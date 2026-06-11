@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# VS Code / Cursor
+.vscode/
+.cursor/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Outputs gerados
+output/*.pdf
+output/*.xlsx
+output/*.tex
+output/*.aux
+output/*.log
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Dados sensíveis
+*.env

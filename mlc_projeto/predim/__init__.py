@@ -1,0 +1,1 @@
+"""predim — Pré-dimensionamento."""

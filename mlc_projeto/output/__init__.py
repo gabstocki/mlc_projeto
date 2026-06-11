@@ -1,0 +1,1 @@
+"""output — Geração de relatório."""

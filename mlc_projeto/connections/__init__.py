@@ -1,0 +1,1 @@
+"""connections — Dimensionamento de ligações."""

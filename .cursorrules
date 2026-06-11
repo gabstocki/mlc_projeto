@@ -1,0 +1,35 @@
+# Contexto do projeto — lido automaticamente pelo Cursor em todo chat
+
+## Projeto
+Verificação estrutural de galpão em madeira lamelada colada (MLC/glulam)
+seguindo Eurocode 5 (EN 1995-1-1) e EN 1990.
+Vigas de duplo-bisel com vão de 40,5 m.
+
+## Convenções obrigatórias para TODAS as funções
+1. Unidades SI: forças em N, comprimentos em m, tensões em Pa (N/m²)
+2. Retornar sempre um dict com resultados intermediários E taxa de utilização:
+   return {"sigma_md": ..., "f_md": ..., "eta": sigma_md / f_md, "ok": eta <= 1.0}
+3. Incluir referência normativa no docstring: ex. "EC5 §6.4.3 Eq. 6.54"
+4. Type hints em todos os parâmetros e retorno
+5. Nunca lançar exceção para eta > 1.0 — apenas registrar no dict retornado
+
+## Estrutura de módulos
+- core/geometry.py   → geometria paramétrica h(x), I(x), A(x), W(x)
+- core/materials.py  → propriedades e f_d por (classe, classe_servico, duracao)
+- core/loads.py      → carregamentos e combinações EN 1990
+- predim/predim.py   → pré-dimensionamento por varredura paramétrica
+- checks/elu/        → verificações ELU (flexão, cumeeira, flambagem, apoio)
+- checks/els/        → verificações ELS (flecha, fluência)
+- connections/       → ligações (Johansen, n_ef, distâncias mínimas)
+- output/report.py   → relatório consolidado DataFrame → LaTeX → PDF
+
+## Dependências entre módulos
+Regra: checks/* importa APENAS de core/*
+Exceção permitida: creep.py pode importar deflection.py
+report.py importa tudo. main.py orquestra e nunca é importado.
+
+## Normas de referência
+- EN 1995-1-1 (Eurocode 5) — estrutura principal
+- EN 1990 — combinações de ações
+- EN 1991-1-1 e NBR 6123 — carregamentos
+- EN 14080 — propriedades do glulam
