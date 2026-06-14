@@ -24,7 +24,7 @@ def main() -> None:
     """Executa o pipeline completo de verificação."""
 
     # ── Fase 0: Dados de entrada ──────────────────────────────
-    geo  = GeometriaViga(L=40.5, h0=1.62, alpha_deg=5.0, b=0.20)
+    geo  = GeometriaViga(L=20.5, h0=1.62, alpha_deg=5.0, b=0.20)
     mat  = GlulamMaterial(classe="GL28h", classe_servico=1)
     load = Carregamentos(geo=geo, mat=mat)
 
