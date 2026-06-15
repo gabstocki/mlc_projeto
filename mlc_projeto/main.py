@@ -7,6 +7,7 @@ Executa todas as fases em sequência e chama report.py ao final.
 from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
 from mlc_projeto.core.loads      import Carregamentos
+from mlc_projeto.core.wind       import ParametrosVento, calcular_vento, ResultadoVento
 from mlc_projeto.predim.predim   import pre_dimensionar
 from mlc_projeto.checks.elu.flexao            import verifica_flexao
 from mlc_projeto.checks.elu.cumeeira          import verifica_cumeeira
@@ -24,9 +25,17 @@ def main() -> None:
     """Executa o pipeline completo de verificação."""
 
     # ── Fase 0: Dados de entrada ──────────────────────────────
-    geo  = GeometriaViga(L=20.5, h0=1.62, alpha_deg=5.0, b=0.20)
-    mat  = GlulamMaterial(classe="GL28h", classe_servico=1)
-    load = Carregamentos(geo=geo, mat=mat)
+    # Fase 0: Dados de entrada
+    geo = GeometriaViga(L=20.25, h0=7.0, alpha_deg=5.64, b=0.20)
+    mat = GlulamMaterial(classe="GL28h", classe_servico=1)
+
+    params_vento = ParametrosVento(
+    V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
+    L=20.25, H1=1.0, h=7.0, dist_portico=5.75,
+)
+    vento = calcular_vento(params_vento)
+
+    load = Carregamentos(geo=geo, mat=mat, vento=vento)
 
     # ── Fase 1: Pré-dimensionamento ───────────────────────────
     predim = pre_dimensionar(geo, mat, load)
