@@ -308,21 +308,23 @@ if __name__ == "__main__":
     from mlc_projeto.core.wind      import ParametrosVento
     from mlc_projeto.core.loads     import carregamentos_com_vento
 
-    # Geometria recomendada pelo predim
-    geo = GeometriaViga(L=20.25, h0=0.70, alpha_deg=4.5, b=0.30)
+    # Geometria recomendada pelo predim_v2
+    geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
 
     # Material — k_def = 0,80 para CS2
     mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="longa")
 
-    # Carregamentos com vento
+    # Parâmetros de vento NBR 6123
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=1.0, h=7.0, dist_portico=5.75,
     )
+
+    # Carregamentos com interface v2 — área tributária = L_t/2
     load = carregamentos_com_vento(
         geo=geo, mat=mat,
-        g_k_m2=1.50, q_k_m2=0.25,
-        dist_portico=5.75,
+        g_area=1.50, q_area=0.25,
+        L_t=5.75,
         params_vento=params_vento,
     )
 
