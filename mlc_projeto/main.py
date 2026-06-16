@@ -5,6 +5,7 @@ Executa todas as fases em sequência usando as interfaces v2:
     — Carregamentos com área tributária correta (L_t/2)
     — Combinações EN 1990 completas com vento NBR 6123
     — Varredura paramétrica com s varrido e l_ef recalculado
+    — Verificação de pilares com comparativo de 3 sistemas
 
 Dados do projeto:
     Galpão em MLC GL24h | Vão 20,25 m | EC5 + EN 1990 + NBR 6123
@@ -23,6 +24,7 @@ from mlc_projeto.checks.elu.flambagem_lateral import verifica_flambagem_lateral
 from mlc_projeto.checks.elu.flexao            import verifica_flexao
 from mlc_projeto.checks.elu.cisalhamento      import verifica_cisalhamento
 from mlc_projeto.checks.elu.apoio             import verifica_apoio
+from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
 from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
 from mlc_projeto.output.report                import gerar_relatorio
@@ -30,53 +32,48 @@ from mlc_projeto.output.report                import gerar_relatorio
 
 # ── Dados do projeto ──────────────────────────────────────────────────────────
 
-# Geometria — definida após varredura paramétrica
-# Atualizar com o resultado do pre_dimensionar() quando executado
 GEO_PARAMS = dict(
-    L         = 20.25,   # m — vão de cada pórtico
-    h0        = 0.60,    # m — altura da seção no apoio
-    alpha_deg = 4.5,     # graus — inclinação da cumeeira
-    b         = 0.26,    # m — largura da seção
+    L         = 20.25,
+    h0        = 0.60,
+    alpha_deg = 4.5,
+    b         = 0.26,
 )
 
-# Material
 MAT_PARAMS = dict(
     classe         = "GL24h",
     classe_servico = 2,
-    duracao        = "curta",   # vento dominante — combinação C2
+    duracao        = "curta",
 )
 
-# Vento NBR 6123
 VENTO_PARAMS = dict(
-    V0          = 45.0,
-    S1          = 1.0,
-    categoria   = "IV",
-    classe      = "B",
-    S3          = 1.0,
-    L           = 20.25,
-    H1          = 1.0,
-    h           = 7.0,
-    dist_portico= 5.75,
+    V0           = 45.0,
+    S1           = 1.0,
+    categoria    = "IV",
+    classe       = "B",
+    S3           = 1.0,
+    L            = 20.25,
+    H1           = 1.0,
+    h            = 7.0,
+    dist_portico = 5.75,
 )
 
-# Carregamentos por área
-G_AREA = 1.50   # kN/m² — permanente
-Q_AREA = 0.25   # kN/m² — sobrecarga
+G_AREA  = 1.50   # kN/m²
+Q_AREA  = 0.25   # kN/m²
+L_T     = 5.75   # m — vão das terças
+S       = 1.00   # m — espaçamento entre terças
+L_AP    = 0.55   # m — comprimento da placa de apoio
 
-# Geometria das terças
-L_T = 5.75      # m — vão das terças = espaçamento entre pórticos
-S   = 1.00      # m — espaçamento entre terças (resultado varredura terças)
-L_AP = 0.55     # m — comprimento placa de apoio (resultado varredura)
+# Pilares — geometria do sistema recomendado (A)
+PILAR = dict(
+    b_pilar  = 0.22,
+    h_pilar  = 0.80,
+    H_pilar  = 7.0,
+    sistema  = "A",
+)
 
 
 def main(rodar_varredura: bool = False) -> None:
-    """
-    Executa o pipeline completo de verificação.
-
-    Args:
-        rodar_varredura: Se True, roda a varredura paramétrica completa
-                         antes das verificações pontuais. Pode demorar.
-    """
+    """Executa o pipeline completo de verificação."""
 
     print("=" * 70)
     print("  PIPELINE MLC — STOCKI Engenharia Estrutural")
@@ -88,19 +85,21 @@ def main(rodar_varredura: bool = False) -> None:
 
     params_vento = ParametrosVento(**VENTO_PARAMS)
 
-    geo = GeometriaViga(**GEO_PARAMS)
-    mat = GlulamMaterial(**MAT_PARAMS)
+    geo      = GeometriaViga(**GEO_PARAMS)
+    mat      = GlulamMaterial(**MAT_PARAMS)
     mat_longa = GlulamMaterial(
-        classe=MAT_PARAMS["classe"],
-        classe_servico=MAT_PARAMS["classe_servico"],
-        duracao="longa",
+        classe         = MAT_PARAMS["classe"],
+        classe_servico = MAT_PARAMS["classe_servico"],
+        duracao        = "longa",
     )
 
     load = carregamentos_com_vento(
-        geo=geo, mat=mat,
-        g_area=G_AREA, q_area=Q_AREA,
-        L_t=L_T,
-        params_vento=params_vento,
+        geo          = geo,
+        mat          = mat,
+        g_area       = G_AREA,
+        q_area       = Q_AREA,
+        L_t          = L_T,
+        params_vento = params_vento,
     )
 
     print(f"  Geometria : L={geo.L}m | h0={geo.h0}m | "
@@ -111,31 +110,34 @@ def main(rodar_varredura: bool = False) -> None:
           f"M={load.M_max_ELU():.2f} kN·m | "
           f"V={load.V_max_ELU():.2f} kN")
     print(f"  Área trib.: {load.area_trib:.3f} m (L_t/2)")
+    print(f"  Pilar     : Sistema {PILAR['sistema']} | "
+          f"{PILAR['b_pilar']}×{PILAR['h_pilar']} m | "
+          f"H={PILAR['H_pilar']} m")
 
-    # ── Fase 1: Pré-dimensionamento (opcional) ────────────────
+    # ── Fase 1: Pré-dimensionamento ───────────────────────────
     if rodar_varredura:
         print("\n[FASE 1] Varredura paramétrica (pode demorar)...")
         df = pre_dimensionar(
-            g_area        = G_AREA,
-            q_area        = Q_AREA,
-            params_vento  = params_vento,
-            L_v           = geo.L,
-            L_t           = L_T,
-            classe        = MAT_PARAMS["classe"],
-            classe_servico= MAT_PARAMS["classe_servico"],
-            h0_range      = (0.40, 1.20, 0.10),
-            alpha_range   = (3.0,  9.0,  0.5),
-            b_range       = (0.10, 0.28, 0.02),
-            l_ap_range    = (0.20, 0.60, 0.05),
-            s_range       = (1.00, 2.10, 0.25),
+            g_area         = G_AREA,
+            q_area         = Q_AREA,
+            params_vento   = params_vento,
+            L_v            = geo.L,
+            L_t            = L_T,
+            classe         = MAT_PARAMS["classe"],
+            classe_servico = MAT_PARAMS["classe_servico"],
+            h0_range       = (0.40, 1.20, 0.10),
+            alpha_range    = (3.0,  9.0,  0.5),
+            b_range        = (0.10, 0.28, 0.02),
+            l_ap_range     = (0.20, 0.60, 0.05),
+            s_range        = (1.00, 2.10, 0.25),
         )
         relatorio(df, n=10)
     else:
-        print("\n[FASE 1] Usando geometria pré-definida "
+        print("\n[FASE 1] Geometria pré-definida "
               "(passe rodar_varredura=True para rodar a varredura)")
 
     # ── Fase 2: Verificações ELU ──────────────────────────────
-    print("\n[FASE 2] Verificações ELU...")
+    print("\n[FASE 2] Verificações ELU — Viga principal...")
 
     resultados_elu = {}
 
@@ -156,6 +158,20 @@ def main(rodar_varredura: bool = False) -> None:
     resultados_elu["apoio"] = verifica_apoio(geo, mat, load, l_ap=L_AP)
     _print_eta("Apoio §6.1.5+§6.2.2", resultados_elu["apoio"])
 
+    print("\n[FASE 2] Verificações ELU — Pilar...")
+
+    resultados_elu["pilar"] = verifica_flexo_compressao(
+        geo          = geo,
+        mat          = mat,
+        load         = load,
+        params_vento = params_vento,
+        **PILAR,
+    )
+    _print_eta(
+        f"Pilar Sist.{PILAR['sistema']} §6.3.2",
+        resultados_elu["pilar"]
+    )
+
     # ── Fase 3: Verificações ELS ──────────────────────────────
     print("\n[FASE 3] Verificações ELS...")
 
@@ -167,28 +183,30 @@ def main(rodar_varredura: bool = False) -> None:
     print("\n" + "=" * 70)
     print("  RESUMO DE TAXAS DE UTILIZAÇÃO")
     print("=" * 70)
-    todos = {**resultados_elu, **resultados_els}
-    eta_max = 0.0
+
+    todos  = {**resultados_elu, **resultados_els}
+    eta_max_val = 0.0
+
     for nome, res in todos.items():
         eta = res["eta"]
         ok  = "✓" if res["ok"] else "✗"
         bar = "█" * int(eta * 20)
-        print(f"  {ok} {nome:<22} η = {eta:.4f}  {bar}")
-        eta_max = max(eta_max, eta)
-    print(f"\n  η máximo = {eta_max:.4f}")
-    status = "APROVADO" if eta_max <= 1.0 else "REPROVADO"
+        print(f"  {ok} {nome:<26} η = {eta:.4f}  {bar}")
+        eta_max_val = max(eta_max_val, eta)
+
+    print(f"\n  η máximo = {eta_max_val:.4f}")
+    status = "APROVADO" if eta_max_val <= 1.0 else "REPROVADO"
     print(f"  Status   = {status}")
     print("=" * 70)
 
-    # ── Fase 5-6: Relatório ───────────────────────────────────
+    # ── Fases 5-6: Relatório ──────────────────────────────────
     gerar_relatorio(todos, geo, mat)
     print("\nPipeline concluído. Relatório gerado em output/")
 
 
 def _print_eta(nome: str, res: dict) -> None:
-    """Imprime resultado de uma verificação de forma compacta."""
-    ok  = "✓" if res["ok"] else "✗"
-    print(f"  {ok} {nome:<25} η = {res['eta']:.4f}  "
+    ok = "✓" if res["ok"] else "✗"
+    print(f"  {ok} {nome:<28} η = {res['eta']:.4f}  "
           f"({'OK' if res['ok'] else 'REPROVADO'})")
 
 

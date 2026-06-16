@@ -1,29 +1,16 @@
-"""
-checks/elu/flexo_compressao.py — Flexo-compressão de pilares.
-
-Referência: EC5 §6.3.2, Eq. 6.23 e 6.24
-"""
-
-from mlc_projeto.core.geometry  import GeometriaViga
-from mlc_projeto.core.materials import GlulamMaterial
-from mlc_projeto.core.loads     import Carregamentos
-
+from mlc_projeto.checks.elu.pilares import verifica_pilar, esforcos_pilar
 
 def verifica_flexo_compressao(
-    geo:  GeometriaViga,
-    mat:  GlulamMaterial,
-    load: Carregamentos,
-    N_d:  float = 0.0,
-    l_ef: float | None = None,
+    geo, mat, load,
+    b_pilar:  float = 0.22,
+    h_pilar:  float = 0.80,
+    H_pilar:  float = 7.0,
+    sistema:  str   = "A",
 ) -> dict:
     """
-    (σ_c,0,d / (k_c · f_c,0,d))² + σ_m,d / f_m,d ≤ 1,0
-    (EC5 §6.3.2 Eq. 6.23)
-
-    Returns:
-        dict com lambda_rel_c, k_c, eta e ok
+    Verificação de flexo-compressão do pilar dimensionado.
+    Delega para pilares.py que contém a implementação completa.
     """
-    # TODO: implementar
-    raise NotImplementedError(
-        "flexo_compressao.verifica_flexo_compressao — a implementar"
-    )
+    # importar vento e calcular esforços
+    ...
+    return verifica_pilar(mat, b_pilar, h_pilar, H_pilar, N_d, M_d, sistema)
