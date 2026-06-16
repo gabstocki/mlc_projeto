@@ -1,34 +1,48 @@
 """
-core/loads.py — Carregamentos e combinações de ações. v2
+core/loads.py — Carregamentos e combinações EN 1990. v3
 
-CORREÇÃO v2:
-    Área tributária da viga principal = L_t/2
-    (metade do vão das terças — cada pórtico recebe metade da carga)
+MUDANÇA v3 — Pórtico de três rótulas:
+    Sistema estrutural: isostático com três rótulas
+        - Rótulas nas bases dos pilares
+        - Rótula na cumeeira
+    
+    Diagrama de momento correto para 3 rótulas:
+        M(x) = R_v·x - H·y(x) - q·x²/2
+        
+    onde:
+        R_v = q·L/2                   (reação vertical)
+        H   = R_v·(L/2) - q·(L/2)²/2 / f   (empuxo horizontal)
+        f   = h_ap - h0               (variação de altura da viga)
+        y(x) = x·tan(α)              (ordenada do eixo da viga)
 
-    Cada terça é biapoiada nos dois pórticos.
-    Por metro de viga: q = g_area × L_t/2
+    Consequências:
+        - M na cumeeira = 0  (rótula)
+        - M na base    = 0  (rótula)
+        - M_max ocorre em x ≈ L/4 (não no meio do vão)
+        - M_max ≈ 75% menor que pórtico rígido
+        - Viga sujeita a M + N (flexo-compressão)
+        - H vai direto para a fundação (sapata com chumbadores)
 
-Combinações EN 1990 completas:
+Combinações EN 1990 mantidas (inalteradas):
+    ELU_C1: 1,35G + 1,5Q + 0,9W_C1bv
+    ELU_C2: 1,35G + 1,5W_C1bv + 1,05Q  ← governante
+    ELU_C3: 0,9G  + 1,5W_C2st
+    ELU_C4: 1,35G + 1,5W_C2bv + 1,05Q
+    ELS_S1: G + Q + 0,6W_C1bv
+    ELS_S2: G + 0,5Q
+    ELS_S3: G
 
-    ELU_C1: 1,35G + 1,5Q + 0,9W_C1bv   — Q dominante
-    ELU_C2: 1,35G + 1,5W_C1bv + 1,05Q  — W_C1 dominante ← GOVERNANTE
-    ELU_C3: 0,9G  + 1,5W_C2st           — sucção dominante
-    ELU_C4: 1,35G + 1,5W_C2bv + 1,05Q  — W_C2 dominante
+Área tributária correta (v2): L_t/2
 
-    ELS_S1: G + Q + 0,6W_C1bv           — característico
-    ELS_S2: G + 0,5Q                    — frequente
-    ELS_S3: G                           — quase-permanente (fluência)
-
-Coeficientes ψ — EN 1990 Tab. A1.1 (coberturas industriais):
-    Q (sobrecarga cobertura): ψ₀=0,70 | ψ₁=0,50 | ψ₂=0,00
-    W (vento):                ψ₀=0,60 | ψ₁=0,20 | ψ₂=0,00
-
-Referência: EN 1990 §6.4, §6.5, Tab. A1.1
+Referência: EN 1990 §6.4, §6.5
+            Leick (2014) — Three-hinged frames
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -56,25 +70,113 @@ class Combinacao:
     nome:       str
     tipo:       str
     descricao:  str
-    q_tot:      float   # kN/m — positivo=baixo, negativo=cima
-    M_max_kNm:  float
-    V_max_kN:   float
+    q_tot:      float    # kN/m — carga distribuída total
+    M_max_kNm:  float    # kN·m — momento máximo na viga
+    V_max_kN:   float    # kN   — cortante máximo no apoio
+    N_viga_kN:  float    # kN   — força normal na viga no apoio
+    H_kN:       float    # kN   — empuxo horizontal na fundação
+    x_Mmax_m:   float    # m    — posição do momento máximo
     duracao:    str
 
 
-# ── Classe principal ──────────────────────────────────────────────────────────
+# ── Análise estrutural do pórtico de três rótulas ────────────────────────────
+
+def analisar_3rotulas(
+    q:     float,
+    L:     float,
+    h0:    float,
+    h_ap:  float,
+    alpha_rad: float,
+    n_pts: int = 200,
+) -> dict:
+    """
+    Analisa o pórtico de três rótulas com carga uniforme q.
+
+    Sistema isostático: rótulas nas bases + rótula na cumeeira.
+    Válido para pórtico simétrico de duas águas.
+
+    Equações de equilíbrio:
+        ΣFy = 0 → R_v = q·L/2
+        ΣM_cumeeira = 0 (em meia viga):
+            R_v·(L/2) - H·f - q·(L/2)²/2 = 0
+            H = [R_v·(L/2) - q·(L/2)²/2] / f
+
+    Diagrama de momento (0 ≤ x ≤ L/2, simetria para x > L/2):
+        y(x) = x·tan(α)   [ordenada do eixo da viga]
+        M(x) = R_v·x - H·y(x) - q·x²/2
+
+    Args:
+        q         : Carga distribuída (kN/m) — positivo=para baixo
+        L         : Vão total (m)
+        h0        : Altura da seção no apoio (m)
+        h_ap      : Altura da seção na cumeeira (m)
+        alpha_rad : Ângulo de inclinação (rad)
+        n_pts     : Número de pontos para integração
+
+    Returns:
+        dict com R_v, H, M_max, x_Mmax, N_apoio, M_x, x
+    """
+    if abs(q) < 1e-10:
+        return {
+            "R_v_kN":    0.0, "H_kN":      0.0,
+            "M_max_kNm": 0.0, "x_Mmax_m":  0.0,
+            "N_apoio_kN":0.0,
+            "M_x":       np.zeros(n_pts),
+            "x":         np.linspace(0, L, n_pts),
+        }
+
+    f = h_ap - h0   # variação de altura (m)
+
+    if f <= 0:
+        raise ValueError(
+            f"h_ap={h_ap:.3f} deve ser maior que h0={h0:.3f} "
+            f"para o pórtico de 3 rótulas. f={f:.3f} m"
+        )
+
+    # Reações
+    R_v = q * L / 2
+    H   = (R_v * (L/2) - q * (L/2)**2 / 2) / f
+
+    # Diagrama de momento (meia viga por simetria)
+    x_half = np.linspace(0, L/2, n_pts // 2)
+    y_x    = x_half * math.tan(alpha_rad)
+    M_half = R_v * x_half - H * y_x - q * x_half**2 / 2
+
+    # Espelhar para o vão completo
+    M_x = np.concatenate([M_half, M_half[-2::-1]])
+    x   = np.linspace(0, L, len(M_x))
+
+    # Momento máximo
+    idx_max  = np.argmax(np.abs(M_x))
+    M_max    = float(M_x[idx_max])
+    x_Mmax   = float(x[idx_max])
+
+    # Força normal na viga no apoio
+    # N = H·cos(α) + R_v·sin(α)
+    N_apoio = H * math.cos(alpha_rad) + R_v * math.sin(alpha_rad)
+
+    return {
+        "R_v_kN":    round(R_v,    4),
+        "H_kN":      round(H,      4),
+        "M_max_kNm": round(M_max,  4),
+        "x_Mmax_m":  round(x_Mmax, 4),
+        "N_apoio_kN":round(N_apoio,4),
+        "M_x":       M_x,
+        "x":         x,
+    }
+
+
+# ── Classe principal de carregamentos ────────────────────────────────────────
 
 @dataclass
 class Carregamentos:
     """
-    Carregamentos e combinações EN 1990 para a viga principal.
+    Carregamentos e combinações EN 1990 para pórtico de três rótulas.
 
-    ÁREA TRIBUTÁRIA CORRETA: L_t/2
-    Cada pórtico recebe metade da carga de cada terça biapoiada.
-    Por metro de viga: q = pressão × L_t/2
+    Área tributária = L_t/2 (cada pórtico recebe metade da carga das terças).
 
     Args:
-        geo          : Geometria da viga
+        geo          : Geometria da viga (fornece h0, h_ap, alpha_rad, L)
         mat          : Material
         g_area       : Carga permanente por área (kN/m²)
         q_area       : Sobrecarga por área (kN/m²)
@@ -86,79 +188,64 @@ class Carregamentos:
     """
     geo:       GeometriaViga
     mat:       GlulamMaterial
-    g_area:    float = 1.50    # kN/m²
-    q_area:    float = 0.25    # kN/m²
-    L_t:       float = 5.75    # m
-    w_C1bv_m2: float = 0.0     # kN/m²
+    g_area:    float = 1.50
+    q_area:    float = 0.25
+    L_t:       float = 5.75
+    w_C1bv_m2: float = 0.0
     w_C1st_m2: float = 0.0
     w_C2bv_m2: float = 0.0
-    w_C2st_m2: float = 0.0     # negativo = sucção
+    w_C2st_m2: float = 0.0
 
     _combinacoes: dict = field(default_factory=dict, init=False, repr=False)
     _area_trib:   float = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        # Área tributária correta = L_t/2
         self._area_trib = self.L_t / 2
         self._combinacoes = self._montar_combinacoes()
 
     @property
     def area_trib(self) -> float:
-        """Área tributária por metro de viga (m) = L_t/2."""
         return self._area_trib
 
-    # ── Cargas lineares na viga ───────────────────────────────
-
+    # ── Cargas lineares ───────────────────────────────────────
     @property
     def g_k(self) -> float:
-        """Carga permanente linear (kN/m) = g_area × L_t/2."""
         return self.g_area * self._area_trib
 
     @property
     def q_k(self) -> float:
-        """Sobrecarga linear (kN/m) = q_area × L_t/2."""
         return self.q_area * self._area_trib
 
     @property
     def w_C1bv_k(self) -> float:
-        """Vento C1 barlavento linear (kN/m)."""
         return self.w_C1bv_m2 * self._area_trib
 
     @property
     def w_C1st_k(self) -> float:
-        """Vento C1 sotavento linear (kN/m)."""
         return self.w_C1st_m2 * self._area_trib
 
     @property
     def w_C2bv_k(self) -> float:
-        """Vento C2 barlavento linear (kN/m)."""
         return self.w_C2bv_m2 * self._area_trib
 
     @property
     def w_C2st_k(self) -> float:
-        """Vento C2 sotavento linear (kN/m)."""
         return self.w_C2st_m2 * self._area_trib
 
-    # ── Diagramas de momento ──────────────────────────────────
+    # ── Análise estrutural para uma carga q ──────────────────
+    def _analisar(self, q: float) -> dict:
+        return analisar_3rotulas(
+            q         = q,
+            L         = self.geo.L,
+            h0        = self.geo.h0,
+            h_ap      = self.geo.h_ap,
+            alpha_rad = self.geo.alpha_rad,
+        )
 
-    def _M(self, q: float) -> NDArray:
-        """M(x) bi-apoiada carga uniforme q (kN/m → kN·m)."""
-        x = self.geo.x
-        return q * x * (self.geo.L - x) / 2
-
-    def _M_max(self, q: float) -> float:
-        """Momento máximo (kN·m)."""
-        return abs(q) * self.geo.L**2 / 8
-
-    def _V_max(self, q: float) -> float:
-        """Cortante máximo (kN)."""
-        return abs(q) * self.geo.L / 2
-
-    # ── Montagem das combinações EN 1990 ──────────────────────
-
+    # ── Montagem das combinações ──────────────────────────────
     def _montar_combinacoes(self) -> dict[str, Combinacao]:
-        g   = self.g_k
-        q   = self.q_k
+        g    = self.g_k
+        q    = self.q_k
         w1bv = self.w_C1bv_k
         w1st = self.w_C1st_k
         w2bv = self.w_C2bv_k
@@ -166,68 +253,65 @@ class Carregamentos:
 
         c = {}
 
-        # ── ELU ───────────────────────────────────────────────
+        def _comb(nome, tipo, desc, q_tot, duracao):
+            r = self._analisar(q_tot)
+            return Combinacao(
+                nome      = nome,
+                tipo      = tipo,
+                descricao = desc,
+                q_tot     = q_tot,
+                M_max_kNm = r["M_max_kNm"],
+                V_max_kN  = r["R_v_kN"],
+                N_viga_kN = r["N_apoio_kN"],
+                H_kN      = r["H_kN"],
+                x_Mmax_m  = r["x_Mmax_m"],
+                duracao   = duracao,
+            )
 
-        # C1: Q dominante + vento acompanhante
-        q_C1 = GAMMA_G_sup*g + GAMMA_Q*q + PSI_0_W*GAMMA_Q*w1bv
-        c["ELU_C1"] = Combinacao(
-            nome="ELU_C1", tipo="ELU",
-            descricao="1,35G + 1,5Q + 0,9W_C1bv  (Q dominante)",
-            q_tot=q_C1, M_max_kNm=self._M_max(q_C1),
-            V_max_kN=self._V_max(q_C1), duracao="longa",
+        # ELU
+        c["ELU_C1"] = _comb(
+            "ELU_C1", "ELU",
+            "1,35G + 1,5Q + 0,9W_C1bv  (Q dominante)",
+            GAMMA_G_sup*g + GAMMA_Q*q + PSI_0_W*GAMMA_Q*w1bv,
+            "longa",
+        )
+        c["ELU_C2"] = _comb(
+            "ELU_C2", "ELU",
+            "1,35G + 1,5W_C1bv + 1,05Q  (W_C1 dominante) ← GOVERNA",
+            GAMMA_G_sup*g + GAMMA_Q*w1bv + PSI_0_Q*GAMMA_Q*q,
+            "curta",
+        )
+        c["ELU_C3"] = _comb(
+            "ELU_C3", "ELU",
+            "0,9G + 1,5W_C2st  (sucção dominante)",
+            GAMMA_G_inf*g + GAMMA_Q*w2st,
+            "curta",
+        )
+        c["ELU_C4"] = _comb(
+            "ELU_C4", "ELU",
+            "1,35G + 1,5W_C2bv + 1,05Q  (W_C2 dominante)",
+            GAMMA_G_sup*g + GAMMA_Q*w2bv + PSI_0_Q*GAMMA_Q*q,
+            "curta",
         )
 
-        # C2: Vento C1 barlavento dominante ← GOVERNA
-        q_C2 = GAMMA_G_sup*g + GAMMA_Q*w1bv + PSI_0_Q*GAMMA_Q*q
-        c["ELU_C2"] = Combinacao(
-            nome="ELU_C2", tipo="ELU",
-            descricao="1,35G + 1,5W_C1bv + 1,05Q  (W_C1 dominante)",
-            q_tot=q_C2, M_max_kNm=self._M_max(q_C2),
-            V_max_kN=self._V_max(q_C2), duracao="curta",
+        # ELS
+        c["ELS_S1"] = _comb(
+            "ELS_S1", "ELS",
+            "G + Q + 0,6W_C1bv  (característico)",
+            g + q + PSI_0_W*w1bv,
+            "longa",
         )
-
-        # C3: Sucção dominante
-        q_C3 = GAMMA_G_inf*g + GAMMA_Q*w2st
-        c["ELU_C3"] = Combinacao(
-            nome="ELU_C3", tipo="ELU",
-            descricao="0,9G + 1,5W_C2st  (sucção dominante)",
-            q_tot=q_C3, M_max_kNm=self._M_max(q_C3),
-            V_max_kN=self._V_max(q_C3), duracao="curta",
+        c["ELS_S2"] = _comb(
+            "ELS_S2", "ELS",
+            "G + 0,5Q  (frequente)",
+            g + PSI_1_Q*q,
+            "longa",
         )
-
-        # C4: Vento C2 barlavento dominante
-        q_C4 = GAMMA_G_sup*g + GAMMA_Q*w2bv + PSI_0_Q*GAMMA_Q*q
-        c["ELU_C4"] = Combinacao(
-            nome="ELU_C4", tipo="ELU",
-            descricao="1,35G + 1,5W_C2bv + 1,05Q  (W_C2 dominante)",
-            q_tot=q_C4, M_max_kNm=self._M_max(q_C4),
-            V_max_kN=self._V_max(q_C4), duracao="curta",
-        )
-
-        # ── ELS ───────────────────────────────────────────────
-
-        q_S1 = g + q + PSI_0_W*w1bv
-        c["ELS_S1"] = Combinacao(
-            nome="ELS_S1", tipo="ELS",
-            descricao="G + Q + 0,6W_C1bv  (característico)",
-            q_tot=q_S1, M_max_kNm=self._M_max(q_S1),
-            V_max_kN=self._V_max(q_S1), duracao="longa",
-        )
-
-        q_S2 = g + PSI_1_Q*q
-        c["ELS_S2"] = Combinacao(
-            nome="ELS_S2", tipo="ELS",
-            descricao="G + 0,5Q  (frequente)",
-            q_tot=q_S2, M_max_kNm=self._M_max(q_S2),
-            V_max_kN=self._V_max(q_S2), duracao="longa",
-        )
-
-        q_S3 = g + PSI_2_Q*q   # PSI_2_Q = 0 → só permanente
-        c["ELS_S3"] = Combinacao(
-            nome="ELS_S3", tipo="ELS",
-            descricao="G  (quase-permanente — fluência)",
-            q_tot=q_S3, M_max_kNm=self._M_max(q_S3),
-            V_max_kN=self._V_max(q_S3), duracao="permanente",
+        c["ELS_S3"] = _comb(
+            "ELS_S3", "ELS",
+            "G  (quase-permanente — fluência)",
+            g + PSI_2_Q*q,
+            "permanente",
         )
 
         return c
@@ -247,17 +331,16 @@ class Carregamentos:
                 if v.tipo == "ELS"}
 
     def combinacao_ELU_governante(self) -> Combinacao:
-        """Combinação ELU com maior M_max (positivo)."""
+        """Combinação ELU com maior M_max (carga positiva)."""
         return max(
             (c for c in self.combinacoes_ELU().values() if c.q_tot > 0),
-            key=lambda c: c.M_max_kNm
+            key=lambda c: c.M_max_kNm,
         )
 
     def combinacao_ELU_succao(self) -> Combinacao:
-        """Combinação ELU de sucção."""
         return self._combinacoes["ELU_C3"]
 
-    # ── Interface de compatibilidade ──────────────────────────
+    # ── Interface de compatibilidade com módulos existentes ──
 
     def M_max_ELU(self) -> float:
         return self.combinacao_ELU_governante().M_max_kNm
@@ -265,64 +348,75 @@ class Carregamentos:
     def V_max_ELU(self) -> float:
         return self.combinacao_ELU_governante().V_max_kN
 
+    def N_max_ELU(self) -> float:
+        """Força normal máxima na viga — novo para 3 rótulas."""
+        return self.combinacao_ELU_governante().N_viga_kN
+
+    def H_ELU(self) -> float:
+        """Empuxo horizontal na fundação — novo para 3 rótulas."""
+        return self.combinacao_ELU_governante().H_kN
+
     def M_ELU(self) -> NDArray:
-        return self._M(self.combinacao_ELU_governante().q_tot)
+        """Diagrama M(x) da combinação ELU governante (kN·m)."""
+        gov = self.combinacao_ELU_governante()
+        r   = self._analisar(gov.q_tot)
+        return r["M_x"]
 
     def V_ELU(self) -> NDArray:
+        """Diagrama V(x) aproximado (kN)."""
         q = self.combinacao_ELU_governante().q_tot
         return q * (self.geo.L / 2 - self.geo.x)
 
     def M_g(self) -> NDArray:
-        return self._M(self.g_k)
+        return self._analisar(self.g_k)["M_x"]
 
     def M_q(self) -> NDArray:
-        return self._M(self.q_k)
+        return self._analisar(self.q_k)["M_x"]
 
     def M_ELS_car(self) -> NDArray:
-        return self._M(self._combinacoes["ELS_S1"].q_tot)
+        return self._analisar(
+            self._combinacoes["ELS_S1"].q_tot
+        )["M_x"]
 
     # ── Relatório ─────────────────────────────────────────────
 
     def resumo(self) -> None:
-        print("=" * 74)
-        print("  COMBINAÇÕES DE AÇÕES — EN 1990  (v2 — área tributária corrigida)")
-        print(f"  Vão viga L_v = {self.geo.L} m | "
-              f"Vão terças L_t = {self.L_t} m | "
-              f"Área trib. = L_t/2 = {self._area_trib} m")
-        print("=" * 74)
+        """Imprime resumo de todas as combinações."""
+        print("=" * 76)
+        print("  COMBINAÇÕES DE AÇÕES — EN 1990 | Pórtico de 3 Rótulas v3")
+        print(f"  L={self.geo.L}m | h0={self.geo.h0}m | "
+              f"h_ap={self.geo.h_ap:.3f}m | "
+              f"Área trib.={self._area_trib}m (L_t/2)")
+        print("=" * 76)
 
-        print(f"\n  Cargas lineares na viga principal:")
-        print(f"    G  = {self.g_k:.4f} kN/m  "
-              f"(= {self.g_area} kN/m² × {self._area_trib} m)")
-        print(f"    Q  = {self.q_k:.4f} kN/m  "
-              f"(= {self.q_area} kN/m² × {self._area_trib} m)")
-        print(f"    W_C1bv = {self.w_C1bv_k:+.4f} kN/m")
-        print(f"    W_C1st = {self.w_C1st_k:+.4f} kN/m")
-        print(f"    W_C2bv = {self.w_C2bv_k:+.4f} kN/m")
-        print(f"    W_C2st = {self.w_C2st_k:+.4f} kN/m")
+        print(f"\n  Cargas lineares:")
+        print(f"    G  = {self.g_k:.4f} kN/m | Q = {self.q_k:.4f} kN/m")
+        print(f"    W_C1bv = {self.w_C1bv_k:+.4f} kN/m | "
+              f"W_C2st = {self.w_C2st_k:+.4f} kN/m")
 
-        print(f"\n  {'Comb.':<10} {'Tipo':<5} {'q_tot(kN/m)':>12} "
-              f"{'M_max(kN·m)':>13} {'V_max(kN)':>11}  Descrição")
-        print(f"  {'-'*72}")
+        print(f"\n  {'Comb.':<10} {'Tipo':<5} {'q(kN/m)':>10} "
+              f"{'M_max(kN·m)':>12} {'V_max(kN)':>11} "
+              f"{'N_viga(kN)':>11} {'H_fund(kN)':>11}  Duração")
+        print(f"  {'-'*82}")
 
         for nome, c in self._combinacoes.items():
-            sinal = "↓" if c.q_tot >= 0 else "↑"
             print(
-                f"  {nome:<10} {c.tipo:<5} {c.q_tot:>+11.4f}{sinal} "
-                f"{c.M_max_kNm:>13.2f} {c.V_max_kN:>11.2f}  {c.descricao}"
+                f"  {nome:<10} {c.tipo:<5} {c.q_tot:>+9.3f}  "
+                f"{c.M_max_kNm:>12.2f} {c.V_max_kN:>11.2f} "
+                f"{c.N_viga_kN:>11.2f} {c.H_kN:>11.2f}  {c.duracao}"
             )
 
         gov = self.combinacao_ELU_governante()
-        suc = self.combinacao_ELU_succao()
-        print(f"\n  ELU governante: {gov.nome} — "
-              f"M = {gov.M_max_kNm:.2f} kN·m | "
-              f"k_mod duração '{gov.duracao}'")
-        print(f"  Sucção ELU_C3: q = {suc.q_tot:+.4f} kN/m "
-              f"{'← para cima' if suc.q_tot < 0 else '← ainda para baixo'}")
-        print("=" * 74)
+        print(f"\n  ELU governante: {gov.nome}")
+        print(f"    M_max = {gov.M_max_kNm:.2f} kN·m  "
+              f"em x = {gov.x_Mmax_m:.3f} m")
+        print(f"    V_max = {gov.V_max_kN:.2f} kN")
+        print(f"    N_viga = {gov.N_viga_kN:.2f} kN  (flexo-compressão na viga)")
+        print(f"    H_fund = {gov.H_kN:.2f} kN  (empuxo → sapata)")
+        print("=" * 76)
 
 
-# ── Fábrica: integra wind.py → Carregamentos ─────────────────────────────────
+# ── Fábrica com vento ─────────────────────────────────────────────────────────
 
 def carregamentos_com_vento(
     geo:          GeometriaViga,
@@ -331,11 +425,9 @@ def carregamentos_com_vento(
     q_area:       float,
     L_t:          float,
     params_vento,
-) -> "Carregamentos":
+) -> Carregamentos:
     """
     Cria Carregamentos integrando pressões de vento NBR 6123.
-
-    Converte pressões (kN/m²) para cargas lineares via área tributária L_t/2.
 
     Args:
         geo          : Geometria da viga
@@ -346,7 +438,7 @@ def carregamentos_com_vento(
         params_vento : ParametrosVento (wind.py)
 
     Returns:
-        Carregamentos com todas as combinações EN 1990
+        Carregamentos com combinações EN 1990 para pórtico de 3 rótulas
     """
     from mlc_projeto.core.wind import calcular_vento
     res = calcular_vento(params_vento)
@@ -388,3 +480,11 @@ if __name__ == "__main__":
     )
 
     load.resumo()
+
+    # Confirmar redução do momento
+    gov = load.combinacao_ELU_governante()
+    print(f"\n  Comparação com pórtico rígido:")
+    print(f"    M_max 3 rótulas = {gov.M_max_kNm:.2f} kN·m")
+    print(f"    M_max rígido    = {gov.q_tot * 20.25**2 / 8:.2f} kN·m")
+    print(f"    Redução         = "
+          f"{(1 - gov.M_max_kNm/(gov.q_tot*20.25**2/8))*100:.1f}%")
