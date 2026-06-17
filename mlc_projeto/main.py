@@ -85,6 +85,10 @@ B_PILAR = 0.20   # m
 H_PILAR = 0.20   # m
 H_PILAR_ALT = 7.0  # m — altura do pilar
 
+# Terças
+B_TERCA = 0.20   # m — largura da seção
+H_TERCA = 0.58   # m — altura da seção
+
 # Ligações
 D_BASE_MM = 20    # mm — pinos na ligação base
 D_CUM_MM  = 30    # mm — pino passante na cumeeira
@@ -184,6 +188,26 @@ def main(rodar_varredura: bool = False) -> None:
         res_elu["flexo_comp"]
     )
 
+    # Terças
+    print("\n[FASE 2] Verificações ELU — Terças...")
+    from mlc_projeto.checks.elu.tercas import verifica_terca
+    from mlc_projeto.core.wind import calcular_vento as _calcular_vento
+    _w_C1bv_m2 = _calcular_vento(params_vento).pressoes["C1"]["barlavento_kNm2"]
+    res_elu["terca"] = verifica_terca(
+        mat       = mat_curta,
+        L_t       = L_T,
+        s         = S,
+        b         = B_TERCA,
+        h         = H_TERCA,
+        alpha_deg = GEO_PARAMS["alpha_deg"],
+        g_k_m2    = G_AREA,
+        q_k_m2    = Q_AREA,
+        w_kNm2    = _w_C1bv_m2,
+    )
+    # normalizar chave para interface padrão do pipeline
+    res_elu["terca"]["eta"] = res_elu["terca"]["eta_gov"]
+    _print_eta("Terça §6.1.6+§6.1.7", res_elu["terca"])
+
     # ── Fase 3: Verificações ELS ──────────────────────────────
     print("\n[FASE 3] Verificações ELS...")
 
@@ -222,7 +246,8 @@ def main(rodar_varredura: bool = False) -> None:
             "cisalhamento", "apoio",
         ]),
         ("── ELU Pilar ──", ["flexo_comp"]),
-        ("── ELS ──",       ["ELS"]),
+        ("── ELU Terças ──", ["terca"]),
+        ("── ELS ──",        ["ELS"]),
     ]
 
     for titulo, chaves in secoes:
