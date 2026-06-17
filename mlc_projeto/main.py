@@ -40,6 +40,7 @@ from mlc_projeto.connections.connections      import (
     dimensionar_ligacoes, relatorio_ligacoes
 )
 from mlc_projeto.output.report                import gerar_relatorio
+from mlc_projeto.visualization.viz_3d         import visualizar_galpao
 
 
 # ── Dados do projeto ──────────────────────────────────────────────────────────
@@ -280,6 +281,23 @@ def main(rodar_varredura: bool = False) -> None:
     # ── Fase 5: Relatório ─────────────────────────────────────
     gerar_relatorio(todos_para_relatorio, geo, mat_curta)
     print("\nPipeline concluído. Relatório gerado em output/")
+
+    # ── Fase 6: Visualização 3D ───────────────────────────────
+    print("\n[FASE 6] Abrindo visualização 3D interativa...")
+    visualizar_galpao(
+        geo        = geo,
+        resultados = {**res_elu, **res_els,
+                      "L1": res_lig["L1"],
+                      "L2": res_lig["L2"],
+                      "L3": res_lig["L3"]},
+        H_pilar    = H_PILAR_ALT,
+        n_modulos  = 8,
+        dist_mod   = L_T,
+        b_pilar    = B_PILAR,
+        h_pilar    = H_PILAR,
+        b_terca    = B_TERCA,
+        h_terca    = H_TERCA,
+    )
 
 
 def _print_eta(nome: str, res: dict) -> None:
