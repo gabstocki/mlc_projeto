@@ -1,18 +1,25 @@
 """
-checks/elu/flexo_compressao.py — Flexo-compressão do pilar dimensionado.
+checks/elu/flexo_compressao.py — Flexo-compressão unificado. v2
 
-Ponto de entrada chamado pelo main.py com a geometria do pilar já definida
-após o comparativo de sistemas em pilares.py.
+ATUALIZAÇÃO v2 — Pórtico de 3 rótulas:
 
-Delega o cálculo para pilares.py que contém a implementação completa
-de esforços por sistema e verificação EC5 §6.3.2.
+    Dois elementos verificados:
 
-Parâmetros do pilar recomendados pelo comparativo:
-    Sistema A (rígido-articulado): b=0,22m × h=0,80m | η=0,94
-    Sistema B (totalmente rígido):  b=0,22m × h=0,80m | η=0,97
-    Sistema C (isostático):         b=0,14m × h=0,30m | η=0,86
+    1. VIGA — flexo-compressão real (M + N):
+       Delega para flexao.py → verifica_flexao()
+       EC5 §6.3.2 Eq. 6.23
+       M_d ≠ 0 (momento no vão) + N_d ≠ 0 (empuxo interno)
 
-Referência: EC5 §6.3.2, Eq. 6.23
+    2. PILAR — compressão simples (M = 0):
+       Delega para pilares.py → verifica_pilar()
+       EC5 §6.3.2 Eq. 6.23 simplificada
+       M_d = 0 (rótulas em ambas as extremidades)
+       N_d = R_v (reação vertical)
+
+    O resultado consolidado retorna o η governante entre os dois
+    elementos e é chamado diretamente pelo main.py.
+
+Referência: EC5 §6.3.2 Eq. 6.23
 """
 
 from __future__ import annotations
@@ -20,124 +27,100 @@ from __future__ import annotations
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
-from mlc_projeto.core.wind      import ParametrosVento, calcular_vento
+from mlc_projeto.core.wind      import ParametrosVento
 
-from mlc_projeto.checks.elu.pilares import (
-    esforcos_pilar,
-    verifica_pilar,
-    Sistema,
-)
+from mlc_projeto.checks.elu.flexao   import verifica_flexao
+from mlc_projeto.checks.elu.pilares  import verifica_pilar
 
 
 def verifica_flexo_compressao(
     geo:          GeometriaViga,
     mat:          GlulamMaterial,
     load:         Carregamentos,
-    b_pilar:      float   = 0.22,
-    h_pilar:      float   = 0.80,
-    H_pilar:      float   = 7.0,
-    sistema:      Sistema = "A",
+    b_pilar:      float          = 0.20,
+    h_pilar:      float          = 0.20,
+    H_pilar:      float          = 7.0,
+    s:            float          = 1.00,
+    sistema:      str            = "3rotulas",
     params_vento: ParametrosVento | None = None,
 ) -> dict:
     """
-    Verifica flexo-compressão do pilar com instabilidade — EC5 §6.3.2 Eq. 6.23.
+    Verifica flexo-compressão da viga e compressão do pilar.
 
-    Calcula os esforços no pilar conforme o sistema estrutural adotado
-    e verifica a condição:
-
-        (σ_c,0,d / (k_c · f_c,0,d))² + σ_m,d / f_m,d ≤ 1,0
-
-    Sistemas disponíveis:
-        A — Rígido-articulado: knee-frame, base articulada | l_ef = 1,5H
-        B — Totalmente rígido:  knee-frame, base engastada  | l_ef = 1,0H
-        C — Isostático:         pino no canto, sem momento  | l_ef = 2,0H
+    Pórtico de 3 rótulas:
+        Viga : EC5 §6.3.2 com M + N  → verifica_flexao()
+        Pilar: EC5 §6.3.2 com N puro → verifica_pilar()
 
     Args:
-        geo          : Geometria da viga principal (para cálculo de EI_viga)
-        mat          : Material do pilar (GL24h duração curta — vento dominante)
-        load         : Carregamentos (fornece q_vert da combinação ELU_C2)
+        geo          : Geometria da viga principal
+        mat          : Material (k_mod duração curta — vento dominante)
+        load         : Carregamentos com combinações EN 1990
         b_pilar      : Largura da seção do pilar (m)
         h_pilar      : Altura da seção do pilar no plano do pórtico (m)
         H_pilar      : Comprimento do pilar (m)
-        sistema      : "A", "B" ou "C"
-        params_vento : Parâmetros de vento NBR 6123 para carga horizontal
-                       Se None, usa pressão zero (conservador — só compressão)
+        s            : Espaçamento entre terças (m) — l_ef fora do plano
+        sistema      : "3rotulas" (único sistema suportado nesta versão)
+        params_vento : Não utilizado — mantido por compatibilidade
 
     Returns:
-        dict com esforços, k_c, λ_rel, η e ok
+        dict consolidado com resultados da viga, do pilar e η governante
     """
-    # ── Pressão de vento na fachada ───────────────────────────
-    if params_vento is not None:
-        res_v       = calcular_vento(params_vento)
-        w_fachada   = res_v.pressoes["C1"]["barlavento_kNm2"]
-    else:
-        w_fachada   = 0.0
+    # ── Viga — flexo-compressão EC5 §6.3.2 ───────────────────
+    res_viga = verifica_flexao(geo, mat, load, s=s)
 
-    q_horiz = w_fachada * H_pilar   # kN/m distribuído na altura
-
-    # ── Carga vertical — combinação ELU_C2 ───────────────────
-    q_vert  = load.combinacoes["ELU_C2"].q_tot   # kN/m
-
-    # ── Rigidez da viga (valor médio) ─────────────────────────
-    h_medio  = (geo.h0 + geo.h_ap) / 2
-    EI_viga  = mat.E0_05 * 1e-3 * geo.b * h_medio**3 / 12  # kN·m²
-
-    # ── Rigidez do pilar ──────────────────────────────────────
-    EI_pilar = mat.E0_05 * 1e-3 * b_pilar * h_pilar**3 / 12  # kN·m²
-
-    # ── Esforços no pilar pelo sistema ────────────────────────
-    esf = esforcos_pilar(
-        sistema  = sistema,
-        q_vert   = q_vert,
-        q_horiz  = q_horiz,
-        L        = geo.L,
-        H        = H_pilar,
-        EI_viga  = EI_viga,
-        EI_pilar = EI_pilar,
-    )
-
-    # ── Momento governante ────────────────────────────────────
-    M_gov = max(abs(esf["M_d_topo_kNm"]), abs(esf["M_d_base_kNm"]))
-
-    # ── Verificação EC5 §6.3.2 ────────────────────────────────
-    res = verifica_pilar(
-        mat     = mat,
-        b       = b_pilar,
-        h       = h_pilar,
-        H       = H_pilar,
-        N_d     = esf["N_d_kN"],
-        M_d     = M_gov,
-        sistema = sistema,
+    # ── Pilar — compressão simples EC5 §6.3.2 ────────────────
+    N_d_pilar = load.V_max_ELU()   # kN — reação vertical
+    res_pilar = verifica_pilar(
+        mat=mat,
+        b=b_pilar,
+        h=h_pilar,
+        H=H_pilar,
+        N_d=N_d_pilar,
     )
 
     # ── Resultado consolidado ─────────────────────────────────
+    eta_viga  = res_viga["eta"]
+    eta_pilar = res_pilar["eta"]
+    eta_gov   = max(eta_viga, eta_pilar)
+    elem_gov  = "viga" if eta_viga >= eta_pilar else "pilar"
+
     return {
-        # Geometria do pilar
-        "sistema":        sistema,
-        "b_pilar_m":      b_pilar,
-        "h_pilar_m":      h_pilar,
-        "H_pilar_m":      H_pilar,
-        "l_ef_m":         res["l_ef_m"],
-        # Esforços
-        "N_d_kN":         esf["N_d_kN"],
-        "M_d_topo_kNm":   esf["M_d_topo_kNm"],
-        "M_d_base_kNm":   esf["M_d_base_kNm"],
-        "M_d_gov_kNm":    round(M_gov, 3),
-        "V_d_kN":         esf["V_d_kN"],
-        "H_empuxo_kN":    esf["H_empuxo_kN"],
-        # Verificação §6.3.2
-        "lambda":         res["lambda"],
-        "lambda_rel":     res["lambda_rel"],
-        "k_c":            res["k_c"],
-        "sigma_c_MPa":    res["sigma_c_MPa"],
-        "sigma_m_MPa":    res["sigma_m_MPa"],
-        "f_c0d_MPa":      res["f_c0d_MPa"],
-        "f_md_MPa":       res["f_md_MPa"],
-        # Resultado
-        "eta":            res["eta"],
-        "ok":             res["ok"],
-        "norma":          "EC5 §6.3.2 Eq. 6.23",
-        "nota":           esf["nota"],
+        # ── Viga ─────────────────────────────────────────────
+        "viga": {
+            "M_max_kNm":      res_viga["M_max_kNm"],
+            "N_d_kN":         res_viga["N_d_kN"],
+            "x_Mmax_m":       res_viga["x_Mmax_m"],
+            "h_x_m":          res_viga["h_x_m"],
+            "lambda_rel_y":   res_viga["lambda_rel_y"],
+            "k_c_y":          res_viga["k_c_y"],
+            "sigma_c_MPa":    res_viga["sigma_c_MPa"],
+            "sigma_m_MPa":    res_viga["sigma_m_MPa"],
+            "eta_no_plano":   res_viga["eta_no_plano"],
+            "eta_fora_plano": res_viga["eta_fora_plano"],
+            "eta":            eta_viga,
+            "ok":             res_viga["ok"],
+            "plano_gov":      res_viga["plano_gov"],
+        },
+        # ── Pilar ─────────────────────────────────────────────
+        "pilar": {
+            "b_m":          b_pilar,
+            "h_m":          h_pilar,
+            "H_m":          H_pilar,
+            "l_ef_m":       res_pilar["l_ef_m"],
+            "lambda":       res_pilar["lambda"],
+            "lambda_rel":   res_pilar["lambda_rel"],
+            "k_c":          res_pilar["k_c"],
+            "N_d_kN":       N_d_pilar,
+            "sigma_c_MPa":  res_pilar["sigma_c_MPa"],
+            "eta":          eta_pilar,
+            "ok":           res_pilar["ok"],
+        },
+        # ── Consolidado ───────────────────────────────────────
+        "eta":      round(eta_gov, 4),
+        "ok":       eta_gov <= 1.0,
+        "elem_gov": elem_gov,
+        "norma":    "EC5 §6.3.2 Eq. 6.23",
+        "sistema":  "3 rótulas",
     }
 
 
@@ -158,34 +141,37 @@ if __name__ == "__main__":
     load = carregamentos_com_vento(
         geo=geo, mat=mat,
         g_area=1.50, q_area=0.25,
-        L_t=5.75,
-        params_vento=params_vento,
+        L_t=5.75, params_vento=params_vento,
     )
 
-    print("VERIFICAÇÃO DE FLEXO-COMPRESSÃO DOS PILARES")
-    print("Geometria recomendada pelo comparativo: Sistema A, b=0,22m × h=0,80m\n")
+    res = verifica_flexo_compressao(
+        geo=geo, mat=mat, load=load,
+        b_pilar=0.20, h_pilar=0.20,
+        H_pilar=7.0, s=1.00,
+    )
 
-    for sistema, b, h, descricao in [
-        ("A", 0.22, 0.80, "Rígido-articulado — knee-frame, base articulada"),
-        ("B", 0.22, 0.80, "Totalmente rígido  — knee-frame, base engastada"),
-        ("C", 0.14, 0.30, "Isostático         — pino no canto + contraventamento"),
-    ]:
-        res = verifica_flexo_compressao(
-            geo=geo, mat=mat, load=load,
-            b_pilar=b, h_pilar=h, H_pilar=7.0,
-            sistema=sistema,
-            params_vento=params_vento,
-        )
+    print("VERIFICAÇÃO FLEXO-COMPRESSÃO — EC5 §6.3.2")
+    print(f"Sistema: {res['sistema']}\n")
 
-        ok = "✓" if res["ok"] else "✗"
-        print(f"  {ok} Sistema {sistema} — {descricao}")
-        print(f"     Seção: {b}×{h} m | l_ef={res['l_ef_m']} m | "
-              f"λ={res['lambda']:.1f} | λ_rel={res['lambda_rel']:.4f} | "
-              f"k_c={res['k_c']:.4f}")
-        print(f"     N_d={res['N_d_kN']:.2f} kN | "
-              f"M_d={res['M_d_gov_kNm']:.2f} kN·m | "
-              f"H_emp={res['H_empuxo_kN']:.2f} kN")
-        print(f"     σ_c={res['sigma_c_MPa']:.4f} MPa | "
-              f"σ_m={res['sigma_m_MPa']:.4f} MPa | "
-              f"f_c0d={res['f_c0d_MPa']:.4f} MPa")
-        print(f"     η = {res['eta']:.4f}  ({'OK' if res['ok'] else 'REPROVADO'})\n")
+    v = res["viga"]
+    p = res["pilar"]
+
+    print(f"  VIGA:")
+    print(f"    M_d={v['M_max_kNm']:.2f} kN·m | N_d={v['N_d_kN']:.2f} kN")
+    print(f"    σ_c={v['sigma_c_MPa']:.4f} MPa | σ_m={v['sigma_m_MPa']:.4f} MPa")
+    print(f"    k_c={v['k_c_y']:.4f} | η_no_plano={v['eta_no_plano']:.4f} | "
+          f"η_fora_plano={v['eta_fora_plano']:.4f}")
+    print(f"    η_viga = {v['eta']:.4f}  "
+          f"({'✓' if v['ok'] else '✗'})\n")
+
+    print(f"  PILAR ({p['b_m']}×{p['h_m']} m):")
+    print(f"    N_d={p['N_d_kN']:.2f} kN | M_d=0 kN·m")
+    print(f"    σ_c={p['sigma_c_MPa']:.4f} MPa")
+    print(f"    λ={p['lambda']:.1f} | λ_rel={p['lambda_rel']:.4f} | "
+          f"k_c={p['k_c']:.4f}")
+    print(f"    η_pilar = {p['eta']:.4f}  "
+          f"({'✓' if p['ok'] else '✗'})\n")
+
+    ok = "✓ APROVADO" if res["ok"] else "✗ REPROVADO"
+    print(f"  η GOVERNANTE = {res['eta']:.4f}  "
+          f"({res['elem_gov']} governa)  → {ok}")
