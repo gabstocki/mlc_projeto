@@ -1,19 +1,22 @@
 """
-predim/predim.py — Varredura paramétrica completa com carregamento correto.
+predim/predim.py — Varredura paramétrica v3 — Pórtico de 3 rótulas.
 
-CORREÇÃO v2:
-    Área tributária da viga principal = L_t/2 (metade do vão das terças)
-    Não L_t inteiro como estava anteriormente.
+MUDANÇAS v3:
+    - M_max calculado pela análise estrutural correta de 3 rótulas
+    - Verificação de flexo-compressão na viga (EC5 §6.3.2) — M + N axial
+    - Cumeeira: M=0 → verificação de tração perp. irrelevante (removida)
+    - H_fund registrado para cada geometria
+    - N_viga = H·cos(α) + R_v·sin(α) entra na verificação da viga
 
-    Cada terça é biapoiada nos dois pórticos.
-    Cada pórtico recebe metade da carga de cada terça.
-    Por metro de viga: q = g_area × L_t/2
+Verificações implementadas:
+    ELU: Flexo-compressão viga §6.3.2 | Flambagem lateral §6.3.3
+         Cisalhamento §6.1.7 | Apoio §6.1.5+§6.2.2
+    ELS: Flecha §2.3.2.2 + Tab.7.2
 
-Variáveis varridas: h0, α, b, l_ap, s (espaçamento entre terças)
-Para cada s: recalcula l_ef da viga principal e carga linear.
-
-Combinação governante ELU_C2: 1,35G + 1,5W_C1bv + 1,05Q
-k_mod = 0,90 (duração curta — vento dominante)
+Nota sobre cumeeira:
+    No pórtico de 3 rótulas, M=0 na cumeeira → σ_t,90,d = 0.
+    A verificação de EC5 §6.4.3 não governa.
+    Mantida como verificação informativa com resultado η≈0.
 
 Referência: EN 1990 §6.4, EC5 §6.x
 """
@@ -28,10 +31,8 @@ from scipy.integrate import cumulative_trapezoid
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind      import ParametrosVento, calcular_vento
+from mlc_projeto.core.loads     import analisar_3rotulas
 
-from mlc_projeto.checks.elu.cumeeira import (
-    calcular_k_p, calcular_k_vol, calcular_sigma_t90d, K_DIS,
-)
 from mlc_projeto.checks.elu.flambagem_lateral import (
     calcular_l_ef, calcular_sigma_m_crit,
     calcular_lambda_rel_m, calcular_k_crit,
@@ -39,6 +40,62 @@ from mlc_projeto.checks.elu.flambagem_lateral import (
 from mlc_projeto.checks.elu.apoio import f_c_alpha_d
 from mlc_projeto.checks.els.creep import calcular_flecha_inst
 
+
+# ── Flexo-compressão na viga — EC5 §6.3.2 ───────────────────────────────────
+
+def eta_flexo_compressao_viga(
+    mat:     GlulamMaterial,
+    b:       float,
+    h_x:    float,
+    L:       float,
+    l_ef:   float,
+    M_d_Nm: float,
+    N_d_N:  float,
+) -> float:
+    """
+    Taxa de utilização em flexo-compressão na viga — EC5 §6.3.2 Eq. 6.23.
+
+    Para a viga do pórtico de 3 rótulas, a força normal N é compressão.
+    A verificação combina:
+        (σ_c,0,d / (k_c · f_c,0,d))² + σ_m,d / f_m,d ≤ 1,0
+
+    Comprimento efetivo para flambagem da viga:
+        No plano do pórtico: l_ef = distância entre rótulas = L/2
+        Fora do plano: l_ef = espaçamento entre terças (já verificado)
+
+    Args:
+        mat     : Material
+        b       : Largura da seção (m)
+        h_x     : Altura da seção no ponto verificado (m)
+        L       : Vão da viga (m)
+        l_ef    : Comprimento efetivo para flambagem fora do plano (m)
+        M_d_Nm  : Momento de cálculo (N·m)
+        N_d_N   : Força normal de cálculo (N) — compressão positiva
+
+    Returns:
+        η (taxa de utilização)
+    """
+    A    = b * h_x
+    I_y  = b * h_x**3 / 12
+    W_y  = b * h_x**2 / 6
+    i_y  = math.sqrt(I_y / A)
+
+    # Esbeltez no plano do pórtico (entre rótulas = L/2)
+    lam_y  = (L / 2) / i_y
+    lam_rel_y = (lam_y / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+
+    beta_c = 0.1   # glulam
+    k_y    = 0.5 * (1 + beta_c*(lam_rel_y - 0.3) + lam_rel_y**2)
+    k_c_y  = min(1.0 / (k_y + math.sqrt(k_y**2 - lam_rel_y**2)), 1.0)
+
+    sigma_c = N_d_N / A
+    sigma_m = M_d_Nm / W_y
+
+    eta = (sigma_c / (k_c_y * mat.f_c0_d))**2 + sigma_m / mat.f_m_d
+    return eta
+
+
+# ── Varredura principal ───────────────────────────────────────────────────────
 
 def pre_dimensionar(
     g_area:        float,
@@ -48,65 +105,49 @@ def pre_dimensionar(
     L_t:           float,
     classe:        str   = "GL24h",
     classe_servico: int  = 2,
-    h0_range:      tuple = (0.60, 1.60, 0.10),
-    alpha_range:   tuple = (3.0,  9.0,  0.5),
-    b_range:       tuple = (0.14, 0.32, 0.02),
-    l_ap_range:    tuple = (0.30, 0.70, 0.05),
+    h0_range:      tuple = (0.40, 1.20, 0.05),
+    alpha_range:   tuple = (3.0,  8.0,  0.5),
+    b_range:       tuple = (0.10, 0.28, 0.02),
+    l_ap_range:    tuple = (0.20, 0.60, 0.05),
     s_range:       tuple = (1.00, 2.10, 0.25),
     eta_max:       float = 1.0,
 ) -> pd.DataFrame:
     """
-    Varredura paramétrica com carregamento correto e s varrido.
+    Varredura paramétrica para pórtico de 3 rótulas.
 
-    Área tributária por metro de viga = L_t/2
-    (metade do vão das terças, pois cada pórtico recebe metade da carga)
-
-    Args:
-        g_area        : Carga permanente por área (kN/m²)
-        q_area        : Sobrecarga por área (kN/m²)
-        params_vento  : Parâmetros de vento NBR 6123
-        L_v           : Vão da viga principal (m)
-        L_t           : Vão das terças = espaçamento entre pórticos (m)
-        classe        : Classe resistente do glulam
-        classe_servico: Classe de serviço
-        h0_range      : (mín, máx, passo) para h0 (m)
-        alpha_range   : (mín, máx, passo) para α (graus)
-        b_range       : (mín, máx, passo) para b (m)
-        l_ap_range    : (mín, máx, passo) para l_ap (m)
-        s_range       : (mín, máx, passo) para espaçamento s entre terças (m)
-        eta_max       : Taxa máxima para aprovação
+    Para cada (h0, α, b, l_ap, s):
+        1. Calcula M_max e N_viga pela análise de 3 rótulas
+        2. Verifica flexo-compressão na viga (EC5 §6.3.2)
+        3. Verifica flambagem lateral (EC5 §6.3.3)
+        4. Verifica cisalhamento (EC5 §6.1.7)
+        5. Verifica apoio (EC5 §6.1.5+§6.2.2)
+        6. Verifica flecha ELS
 
     Returns:
         DataFrame com geometrias aprovadas, ordenado por η governante
     """
-
-    # ── Material por duração ──────────────────────────────────
     mat_curta = GlulamMaterial(classe, classe_servico, duracao="curta")
     mat_longa = GlulamMaterial(classe, classe_servico, duracao="longa")
 
-    # ── Vento — pressões por m² ───────────────────────────────
+    # Vento
     res_vento  = calcular_vento(params_vento)
-    w_C1bv_m2  = res_vento.pressoes["C1"]["barlavento_kNm2"]  # kN/m²
+    w_C1bv_m2  = res_vento.pressoes["C1"]["barlavento_kNm2"]
 
-    # ── Área tributária CORRETA = L_t/2 ──────────────────────
-    # (independe de s — s define apenas o l_ef)
-    area_trib = L_t / 2   # m — área tributária por metro de viga
+    # Cargas lineares
+    area_trib = L_t / 2
+    g_k = g_area * area_trib
+    q_k = q_area * area_trib
+    w_k = w_C1bv_m2 * area_trib
 
-    g_k = g_area * area_trib   # kN/m — permanente
-    q_k = q_area * area_trib   # kN/m — sobrecarga
-    w_k = w_C1bv_m2 * area_trib  # kN/m — vento C1 barlavento
+    # Combinação ELU_C2: 1,35G + 1,5W + 1,05Q
+    q_C2 = 1.35*g_k + 1.5*w_k + 1.05*q_k
 
-    # ── Combinação ELU_C2: 1,35G + 1,5W + 1,05Q ─────────────
-    q_C2    = 1.35*g_k + 1.5*w_k + 1.05*q_k
-    M_C2_Nm = (q_C2 * L_v**2 / 8) * 1e3   # N·m
-    V_C2_N  = (q_C2 * L_v / 2)    * 1e3   # N
-
-    # ── ELS — componentes separadas ───────────────────────────
-    k_def   = mat_longa.k_def
+    # ELS
+    q_S1     = g_k + q_k + 0.6*w_k   # característico
+    k_def    = mat_longa.k_def
     lim_inst = L_v / 300
     lim_fin  = L_v / 250
 
-    # ── Varredura ─────────────────────────────────────────────
     h0_vals    = np.arange(*h0_range)
     alpha_vals = np.arange(*alpha_range)
     b_vals     = np.arange(*b_range)
@@ -115,54 +156,78 @@ def pre_dimensionar(
 
     resultados = []
 
-    for s in s_vals:
-        s_f  = round(float(s), 3)
-        l_ef = calcular_l_ef(s_f, restricao="continua_topo")
+    for h0 in h0_vals:
+        for alpha in alpha_vals:
+            for b in b_vals:
 
-        for h0 in h0_vals:
-            for alpha in alpha_vals:
-                for b in b_vals:
+                h0_f  = round(float(h0),    3)
+                al_f  = round(float(alpha),  2)
+                b_f   = round(float(b),      3)
+                al_r  = math.radians(al_f)
 
-                    geo = GeometriaViga(
-                        L=L_v,
-                        h0=round(float(h0), 3),
-                        alpha_deg=round(float(alpha), 2),
-                        b=round(float(b), 3),
+                geo = GeometriaViga(
+                    L=L_v, h0=h0_f, alpha_deg=al_f, b=b_f
+                )
+                h_ap = geo.h_ap
+                f_geo = h_ap - h0_f   # variação de altura
+
+                if f_geo <= 0:
+                    continue
+
+                # ── Análise estrutural 3 rótulas ──────────────
+                r_C2 = analisar_3rotulas(
+                    q=q_C2, L=L_v, h0=h0_f, h_ap=h_ap,
+                    alpha_rad=al_r
+                )
+
+                M_max_Nm = r_C2["M_max_kNm"] * 1e3   # N·m
+                N_viga_N = r_C2["N_apoio_kN"] * 1e3  # N
+                V_max_N  = r_C2["R_v_kN"]     * 1e3  # N
+                x_Mmax   = r_C2["x_Mmax_m"]
+                H_fund   = r_C2["H_kN"]
+
+                # Altura da seção no ponto de M_max
+                h_Mmax = h0_f + x_Mmax * math.tan(al_r)
+
+                for s in s_vals:
+                    s_f  = round(float(s), 3)
+                    l_ef = calcular_l_ef(s_f, restricao="continua_topo")
+
+                    # ── 1. FLEXO-COMPRESSÃO §6.3.2 ────────────
+                    eta_fc = eta_flexo_compressao_viga(
+                        mat     = mat_curta,
+                        b       = b_f,
+                        h_x     = h_Mmax,
+                        L       = L_v,
+                        l_ef    = l_ef,
+                        M_d_Nm  = M_max_Nm,
+                        N_d_N   = N_viga_N,
                     )
-
-                    h_ap = geo.h_ap
-                    b_f  = float(b)
-                    h0_f = float(h0)
-                    al_f = float(alpha)
-
-                    # ── 1. CUMEEIRA §6.4.3 ────────────────────
-                    kp      = calcular_k_p(al_f)
-                    kvol    = calcular_k_vol(b_f, h_ap)
-                    sig_t90 = calcular_sigma_t90d(kp, M_C2_Nm, b_f, h_ap)
-                    eta_cum = sig_t90 / (K_DIS * kvol * mat_curta.f_t90_d)
 
                     # ── 2. FLAMBAGEM LATERAL §6.3.3 ───────────
                     sig_crit = calcular_sigma_m_crit(
                         mat_curta.E0_05, mat_curta.G_mean,
-                        b_f, h_ap, l_ef
+                        b_f, h_Mmax, l_ef
                     )
-                    lam_rel  = calcular_lambda_rel_m(mat_curta.f_m_k, sig_crit)
+                    lam_rel  = calcular_lambda_rel_m(
+                        mat_curta.f_m_k, sig_crit
+                    )
                     k_crit   = calcular_k_crit(lam_rel)
-                    W_y      = b_f * h_ap**2 / 6
-                    sig_md   = M_C2_Nm / W_y
+                    W_y      = b_f * h_Mmax**2 / 6
+                    sig_md   = M_max_Nm / W_y
                     eta_fl   = sig_md / (k_crit * mat_curta.f_m_d)
 
-                    # ── 3. FLEXÃO SIMPLES §6.1.6 ──────────────
-                    eta_fx   = sig_md / mat_curta.f_m_d
+                    # ── 3. CISALHAMENTO §6.1.7 ────────────────
+                    tau_d  = 1.5 * V_max_N / (b_f * h0_f)
+                    eta_ci = tau_d / mat_curta.f_v_d
 
-                    # ── 4. CISALHAMENTO §6.1.7 ────────────────
-                    tau_d    = 1.5 * V_C2_N / (b_f * h0_f)
-                    eta_ci   = tau_d / mat_curta.f_v_d
+                    # ── 4. ELS — FLECHA ───────────────────────
+                    r_g  = analisar_3rotulas(g_k, L_v, h0_f, h_ap, al_r)
+                    r_q  = analisar_3rotulas(q_k, L_v, h0_f, h_ap, al_r)
 
-                    # ── 6. ELS — FLECHA ───────────────────────
-                    x = geo.x
-                    M_g_Nm = g_k * x * (L_v - x) / 2 * 1e3
-                    M_q_Nm = q_k * x * (L_v - x) / 2 * 1e3
+                    x_pts = geo.x
+                    M_g_Nm = np.interp(x_pts, r_g["x"], r_g["M_x"]) * 1e3
+                    M_q_Nm = np.interp(x_pts, r_q["x"], r_q["M_x"]) * 1e3
 
                     w_G,  _ = calcular_flecha_inst(geo, mat_longa, M_g_Nm)
                     w_Q1, _ = calcular_flecha_inst(geo, mat_longa, M_q_Nm)
@@ -172,128 +237,137 @@ def pre_dimensionar(
                     eta_fin  = w_fin / lim_fin
                     eta_els  = max(eta_inst, eta_fin)
 
-                    # ── 5. APOIO §6.1.5 + §6.2.2 — varrer l_ap
-                    f_ca    = f_c_alpha_d(mat_curta, al_f)
-                    sig_ca  = V_C2_N / (b_f * h0_f)
-                    eta_ca  = sig_ca / f_ca
+                    # ── 5. APOIO §6.1.5+§6.2.2 — varrer l_ap ─
+                    f_ca   = f_c_alpha_d(mat_curta, al_f)
+                    sig_ca = V_max_N / (b_f * h0_f)
+                    eta_ca = sig_ca / f_ca
 
                     for l_ap in l_ap_vals:
                         l_ap_f  = round(float(l_ap), 3)
-                        sig_c90 = V_C2_N / (b_f * l_ap_f)
+                        sig_c90 = V_max_N / (b_f * l_ap_f)
                         eta_c90 = sig_c90 / mat_curta.f_c90_d
                         eta_ap  = max(eta_c90, eta_ca)
 
                         etas = {
-                            "cumeeira":  eta_cum,
-                            "flambagem": eta_fl,
-                            "flexao":    eta_fx,
-                            "cisalh.":   eta_ci,
-                            "apoio":     eta_ap,
-                            "ELS":       eta_els,
+                            "flexo_comp": eta_fc,
+                            "flambagem":  eta_fl,
+                            "cisalh.":    eta_ci,
+                            "apoio":      eta_ap,
+                            "ELS":        eta_els,
                         }
-
                         ok        = all(e <= eta_max for e in etas.values())
                         eta_gov   = max(etas.values())
                         verif_gov = max(etas, key=etas.get)
 
                         if ok:
                             resultados.append({
-                                "s_m":           s_f,
-                                "h0_m":          round(h0_f,         3),
-                                "alpha_deg":     round(al_f,          2),
-                                "b_m":           round(b_f,           3),
-                                "l_ap_m":        l_ap_f,
-                                "h_ap_m":        round(h_ap,          3),
-                                "h_b":           round(h_ap / b_f,    2),
-                                "l_ef_m":        round(l_ef,          3),
-                                "eta_cumeeira":  round(eta_cum,       4),
-                                "eta_flambagem": round(eta_fl,        4),
-                                "eta_flexao":    round(eta_fx,        4),
-                                "eta_cisalh":    round(eta_ci,        4),
-                                "eta_apoio":     round(eta_ap,        4),
-                                "eta_ELS":       round(eta_els,       4),
-                                "eta_gov":       round(eta_gov,       4),
-                                "verif_gov":     verif_gov,
-                                "w_G_mm":        round(w_G   *1000,   2),
-                                "w_Q1_mm":       round(w_Q1  *1000,   2),
-                                "w_fin_mm":      round(w_fin *1000,   2),
-                                "M_C2_kNm":      round(q_C2*L_v**2/8, 2),
-                                "V_C2_kN":       round(q_C2*L_v/2,    2),
-                                "q_C2_kNm":      round(q_C2,          4),
-                                "g_k_kNm":       round(g_k,           4),
-                                "k_mod":         mat_curta.k_mod,
-                                "area_trib_m":   round(area_trib,     3),
+                                "h0_m":        h0_f,
+                                "alpha_deg":   al_f,
+                                "b_m":         b_f,
+                                "l_ap_m":      l_ap_f,
+                                "s_m":         s_f,
+                                "h_ap_m":      round(h_ap,        3),
+                                "h_Mmax_m":    round(h_Mmax,      3),
+                                "x_Mmax_m":    round(x_Mmax,      3),
+                                "h_b":         round(h_ap/b_f,    2),
+                                "l_ef_m":      round(l_ef,        3),
+                                "M_max_kNm":   round(r_C2["M_max_kNm"], 2),
+                                "N_viga_kN":   round(r_C2["N_apoio_kN"],2),
+                                "V_max_kN":    round(r_C2["R_v_kN"],    2),
+                                "H_fund_kN":   round(H_fund,      2),
+                                "eta_fc":      round(eta_fc,      4),
+                                "eta_flamb":   round(eta_fl,      4),
+                                "eta_cisalh":  round(eta_ci,      4),
+                                "eta_apoio":   round(eta_ap,      4),
+                                "eta_ELS":     round(eta_els,     4),
+                                "eta_gov":     round(eta_gov,     4),
+                                "verif_gov":   verif_gov,
+                                "w_G_mm":      round(w_G  *1000,  2),
+                                "w_Q1_mm":     round(w_Q1 *1000,  2),
+                                "w_fin_mm":    round(w_fin*1000,  2),
+                                "q_C2_kNm":    round(q_C2,       4),
+                                "k_mod":       mat_curta.k_mod,
                             })
 
     df = pd.DataFrame(resultados)
     if not df.empty:
-        df = df.sort_values(["eta_gov", "l_ap_m", "s_m"]).reset_index(drop=True)
+        df = df.sort_values(
+            ["eta_gov", "l_ap_m", "s_m"]
+        ).reset_index(drop=True)
     return df
 
 
-def relatorio(df: pd.DataFrame, n: int = 30) -> None:
-    """Relatório completo do pré-dimensionamento."""
-    print("=" * 118)
-    print("  PRÉ-DIMENSIONAMENTO COMPLETO v2 — EN 1990 + EC5")
-    print("  Carregamento CORRETO: área tributária = L_t/2 = 2,875 m")
-    print("  Combinação governante: ELU_C2 = 1,35G + 1,5W_C1bv + 1,05Q | k_mod = 0,90")
-    print("  Varrendo: h0 | α | b | l_ap | s (espaçamento entre terças → l_ef)")
-    print("=" * 118)
+# ── Relatório ─────────────────────────────────────────────────────────────────
+
+def relatorio(df: pd.DataFrame, n: int = 25) -> None:
+    """Relatório do pré-dimensionamento para pórtico de 3 rótulas."""
+    print("=" * 114)
+    print("  PRÉ-DIMENSIONAMENTO v3 — PÓRTICO DE 3 RÓTULAS")
+    print("  ELU: Flexo-compressão §6.3.2 | Flambagem §6.3.3 | "
+          "Cisalh. §6.1.7 | Apoio §6.1.5")
+    print("  ELS: Flecha §2.3.2.2 + Tab.7.2")
+    print("=" * 114)
 
     if df.empty:
         print("\n  Nenhuma geometria aprovada.")
-        print("=" * 118)
+        print("  Sugestões: aumentar h0, b ou l_ap.")
+        print("=" * 114)
         return
 
     m0 = df.iloc[0]
-    print(f"\n  Carregamento: g_k = {m0['g_k_kNm']:.4f} kN/m | "
-          f"q_C2 = {m0['q_C2_kNm']:.4f} kN/m | "
-          f"M_C2 = {m0['M_C2_kNm']:.1f} kN·m | "
-          f"V_C2 = {m0['V_C2_kN']:.1f} kN")
-    print(f"  Área tributária = {m0['area_trib_m']:.3f} m (L_t/2)")
-    print(f"  Total de combinações aprovadas: {len(df)}\n")
+    print(f"\n  ELU_C2: q={m0['q_C2_kNm']:.4f} kN/m | "
+          f"k_mod={m0['k_mod']:.2f} (duração curta)")
+    print(f"  Total aprovadas: {len(df)}\n")
 
     hdr = (
-        f"  {'#':>3}  {'s':>5}  {'h0':>6}  {'α':>5}  {'b':>6}  "
-        f"{'l_ap':>6}  {'h_ap':>7}  {'h/b':>5}  {'l_ef':>6}  "
-        f"{'η_cum':>7}  {'η_fla':>7}  {'η_fle':>7}  "
-        f"{'η_cis':>7}  {'η_apo':>7}  {'η_ELS':>7}  "
-        f"{'η_gov':>7}  {'Governa'}"
+        f"  {'#':>3}  {'h0':>5}  {'α':>5}  {'b':>6}  "
+        f"{'l_ap':>6}  {'s':>5}  {'h_ap':>7}  "
+        f"{'M_max':>7}  {'N_vig':>7}  {'H_fun':>7}  "
+        f"{'η_fc':>7}  {'η_fla':>7}  {'η_cis':>7}  "
+        f"{'η_apo':>7}  {'η_ELS':>7}  {'η_gov':>7}  Governa"
     )
     print(hdr)
-    print("  " + "-" * 112)
+    print("  " + "-" * 108)
 
     for i, row in df.head(n).iterrows():
         print(
-            f"  {i+1:>3}  {row['s_m']:>5.2f}  {row['h0_m']:>6.3f}  "
-            f"{row['alpha_deg']:>5.1f}  {row['b_m']:>6.3f}  "
-            f"{row['l_ap_m']:>6.3f}  {row['h_ap_m']:>7.3f}  "
-            f"{row['h_b']:>5.1f}  {row['l_ef_m']:>6.3f}  "
-            f"{row['eta_cumeeira']:>7.4f}  {row['eta_flambagem']:>7.4f}  "
-            f"{row['eta_flexao']:>7.4f}  {row['eta_cisalh']:>7.4f}  "
-            f"{row['eta_apoio']:>7.4f}  {row['eta_ELS']:>7.4f}  "
-            f"{row['eta_gov']:>7.4f}  {row['verif_gov']}"
+            f"  {i+1:>3}  {row['h0_m']:>5.2f}  {row['alpha_deg']:>5.1f}  "
+            f"{row['b_m']:>6.3f}  {row['l_ap_m']:>6.3f}  "
+            f"{row['s_m']:>5.2f}  {row['h_ap_m']:>7.3f}  "
+            f"{row['M_max_kNm']:>7.1f}  {row['N_viga_kN']:>7.1f}  "
+            f"{row['H_fund_kN']:>7.1f}  "
+            f"{row['eta_fc']:>7.4f}  {row['eta_flamb']:>7.4f}  "
+            f"{row['eta_cisalh']:>7.4f}  {row['eta_apoio']:>7.4f}  "
+            f"{row['eta_ELS']:>7.4f}  {row['eta_gov']:>7.4f}  "
+            f"{row['verif_gov']}"
         )
 
     m = df.iloc[0]
-    print(f"\n  ── Geometria recomendada ──────────────────────────────────────────")
-    print(f"  Espaçamento terças s = {m['s_m']} m  → l_ef viga = {m['l_ef_m']} m")
-    print(f"  h0    = {m['h0_m']} m   α = {m['alpha_deg']}°   b = {m['b_m']} m   l_ap = {m['l_ap_m']} m")
-    print(f"  h_ap  = {m['h_ap_m']} m   h/b = {m['h_b']}")
-    print(f"  ─────────────────────────────────────────────────────────────────")
-    print(f"  M_C2           = {m['M_C2_kNm']:.2f} kN·m  |  V_C2 = {m['V_C2_kN']:.2f} kN")
-    print(f"  k_mod          = {m['k_mod']:.2f} (duração curta — vento dominante)")
-    print(f"  η cumeeira     = {m['eta_cumeeira']:.4f}")
-    print(f"  η flambagem    = {m['eta_flambagem']:.4f}  (l_ef = {m['l_ef_m']} m)")
-    print(f"  η flexão       = {m['eta_flexao']:.4f}")
-    print(f"  η cisalhamento = {m['eta_cisalh']:.4f}")
-    print(f"  η apoio        = {m['eta_apoio']:.4f}")
-    print(f"  η ELS          = {m['eta_ELS']:.4f}")
-    print(f"  η GOVERNANTE   = {m['eta_gov']:.4f}  ← {m['verif_gov']}")
-    print(f"  w_G = {m['w_G_mm']:.2f} mm  |  w_Q1 = {m['w_Q1_mm']:.2f} mm  |  "
-          f"w_fin = {m['w_fin_mm']:.2f} mm  (limite L/250 = {20.25/250*1000:.1f} mm)")
-    print("=" * 118)
+    print(f"\n  ── Geometria recomendada ──────────────────────────────────────")
+    print(f"  h0           = {m['h0_m']} m")
+    print(f"  α            = {m['alpha_deg']}°")
+    print(f"  b            = {m['b_m']} m")
+    print(f"  l_ap         = {m['l_ap_m']} m")
+    print(f"  s            = {m['s_m']} m  → l_ef = {m['l_ef_m']} m")
+    print(f"  h_ap         = {m['h_ap_m']} m")
+    print(f"  h/b          = {m['h_b']}")
+    print(f"  ─────────────────────────────────────────────────────────────")
+    print(f"  M_max        = {m['M_max_kNm']:.2f} kN·m  em x={m['x_Mmax_m']:.3f} m")
+    print(f"  N_viga       = {m['N_viga_kN']:.2f} kN  (flexo-compressão)")
+    print(f"  V_max        = {m['V_max_kN']:.2f} kN")
+    print(f"  H_fund       = {m['H_fund_kN']:.2f} kN  (empuxo → sapata)")
+    print(f"  η flexo-comp = {m['eta_fc']:.4f}  (EC5 §6.3.2)")
+    print(f"  η flambagem  = {m['eta_flamb']:.4f}  (EC5 §6.3.3)")
+    print(f"  η cisalh.    = {m['eta_cisalh']:.4f}  (EC5 §6.1.7)")
+    print(f"  η apoio      = {m['eta_apoio']:.4f}  (EC5 §6.1.5)")
+    print(f"  η ELS        = {m['eta_ELS']:.4f}  (EC5 §2.3.2.2)")
+    print(f"  η GOVERNANTE = {m['eta_gov']:.4f}  ← {m['verif_gov']}")
+    print(f"  w_fin        = {m['w_fin_mm']:.2f} mm  "
+          f"(limite L/250 = {20.25/250*1000:.1f} mm)")
+    print("=" * 114)
 
+
+# ── Execução direta ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
 
@@ -302,7 +376,7 @@ if __name__ == "__main__":
         L=20.25, H1=1.0, h=7.0, dist_portico=5.75,
     )
 
-    print("PRÉ-DIMENSIONAMENTO v2 — carregamento corrigido\n")
+    print("PRÉ-DIMENSIONAMENTO v3 — Pórtico de 3 Rótulas\n")
 
     df = pre_dimensionar(
         g_area        = 1.50,
@@ -312,11 +386,11 @@ if __name__ == "__main__":
         L_t           = 5.75,
         classe        = "GL24h",
         classe_servico= 2,
-        h0_range      = (0.40, 1.20, 0.10),
-        alpha_range   = (3.0,  9.0,  0.5),
+        h0_range      = (0.40, 1.20, 0.05),
+        alpha_range   = (3.0,  8.0,  0.5),
         b_range       = (0.10, 0.28, 0.02),
-        l_ap_range    = (0.20, 0.60, 0.05),
+        l_ap_range    = (0.20, 0.55, 0.05),
         s_range       = (1.00, 2.10, 0.25),
     )
 
-    relatorio(df, n=30)
+    relatorio(df, n=25)
