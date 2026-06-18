@@ -1,22 +1,16 @@
 """
-visualization/viz_3d.py — Visualização 3D estilo SAP2000. v2
+visualization/viz_3d.py — Visualização 3D estilo SAP2000. v3
 
-Representação por extrusão da seção transversal ao longo do eixo
-do elemento — padrão SAP2000/Robot Structural Analysis.
+ATUALIZAÇÃO v3 — Dois pórticos lado a lado (vão total 40,5 m):
+    - 2 pórticos × 20,25 m = 40,50 m
+    - Pilar central compartilhado 0,26×0,26 m (N = 2×R_v)
+    - Pilares laterais 0,20×0,20 m
+    - Empuxos horizontais se cancelam no pilar central
+    - 8 módulos × 5,75 m = 46 m de comprimento
 
-Cada elemento mostra sua seção transversal real:
-    Viga: seção b × h(x) variável — segmentos prismáticos
-    Pilar: seção b × h constante — box vertical
-    Terça: seção b × h constante — box inclinado
-
-Escala de cores por η:
-    Verde       η < 0,50
-    Amarelo     0,50 ≤ η < 0,80
-    Laranja     0,80 ≤ η < 0,95
-    Vermelho    η ≥ 0,95
-    Azul        rótulas
-
-Dependências: pyvista, numpy
+Representação estilo SAP2000:
+    Seções transversais reais extrudadas ao longo do eixo.
+    Coloração por η de cada tipo de elemento.
 """
 
 from __future__ import annotations
@@ -35,72 +29,39 @@ from mlc_projeto.core.geometry import GeometriaViga
 # ── Escala de cores ───────────────────────────────────────────────────────────
 
 def eta_cor(eta: float) -> tuple:
-    if eta < 0.50:  return (0.18, 0.62, 0.18)   # verde
-    if eta < 0.80:  return (0.95, 0.78, 0.05)   # amarelo
-    if eta < 0.95:  return (0.92, 0.42, 0.07)   # laranja
-    return              (0.82, 0.07, 0.07)       # vermelho
+    if eta < 0.50:  return (0.18, 0.62, 0.18)
+    if eta < 0.80:  return (0.95, 0.78, 0.05)
+    if eta < 0.95:  return (0.92, 0.42, 0.07)
+    return              (0.82, 0.07, 0.07)
 
 
 # ── Primitivas geométricas ────────────────────────────────────────────────────
-
-def _seccao_retangular(b: float, h: float) -> np.ndarray:
-    """
-    Retorna os 4 vértices da seção transversal centrada na origem.
-    Eixo do elemento ao longo de X.
-    Seção no plano YZ: b=Y, h=Z.
-    """
-    hb, hh = b / 2, h / 2
-    return np.array([
-        [ 0, -hb, -hh],
-        [ 0,  hb, -hh],
-        [ 0,  hb,  hh],
-        [ 0, -hb,  hh],
-    ], dtype=float)
-
 
 def _prisma_segmento(
     p0: np.ndarray, p1: np.ndarray,
     b0: float, h0: float,
     b1: float, h1: float,
     up: np.ndarray = None,
-) -> pv.UnstructuredGrid:
-    """
-    Cria um prisma hexaédrico entre dois pontos p0 e p1.
-    Seção em p0: b0 × h0 | Seção em p1: b1 × h1
-
-    O eixo local X aponta de p0 para p1.
-    O eixo local Z aponta para 'up' (direção da altura da seção).
-    O eixo local Y é perpendicular (largura da seção).
-
-    Args:
-        p0, p1 : pontos extremos (array 3D)
-        b0, h0 : largura e altura no ponto p0
-        b1, h1 : largura e altura no ponto p1
-        up     : vetor "para cima" da seção (padrão: (0,0,1))
-    """
+) -> pv.PolyData:
+    """Prisma hexaédrico entre p0 e p1 com seção b×h."""
     vec = p1 - p0
     L   = np.linalg.norm(vec)
     if L < 1e-9:
         return None
 
-    ex = vec / L   # eixo local X — ao longo do elemento
-
+    ex = vec / L
     if up is None:
         up = np.array([0.0, 0.0, 1.0])
 
-    # Eixo local Z — direção da altura da seção
     ez = up - np.dot(up, ex) * ex
     if np.linalg.norm(ez) < 1e-9:
         ez = np.array([0.0, 1.0, 0.0])
     ez = ez / np.linalg.norm(ez)
-
-    # Eixo local Y — largura da seção
     ey = np.cross(ez, ex)
     ey = ey / np.linalg.norm(ey)
 
-    # Função para construir a seção em um ponto
     def secao(pt, b, h):
-        hb, hh = b / 2, h / 2
+        hb, hh = b/2, h/2
         return np.array([
             pt - hb*ey - hh*ez,
             pt + hb*ey - hh*ez,
@@ -110,47 +71,23 @@ def _prisma_segmento(
 
     s0 = secao(p0, b0, h0)
     s1 = secao(p1, b1, h1)
+    pts = np.vstack([s0, s1])
 
-    # 8 vértices do hexaedro
-    pts = np.vstack([s0, s1])  # shape (8,3)
-
-    # Faces do hexaedro (6 faces, 4 vértices cada)
     faces = np.array([
-        [4, 0, 1, 2, 3],     # face p0
-        [4, 4, 5, 6, 7],     # face p1
-        [4, 0, 1, 5, 4],     # face inferior
-        [4, 2, 3, 7, 6],     # face superior
-        [4, 0, 3, 7, 4],     # face lateral esq
-        [4, 1, 2, 6, 5],     # face lateral dir
+        [4, 0,1,2,3], [4, 4,5,6,7],
+        [4, 0,1,5,4], [4, 2,3,7,6],
+        [4, 0,3,7,4], [4, 1,2,6,5],
     ]).ravel()
 
-    mesh = pv.PolyData(pts, faces)
-    return mesh
+    return pv.PolyData(pts, faces)
 
 
-# ── Construtores de elementos ─────────────────────────────────────────────────
-
-def _viga_sap(
-    x0: float, y0: float, z_base: float,
-    L: float, h0: float, h_ap: float,
-    alpha_rad: float, b: float,
-    n_seg: int = 20,
-) -> pv.PolyData:
-    """
-    Viga duplo-bisel estilo SAP2000.
-
-    Seção retangular b × h(x) extrudada ao longo do eixo inclinado.
-    Dividida em n_seg segmentos para mostrar a variação de altura.
-
-    O eixo da viga segue a linha de cumeeira inclinada.
-    A seção é sempre vertical (ez = (0,0,1)).
-    """
+def _viga_sap(x0, y0, z_base, L, h0, h_ap, alpha_rad, b, n_seg=24):
+    """Viga duplo-bisel com seção b×h(x) variável."""
     x_pts = np.linspace(0, L, n_seg + 1)
     x_sim = np.where(x_pts <= L/2, x_pts, L - x_pts)
     h_pts = h0 + x_sim * math.tan(alpha_rad)
 
-    # Eixo da viga: centro da seção em cada ponto
-    # O centro da seção está em z = z_base + h(x)/2
     pts_eixo = np.column_stack([
         x0 + x_pts,
         np.full(n_seg + 1, y0),
@@ -159,90 +96,69 @@ def _viga_sap(
 
     meshes = []
     for i in range(n_seg):
-        p0 = pts_eixo[i]
-        p1 = pts_eixo[i + 1]
         seg = _prisma_segmento(
-            p0, p1,
+            pts_eixo[i], pts_eixo[i+1],
             b0=b, h0=h_pts[i],
-            b1=b, h1=h_pts[i + 1],
+            b1=b, h1=h_pts[i+1],
             up=np.array([0.0, 0.0, 1.0]),
         )
-        if seg is not None:
+        if seg:
             meshes.append(seg)
 
     if not meshes:
         return pv.PolyData()
-
     combined = meshes[0]
     for m in meshes[1:]:
         combined = combined.merge(m)
     return combined
 
 
-def _pilar_sap(
-    x: float, y: float,
-    H: float, b: float, h: float,
-) -> pv.PolyData:
-    """
-    Pilar retangular b × h, altura H.
-    Seção no plano XY (b=X, h=Y), altura em Z.
-    Estilo SAP2000: box com seção exata.
-    """
-    p0 = np.array([x, y, 0.0])
-    p1 = np.array([x, y, H])
-    # up = eixo X local para o pilar (seção orientada no plano do pórtico)
+def _pilar_sap(x, y, H, b, h):
+    """Pilar retangular b×h altura H."""
     return _prisma_segmento(
-        p0, p1,
-        b0=b, h0=h,
-        b1=b, h1=h,
+        np.array([x, y, 0.0]),
+        np.array([x, y, H]),
+        b0=b, h0=h, b1=b, h1=h,
         up=np.array([1.0, 0.0, 0.0]),
     )
 
 
-def _terca_sap(
-    x_t: float, y0: float, y1: float,
-    z: float, b: float, h: float,
-    alpha_rad: float = 0.0,
-) -> pv.PolyData:
-    """
-    Terça retangular b × h entre dois pórticos.
-    Orientada na direção Y (entre pórticos).
-    """
-    p0 = np.array([x_t, y0, z])
-    p1 = np.array([x_t, y1, z])
-    # up = direção Z (altura da terça vertical)
+def _terca_sap(x_t, y0, y1, z, b, h):
+    """Terça retangular entre dois pórticos."""
     return _prisma_segmento(
-        p0, p1,
-        b0=b, h0=h,
-        b1=b, h1=h,
+        np.array([x_t, y0, z]),
+        np.array([x_t, y1, z]),
+        b0=b, h0=h, b1=b, h1=h,
         up=np.array([0.0, 0.0, 1.0]),
     )
 
 
-def _rotula_sap(cx, cy, cz, raio=0.07):
-    """Esfera representando uma rótula."""
-    return pv.Sphere(radius=raio, center=(cx, cy, cz), theta_resolution=12, phi_resolution=12)
+def _rotula(cx, cy, cz, raio=0.07):
+    return pv.Sphere(radius=raio, center=(cx, cy, cz),
+                     theta_resolution=12, phi_resolution=12)
 
 
 # ── Visualização principal ────────────────────────────────────────────────────
 
 def visualizar_galpao(
-    geo:           GeometriaViga,
-    resultados:    dict,
-    H_pilar:       float = 7.0,
-    n_modulos:     int   = 8,
-    dist_mod:      float = 5.75,
-    b_pilar:       float = 0.20,
-    h_pilar:       float = 0.20,
-    b_terca:       float = 0.20,
-    h_terca:       float = 0.58,
+    geo:          GeometriaViga,
+    resultados:   dict,
+    H_pilar:      float = 7.0,
+    n_modulos:    int   = 8,
+    dist_mod:     float = 5.75,
+    b_pilar:      float = 0.20,
+    h_pilar:      float = 0.20,
+    b_pilar_c:    float = 0.26,
+    h_pilar_c:    float = 0.26,
+    b_terca:      float = 0.20,
+    h_terca:      float = 0.58,
     salvar_imagem: str | None = None,
 ) -> None:
     """
-    Visualização 3D estilo SAP2000 do galpão MLC.
+    Visualização 3D estilo SAP2000 — dois pórticos lado a lado.
 
-    Seções transversais reais extrudadas ao longo dos eixos dos elementos.
-    Coloração por η de cada elemento.
+    Pilar central compartilhado recebe carga dos dois pórticos.
+    Empuxos horizontais se cancelam no pilar central.
     """
     if not PYVISTA_OK:
         print("PyVista não instalado. Rode: pip install pyvista")
@@ -255,149 +171,168 @@ def visualizar_galpao(
         resultados.get("flexao",      {}).get("eta", 0.0),
         resultados.get("flambagem",   {}).get("eta", 0.0),
     )
-    eta_pilar = resultados.get("flexo_comp", {}).get("pilar", {}).get("eta", 0.0)
-    if not eta_pilar:
-        eta_pilar = resultados.get("flexo_comp", {}).get("eta", 0.0)
-    eta_terca = resultados.get("terca", {}).get("eta", 0.0)
+    eta_pilar_lat = (resultados.get("flexo_comp", {})
+                               .get("pilar", {}).get("eta", 0.0)
+                    or resultados.get("flexo_comp", {}).get("eta", 0.0))
+    eta_pilar_cen = resultados.get("pilar_central", {}).get("eta", 0.0)
+    eta_terca     = resultados.get("terca", {}).get("eta", 0.0)
 
-    cor_viga  = eta_cor(eta_viga)
-    cor_pilar = eta_cor(eta_pilar)
-    cor_terca = eta_cor(eta_terca)
-    cor_rot   = (0.15, 0.35, 0.85)   # azul — rótulas
+    cor_viga      = eta_cor(eta_viga)
+    cor_pilar_lat = eta_cor(eta_pilar_lat)
+    cor_pilar_cen = eta_cor(eta_pilar_cen)
+    cor_terca     = eta_cor(eta_terca)
+    cor_rot       = (0.15, 0.35, 0.85)
 
-    L       = geo.L
-    h0      = geo.h0
-    h_ap    = geo.h_ap
-    alpha   = geo.alpha_rad
-    b_viga  = geo.b
-    comp    = n_modulos * dist_mod
+    L      = geo.L          # vão de cada pórtico = 20,25 m
+    h0     = geo.h0
+    h_ap   = geo.h_ap
+    alpha  = geo.alpha_rad
+    b_viga = geo.b
+    comp   = n_modulos * dist_mod
 
-    y_porticos = [i * dist_mod for i in range(n_modulos + 1)]
+    # Dois pórticos: x de 0 a L e de L a 2L
+    # Pilar central em x = L
+    L_total = 2 * L
 
-    plotter = pv.Plotter(window_size=[1400, 820])
+    y_pos = [i * dist_mod for i in range(n_modulos + 1)]
+
+    plotter = pv.Plotter(window_size=[1500, 860])
     plotter.set_background("white")
     plotter.add_axes(
         xlabel="X (vão)", ylabel="Y (compr.)", zlabel="Z (alt.)",
         line_width=2,
     )
 
-    # ── Vigas ─────────────────────────────────────────────────
-    for y in y_porticos:
-        mesh = _viga_sap(
-            x0=0, y0=y, z_base=H_pilar,
-            L=L, h0=h0, h_ap=h_ap,
-            alpha_rad=alpha, b=b_viga,
-            n_seg=24,
-        )
-        plotter.add_mesh(
-            mesh, color=cor_viga,
-            smooth_shading=True,
-            show_edges=False,
-            label=f"Viga GL24h  η={eta_viga:.3f}" if y == y_porticos[0] else "",
-        )
+    # ── Vigas — dois pórticos ─────────────────────────────────
+    for y in y_pos:
+        # Pórtico 1: x=0 → x=L
+        m1 = _viga_sap(0, y, H_pilar, L, h0, h_ap, alpha, b_viga)
+        plotter.add_mesh(m1, color=cor_viga, smooth_shading=True,
+                         show_edges=False,
+                         label=f"Viga GL24h  η={eta_viga:.3f}"
+                               if y == y_pos[0] else "")
 
-        # Rótula cumeeira
-        plotter.add_mesh(
-            _rotula_sap(L/2, y, H_pilar + h_ap),
-            color=cor_rot,
-            label="Rótulas" if y == y_porticos[0] else "",
-        )
+        # Pórtico 2: x=L → x=2L (espelhado)
+        m2 = _viga_sap(L, y, H_pilar, L, h0, h_ap, alpha, b_viga)
+        plotter.add_mesh(m2, color=cor_viga, smooth_shading=True,
+                         show_edges=False)
 
-    # ── Pilares ───────────────────────────────────────────────
-    for y in y_porticos:
-        for x_p in [0.0, L]:
-            mesh = _pilar_sap(x_p, y, H_pilar, b_pilar, h_pilar)
-            if mesh:
+        # Rótulas cumeeira (duas — uma por pórtico)
+        plotter.add_mesh(_rotula(L/2,     y, H_pilar + h_ap), color=cor_rot,
+                         label="Rótulas" if y == y_pos[0] else "")
+        plotter.add_mesh(_rotula(L + L/2, y, H_pilar + h_ap), color=cor_rot)
+
+    # ── Pilares laterais esquerdo (x=0) e direito (x=2L) ─────
+    for y in y_pos:
+        for x_p, label_flag in [(0.0, True), (L_total, False)]:
+            m = _pilar_sap(x_p, y, H_pilar, b_pilar, h_pilar)
+            if m:
                 plotter.add_mesh(
-                    mesh, color=cor_pilar,
-                    smooth_shading=True,
+                    m, color=cor_pilar_lat, smooth_shading=True,
                     show_edges=False,
-                    label=f"Pilar GL24h  η={eta_pilar:.3f}"
-                    if (y == y_porticos[0] and x_p == 0) else "",
+                    label=f"Pilar lateral  η={eta_pilar_lat:.3f}"
+                          if (y == y_pos[0] and label_flag) else "",
                 )
-            # Rótulas base e topo pilar
-            plotter.add_mesh(_rotula_sap(x_p, y, 0.0), color=cor_rot)
-            plotter.add_mesh(_rotula_sap(x_p, y, H_pilar), color=cor_rot)
+            plotter.add_mesh(_rotula(x_p, y, 0.0),     color=cor_rot)
+            plotter.add_mesh(_rotula(x_p, y, H_pilar), color=cor_rot)
+
+    # ── Pilar central compartilhado (x=L) ────────────────────
+    for y in y_pos:
+        m = _pilar_sap(L, y, H_pilar, b_pilar_c, h_pilar_c)
+        if m:
+            plotter.add_mesh(
+                m, color=cor_pilar_cen, smooth_shading=True,
+                show_edges=False,
+                label=f"Pilar central {b_pilar_c}×{h_pilar_c}m  "
+                      f"η={eta_pilar_cen:.3f}"
+                      if y == y_pos[0] else "",
+            )
+        plotter.add_mesh(_rotula(L, y, 0.0),     color=cor_rot)
+        plotter.add_mesh(_rotula(L, y, H_pilar), color=cor_rot)
 
     # ── Terças ────────────────────────────────────────────────
-    # s=2,53m → 3 terças intermediárias por meia água + apoios
-    # Posições: 0, 2.53, 5.06, 7.59, L/2 (cumeeira), espelho
-    s_terca = 2.53
-    n_half  = round((L/2) / s_terca)   # = 4 espaços
-    x_half  = np.array([i * (L/2) / n_half for i in range(n_half + 1)])
-    x_tercas = np.unique(np.concatenate([x_half, L - x_half]))
+    s_terca  = 2.53
+    n_half   = round((L/2) / s_terca)
+    x_half   = np.array([i * (L/2) / n_half for i in range(n_half + 1)])
+    # Posições para cada pórtico
+    x_t_p1   = np.unique(np.concatenate([x_half, L - x_half]))
+    x_t_p2   = x_t_p1 + L
 
-    for i in range(len(y_porticos) - 1):
-        y0_t = y_porticos[i]
-        y1_t = y_porticos[i + 1]
-        for j, x_t in enumerate(x_tercas):
-            xs   = x_t if x_t <= L/2 else L - x_t
-            z_t  = H_pilar + h0 + xs * math.tan(alpha)
-            mesh = _terca_sap(x_t, y0_t, y1_t, z_t, b_terca, h_terca)
-            if mesh:
+    for i in range(len(y_pos) - 1):
+        y0_t, y1_t = y_pos[i], y_pos[i+1]
+        primeiro = True
+        for x_t in np.concatenate([x_t_p1, x_t_p2]):
+            # altura da terça: relativa ao pórtico correspondente
+            if x_t <= L:
+                xs = x_t if x_t <= L/2 else L - x_t
+            else:
+                xs = (x_t - L) if (x_t - L) <= L/2 else L - (x_t - L)
+            z_t = H_pilar + h0 + xs * math.tan(alpha)
+            m = _terca_sap(x_t, y0_t, y1_t, z_t, b_terca, h_terca)
+            if m:
                 plotter.add_mesh(
-                    mesh, color=cor_terca,
-                    smooth_shading=True,
+                    m, color=cor_terca, smooth_shading=True,
                     show_edges=False,
                     label=f"Terça GL24h  η={eta_terca:.3f}"
-                    if (i == 0 and j == 0) else "",
+                          if (i == 0 and primeiro) else "",
                 )
+                primeiro = False
 
     # ── Cobertura translúcida ─────────────────────────────────
-    n_x, n_y = 40, 16
-    xv = np.linspace(0, L, n_x)
-    yv = np.linspace(0, comp, n_y)
-    XX, YY = np.meshgrid(xv, yv)
-    x_sim  = np.where(XX <= L/2, XX, L - XX)
-    ZZ     = H_pilar + h0 + x_sim * math.tan(alpha)
-    sup    = pv.StructuredGrid(XX, YY, ZZ)
-    plotter.add_mesh(
-        sup,
-        color=(0.65, 0.82, 0.93),
-        opacity=0.20,
-        show_edges=False,
-        label="Cobertura",
-    )
+    for x_offset in [0, L]:
+        n_x, n_y = 40, 16
+        xv = np.linspace(x_offset, x_offset + L, n_x)
+        yv = np.linspace(0, comp, n_y)
+        XX, YY = np.meshgrid(xv, yv)
+        x_rel = XX - x_offset
+        x_sim = np.where(x_rel <= L/2, x_rel, L - x_rel)
+        ZZ    = H_pilar + h0 + x_sim * math.tan(alpha)
+        sup   = pv.StructuredGrid(XX, YY, ZZ)
+        plotter.add_mesh(sup, color=(0.65, 0.82, 0.93),
+                         opacity=0.20, show_edges=False,
+                         label="Cobertura" if x_offset == 0 else "")
 
     # ── Piso ──────────────────────────────────────────────────
     piso = pv.Plane(
-        center=(L/2, comp/2, -0.05),
+        center=(L_total/2, comp/2, -0.05),
         direction=(0, 0, 1),
-        i_size=L + 3, j_size=comp + 3,
+        i_size=L_total + 4, j_size=comp + 4,
     )
     plotter.add_mesh(piso, color=(0.88, 0.88, 0.88), opacity=0.6)
 
     # ── Legenda ───────────────────────────────────────────────
     legenda = [
-        [f"Viga      η={eta_viga:.3f}",  cor_viga],
-        [f"Pilar     η={eta_pilar:.3f}", cor_pilar],
-        [f"Terça     η={eta_terca:.3f}", cor_terca],
-        ["η < 0,50  Confortável",        (0.18, 0.62, 0.18)],
-        ["η 0,50–0,80  Atenção",         (0.95, 0.78, 0.05)],
-        ["η 0,80–0,95  Próx. limite",    (0.92, 0.42, 0.07)],
-        ["η ≥ 0,95  Crítico",            (0.82, 0.07, 0.07)],
-        ["Rótulas",                       cor_rot],
+        [f"Viga           η={eta_viga:.3f}",      cor_viga],
+        [f"Pilar lateral  η={eta_pilar_lat:.3f}",  cor_pilar_lat],
+        [f"Pilar central  η={eta_pilar_cen:.3f}",  cor_pilar_cen],
+        [f"Terça          η={eta_terca:.3f}",      cor_terca],
+        ["η < 0,50  Confortável",   (0.18, 0.62, 0.18)],
+        ["η 0,50–0,80  Atenção",    (0.95, 0.78, 0.05)],
+        ["η 0,80–0,95  Próx. lim.", (0.92, 0.42, 0.07)],
+        ["η ≥ 0,95  Crítico",       (0.82, 0.07, 0.07)],
+        ["Rótulas",                  cor_rot],
     ]
     plotter.add_legend(
         legenda, bcolor=(0.97, 0.97, 0.97),
-        border=True, size=(0.24, 0.22),
+        border=True, size=(0.26, 0.24),
     )
 
     # ── Informações ───────────────────────────────────────────
-    eta_max = max(eta_viga, eta_pilar, eta_terca)
+    eta_max = max(eta_viga, eta_pilar_lat, eta_pilar_cen, eta_terca)
     info = (
         f"STOCKI Engenharia Estrutural\n"
-        f"Galpão MLC GL24h — Pórtico de 3 Rótulas\n"
-        f"L={L}m | h0={h0}m | α={geo.alpha_deg}° | "
-        f"b={b_viga}m | H_pilar={H_pilar}m\n"
+        f"Galpão MLC GL24h — Pórtico de 3 Rótulas (2 pórticos)\n"
+        f"Vão total={L_total}m ({L}+{L}m) | h0={h0}m | α={geo.alpha_deg}°\n"
+        f"Pilar lateral {b_pilar}×{h_pilar}m | "
+        f"Pilar central {b_pilar_c}×{h_pilar_c}m\n"
         f"η máximo = {eta_max:.4f}"
     )
     plotter.add_text(info, position="upper_left", font_size=9, color="black")
 
     # ── Câmera ────────────────────────────────────────────────
     plotter.camera_position = [
-        ( L * 1.6,  -comp * 0.35,  H_pilar * 2.2),
-        ( L / 2,     comp / 2,     (H_pilar + h_ap) / 2),
+        ( L_total * 1.10,  -comp * 0.55,  H_pilar * 3.2),
+        ( L_total / 2,      comp / 2,     (H_pilar + h_ap) / 2),
         (0, 0, 1),
     ]
 
@@ -407,7 +342,7 @@ def visualizar_galpao(
         plotter.close()
         print(f"  Imagem 3D salva: {salvar_imagem}")
     else:
-        plotter.show(title="Galpão MLC — Visualização 3D (estilo SAP2000)")
+        plotter.show(title="Galpão MLC — Vão total 40,5m (estilo SAP2000)")
 
 
 # ── Execução direta ───────────────────────────────────────────────────────────
@@ -424,6 +359,7 @@ if __name__ == "__main__":
     from mlc_projeto.checks.elu.cisalhamento      import verifica_cisalhamento
     from mlc_projeto.checks.elu.apoio             import verifica_apoio
     from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
+    from mlc_projeto.checks.elu.pilares           import verifica_pilar
     from mlc_projeto.checks.els.deflection_els    import verificar_ELS
     from mlc_projeto.connections.connections      import dimensionar_ligacoes
     from mlc_projeto.checks.elu.tercas            import verifica_terca
@@ -433,26 +369,28 @@ if __name__ == "__main__":
     mat_l = GlulamMaterial("GL24h", 2, "longa")
     params= ParametrosVento(V0=45,S1=1,categoria="IV",classe="B",S3=1,
                              L=20.25,H1=1,h=7,dist_portico=5.75)
-    load  = carregamentos_com_vento(geo=geo,mat=mat,g_area=1.5,q_area=0.25,
-                                     L_t=5.75,params_vento=params)
+    load  = carregamentos_com_vento(geo=geo,mat=mat,g_area=1.5,
+                                     q_area=0.25,L_t=5.75,params_vento=params)
 
     w   = calcular_vento(params).pressoes["C1"]["barlavento_kNm2"]
-    fc  = verifica_flexo_compressao(geo,mat,load,0.20,0.20,7.0,1.0)
+    fc  = verifica_flexo_compressao(geo,mat,load,0.20,0.20,7.0,2.53)
     lig = dimensionar_ligacoes(mat,load,geo,20,30,80)
-    t   = verifica_terca(mat,5.75,1.0,0.20,0.58,4.5,1.5,0.25,w)
+    t   = verifica_terca(mat,5.75,2.53,0.20,0.58,4.5,1.50,0.25,w)
     t["eta"] = t["eta_gov"]
+    pc  = verifica_pilar(mat, 0.26, 0.26, 7.0, 2*load.V_max_ELU())
 
     resultados = {
         "cumeeira":    verifica_cumeeira(geo,mat,load),
-        "flambagem":   verifica_flambagem_lateral(geo,mat,load,1.0),
-        "flexao":      verifica_flexao(geo,mat,load,1.0),
+        "flambagem":   verifica_flambagem_lateral(geo,mat,load,2.53),
+        "flexao":      verifica_flexao(geo,mat,load,2.53),
         "cisalhamento":verifica_cisalhamento(geo,mat,load),
         "apoio":       verifica_apoio(geo,mat,load,0.50),
         "flexo_comp":  fc,
         "ELS":         verificar_ELS(geo,mat_l,load),
         "terca":       t,
+        "pilar_central": pc,
         "L1": lig["L1"], "L2": lig["L2"], "L3": lig["L3"],
     }
 
-    print("Abrindo visualização 3D estilo SAP2000...")
+    print("Abrindo visualização 3D — vão total 40,5m...")
     visualizar_galpao(geo, resultados, H_pilar=7.0)

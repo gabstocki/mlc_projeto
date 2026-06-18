@@ -82,9 +82,13 @@ L_T    = 5.75   # m — vão das terças
 S      = 2.53   # m — espaçamento entre terças (3 apoios por meia água)
 
 # Pilares
-B_PILAR = 0.20   # m
-H_PILAR = 0.20   # m
+B_PILAR = 0.20   # m — pilar lateral
+H_PILAR = 0.20   # m — pilar lateral
 H_PILAR_ALT = 7.0  # m — altura do pilar
+
+# Pilar central compartilhado (recebe 2 pórticos)
+B_PILAR_C = 0.26  # m — mesma largura da viga
+H_PILAR_C = 0.26  # m
 
 # Terças
 B_TERCA = 0.20   # m — largura da seção
@@ -189,6 +193,37 @@ def main(rodar_varredura: bool = False) -> None:
         res_elu["flexo_comp"]
     )
 
+    # Pilar central compartilhado
+    print("\n[FASE 2] Verificações ELU — Pilar central...")
+    from mlc_projeto.checks.elu.pilares import verifica_pilar as _verifica_pilar
+    _N_central = 2 * load.V_max_ELU()   # kN — dois pórticos
+    res_elu["pilar_central"] = _verifica_pilar(
+        mat=mat_curta,
+        b=B_PILAR_C, h=H_PILAR_C,
+        H=H_PILAR_ALT,
+        N_d=_N_central,
+    )
+    res_elu["pilar_central"]["eta"] = res_elu["pilar_central"]["eta"]
+    _print_eta(
+        f"Pilar central {B_PILAR_C}×{H_PILAR_C}m §6.3.2",
+        res_elu["pilar_central"]
+    )
+
+    # Pilar central compartilhado
+    from mlc_projeto.checks.elu.pilares import verifica_pilar
+    N_central = 2 * load.V_max_ELU()   # kN — dois pórticos
+    res_elu["pilar_central"] = verifica_pilar(
+        mat=mat_curta,
+        b=B_PILAR_C, h=H_PILAR_C,
+        H=H_PILAR_ALT,
+        N_d=N_central,
+    )
+    res_elu["pilar_central"]["ok"] = res_elu["pilar_central"]["ok"]
+    _print_eta(
+        f"Pilar central {B_PILAR_C}×{H_PILAR_C}m",
+        res_elu["pilar_central"]
+    )
+
     # Terças
     print("\n[FASE 2] Verificações ELU — Terças...")
     from mlc_projeto.checks.elu.tercas import verifica_terca
@@ -246,7 +281,7 @@ def main(rodar_varredura: bool = False) -> None:
             "cumeeira", "flambagem", "flexao",
             "cisalhamento", "apoio",
         ]),
-        ("── ELU Pilar ──", ["flexo_comp"]),
+        ("── ELU Pilar ──", ["flexo_comp", "pilar_central"]),
         ("── ELU Terças ──", ["terca"]),
         ("── ELS ──",        ["ELS"]),
     ]
@@ -295,6 +330,8 @@ def main(rodar_varredura: bool = False) -> None:
         dist_mod   = L_T,
         b_pilar    = B_PILAR,
         h_pilar    = H_PILAR,
+        b_pilar_c  = B_PILAR_C,
+        h_pilar_c  = H_PILAR_C,
         b_terca    = B_TERCA,
         h_terca    = H_TERCA,
     )
