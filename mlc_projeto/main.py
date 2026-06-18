@@ -79,7 +79,7 @@ VENTO_PARAMS = dict(
 G_AREA = 1.50   # kN/m²
 Q_AREA = 0.25   # kN/m²
 L_T    = 5.75   # m — vão das terças
-S      = 1.00   # m — espaçamento entre terças
+S      = 2.53   # m — espaçamento entre terças (3 apoios por meia água)
 
 # Pilares
 B_PILAR = 0.20   # m

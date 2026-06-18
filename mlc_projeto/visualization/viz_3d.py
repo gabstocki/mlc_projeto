@@ -320,8 +320,12 @@ def visualizar_galpao(
             plotter.add_mesh(_rotula_sap(x_p, y, H_pilar), color=cor_rot)
 
     # ── Terças ────────────────────────────────────────────────
-    n_tercas = int(L)   # s=1,00m → 20 terças por módulo + 1
-    x_tercas = np.linspace(0, L, n_tercas + 1)
+    # s=2,53m → 3 terças intermediárias por meia água + apoios
+    # Posições: 0, 2.53, 5.06, 7.59, L/2 (cumeeira), espelho
+    s_terca = 2.53
+    n_half  = round((L/2) / s_terca)   # = 4 espaços
+    x_half  = np.array([i * (L/2) / n_half for i in range(n_half + 1)])
+    x_tercas = np.unique(np.concatenate([x_half, L - x_half]))
 
     for i in range(len(y_porticos) - 1):
         y0_t = y_porticos[i]

@@ -27,8 +27,10 @@ Nota sobre flexão biaxial:
     Flexão biaxial completa na verificação final quando seção for definida.
 
 Efeito adicional:
-    O espaçamento s entre terças define l_1 para flambagem lateral
-    da viga principal. Para cada s varrido, recalcula-se l_ef da viga.
+    Espaçamento s adotado = 2,53 m (3 terças intermediárias por meia água)
+    Justificativa: telha metálica de 5 m apoiada em 3 pontos
+    (2 × 2,53 m = 5,06 m — comprimento comercial da telha).
+    l_ef viga principal = 0,9 × 2,53 = 2,277 m
 
 Referência: EC5 §6.1.6 Eq. 6.11–6.12, §6.1.7, §2.3.2.2, Tab. 7.2
 """
@@ -234,7 +236,7 @@ def varrer_tercas(
     g_k_m2:       float,
     q_k_m2:       float,
     params_vento: ParametrosVento,
-    s_range:      tuple = (1.00, 2.10, 0.25),
+    s_range:      tuple = (1.00, 2.75, 0.25),
     b_range:      tuple = (0.10, 0.22, 0.02),
     h_range:      tuple = (0.16, 0.60, 0.02),
     eta_max:      float = 1.0,
@@ -418,7 +420,7 @@ if __name__ == "__main__":
         g_k_m2       = 1.50,
         q_k_m2       = 0.25,
         params_vento = params_vento,
-        s_range      = (1.00, 2.10, 0.25),
+        s_range      = (1.00, 2.75, 0.25),   # cobre s=2,53m adotado
         b_range      = (0.10, 0.22, 0.02),
         h_range      = (0.16, 0.60, 0.02),
     )
