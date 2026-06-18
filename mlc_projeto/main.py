@@ -36,6 +36,7 @@ from mlc_projeto.checks.elu.apoio             import verifica_apoio
 from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
 from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
+from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
 from mlc_projeto.connections.connections      import (
     dimensionar_ligacoes, relatorio_ligacoes
 )
@@ -209,21 +210,6 @@ def main(rodar_varredura: bool = False) -> None:
         res_elu["pilar_central"]
     )
 
-    # Pilar central compartilhado
-    from mlc_projeto.checks.elu.pilares import verifica_pilar
-    N_central = 2 * load.V_max_ELU()   # kN — dois pórticos
-    res_elu["pilar_central"] = verifica_pilar(
-        mat=mat_curta,
-        b=B_PILAR_C, h=H_PILAR_C,
-        H=H_PILAR_ALT,
-        N_d=N_central,
-    )
-    res_elu["pilar_central"]["ok"] = res_elu["pilar_central"]["ok"]
-    _print_eta(
-        f"Pilar central {B_PILAR_C}×{H_PILAR_C}m",
-        res_elu["pilar_central"]
-    )
-
     # Terças
     print("\n[FASE 2] Verificações ELU — Terças...")
     from mlc_projeto.checks.elu.tercas import verifica_terca
@@ -243,6 +229,15 @@ def main(rodar_varredura: bool = False) -> None:
     # normalizar chave para interface padrão do pipeline
     res_elu["terca"]["eta"] = res_elu["terca"]["eta_gov"]
     _print_eta("Terça §6.1.6+§6.1.7", res_elu["terca"])
+
+    # Contraventamento horizontal da cobertura
+    res_elu["contraventamento"] = verificar_contraventamento(
+        geo=geo, mat=mat_curta, load=load,
+        L_comp=46.0, n_modulos_cv=2,
+        s_terca=S, d_barra_mm=12.0, aco="S235",
+        n_porticos=2,
+    )
+    _print_eta("Contravent. §9.2+EN1993", res_elu["contraventamento"])
 
     # ── Fase 3: Verificações ELS ──────────────────────────────
     print("\n[FASE 3] Verificações ELS...")
@@ -283,6 +278,7 @@ def main(rodar_varredura: bool = False) -> None:
         ]),
         ("── ELU Pilar ──", ["flexo_comp", "pilar_central"]),
         ("── ELU Terças ──", ["terca"]),
+        ("── ELU Contravent. ──", ["contraventamento"]),
         ("── ELS ──",        ["ELS"]),
     ]
 
