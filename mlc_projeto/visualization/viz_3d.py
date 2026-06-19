@@ -181,6 +181,8 @@ def visualizar_galpao(
     cor_pilar_lat = eta_cor(eta_pilar_lat)
     cor_pilar_cen = eta_cor(eta_pilar_cen)
     cor_terca     = eta_cor(eta_terca)
+    eta_cv        = resultados.get('contraventamento', {}).get('eta', 0.0)
+    cor_cv        = (0.80, 0.35, 0.05)   # laranja aço — contraste com madeira
     cor_rot       = (0.15, 0.35, 0.85)
 
     L      = geo.L          # vão de cada pórtico = 20,25 m
@@ -306,6 +308,7 @@ def visualizar_galpao(
         [f"Pilar lateral  η={eta_pilar_lat:.3f}",  cor_pilar_lat],
         [f"Pilar central  η={eta_pilar_cen:.3f}",  cor_pilar_cen],
         [f"Terça          η={eta_terca:.3f}",      cor_terca],
+        [f"Contravent.    η={eta_cv:.3f}",         cor_cv],
         ["η < 0,50  Confortável",   (0.18, 0.62, 0.18)],
         ["η 0,50–0,80  Atenção",    (0.95, 0.78, 0.05)],
         ["η 0,80–0,95  Próx. lim.", (0.92, 0.42, 0.07)],
@@ -324,15 +327,16 @@ def visualizar_galpao(
         f"Galpão MLC GL24h — Pórtico de 3 Rótulas (2 pórticos)\n"
         f"Vão total={L_total}m ({L}+{L}m) | h0={h0}m | α={geo.alpha_deg}°\n"
         f"Pilar lateral {b_pilar}×{h_pilar}m | "
-        f"Pilar central {b_pilar_c}×{h_pilar_c}m\n"
+        f"Pilar central {b_pilar_c}×{h_pilar_c}m | "
+        f"Contravent. d=12mm S235\n"
         f"η máximo = {eta_max:.4f}"
     )
     plotter.add_text(info, position="upper_left", font_size=9, color="black")
 
     # ── Câmera ────────────────────────────────────────────────
     plotter.camera_position = [
-        ( L_total * 1.10,  -comp * 0.55,  H_pilar * 3.2),
-        ( L_total / 2,      comp / 2,     (H_pilar + h_ap) / 2),
+        ( L_total * 0.90,  -comp * 0.70,  H_pilar * 3.0),
+        ( L_total / 2,      comp * 0.15,  (H_pilar + h_ap) / 2),
         (0, 0, 1),
     ]
 
