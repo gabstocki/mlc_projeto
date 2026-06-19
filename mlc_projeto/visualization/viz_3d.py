@@ -317,7 +317,6 @@ def visualizar_galpao(
     # ── Contraventamento horizontal (módulos extremos) ────────
     # Cruzes de St. André — aço S235 d=12mm — 2 módulos extremos
     brace_modules = [(y_pos[0], y_pos[1]), (y_pos[-2], y_pos[-1])]
-    print(f"DEBUG contravent: cor_cv={cor_cv}, eta_cv={eta_cv}, y_pos={y_pos[:3]}")
     first_cv = True
     for x_off in [0, L]:
         for (yb0, yb1) in brace_modules:
