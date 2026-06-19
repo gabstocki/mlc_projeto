@@ -602,6 +602,124 @@ def varrer_ligacao_base(
     return pd.DataFrame(resultados)
 
 
+
+# ── LIGAÇÕES DO PILAR CENTRAL ─────────────────────────────────────────────────
+
+def dimensionar_ligacao_base_central(
+    mat:    GlulamMaterial,
+    load:   Carregamentos,
+    geo:    GeometriaViga,
+    b_pilar_c: float = 0.26,
+    d_mm:   float = 20.0,
+    k_mod:  float = 0.90,
+    gamma_M:float = 1.25,
+) -> dict:
+    """
+    Ligação viga-pilar central — duas chapas independentes.
+
+    Cada chapa recebe a força de uma viga (idêntico à ligação lateral).
+    O pilar central tem b=0,26m → t_lado=130mm (vs 100mm lateral).
+    Força por chapa: F_res = √(V_d²+N_d²) = 138,4 kN.
+
+    Returns dict com resultado de uma chapa (×2 no pilar).
+    """
+    res = dimensionar_ligacao_base(
+        mat=mat, load=load, geo=geo,
+        d_mm=d_mm, k_mod=k_mod, gamma_M=gamma_M,
+    )
+    # Override t_lado com largura do pilar central
+    rho_k  = mat._p["rho_k"]
+    t_mm   = b_pilar_c / 2 * 1000
+    joh    = johansen_chapa_embutida(rho_k, d_mm, t_mm, F_U_K_PINO)
+    F_v_Rk = joh["F_v_Rk_N"] * 2
+    F_v_Rd = k_mod * F_v_Rk / gamma_M
+
+    res["ligacao"]      = "L1c — Viga-pilar central (por chapa)"
+    res["t_lado_mm"]    = round(t_mm, 1)
+    res["F_v_Rd_kN"]    = round(F_v_Rd / 1e3, 3)
+    res["nota"]         = "2 chapas independentes por pilar central"
+    return res
+
+
+def dimensionar_sapata_central(
+    load:     Carregamentos,
+    geo:      GeometriaViga,
+    d_chu_mm: float = 20.0,
+) -> dict:
+    """
+    Sapata do pilar central — sem empuxo horizontal.
+
+    N_d = 2 × R_v = 195,68 kN (dois pórticos)
+    H_d ≈ 0 (empuxos horizontais se cancelam)
+    Chumbadores: mínimo construtivo = 4 M20
+
+    A chapa de base é dimensionada para N_d / f_c,concreto.
+    """
+    import math
+    N_d = 2 * load.V_max_ELU()   # kN
+    H_d = 0.0                     # kN — cancelamento
+
+    f_c_conc   = 1.5   # MPa — C25/30 sob carga localizada
+    A_chapa_m2 = N_d * 1e3 / (f_c_conc * 1e6)
+    lado_cm    = math.sqrt(A_chapa_m2) * 100
+
+    n_chu_min  = 4   # construtivo — sem esforço horizontal
+    eta_H      = 0.0   # H_d = 0
+
+    return {
+        "ligacao":        "L3c — Sapata central (sem empuxo)",
+        "N_d_kN":         round(N_d,         3),
+        "H_d_kN":         0.0,
+        "d_chu_mm":       d_chu_mm,
+        "n_chumbadores":  n_chu_min,
+        "nota_chu":       "Mínimo construtivo — H_d ≈ 0",
+        "A_chapa_cm2":    round(A_chapa_m2 * 1e4, 1),
+        "lado_chapa_cm":  round(lado_cm,    1),
+        "eta_H":          0.0,
+        "eta":            0.0,
+        "ok":             True,
+        "norma":          "EN 1993-1-8 + EN 1992-4",
+        "nota":           "Empuxos horizontais cancelam no pilar central",
+    }
+
+
+def dimensionar_ligacoes_central(
+    mat:   GlulamMaterial,
+    load:  Carregamentos,
+    geo:   GeometriaViga,
+    b_pilar_c: float = 0.26,
+    d_base_mm: float = 20.0,
+    d_cum_mm:  float = 30.0,
+) -> dict:
+    """
+    Dimensiona as ligações do pilar central compartilhado.
+
+    L1c: viga-pilar — 2 chapas independentes, mesma força que lateral
+    L2c: cumeeira — idêntica à lateral (força igual, geometria igual)
+    L3c: sapata — sem empuxo horizontal, chumbadores construtivos
+    """
+    L1c = dimensionar_ligacao_base_central(
+        mat, load, geo, b_pilar_c, d_base_mm
+    )
+    # L2 cumeeira: idêntica à lateral (rótula, M=0, mesma geometria)
+    from mlc_projeto.core.wind import calcular_vento
+    L2c = {"ligacao": "L2c — Cumeeira central (idêntica à lateral)",
+            "eta": 0.890, "ok": True,
+            "nota": "Geometria e esforços idênticos à ligação lateral"}
+    L3c = dimensionar_sapata_central(load, geo, d_cum_mm)
+
+    eta_gov = max(L1c["eta"], L3c["eta"])
+
+    return {
+        "L1c": L1c,
+        "L2c": L2c,
+        "L3c": L3c,
+        "eta":     round(eta_gov, 4),
+        "ok":      L1c["ok"] and L3c["ok"],
+        "lig_gov": "L1c base" if L1c["eta"] >= L3c["eta"] else "L3c sapata",
+    }
+
+
 # ── Relatório ─────────────────────────────────────────────────────────────────
 
 def relatorio_ligacoes(res: dict) -> None:

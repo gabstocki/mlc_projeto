@@ -38,7 +38,7 @@ from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
 from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
 from mlc_projeto.connections.connections      import (
-    dimensionar_ligacoes, relatorio_ligacoes
+    dimensionar_ligacoes, dimensionar_ligacoes_central, relatorio_ligacoes
 )
 from mlc_projeto.output.report                import gerar_relatorio
 from mlc_projeto.visualization.viz_3d         import visualizar_galpao
@@ -263,6 +263,19 @@ def main(rodar_varredura: bool = False) -> None:
     ]:
         _print_eta(label, res_lig[key])
 
+    # Ligações pilar central
+    res_lig_c = dimensionar_ligacoes_central(
+        mat=mat_curta, load=load, geo=geo,
+        b_pilar_c=B_PILAR_C,
+        d_base_mm=D_BASE_MM,
+        d_cum_mm=D_CUM_MM,
+    )
+    for key, label in [
+        ('L1c', f'L1c central (d={D_BASE_MM}mm, 2 chapas)'),
+        ('L3c', 'L3c sapata central'),
+    ]:
+        _print_eta(label, res_lig_c[key])
+
     # ── Resumo ────────────────────────────────────────────────
     print("\n" + "=" * 72)
     print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Pórtico de 3 Rótulas")
@@ -295,8 +308,10 @@ def main(rodar_varredura: bool = False) -> None:
             eta_max_val = max(eta_max_val, eta)
 
     print(f"\n  ── Ligações ──")
-    for key, label in [("L1","base"),("L2","cumeeira"),("L3","sapata")]:
-        r   = res_lig[key]
+    for key, label in [("L1","base"),("L2","cumeeira"),("L3","sapata"),
+                       ("L1c","central base"),("L3c","central sapata")]:
+        r_src = res_lig if key in res_lig else res_lig_c
+        r   = r_src[key]
         ok  = "✓" if r["ok"] else "✗"
         eta = r["eta"]
         bar = "█" * int(eta * 20)
