@@ -138,6 +138,39 @@ def _rotula(cx, cy, cz, raio=0.07):
                      theta_resolution=12, phi_resolution=12)
 
 
+
+# ── Cruzes de St. André ───────────────────────────────────────────────────────
+
+def _cruz_sap(p0, p1, raio=0.08):
+    """Barra de contraventamento entre dois pontos."""
+    linha = pv.Line(p0, p1)
+    return linha.tube(radius=raio, n_sides=8)
+
+
+def _cruzes_modulo(x_offset, y0, y1, L, h0, alpha_rad, H_pilar, s_terca, raio=0.08):
+    """
+    Gera as cruzes de St. André para um módulo de contraventamento.
+    Dois painéis por água (junto aos apoios em x=0 e x=L).
+    """
+    def z(x_loc):
+        xs = x_loc if x_loc <= L/2 else L - x_loc
+        return H_pilar + h0 + xs * math.tan(alpha_rad)
+
+    meshes = []
+    for x_a_loc, x_b_loc in [(0.0, s_terca), (L - s_terca, L)]:
+        x_a = x_offset + x_a_loc
+        x_b = x_offset + x_b_loc
+        z_a = z(x_a_loc)
+        z_b = z(x_b_loc)
+        # Diagonal 1
+        m1 = _cruz_sap(np.array([x_a, y0, z_a]), np.array([x_b, y1, z_b]), raio)
+        if m1: meshes.append(m1)
+        # Diagonal 2
+        m2 = _cruz_sap(np.array([x_b, y0, z_b]), np.array([x_a, y1, z_a]), raio)
+        if m2: meshes.append(m2)
+    return meshes
+
+
 # ── Visualização principal ────────────────────────────────────────────────────
 
 def visualizar_galpao(
@@ -279,6 +312,27 @@ def visualizar_galpao(
                           if (i == 0 and primeiro) else "",
                 )
                 primeiro = False
+
+
+    # ── Contraventamento horizontal (módulos extremos) ────────
+    # Cruzes de St. André — aço S235 d=12mm — 2 módulos extremos
+    brace_modules = [(y_pos[0], y_pos[1]), (y_pos[-2], y_pos[-1])]
+    print(f"DEBUG contravent: cor_cv={cor_cv}, eta_cv={eta_cv}, y_pos={y_pos[:3]}")
+    first_cv = True
+    for x_off in [0, L]:
+        for (yb0, yb1) in brace_modules:
+            for m in _cruzes_modulo(
+                x_offset=x_off, y0=yb0, y1=yb1,
+                L=L, h0=h0, alpha_rad=alpha,
+                H_pilar=H_pilar, s_terca=2.53,
+                raio=0.09,
+            ):
+                plotter.add_mesh(
+                    m, color=cor_cv,
+                    smooth_shading=True, show_edges=False,
+                    label=f"Contravent. S235  η={eta_cv:.3f}" if first_cv else "",
+                )
+                first_cv = False
 
     # ── Cobertura translúcida ─────────────────────────────────
     for x_offset in [0, L]:
