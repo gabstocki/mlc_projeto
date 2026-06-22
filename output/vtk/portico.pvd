@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<VTKFile type="Collection" version="0.1">
-  <Collection>
-    <DataSet timestep="0" group="" part="0" file="portico_ELU_C2.vtk" name="ELU_C2"/>
-    <DataSet timestep="1" group="" part="0" file="portico_ELS_S1.vtk" name="ELS_S1"/>
-    <DataSet timestep="2" group="" part="0" file="portico_ELS_S3.vtk" name="ELS_S3"/>
-    <DataSet timestep="3" group="" part="0" file="portico_G_only.vtk" name="G_only"/>
-  </Collection>
-</VTKFile>
