@@ -1,5 +1,5 @@
 """
-main.py — Orquestrador do pipeline de verificação MLC. v4
+main.py — Orquestrador do pipeline de verificação MLC. v9
 
 Sistema estrutural: Pórtico de 3 rótulas
     - Rótulas nas bases dos pilares
@@ -10,10 +10,11 @@ Sistema estrutural: Pórtico de 3 rótulas
 Pipeline completo:
     Fase 0 — Dados de entrada
     Fase 1 — Pré-dimensionamento (varredura opcional)
-    Fase 2 — Verificações ELU (viga + pilar)
+    Fase 2 — Verificações ELU (viga + pilar + terças + contraventamento)
     Fase 3 — Verificações ELS
-    Fase 4 — Ligações
+    Fase 4 — Ligações + Fadiga (EC5 §2.4 + §7.1 + §8.1.5)
     Fase 5 — Relatório
+    Fase 6 — Visualização 3D
 
 Dados do projeto:
     Galpão estacionamento em MLC GL24h
@@ -40,6 +41,7 @@ from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
 from mlc_projeto.connections.connections      import (
     dimensionar_ligacoes, dimensionar_ligacoes_central, relatorio_ligacoes
 )
+from mlc_projeto.connections.fadiga_ligacoes  import verificar_fadiga_deslizamento
 from mlc_projeto.output.report                import gerar_relatorio
 from mlc_projeto.visualization.viz_3d         import visualizar_galpao
 
@@ -47,22 +49,22 @@ from mlc_projeto.visualization.viz_3d         import visualizar_galpao
 # ── Dados do projeto ──────────────────────────────────────────────────────────
 
 GEO_PARAMS = dict(
-    L         = 20.25,   # m — vão de cada pórtico
-    h0        = 0.60,    # m — altura da seção no apoio
-    alpha_deg = 4.5,     # graus — inclinação da cumeeira
-    b         = 0.26,    # m — largura da seção
+    L         = 20.25,
+    h0        = 0.60,
+    alpha_deg = 4.5,
+    b         = 0.26,
 )
 
 MAT_CURTA = dict(
     classe         = "GL24h",
     classe_servico = 2,
-    duracao        = "curta",   # vento dominante — ELU_C2
+    duracao        = "curta",
 )
 
 MAT_LONGA = dict(
     classe         = "GL24h",
     classe_servico = 2,
-    duracao        = "longa",   # ELS — fluência
+    duracao        = "longa",
 )
 
 VENTO_PARAMS = dict(
@@ -77,41 +79,44 @@ VENTO_PARAMS = dict(
     dist_portico = 5.75,
 )
 
-G_AREA = 1.50   # kN/m²
-Q_AREA = 0.25   # kN/m²
-L_T    = 5.75   # m — vão das terças
-S      = 2.53   # m — espaçamento entre terças (3 apoios por meia água)
+G_AREA = 1.50
+Q_AREA = 0.25
+L_T    = 5.75
+S      = 2.53
 
-# Pilares
-B_PILAR = 0.20   # m — pilar lateral
-H_PILAR = 0.20   # m — pilar lateral
-H_PILAR_ALT = 7.0  # m — altura do pilar
+B_PILAR     = 0.20
+H_PILAR     = 0.20
+H_PILAR_ALT = 7.0
 
-# Pilar central compartilhado (recebe 2 pórticos)
-B_PILAR_C = 0.26  # m — mesma largura da viga
-H_PILAR_C = 0.26  # m
+B_PILAR_C = 0.26
+H_PILAR_C = 0.26
 
-# Terças
-B_TERCA = 0.20   # m — largura da seção
-H_TERCA = 0.58   # m — altura da seção
+B_TERCA = 0.20
+H_TERCA = 0.58
 
-# Ligações
-D_BASE_MM = 20    # mm — pinos na ligação base
-D_CUM_MM  = 30    # mm — pino passante na cumeeira
-F_CHU_KN  = 80.0  # kN — resistência por chumbador
-L_AP      = 0.50  # m  — placa de apoio
+D_BASE_MM = 20
+D_CUM_MM  = 30
+F_CHU_KN  = 80.0
+L_AP      = 0.50
+
 
 # ── Orquestrador ──────────────────────────────────────────────────────────────
 
+def _print_eta(nome: str, res: dict) -> None:
+    ok  = "✓" if res["ok"] else "✗"
+    bar = "█" * int(res["eta"] * 20)
+    print(f"  {ok} {nome:<30} η = {res['eta']:.4f}  {bar}")
+
+
 def main(rodar_varredura: bool = False) -> None:
-    """Executa o pipeline completo — pórtico de 3 rótulas."""
+    """Executa o pipeline completo."""
 
     print("=" * 72)
     print("  PIPELINE MLC — STOCKI Engenharia Estrutural")
     print("  Pórtico de 3 Rótulas | EC5 EN 1995-1-1 | EN 1990 | NBR 6123")
     print("=" * 72)
 
-    # ── Fase 0: Dados de entrada ──────────────────────────────
+    # ── Fase 0: Dados de entrada ──────────────────────────────────────────────
     print("\n[FASE 0] Dados de entrada...")
 
     params_vento = ParametrosVento(**VENTO_PARAMS)
@@ -136,7 +141,7 @@ def main(rodar_varredura: bool = False) -> None:
     print(f"  Sistema   : Pórtico de 3 rótulas | "
           f"Área trib.={load.area_trib:.3f} m (L_t/2)")
 
-    # ── Fase 1: Pré-dimensionamento ───────────────────────────
+    # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
         print("\n[FASE 1] Varredura paramétrica...")
         df = pre_dimensionar(
@@ -156,34 +161,28 @@ def main(rodar_varredura: bool = False) -> None:
         print("\n[FASE 1] Geometria pré-definida "
               "(passe rodar_varredura=True para varredura completa)")
 
-    # ── Fase 2: Verificações ELU ──────────────────────────────
+    # ── Fase 2: Verificações ELU ──────────────────────────────────────────────
     print("\n[FASE 2] Verificações ELU...")
 
     res_elu = {}
 
-    # Cumeeira — M=0, η=0 documentado
     res_elu["cumeeira"] = verifica_cumeeira(geo, mat_curta, load)
     _print_eta("Cumeeira §6.4.3", res_elu["cumeeira"])
 
-    # Flambagem lateral
     res_elu["flambagem"] = verifica_flambagem_lateral(
         geo, mat_curta, load, l_1=S
     )
     _print_eta("Flambagem §6.3.3", res_elu["flambagem"])
 
-    # Flexo-compressão da viga (M + N)
     res_elu["flexao"] = verifica_flexao(geo, mat_curta, load, s=S)
     _print_eta("Flexo-comp. viga §6.3.2", res_elu["flexao"])
 
-    # Cisalhamento
     res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_curta, load)
     _print_eta("Cisalhamento §6.1.7", res_elu["cisalhamento"])
 
-    # Apoio
     res_elu["apoio"] = verifica_apoio(geo, mat_curta, load, l_ap=L_AP)
     _print_eta("Apoio §6.1.5+§6.2.2", res_elu["apoio"])
 
-    # Flexo-compressão consolidada (viga + pilar)
     res_elu["flexo_comp"] = verifica_flexo_compressao(
         geo=geo, mat=mat_curta, load=load,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
@@ -194,23 +193,20 @@ def main(rodar_varredura: bool = False) -> None:
         res_elu["flexo_comp"]
     )
 
-    # Pilar central compartilhado
     print("\n[FASE 2] Verificações ELU — Pilar central...")
     from mlc_projeto.checks.elu.pilares import verifica_pilar as _verifica_pilar
-    _N_central = 2 * load.V_max_ELU()   # kN — dois pórticos
+    _N_central = 2 * load.V_max_ELU()
     res_elu["pilar_central"] = _verifica_pilar(
         mat=mat_curta,
         b=B_PILAR_C, h=H_PILAR_C,
         H=H_PILAR_ALT,
         N_d=_N_central,
     )
-    res_elu["pilar_central"]["eta"] = res_elu["pilar_central"]["eta"]
     _print_eta(
         f"Pilar central {B_PILAR_C}×{H_PILAR_C}m §6.3.2",
         res_elu["pilar_central"]
     )
 
-    # Terças
     print("\n[FASE 2] Verificações ELU — Terças...")
     from mlc_projeto.checks.elu.tercas import verifica_terca
     from mlc_projeto.core.wind import calcular_vento as _calcular_vento
@@ -226,11 +222,9 @@ def main(rodar_varredura: bool = False) -> None:
         q_k_m2    = Q_AREA,
         w_kNm2    = _w_C1bv_m2,
     )
-    # normalizar chave para interface padrão do pipeline
     res_elu["terca"]["eta"] = res_elu["terca"]["eta_gov"]
     _print_eta("Terça §6.1.6+§6.1.7", res_elu["terca"])
 
-    # Contraventamento horizontal da cobertura
     res_elu["contraventamento"] = verificar_contraventamento(
         geo=geo, mat=mat_curta, load=load,
         L_comp=46.0, n_modulos_cv=2,
@@ -239,14 +233,14 @@ def main(rodar_varredura: bool = False) -> None:
     )
     _print_eta("Contravent. §9.2+EN1993", res_elu["contraventamento"])
 
-    # ── Fase 3: Verificações ELS ──────────────────────────────
+    # ── Fase 3: Verificações ELS ──────────────────────────────────────────────
     print("\n[FASE 3] Verificações ELS...")
 
     res_els = {}
     res_els["ELS"] = verificar_ELS(geo, mat_longa, load)
     _print_eta("ELS §2.3.2.2+Tab.7.2", res_els["ELS"])
 
-    # ── Fase 4: Ligações ──────────────────────────────────────
+    # ── Fase 4: Ligações ──────────────────────────────────────────────────────
     print("\n[FASE 4] Ligações...")
 
     res_lig = dimensionar_ligacoes(
@@ -255,7 +249,6 @@ def main(rodar_varredura: bool = False) -> None:
         d_cum_mm=D_CUM_MM,
         F_chu_kN=F_CHU_KN,
     )
-
     for key, label in [
         ("L1", f"L1 base (d={D_BASE_MM}mm)"),
         ("L2", "L2 cumeeira"),
@@ -263,7 +256,6 @@ def main(rodar_varredura: bool = False) -> None:
     ]:
         _print_eta(label, res_lig[key])
 
-    # Ligações pilar central
     res_lig_c = dimensionar_ligacoes_central(
         mat=mat_curta, load=load, geo=geo,
         b_pilar_c=B_PILAR_C,
@@ -271,12 +263,23 @@ def main(rodar_varredura: bool = False) -> None:
         d_cum_mm=D_CUM_MM,
     )
     for key, label in [
-        ('L1c', f'L1c central (d={D_BASE_MM}mm, 2 chapas)'),
-        ('L3c', 'L3c sapata central'),
+        ("L1c", f"L1c central (d={D_BASE_MM}mm, 2 chapas)"),
+        ("L3c", "L3c sapata central"),
     ]:
         _print_eta(label, res_lig_c[key])
 
-    # ── Resumo ────────────────────────────────────────────────
+    # ── Fase 4b: Fadiga e deslizamento das ligações ───────────────────────────
+    print("\n[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...")
+
+    res_fadiga = verificar_fadiga_deslizamento()
+
+    for cod, r in res_fadiga.items():
+        status = "✓" if r["slip_ok"] and r["alternada"]["ok"] else "✗"
+        print(f"  {status} {cod:<6}  "
+              f"η_slip={r['eta_slip']:.4f}  "
+              f"η_alt={r['alternada']['eta_alt']:.4f}")
+
+    # ── Resumo ────────────────────────────────────────────────────────────────
     print("\n" + "=" * 72)
     print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Pórtico de 3 Rótulas")
     print("=" * 72)
@@ -292,7 +295,7 @@ def main(rodar_varredura: bool = False) -> None:
         ("── ELU Pilar ──", ["flexo_comp", "pilar_central"]),
         ("── ELU Terças ──", ["terca"]),
         ("── ELU Contravent. ──", ["contraventamento"]),
-        ("── ELS ──",        ["ELS"]),
+        ("── ELS ──", ["ELS"]),
     ]
 
     for titulo, chaves in secoes:
@@ -300,23 +303,35 @@ def main(rodar_varredura: bool = False) -> None:
         for chave in chaves:
             if chave not in todos_para_relatorio:
                 continue
-            res  = todos_para_relatorio[chave]
-            eta  = res["eta"]
-            ok   = "✓" if res["ok"] else "✗"
-            bar  = "█" * int(eta * 20)
+            res = todos_para_relatorio[chave]
+            eta = res["eta"]
+            ok  = "✓" if res["ok"] else "✗"
+            bar = "█" * int(eta * 20)
             print(f"  {ok} {chave:<26} η = {eta:.4f}  {bar}")
             eta_max_val = max(eta_max_val, eta)
 
     print(f"\n  ── Ligações ──")
-    for key, label in [("L1","base"),("L2","cumeeira"),("L3","sapata"),
-                       ("L1c","central base"),("L3c","central sapata")]:
+    for key, label in [
+        ("L1",  "base"),
+        ("L2",  "cumeeira"),
+        ("L3",  "sapata"),
+        ("L1c", "central base"),
+        ("L3c", "central sapata"),
+    ]:
         r_src = res_lig if key in res_lig else res_lig_c
-        r   = r_src[key]
-        ok  = "✓" if r["ok"] else "✗"
-        eta = r["eta"]
-        bar = "█" * int(eta * 20)
+        r     = r_src[key]
+        ok    = "✓" if r["ok"] else "✗"
+        eta   = r["eta"]
+        bar   = "█" * int(eta * 20)
         print(f"  {ok} Ligação {label:<22} η = {eta:.4f}  {bar}")
         eta_max_val = max(eta_max_val, eta)
+
+    print(f"\n  ── Fadiga (deslizamento ELS) ──")
+    for cod, r in res_fadiga.items():
+        ok  = "✓" if r["slip_ok"] else "✗"
+        eta = r["eta_slip"]
+        bar = "█" * int(eta * 20)
+        print(f"  {ok} Fadiga {cod:<23} η = {eta:.4f}  {bar}")
 
     print(f"\n  η máximo  = {eta_max_val:.4f}")
     print(f"  H_fund    = {load.H_ELU():.2f} kN  (empuxo → sapata)")
@@ -324,34 +339,43 @@ def main(rodar_varredura: bool = False) -> None:
     print(f"  Status    = {status}")
     print("=" * 72)
 
-    # ── Fase 5: Relatório ─────────────────────────────────────
+    # ── Fase 5: Relatório ─────────────────────────────────────────────────────
     gerar_relatorio(todos_para_relatorio, geo, mat_curta)
     print("\nPipeline concluído. Relatório gerado em output/")
 
-    # ── Fase 6: Visualização 3D ───────────────────────────────
+    # ── Fase 6: Visualização 3D ───────────────────────────────────────────────
     print("\n[FASE 6] Abrindo visualização 3D interativa...")
     visualizar_galpao(
         geo        = geo,
-        resultados = {**res_elu, **res_els,
-                      "L1": res_lig["L1"],
-                      "L2": res_lig["L2"],
-                      "L3": res_lig["L3"]},
-        H_pilar    = H_PILAR_ALT,
-        n_modulos  = 8,
-        dist_mod   = L_T,
-        b_pilar    = B_PILAR,
-        h_pilar    = H_PILAR,
-        b_pilar_c  = B_PILAR_C,
-        h_pilar_c  = H_PILAR_C,
-        b_terca    = B_TERCA,
-        h_terca    = H_TERCA,
+        resultados = {
+            **res_elu,
+            **res_els,
+            "L1":       res_lig["L1"],
+            "L2":       res_lig["L2"],
+            "L3":       res_lig["L3"],
+            "fadiga_L1":  {
+                "eta": res_fadiga["L1"]["eta_slip"],
+                "ok":  res_fadiga["L1"]["slip_ok"],
+            },
+            "fadiga_L2":  {
+                "eta": res_fadiga["L2"]["eta_slip"],
+                "ok":  res_fadiga["L2"]["slip_ok"],
+            },
+            "fadiga_L1c": {
+                "eta": res_fadiga["L1c"]["eta_slip"],
+                "ok":  res_fadiga["L1c"]["slip_ok"],
+            },
+        },
+        H_pilar   = H_PILAR_ALT,
+        n_modulos = 8,
+        dist_mod  = L_T,
+        b_pilar   = B_PILAR,
+        h_pilar   = H_PILAR,
+        b_pilar_c = B_PILAR_C,
+        h_pilar_c = H_PILAR_C,
+        b_terca   = B_TERCA,
+        h_terca   = H_TERCA,
     )
-
-
-def _print_eta(nome: str, res: dict) -> None:
-    ok = "✓" if res["ok"] else "✗"
-    print(f"  {ok} {nome:<30} η = {res['eta']:.4f}  "
-          f"({'OK' if res['ok'] else 'REPROVADO'})")
 
 
 if __name__ == "__main__":
