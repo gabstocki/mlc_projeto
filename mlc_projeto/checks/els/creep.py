@@ -286,7 +286,7 @@ def varrer_acumulado(
 
                 # ── 2. FLAMBAGEM LATERAL §6.3.3 ───────────────
                 sig_crit = calcular_sigma_m_crit(
-                    mat.E0_05, mat.G_mean, b_f, h_ap, l_ef
+                    mat.E0_05, b_f, h_ap, l_ef
                 )
                 lam_rel  = calcular_lambda_rel_m(mat.f_m_k, sig_crit)
                 k_crit   = calcular_k_crit(lam_rel)
@@ -297,8 +297,8 @@ def varrer_acumulado(
                 # ── 3. FLEXÃO SIMPLES §6.1.6 ──────────────────
                 eta_fx   = sig_md / mat.f_m_d
 
-                # ── 4. CISALHAMENTO §6.1.7 ────────────────────
-                tau_d    = 1.5 * V_max_N / (b_f * h0_f)
+                # ── 4. CISALHAMENTO §6.1.7 (b_ef = k_cr · b) ───
+                tau_d    = 1.5 * V_max_N / (mat.k_cr * b_f * h0_f)
                 eta_ci   = tau_d / mat.f_v_d
 
                 # ── 6-7. ELS — FLECHA ─────────────────────────

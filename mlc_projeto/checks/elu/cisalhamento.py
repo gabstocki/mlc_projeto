@@ -4,7 +4,10 @@ checks/elu/cisalhamento.py — Verificação de cisalhamento no apoio.
 Verifica a tensão de cisalhamento na seção crítica (apoio),
 onde o cortante é máximo e a altura da seção é mínima.
 
-Condição: τ_d = 1,5 · V_d / (b · h_ef) ≤ f_v,d   (EC5 §6.1.7 Eq. 6.13)
+Condição EC5 §6.1.7 Eq. 6.13 (+ A1:2008):
+    τ_d = 1,5 · V_d / (b_ef · h_ef) ≤ f_v,d
+    b_ef = k_cr · b
+    k_cr = 0,67 para glulam (madeira maciça e glulam)
 
 Para viga sem entalhe: h_ef = h0 (altura no apoio).
 Para viga com entalhe: h_ef reduzida por fator k_v (EC5 §6.5.2).
@@ -82,7 +85,8 @@ def verifica_cisalhamento(
     Verifica resistência ao cisalhamento no apoio — EC5 §6.1.7 Eq. 6.13.
 
     Condição:
-        τ_d = 1,5 · V_d / (b · h_ef) ≤ f_v,d
+        τ_d = 1,5 · V_d / (b_ef · h_ef) ≤ f_v,d
+        b_ef = k_cr · b  (EC5 §6.1.7 A1)
 
     A seção crítica é o apoio, onde:
     - Cortante é máximo: V_d = q_ELU · L / 2
@@ -119,9 +123,11 @@ def verifica_cisalhamento(
         nota = "Sem entalhe"
 
     # ── Tensão de cisalhamento ────────────────────────────────
-    # EC5 §6.1.7 Eq. 6.13: τ_d = 1,5·V_d/(b·h_ef)
-    # Com k_v: τ_d = 1,5·V_d/(b·k_v·h_ef) — conservador
-    tau_d = 1.5 * V_d_N / (b * k_v * h_ef)    # Pa
+    # EC5 §6.1.7 Eq. 6.13 + A1: b_ef = k_cr · b
+    # Com entalhe: k_v reduz a resistência efetiva (EC5 §6.5.2)
+    k_cr  = mat.k_cr
+    b_ef  = k_cr * b
+    tau_d = 1.5 * V_d_N / (b_ef * k_v * h_ef)  # Pa
 
     # ── Resistência de cálculo ────────────────────────────────
     f_vd  = mat.f_v_d                          # Pa
@@ -135,6 +141,8 @@ def verifica_cisalhamento(
         "h0_m":       h0,
         "h_ef_m":     round(h_ef, 4),
         "b_m":        b,
+        "k_cr":       k_cr,
+        "b_ef_m":     round(b_ef, 6),
         "k_v":        round(k_v, 4),
         # Esforços
         "V_d_kN":     round(V_d_kN, 3),
@@ -146,7 +154,7 @@ def verifica_cisalhamento(
         "ok":         eta <= 1.0,
         "nota":       nota,
         # Referência
-        "norma":      "EC5 §6.1.7 Eq. 6.13",
+        "norma":      "EC5 §6.1.7 Eq. 6.13 (b_ef=k_cr·b)",
     }
 
 
@@ -219,7 +227,7 @@ def varrer_acumulado(
 
                 # ── 2. FLAMBAGEM LATERAL §6.3.3 ──────────────
                 sig_crit = calcular_sigma_m_crit(
-                    mat.E0_05, mat.G_mean, b_f, h_ap, l_ef
+                    mat.E0_05, b_f, h_ap, l_ef
                 )
                 lam_rel  = calcular_lambda_rel_m(mat.f_m_k, sig_crit)
                 k_crit   = calcular_k_crit(lam_rel)
@@ -230,8 +238,8 @@ def varrer_acumulado(
                 # ── 3. FLEXÃO SIMPLES §6.1.6 ─────────────────
                 eta_fx   = sig_md / mat.f_m_d
 
-                # ── 4. CISALHAMENTO §6.1.7 ───────────────────
-                tau_d    = 1.5 * V_max_N / (b_f * h0_f)
+                # ── 4. CISALHAMENTO §6.1.7 (b_ef = k_cr · b) ──
+                tau_d    = 1.5 * V_max_N / (mat.k_cr * b_f * h0_f)
                 eta_ci   = tau_d / mat.f_v_d
 
                 # ── Todas aprovadas? ──────────────────────────

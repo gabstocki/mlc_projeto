@@ -6,14 +6,14 @@ MUDANÇA v3 — Pórtico de três rótulas:
         - Rótulas nas bases dos pilares
         - Rótula na cumeeira
     
-    Diagrama de momento correto para 3 rótulas:
-        M(x) = R_v·x - H·y(x) - q·x²/2
-        
-    onde:
-        R_v = q·L/2                   (reação vertical)
-        H   = R_v·(L/2) - q·(L/2)²/2 / f   (empuxo horizontal)
-        f   = h_ap - h0               (variação de altura da viga)
-        y(x) = x·tan(α)              (ordenada do eixo da viga)
+    Diagrama de momento correto para 3 rótulas (eixo centroidal):
+        M(x) = R_v·x - H·y_c(x) - q·x²/2
+
+    onde (intradorso horizontal, rótulas no centroide da secção):
+        R_v  = q·L/2
+        f_c  = (h_ap - h0)/2          (flecha do eixo entre rótulas)
+        y_c(x) = x·tan(α)/2           (ordenada do centroide)
+        H    = [R_v·(L/2) - q·(L/2)²/2] / f_c  = (q·L²/8) / f_c
 
     Consequências:
         - M na cumeeira = 0  (rótula)
@@ -32,10 +32,11 @@ Combinações EN 1990 mantidas (inalteradas):
     ELS_S2: G + 0,5Q
     ELS_S3: G
 
-Área tributária correta (v2): L_t/2
+Área tributária (pórtico intermédio): L_t = espaçamento entre pórticos.
+    Pórtico de extremidade: usar fator_trib=0,5 (meia baia).
 
 Referência: EN 1990 §6.4, §6.5
-            Leick (2014) — Three-hinged frames
+            Estática de pórtico de três rótulas (eixo centroidal)
 """
 
 from __future__ import annotations
@@ -67,16 +68,17 @@ PSI_2_W     = 0.00
 @dataclass
 class Combinacao:
     """Uma combinação de ações com esforços resultantes."""
-    nome:       str
-    tipo:       str
-    descricao:  str
-    q_tot:      float    # kN/m — carga distribuída total
-    M_max_kNm:  float    # kN·m — momento máximo na viga
-    V_max_kN:   float    # kN   — cortante máximo no apoio
-    N_viga_kN:  float    # kN   — força normal na viga no apoio
-    H_kN:       float    # kN   — empuxo horizontal na fundação
-    x_Mmax_m:   float    # m    — posição do momento máximo
-    duracao:    str
+    nome:        str
+    tipo:        str
+    descricao:   str
+    q_tot:       float    # kN/m — carga distribuída total
+    M_max_kNm:   float    # kN·m — momento máximo na viga
+    V_max_kN:    float    # kN   — reação vertical R_v no apoio
+    N_viga_kN:   float    # kN   — força normal no eixo da viga (apoio)
+    V_viga_kN:   float    # kN   — cortante no eixo da viga (apoio)
+    H_kN:        float    # kN   — empuxo horizontal na fundação
+    x_Mmax_m:    float    # m    — posição do momento máximo
+    duracao:     str
 
 
 # ── Análise estrutural do pórtico de três rótulas ────────────────────────────
@@ -95,52 +97,61 @@ def analisar_3rotulas(
     Sistema isostático: rótulas nas bases + rótula na cumeeira.
     Válido para pórtico simétrico de duas águas.
 
-    Equações de equilíbrio:
+    Equações de equilíbrio (rótulas no centroide):
         ΣFy = 0 → R_v = q·L/2
-        ΣM_cumeeira = 0 (em meia viga):
-            R_v·(L/2) - H·f - q·(L/2)²/2 = 0
-            H = [R_v·(L/2) - q·(L/2)²/2] / f
+        ΣM_cumeeira = 0 (meia viga):
+            R_v·(L/2) - H·f_c - q·(L/2)²/2 = 0
+            H = [R_v·(L/2) - q·(L/2)²/2] / f_c
+
+    Hipótese geométrica (RM + pórtico de 3 rótulas):
+        intradorso horizontal; rótulas no centroide da secção retangular
+        → ordenada do eixo: y_c(x) = x·tan(α)/2
+        → flecha entre rótulas: f_c = (h_ap - h0)/2
 
     Diagrama de momento (0 ≤ x ≤ L/2, simetria para x > L/2):
-        y(x) = x·tan(α)   [ordenada do eixo da viga]
-        M(x) = R_v·x - H·y(x) - q·x²/2
+        M(x) = R_v·x - H·y_c(x) - q·x²/2
+
+    Esforços no extremo da viga (apoio):
+        N = H·cos(α) + R_v·sin(α)   (compressão no eixo)
+        V = R_v·cos(α) - H·sin(α)   (cortante no eixo)
 
     Args:
         q         : Carga distribuída (kN/m) — positivo=para baixo
         L         : Vão total (m)
         h0        : Altura da seção no apoio (m)
         h_ap      : Altura da seção na cumeeira (m)
-        alpha_rad : Ângulo de inclinação (rad)
+        alpha_rad : Ângulo de inclinação da face superior (rad)
         n_pts     : Número de pontos para integração
 
     Returns:
-        dict com R_v, H, M_max, x_Mmax, N_apoio, M_x, x
+        dict com R_v, H, M_max, x_Mmax, N_apoio, V_apoio, M_x, x
     """
     if abs(q) < 1e-10:
         return {
             "R_v_kN":    0.0, "H_kN":      0.0,
             "M_max_kNm": 0.0, "x_Mmax_m":  0.0,
-            "N_apoio_kN":0.0,
+            "N_apoio_kN":0.0, "V_apoio_kN":0.0,
             "M_x":       np.zeros(n_pts),
             "x":         np.linspace(0, L, n_pts),
         }
 
-    f = h_ap - h0   # variação de altura (m)
+    # Flecha do eixo centroidal (intradorso horizontal)
+    f_c = (h_ap - h0) / 2.0
 
-    if f <= 0:
+    if f_c <= 0:
         raise ValueError(
             f"h_ap={h_ap:.3f} deve ser maior que h0={h0:.3f} "
-            f"para o pórtico de 3 rótulas. f={f:.3f} m"
+            f"para o pórtico de 3 rótulas. f_c={f_c:.3f} m"
         )
 
     # Reações
     R_v = q * L / 2
-    H   = (R_v * (L/2) - q * (L/2)**2 / 2) / f
+    H   = (R_v * (L / 2) - q * (L / 2) ** 2 / 2) / f_c
 
     # Diagrama de momento (meia viga por simetria)
-    x_half = np.linspace(0, L/2, n_pts // 2)
-    y_x    = x_half * math.tan(alpha_rad)
-    M_half = R_v * x_half - H * y_x - q * x_half**2 / 2
+    x_half = np.linspace(0, L / 2, n_pts // 2)
+    y_c    = x_half * math.tan(alpha_rad) / 2.0  # centroide
+    M_half = R_v * x_half - H * y_c - q * x_half ** 2 / 2
 
     # Espelhar para o vão completo
     M_x = np.concatenate([M_half, M_half[-2::-1]])
@@ -151,18 +162,23 @@ def analisar_3rotulas(
     M_max    = float(M_x[idx_max])
     x_Mmax   = float(x[idx_max])
 
-    # Força normal na viga no apoio
-    # N = H·cos(α) + R_v·sin(α)
-    N_apoio = H * math.cos(alpha_rad) + R_v * math.sin(alpha_rad)
+    # Ângulo do eixo centroidal (intradorso horizontal, bisel linear):
+    # y_c(x) = x·tan(α)/2  →  θ = arctan(tan(α)/2)
+    theta = math.atan(math.tan(alpha_rad) / 2.0)
+    N_apoio = H * math.cos(theta) + R_v * math.sin(theta)
+    V_apoio = R_v * math.cos(theta) - H * math.sin(theta)
 
     return {
-        "R_v_kN":    round(R_v,    4),
-        "H_kN":      round(H,      4),
-        "M_max_kNm": round(M_max,  4),
-        "x_Mmax_m":  round(x_Mmax, 4),
-        "N_apoio_kN":round(N_apoio,4),
-        "M_x":       M_x,
-        "x":         x,
+        "R_v_kN":     round(R_v,     4),
+        "H_kN":       round(H,       4),
+        "M_max_kNm":  round(M_max,   4),
+        "x_Mmax_m":   round(x_Mmax,  4),
+        "N_apoio_kN": round(N_apoio, 4),
+        "V_apoio_kN": round(V_apoio, 4),
+        "f_c_m":      round(f_c,     4),
+        "theta_rad":  round(theta,   6),
+        "M_x":        M_x,
+        "x":          x,
     }
 
 
@@ -173,7 +189,9 @@ class Carregamentos:
     """
     Carregamentos e combinações EN 1990 para pórtico de três rótulas.
 
-    Área tributária = L_t/2 (cada pórtico recebe metade da carga das terças).
+    Área tributária:
+        Pórtico intermédio: L_t (espaçamento entre pórticos)
+        Pórtico de extremidade: L_t · fator_trib com fator_trib=0,5
 
     Args:
         geo          : Geometria da viga (fornece h0, h_ap, alpha_rad, L)
@@ -181,26 +199,33 @@ class Carregamentos:
         g_area       : Carga permanente por área (kN/m²)
         q_area       : Sobrecarga por área (kN/m²)
         L_t          : Vão das terças = espaçamento entre pórticos (m)
+        fator_trib   : 1,0 intermédio (padrão); 0,5 extremidade
         w_C1bv_m2    : Pressão vento C1 barlavento (kN/m²)
         w_C1st_m2    : Pressão vento C1 sotavento (kN/m²)
         w_C2bv_m2    : Pressão vento C2 barlavento (kN/m²)
         w_C2st_m2    : Pressão vento C2 sotavento (kN/m², negativo=sucção)
     """
-    geo:       GeometriaViga
-    mat:       GlulamMaterial
-    g_area:    float = 1.50
-    q_area:    float = 0.25
-    L_t:       float = 5.75
-    w_C1bv_m2: float = 0.0
-    w_C1st_m2: float = 0.0
-    w_C2bv_m2: float = 0.0
-    w_C2st_m2: float = 0.0
+    geo:        GeometriaViga
+    mat:        GlulamMaterial
+    g_area:     float = 1.50
+    q_area:     float = 0.25
+    L_t:        float = 5.75
+    fator_trib: float = 1.0
+    w_C1bv_m2:  float = 0.0
+    w_C1st_m2:  float = 0.0
+    w_C2bv_m2:  float = 0.0
+    w_C2st_m2:  float = 0.0
 
     _combinacoes: dict = field(default_factory=dict, init=False, repr=False)
     _area_trib:   float = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self._area_trib = self.L_t / 2
+        if self.fator_trib not in (0.5, 1.0):
+            raise ValueError(
+                "fator_trib deve ser 1.0 (pórtico intermédio) "
+                "ou 0.5 (pórtico de extremidade)."
+            )
+        self._area_trib = self.L_t * self.fator_trib
         self._combinacoes = self._montar_combinacoes()
 
     @property
@@ -256,16 +281,17 @@ class Carregamentos:
         def _comb(nome, tipo, desc, q_tot, duracao):
             r = self._analisar(q_tot)
             return Combinacao(
-                nome      = nome,
-                tipo      = tipo,
-                descricao = desc,
-                q_tot     = q_tot,
-                M_max_kNm = r["M_max_kNm"],
-                V_max_kN  = r["R_v_kN"],
-                N_viga_kN = r["N_apoio_kN"],
-                H_kN      = r["H_kN"],
-                x_Mmax_m  = r["x_Mmax_m"],
-                duracao   = duracao,
+                nome       = nome,
+                tipo       = tipo,
+                descricao  = desc,
+                q_tot      = q_tot,
+                M_max_kNm  = r["M_max_kNm"],
+                V_max_kN   = r["R_v_kN"],
+                N_viga_kN  = r["N_apoio_kN"],
+                V_viga_kN  = r["V_apoio_kN"],
+                H_kN       = r["H_kN"],
+                x_Mmax_m   = r["x_Mmax_m"],
+                duracao    = duracao,
             )
 
         # ELU
@@ -349,11 +375,15 @@ class Carregamentos:
         return self.combinacao_ELU_governante().V_max_kN
 
     def N_max_ELU(self) -> float:
-        """Força normal máxima na viga — novo para 3 rótulas."""
+        """Força normal no eixo da viga (apoio) — combinação ELU governante."""
         return self.combinacao_ELU_governante().N_viga_kN
 
+    def V_viga_ELU(self) -> float:
+        """Cortante no eixo da viga (apoio) — combinação ELU governante."""
+        return self.combinacao_ELU_governante().V_viga_kN
+
     def H_ELU(self) -> float:
-        """Empuxo horizontal na fundação — novo para 3 rótulas."""
+        """Empuxo horizontal na fundação — combinação ELU governante."""
         return self.combinacao_ELU_governante().H_kN
 
     def M_ELU(self) -> NDArray:
@@ -386,7 +416,8 @@ class Carregamentos:
         print("  COMBINAÇÕES DE AÇÕES — EN 1990 | Pórtico de 3 Rótulas v3")
         print(f"  L={self.geo.L}m | h0={self.geo.h0}m | "
               f"h_ap={self.geo.h_ap:.3f}m | "
-              f"Área trib.={self._area_trib}m (L_t/2)")
+              f"Área trib.={self._area_trib}m "
+              f"(L_t×{self.fator_trib})")
         print("=" * 76)
 
         print(f"\n  Cargas lineares:")

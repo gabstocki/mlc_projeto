@@ -76,44 +76,45 @@ def calcular_l_ef(
 
 def calcular_sigma_m_crit(
     E_005:  float,
-    G_mean: float,
     b:      float,
     h:      float,
     l_ef:   float,
+    G_05:   float | None = None,
 ) -> float:
     """
     Tensão crítica de flambagem lateral σ_m,crit — EC5 §6.3.3.
 
-    Para seção retangular:
+    Secção retangular de coníferas — EC5 §6.3.3(2) Eq. (6.32):
 
-        I_z   = h·b³/12       (inércia em torno do eixo fraco z)
-        I_tor = h·b³/3        (inércia torsional de St. Venant)
-        W_y   = b·h²/6        (módulo resistente em torno do eixo forte y)
+        σ_m,crit = 0,78 · b² · E_0,05 / (h · l_ef)
 
-        σ_m,crit = π·√(E_0,05·I_z·G·I_tor) / (W_y·l_ef)
+    Esta expressão decorre da formulação geral (6.31) com
+    G_0,05 = E_0,05/16 e I_tor ≈ h·b³/3.
 
-    Nota: h é a altura da seção no ponto verificado (m).
-    Para viga de seção variável, usa-se a altura média ou a seção crítica.
-    A posição mais desfavorável para flambagem é a seção de momento máximo.
+    Se G_05 for fornecido, usa-se a formulação geral EC5 Eq. (6.31):
+        σ_m,crit = π · √(E_0,05·I_z·G_0,05·I_tor) / (l_ef · W_y)
 
     Args:
         E_005  : Módulo de elasticidade característico E_0,05 (Pa)
-        G_mean : Módulo de distorção médio G_mean (Pa)
         b      : Largura da seção (m)
         h      : Altura da seção no ponto verificado (m)
         l_ef   : Comprimento efetivo de flambagem lateral (m)
+        G_05   : Opcional — G_0,05 (Pa). Se None, usa Eq. (6.32).
 
     Returns:
         σ_m,crit (Pa)
     """
-    I_z   = h * b**3 / 12       # m⁴ — inércia eixo fraco
-    I_tor = h * b**3 / 3        # m⁴ — inércia torsional
-    W_y   = b * h**2 / 6        # m³ — módulo resistente eixo forte
+    if G_05 is None:
+        # EC5 §6.3.3(2) Eq. (6.32) — retangular, coníferas
+        return 0.78 * (b ** 2) * E_005 / (h * l_ef)
 
-    sigma_crit = (math.pi / (W_y * l_ef)) * math.sqrt(
-        E_005 * I_z * G_mean * I_tor
+    # EC5 §6.3.3 Eq. (6.31) — formulação geral
+    I_z   = h * b ** 3 / 12
+    I_tor = h * b ** 3 / 3
+    W_y   = b * h ** 2 / 6
+    return (math.pi / (W_y * l_ef)) * math.sqrt(
+        E_005 * I_z * G_05 * I_tor
     )
-    return sigma_crit
 
 
 def calcular_lambda_rel_m(
@@ -170,39 +171,38 @@ def verifica_flambagem_lateral(
     """
     Verifica estabilidade lateral por flexo-torção — EC5 §6.3.3.
 
-    Condição:
+    Condição (flexão simples):
         σ_m,d ≤ k_crit · f_m,d
 
-    A verificação é feita na seção de momento máximo.
-    Para viga de duplo-bisel, essa seção é a cumeeira (meio do vão),
-    onde h = h_ap (altura máxima).
+    Secção crítica: ponto de M_max (não a cumeeira no pórtico de
+    3 rótulas, onde M ≈ 0). Altura h = h(x_Mmax).
+
+    σ_m,crit: EC5 §6.3.3(2) Eq. (6.32) — secção retangular.
 
     Args:
         geo  : Geometria da viga
         mat  : Material
         load : Carregamentos
-        l_1  : Espaçamento entre terças (m) — padrão 5,75 m
+        l_1  : Espaçamento entre terças (m)
 
     Returns:
-        dict com todos os resultados intermediários, η e ok
+        dict com resultados intermediários, η e ok
     """
     # ── Comprimento efetivo ───────────────────────────────────
     l_ef = calcular_l_ef(l_1, restricao="continua_topo", tipo_carga="distribuida")
 
-    # ── Seção crítica — cumeeira ──────────────────────────────
-    # Na cumeeira h = h_ap (seção mais alta = maior W_y = menor σ_m,d)
-    # mas também é onde o momento é máximo
-    # Para seção variável, a posição crítica é verificada na h_ap
-    h_crit = geo.h_ap
+    # ── Seção crítica — ponto de momento máximo ───────────────
+    gov    = load.combinacao_ELU_governante()
+    x_Mmax = gov.x_Mmax_m
+    h_crit = float(geo.h(x_Mmax))
     b      = geo.b
 
-    # ── Tensão crítica de flambagem ───────────────────────────
+    # ── Tensão crítica de flambagem — EC5 Eq. (6.32) ──────────
     sigma_crit = calcular_sigma_m_crit(
-        E_005  = mat.E0_05,
-        G_mean = mat.G_mean,
-        b      = b,
-        h      = h_crit,
-        l_ef   = l_ef,
+        E_005 = mat.E0_05,
+        b     = b,
+        h     = h_crit,
+        l_ef  = l_ef,
     )
 
     # ── Esbeltez relativa e k_crit ────────────────────────────
@@ -210,13 +210,13 @@ def verifica_flambagem_lateral(
     k_crit  = calcular_k_crit(lam_rel)
 
     # ── Tensão atuante ────────────────────────────────────────
-    M_max_Nm = load.M_max_ELU() * 1e3     # kN·m → N·m
-    W_y      = b * h_crit**2 / 6          # m³
+    M_max_Nm = gov.M_max_kNm * 1e3        # N·m
+    W_y      = b * h_crit ** 2 / 6
     sigma_md = M_max_Nm / W_y             # Pa
 
     # ── Resistência de cálculo ────────────────────────────────
-    f_md     = mat.f_m_d                  # Pa
-    resist   = k_crit * f_md             # Pa
+    f_md   = mat.f_m_d
+    resist = k_crit * f_md
 
     # ── Taxa de utilização ────────────────────────────────────
     eta = sigma_md / resist
@@ -232,7 +232,9 @@ def verifica_flambagem_lateral(
     return {
         # Geometria
         "L_m":           geo.L,
-        "h_ap_m":        h_crit,
+        "x_Mmax_m":      round(x_Mmax, 3),
+        "h_crit_m":      round(h_crit, 4),
+        "h_ap_m":        geo.h_ap,
         "b_m":           b,
         "h_b":           round(h_crit / b, 2),
         # Comprimento efetivo
@@ -248,12 +250,12 @@ def verifica_flambagem_lateral(
         "f_md_MPa":      round(f_md     / 1e6, 4),
         "resist_MPa":    round(resist   / 1e6, 4),
         # Momento
-        "M_max_ELU_kNm": round(load.M_max_ELU(), 2),
+        "M_max_ELU_kNm": round(gov.M_max_kNm, 2),
         # Resultado
         "eta":           round(eta, 4),
         "ok":            eta <= 1.0,
         # Referência
-        "norma":         "EC5 §6.3.3",
+        "norma":         "EC5 §6.3.3 Eq. 6.32 + 6.33",
     }
 
 
@@ -310,7 +312,7 @@ def varrer_flambagem_lateral(
 
                 # Tensão crítica de flambagem
                 sigma_crit = calcular_sigma_m_crit(
-                    mat.E0_05, mat.G_mean, float(b), h_crit, l_ef
+                    mat.E0_05, float(b), h_crit, l_ef
                 )
 
                 lam_rel = calcular_lambda_rel_m(mat.f_m_k, sigma_crit)
@@ -466,7 +468,7 @@ def varrer_combinado(
 
                 # ── FLAMBAGEM LATERAL ─────────────────────────
                 sig_crit = calcular_sigma_m_crit(
-                    mat.E0_05, mat.G_mean, b_f, h_ap, l_ef
+                    mat.E0_05, b_f, h_ap, l_ef
                 )
                 lam_rel  = calcular_lambda_rel_m(mat.f_m_k, sig_crit)
                 k_crit   = calcular_k_crit(lam_rel)

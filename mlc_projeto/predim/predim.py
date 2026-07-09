@@ -133,8 +133,8 @@ def pre_dimensionar(
     res_vento  = calcular_vento(params_vento)
     w_C1bv_m2  = res_vento.pressoes["C1"]["barlavento_kNm2"]
 
-    # Cargas lineares
-    area_trib = L_t / 2
+    # Cargas lineares — pórtico intermédio: área tributária = L_t
+    area_trib = L_t
     g_k = g_area * area_trib
     q_k = q_area * area_trib
     w_k = w_C1bv_m2 * area_trib
@@ -206,8 +206,7 @@ def pre_dimensionar(
 
                     # ── 2. FLAMBAGEM LATERAL §6.3.3 ───────────
                     sig_crit = calcular_sigma_m_crit(
-                        mat_curta.E0_05, mat_curta.G_mean,
-                        b_f, h_Mmax, l_ef
+                        mat_curta.E0_05, b_f, h_Mmax, l_ef
                     )
                     lam_rel  = calcular_lambda_rel_m(
                         mat_curta.f_m_k, sig_crit
@@ -217,8 +216,8 @@ def pre_dimensionar(
                     sig_md   = M_max_Nm / W_y
                     eta_fl   = sig_md / (k_crit * mat_curta.f_m_d)
 
-                    # ── 3. CISALHAMENTO §6.1.7 ────────────────
-                    tau_d  = 1.5 * V_max_N / (b_f * h0_f)
+                    # ── 3. CISALHAMENTO §6.1.7 (b_ef = k_cr · b)
+                    tau_d  = 1.5 * V_max_N / (mat_curta.k_cr * b_f * h0_f)
                     eta_ci = tau_d / mat_curta.f_v_d
 
                     # ── 4. ELS — FLECHA ───────────────────────

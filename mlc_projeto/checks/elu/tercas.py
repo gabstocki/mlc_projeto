@@ -144,7 +144,8 @@ def verifica_terca(
     # ── Tensões ───────────────────────────────────────────────
     sigma_my = M_d_Nm / W_y    # Pa — flexão eixo forte
     sigma_mz = M_z_Nm / W_z   # Pa — flexão eixo fraco
-    tau_d    = 1.5 * V_d_N / A # Pa — cisalhamento
+    # EC5 §6.1.7: b_ef = k_cr · b → A_ef = k_cr · A
+    tau_d    = 1.5 * V_d_N / (mat.k_cr * A)  # Pa — cisalhamento
 
     # ── Resistências de cálculo (k_mod curta duração) ─────────
     mat_curta = GlulamMaterial(mat.classe, mat.classe_servico, "curta")

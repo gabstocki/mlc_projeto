@@ -47,12 +47,16 @@ from mlc_projeto.visualization.viz_3d         import visualizar_galpao
 
 
 # ── Dados do projeto ──────────────────────────────────────────────────────────
+# Geometria factível — varredura EC5 (output/varredura_factivel.csv)
+# Concepção mantida: pórtico de 3 rótulas, MLC GL24h, L=20,25 m, L_t=5,75 m
+# Candidata C: α mínima prática com margem em cisalhamento (η_cis≈0,89)
+# α=4,5° original inviável: H≈(qL²/8)/f_c com f_c=(L/4)tanα → ligação L1 impossível
 
 GEO_PARAMS = dict(
     L         = 20.25,
-    h0        = 0.60,
-    alpha_deg = 4.5,
-    b         = 0.26,
+    h0        = 0.70,
+    alpha_deg = 10.0,
+    b         = 0.30,
 )
 
 MAT_CURTA = dict(
@@ -74,7 +78,7 @@ VENTO_PARAMS = dict(
     classe       = "B",
     S3           = 1.0,
     L            = 20.25,
-    H1           = 1.0,
+    H1           = 1.785,  # ≈ (L/2)·tan(α) — coerente com h_ap−h0
     h            = 7.0,
     dist_portico = 5.75,
 )
@@ -84,8 +88,8 @@ Q_AREA = 0.25
 L_T    = 5.75
 S      = 2.53
 
-B_PILAR     = 0.20
-H_PILAR     = 0.20
+B_PILAR     = 0.22
+H_PILAR     = 0.22
 H_PILAR_ALT = 7.0
 
 B_PILAR_C = 0.26
@@ -94,10 +98,10 @@ H_PILAR_C = 0.26
 B_TERCA = 0.20
 H_TERCA = 0.58
 
-D_BASE_MM = 20
+D_BASE_MM = 30
 D_CUM_MM  = 30
 F_CHU_KN  = 80.0
-L_AP      = 0.50
+L_AP      = 0.70
 
 
 # ── Orquestrador ──────────────────────────────────────────────────────────────
@@ -119,10 +123,15 @@ def main(rodar_varredura: bool = False) -> None:
     # ── Fase 0: Dados de entrada ──────────────────────────────────────────────
     print("\n[FASE 0] Dados de entrada...")
 
-    params_vento = ParametrosVento(**VENTO_PARAMS)
-    geo          = GeometriaViga(**GEO_PARAMS)
-    mat_curta    = GlulamMaterial(**MAT_CURTA)
-    mat_longa    = GlulamMaterial(**MAT_LONGA)
+    geo       = GeometriaViga(**GEO_PARAMS)
+    mat_curta = GlulamMaterial(**MAT_CURTA)
+    mat_longa = GlulamMaterial(**MAT_LONGA)
+
+    # H1 do vento = variação real da cobertura (coerente com a geometria)
+    vento_kw = dict(VENTO_PARAMS)
+    vento_kw["H1"] = geo.h_ap - geo.h0
+    vento_kw["L"]  = geo.L
+    params_vento = ParametrosVento(**vento_kw)
 
     load = carregamentos_com_vento(
         geo=geo, mat=mat_curta,
@@ -131,15 +140,19 @@ def main(rodar_varredura: bool = False) -> None:
     )
 
     gov = load.combinacao_ELU_governante()
+    # k_mod da duração da combinação governante — EC5 §3.1.3
+    mat_elu = mat_curta.com_duracao(gov.duracao)
+
     print(f"  Geometria : L={geo.L}m | h0={geo.h0}m | "
           f"α={geo.alpha_deg}° | b={geo.b}m | h_ap={geo.h_ap:.3f}m")
-    print(f"  Material  : {mat_curta.classe} | CS{mat_curta.classe_servico} | "
-          f"k_mod={mat_curta.k_mod:.2f} (ELU) | "
+    print(f"  Material  : {mat_elu.classe} | CS{mat_elu.classe_servico} | "
+          f"k_mod={mat_elu.k_mod:.2f} ({gov.duracao}) | "
           f"k_def={mat_longa.k_def:.2f} (ELS)")
     print(f"  ELU gov.  : {gov.nome} | M={gov.M_max_kNm:.2f} kN·m | "
-          f"V={gov.V_max_kN:.2f} kN | H_fund={gov.H_kN:.2f} kN")
+          f"V={gov.V_max_kN:.2f} kN | N={gov.N_viga_kN:.2f} kN | "
+          f"H_fund={gov.H_kN:.2f} kN")
     print(f"  Sistema   : Pórtico de 3 rótulas | "
-          f"Área trib.={load.area_trib:.3f} m (L_t/2)")
+          f"Área trib.={load.area_trib:.3f} m (L_t×{load.fator_trib})")
 
     # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
@@ -166,25 +179,25 @@ def main(rodar_varredura: bool = False) -> None:
 
     res_elu = {}
 
-    res_elu["cumeeira"] = verifica_cumeeira(geo, mat_curta, load)
+    res_elu["cumeeira"] = verifica_cumeeira(geo, mat_elu, load)
     _print_eta("Cumeeira §6.4.3", res_elu["cumeeira"])
 
     res_elu["flambagem"] = verifica_flambagem_lateral(
-        geo, mat_curta, load, l_1=S
+        geo, mat_elu, load, l_1=S
     )
     _print_eta("Flambagem §6.3.3", res_elu["flambagem"])
 
-    res_elu["flexao"] = verifica_flexao(geo, mat_curta, load, s=S)
-    _print_eta("Flexo-comp. viga §6.3.2", res_elu["flexao"])
+    res_elu["flexao"] = verifica_flexao(geo, mat_elu, load, s=S)
+    _print_eta("Flexo-comp. §6.3.2+6.35", res_elu["flexao"])
 
-    res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_curta, load)
+    res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_elu, load)
     _print_eta("Cisalhamento §6.1.7", res_elu["cisalhamento"])
 
-    res_elu["apoio"] = verifica_apoio(geo, mat_curta, load, l_ap=L_AP)
+    res_elu["apoio"] = verifica_apoio(geo, mat_elu, load, l_ap=L_AP)
     _print_eta("Apoio §6.1.5+§6.2.2", res_elu["apoio"])
 
     res_elu["flexo_comp"] = verifica_flexo_compressao(
-        geo=geo, mat=mat_curta, load=load,
+        geo=geo, mat=mat_elu, load=load,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         H_pilar=H_PILAR_ALT, s=S,
     )
@@ -197,7 +210,7 @@ def main(rodar_varredura: bool = False) -> None:
     from mlc_projeto.checks.elu.pilares import verifica_pilar as _verifica_pilar
     _N_central = 2 * load.V_max_ELU()
     res_elu["pilar_central"] = _verifica_pilar(
-        mat=mat_curta,
+        mat=mat_elu,
         b=B_PILAR_C, h=H_PILAR_C,
         H=H_PILAR_ALT,
         N_d=_N_central,
@@ -212,7 +225,7 @@ def main(rodar_varredura: bool = False) -> None:
     from mlc_projeto.core.wind import calcular_vento as _calcular_vento
     _w_C1bv_m2 = _calcular_vento(params_vento).pressoes["C1"]["barlavento_kNm2"]
     res_elu["terca"] = verifica_terca(
-        mat       = mat_curta,
+        mat       = mat_elu,
         L_t       = L_T,
         s         = S,
         b         = B_TERCA,
@@ -226,7 +239,7 @@ def main(rodar_varredura: bool = False) -> None:
     _print_eta("Terça §6.1.6+§6.1.7", res_elu["terca"])
 
     res_elu["contraventamento"] = verificar_contraventamento(
-        geo=geo, mat=mat_curta, load=load,
+        geo=geo, mat=mat_elu, load=load,
         L_comp=46.0, n_modulos_cv=2,
         s_terca=S, d_barra_mm=12.0, aco="S235",
         n_porticos=2,
@@ -244,7 +257,7 @@ def main(rodar_varredura: bool = False) -> None:
     print("\n[FASE 4] Ligações...")
 
     res_lig = dimensionar_ligacoes(
-        mat=mat_curta, load=load, geo=geo,
+        mat=mat_elu, load=load, geo=geo,
         d_base_mm=D_BASE_MM,
         d_cum_mm=D_CUM_MM,
         F_chu_kN=F_CHU_KN,
@@ -257,13 +270,14 @@ def main(rodar_varredura: bool = False) -> None:
         _print_eta(label, res_lig[key])
 
     res_lig_c = dimensionar_ligacoes_central(
-        mat=mat_curta, load=load, geo=geo,
+        mat=mat_elu, load=load, geo=geo,
         b_pilar_c=B_PILAR_C,
         d_base_mm=D_BASE_MM,
         d_cum_mm=D_CUM_MM,
     )
     for key, label in [
         ("L1c", f"L1c central (d={D_BASE_MM}mm, 2 chapas)"),
+        ("L2c", "L2c cumeeira central"),
         ("L3c", "L3c sapata central"),
     ]:
         _print_eta(label, res_lig_c[key])
@@ -271,7 +285,11 @@ def main(rodar_varredura: bool = False) -> None:
     # ── Fase 4b: Fadiga e deslizamento das ligações ───────────────────────────
     print("\n[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...")
 
-    res_fadiga = verificar_fadiga_deslizamento()
+    res_fadiga = verificar_fadiga_deslizamento(
+        mat=mat_longa, load=load, geo=geo,
+        res_lig=res_lig, res_lig_c=res_lig_c,
+        H_pilar=H_PILAR_ALT, psi_2=0.0,
+    )
 
     for cod, r in res_fadiga.items():
         status = "✓" if r["slip_ok"] and r["alternada"]["ok"] else "✗"
