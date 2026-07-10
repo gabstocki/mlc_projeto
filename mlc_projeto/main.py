@@ -302,7 +302,45 @@ def main(rodar_varredura: bool = False) -> None:
     print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Pórtico de 3 Rótulas")
     print("=" * 72)
 
-    todos_para_relatorio = {**res_elu, **res_els}
+    # Mesmos dados do console → memorial / Excel / 3D
+    todos_para_relatorio = {
+        **res_elu,
+        **res_els,
+        "L1":  res_lig["L1"],
+        "L2":  res_lig["L2"],
+        "L3":  res_lig["L3"],
+        "L1c": res_lig_c["L1c"],
+        "L2c": res_lig_c["L2c"],
+        "L3c": res_lig_c["L3c"],
+        "fadiga_L1": {
+            "eta": res_fadiga["L1"]["eta_slip"],
+            "ok":  res_fadiga["L1"]["slip_ok"] and res_fadiga["L1"]["alternada"]["ok"],
+            "eta_slip": res_fadiga["L1"]["eta_slip"],
+            "eta_alt":  res_fadiga["L1"]["alternada"]["eta_alt"],
+            "u_inst_mm": res_fadiga["L1"]["u_inst_mm"],
+            "u_fin_mm":  res_fadiga["L1"]["u_fin_mm"],
+            "descricao": res_fadiga["L1"]["descricao"],
+        },
+        "fadiga_L2": {
+            "eta": res_fadiga["L2"]["eta_slip"],
+            "ok":  res_fadiga["L2"]["slip_ok"] and res_fadiga["L2"]["alternada"]["ok"],
+            "eta_slip": res_fadiga["L2"]["eta_slip"],
+            "eta_alt":  res_fadiga["L2"]["alternada"]["eta_alt"],
+            "u_inst_mm": res_fadiga["L2"]["u_inst_mm"],
+            "u_fin_mm":  res_fadiga["L2"]["u_fin_mm"],
+            "descricao": res_fadiga["L2"]["descricao"],
+        },
+        "fadiga_L1c": {
+            "eta": res_fadiga["L1c"]["eta_slip"],
+            "ok":  res_fadiga["L1c"]["slip_ok"] and res_fadiga["L1c"]["alternada"]["ok"],
+            "eta_slip": res_fadiga["L1c"]["eta_slip"],
+            "eta_alt":  res_fadiga["L1c"]["alternada"]["eta_alt"],
+            "u_inst_mm": res_fadiga["L1c"]["u_inst_mm"],
+            "u_fin_mm":  res_fadiga["L1c"]["u_fin_mm"],
+            "descricao": res_fadiga["L1c"]["descricao"],
+        },
+        "k_def": mat_longa.k_def,
+    }
     eta_max_val = 0.0
 
     secoes = [
@@ -334,20 +372,21 @@ def main(rodar_varredura: bool = False) -> None:
         ("L2",  "cumeeira"),
         ("L3",  "sapata"),
         ("L1c", "central base"),
+        ("L2c", "central cumeeira"),
         ("L3c", "central sapata"),
     ]:
-        r_src = res_lig if key in res_lig else res_lig_c
-        r     = r_src[key]
-        ok    = "✓" if r["ok"] else "✗"
-        eta   = r["eta"]
-        bar   = "█" * int(eta * 20)
+        r   = todos_para_relatorio[key]
+        ok  = "✓" if r["ok"] else "✗"
+        eta = r["eta"]
+        bar = "█" * int(eta * 20)
         print(f"  {ok} Ligação {label:<22} η = {eta:.4f}  {bar}")
         eta_max_val = max(eta_max_val, eta)
 
     print(f"\n  ── Fadiga (deslizamento ELS) ──")
-    for cod, r in res_fadiga.items():
-        ok  = "✓" if r["slip_ok"] else "✗"
-        eta = r["eta_slip"]
+    for cod in ("L1", "L2", "L1c"):
+        r   = todos_para_relatorio[f"fadiga_{cod}"]
+        ok  = "✓" if r["ok"] else "✗"
+        eta = r["eta"]
         bar = "█" * int(eta * 20)
         print(f"  {ok} Fadiga {cod:<23} η = {eta:.4f}  {bar}")
 
@@ -365,25 +404,7 @@ def main(rodar_varredura: bool = False) -> None:
     print("\n[FASE 6] Abrindo visualização 3D interativa...")
     visualizar_galpao(
         geo        = geo,
-        resultados = {
-            **res_elu,
-            **res_els,
-            "L1":       res_lig["L1"],
-            "L2":       res_lig["L2"],
-            "L3":       res_lig["L3"],
-            "fadiga_L1":  {
-                "eta": res_fadiga["L1"]["eta_slip"],
-                "ok":  res_fadiga["L1"]["slip_ok"],
-            },
-            "fadiga_L2":  {
-                "eta": res_fadiga["L2"]["eta_slip"],
-                "ok":  res_fadiga["L2"]["slip_ok"],
-            },
-            "fadiga_L1c": {
-                "eta": res_fadiga["L1c"]["eta_slip"],
-                "ok":  res_fadiga["L1c"]["slip_ok"],
-            },
-        },
+        resultados = todos_para_relatorio,
         H_pilar   = H_PILAR_ALT,
         n_modulos = 8,
         dist_mod  = L_T,

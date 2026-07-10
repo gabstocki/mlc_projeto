@@ -44,7 +44,7 @@ def gerar_tex(
 
     hoje = date.today().strftime("%d/%m/%Y")
 
-    # Extrair resultados dos módulos
+    # Extrair resultados dos módulos (mesmas chaves do console / main)
     r_cum  = resultados.get("cumeeira",    {})
     r_fl   = resultados.get("flambagem",   {})
     r_fx   = resultados.get("flexao",      {})
@@ -55,19 +55,33 @@ def gerar_tex(
     r_L1   = resultados.get("L1",          {})
     r_L2   = resultados.get("L2",          {})
     r_L3   = resultados.get("L3",          {})
+    r_L1c  = resultados.get("L1c",         {})
+    r_L2c  = resultados.get("L2c",         {})
+    r_L3c  = resultados.get("L3c",         {})
+    r_fL1  = resultados.get("fadiga_L1",   {})
+    r_fL2  = resultados.get("fadiga_L2",   {})
+    r_fL1c = resultados.get("fadiga_L1c",  {})
 
     # Extrair sub-dicts de flexo_comp
     r_viga  = r_fc.get("viga",  {}) if r_fc else {}
     r_pilar = r_fc.get("pilar", {}) if r_fc else {}
+
+    k_def = float(resultados.get("k_def", mat.k_def))
 
     def eta_row(nome_verif, norma, eta, ok=True):
         simbolo = r"\checkmark" if ok else r"\times"
         cor     = "etaok" if ok else "etaerr"
         return (
             f"  {nome_verif} & {norma} & "
-            f"\\textcolor{{{cor}}}{{{eta:.4f}}} & "
+            f"\\textcolor{{{cor}}}{{{float(eta):.4f}}} & "
             f"\\textcolor{{{cor}}}{{{simbolo}}} \\\\\n"
         )
+
+    def _eta(d, key="eta", default=0.0):
+        return float(d.get(key, default) or 0.0)
+
+    def _ok(d, default=True):
+        return bool(d.get("ok", default))
 
     tex = r"""\documentclass[a4paper,11pt]{article}
 
@@ -84,6 +98,7 @@ def gerar_tex(
 \usepackage{lastpage}
 \usepackage{multirow}
 \usepackage{amsmath}
+\usepackage{amssymb}
 
 \renewcommand{\familydefault}{\sfdefault}
 
@@ -345,11 +360,13 @@ r"""  \bottomrule
 \end{tabular}
 
 \vspace{4pt}
-Fluência (EC5~\\S2.3.2.2): $w_{{fin}} = " + 
-    str(round(r_els.get('w_G_mm',0),2)) + "(1+0{{,}}80) + " +
-    str(round(r_els.get('w_Q1_mm',0),2)) + " = " +
-    str(round(r_els.get('w_fin_mm',0),2)) + "$~mm.
-
+""" + (
+    f"Fluência (EC5~\\S2.3.2.2): "
+    f"$w_{{fin}} = {r_els.get('w_G_mm', 0):.2f}"
+    f"(1+{k_def:.2f}) + {r_els.get('w_Q1_mm', 0):.2f}"
+    f" = {r_els.get('w_fin_mm', 0):.2f}$~mm "
+    f"($k_{{def}}={k_def:.2f}$, $\\psi_2=0$).\n\n"
+) + r"""
 % ── 10. Ligações ──────────────────────────────────────────────
 \section*{10. Ligações}
 
@@ -361,20 +378,32 @@ Fluência (EC5~\\S2.3.2.2): $w_{{fin}} = " +
     eta_row(
         "L1 -- Viga-pilar (base)",
         "EC5 \\S8.2+\\S8.3+\\S8.6",
-        r_L1.get("eta",0.0),
-        r_L1.get("ok",True)
+        _eta(r_L1), _ok(r_L1),
     ) + \
     eta_row(
         "L2 -- Cumeeira",
         "EC5 \\S6.1.4+\\S6.1.5+\\S8.6",
-        r_L2.get("eta",0.0),
-        r_L2.get("ok",True)
+        _eta(r_L2), _ok(r_L2),
     ) + \
     eta_row(
         "L3 -- Sapata (fundação)",
         "EN 1993-1-8+EN 1992-4",
-        r_L3.get("eta",0.0),
-        r_L3.get("ok",True)
+        _eta(r_L3), _ok(r_L3),
+    ) + \
+    eta_row(
+        "L1c -- Base pilar central",
+        "EC5 \\S8.2+\\S8.3+\\S8.6",
+        _eta(r_L1c), _ok(r_L1c),
+    ) + \
+    eta_row(
+        "L2c -- Cumeeira central",
+        "EC5 \\S6.1.4+\\S6.1.5+\\S8.6",
+        _eta(r_L2c), _ok(r_L2c),
+    ) + \
+    eta_row(
+        "L3c -- Sapata central",
+        "EN 1993-1-8+EN 1992-4",
+        _eta(r_L3c), _ok(r_L3c),
     ) + \
 r"""  \bottomrule
 \end{tabular}
@@ -387,20 +416,72 @@ r"""  \bottomrule
   L1 -- Viga-pilar & Pinos em chapa embutida &
     $d$, $n$, layout &
     """ + \
-    f"20~mm, {r_L1.get('n_pinos',8)}, " + \
-    f"{r_L1.get('n_linha',3)}$\\times${r_L1.get('n_linhas',3)} \\\\\n" + \
+    f"{r_L1.get('d_mm', 0):.0f}~mm, {r_L1.get('n_pinos', 0)}, " + \
+    f"{r_L1.get('n_linha', 0)}$\\times${r_L1.get('n_linhas', 0)} \\\\\n" + \
 r"""  & & $F_{Rd}/\text{pino}$, $n_{ef}$ & """ + \
-    f"{r_L1.get('F_v_Rd_kN',0):.3f}~kN, {r_L1.get('n_ef',0):.2f} \\\\\n" + \
+    f"{r_L1.get('F_v_Rd_kN', 0):.3f}~kN, {r_L1.get('n_ef', 0):.2f} \\\\\n" + \
+r"""  & & $F_{res}$, $\eta$ & """ + \
+    f"{r_L1.get('F_res_kN', 0):.1f}~kN, {_eta(r_L1):.4f} \\\\\n" + \
 r"""  \midrule
-  L2 -- Cumeeira & Pino passante & $d$, $n$ & """ + \
-    f"30~mm, {r_L2.get('n_pino',1)} \\\\\n" + \
-r"""  & Compressão axial & $\sigma_{{c,0,d}}$ & """ + \
-    f"{r_L2.get('sigma_c0_MPa',0):.4f}~MPa \\\\\n" + \
+  L2 -- Cumeeira & Pino passante & $d$, $n$ & """ + (
+    f"{r_L2.get('d_pino_mm', r_L2.get('d_mm', 0)):.0f}~mm, "
+    f"{r_L2.get('n_pino', r_L2.get('n_pinos', 0))} \\\\\n"
+) + \
+r"""  & Compressão axial & $\sigma_{c,0,d}$ & """ + \
+    f"{r_L2.get('sigma_c0_MPa', 0):.4f}~MPa \\\\\n" + \
+r"""  & & $\eta$ & """ + \
+    f"{_eta(r_L2):.4f} \\\\\n" + \
 r"""  \midrule
-  L3 -- Sapata & Chumbadores M20 & $n$, $F_{{chu}}$ & """ + \
-    f"{r_L3.get('n_chumbadores',8)}, {r_L3.get('F_chu_kN',80):.0f}~kN/chu \\\\\n" + \
-r"""  & Chapa de base & Dimensões & """ + \
-    f"{r_L3.get('lado_chapa_cm',25.5):.1f}$\\times${r_L3.get('lado_chapa_cm',25.5):.1f}~cm \\\\\n" + \
+  L3 -- Sapata & Chumbadores & $n$, $F_{chu}$ & """ + (
+    f"{r_L3.get('n_chumbadores', 0)}, "
+    f"{r_L3.get('F_chu_kN', 0):.0f}~kN/chu \\\\\n"
+) + \
+r"""  & Chapa de base & Dimensões & """ + (
+    f"{r_L3.get('lado_chapa_cm', 0):.1f}$\\times$"
+    f"{r_L3.get('lado_chapa_cm', 0):.1f}~cm \\\\\n"
+) + \
+r"""  & & $H_d$, $\eta$ & """ + \
+    f"{r_L3.get('H_d_kN', 0):.1f}~kN, {_eta(r_L3):.4f} \\\\\n" + \
+r"""  \midrule
+  L1c -- Central & 2 chapas independentes &
+    $d$, $n$/chapa, layout &
+    """ + (
+    f"{r_L1c.get('d_mm', 0):.0f}~mm, {r_L1c.get('n_pinos', 0)}, "
+    f"{r_L1c.get('n_linha', 0)}$\\times${r_L1c.get('n_linhas', 0)} \\\\\n"
+) + \
+r"""  & & $\eta$ & """ + \
+    f"{_eta(r_L1c):.4f} \\\\\n" + \
+r"""  \midrule
+  L3c -- Sapata central & Chumbadores (H$\approx$0) & $n$ & """ + \
+    f"{r_L3c.get('n_chumbadores', 0)} \\\\\n" + \
+r"""  \bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\subsection*{10.1 Fadiga e deslizamento (EC5 \S7.1 + \S8.1.5)}
+
+\begin{tabular}{llcccc}
+  \toprule
+  \textbf{Lig.} & \textbf{Descrição} & $u_{inst}$ & $u_{fin}$ &
+  $\eta_{slip}$ & $\eta_{alt}$ \\
+  \midrule
+""" + (
+    f"  L1 & {r_fL1.get('descricao', 'Base lateral')} & "
+    f"{r_fL1.get('u_inst_mm', 0):.3f}~mm & "
+    f"{r_fL1.get('u_fin_mm', 0):.3f}~mm & "
+    f"{_eta(r_fL1, 'eta_slip'):.4f} & "
+    f"{_eta(r_fL1, 'eta_alt'):.4f} \\\\\n"
+    f"  L2 & {r_fL2.get('descricao', 'Cumeeira')} & "
+    f"{r_fL2.get('u_inst_mm', 0):.3f}~mm & "
+    f"{r_fL2.get('u_fin_mm', 0):.3f}~mm & "
+    f"{_eta(r_fL2, 'eta_slip'):.4f} & "
+    f"{_eta(r_fL2, 'eta_alt'):.4f} \\\\\n"
+    f"  L1c & {r_fL1c.get('descricao', 'Base central')} & "
+    f"{r_fL1c.get('u_inst_mm', 0):.3f}~mm & "
+    f"{r_fL1c.get('u_fin_mm', 0):.3f}~mm & "
+    f"{_eta(r_fL1c, 'eta_slip'):.4f} & "
+    f"{_eta(r_fL1c, 'eta_alt'):.4f} \\\\\n"
+) + \
 r"""  \bottomrule
 \end{tabular}
 
@@ -412,20 +493,26 @@ r"""  \bottomrule
   \textbf{Verificação} & \textbf{Norma} & $\boldsymbol{\eta}$ & \textbf{Status} \\
   \midrule
 """ + \
-    eta_row("Cumeeira (M=0)",           "EC5 \\S6.4.3",           r_cum.get("eta",0.0),  True) + \
-    eta_row("Flambagem lateral",         "EC5 \\S6.3.3",           r_fl.get("eta",0.0),   r_fl.get("ok",True)) + \
-    eta_row("Flexo-comp. viga",          "EC5 \\S6.3.2",           r_fx.get("eta",0.0),   r_fx.get("ok",True)) + \
-    eta_row("Cisalhamento",              "EC5 \\S6.1.7",           r_ci.get("eta",0.0),   r_ci.get("ok",True)) + \
-    eta_row("Apoio",                     "EC5 \\S6.1.5+\\S6.2.2",  r_ap.get("eta",0.0),   r_ap.get("ok",True)) + \
-    eta_row("Pilar -- compressão",       "EC5 \\S6.3.2",           r_pilar.get("eta",0.0),r_pilar.get("ok",True)) + \
-    eta_row("ELS -- flechas",            "EC5 \\S2.3.2.2",         r_els.get("eta",0.0),  r_els.get("ok",True)) + \
-    eta_row("L1 -- Viga-pilar",          "EC5 \\S8.2+\\S8.6",      r_L1.get("eta",0.0),   r_L1.get("ok",True)) + \
-    eta_row("L2 -- Cumeeira",            "EC5 \\S8.6",             r_L2.get("eta",0.0),   r_L2.get("ok",True)) + \
-    eta_row("L3 -- Sapata",              "EN 1993-1-8",            r_L3.get("eta",0.0),   r_L3.get("ok",True)) + \
+    eta_row("Cumeeira (M=0)",           "EC5 \\S6.4.3",           _eta(r_cum),  _ok(r_cum, True)) + \
+    eta_row("Flambagem lateral",         "EC5 \\S6.3.3",           _eta(r_fl),   _ok(r_fl)) + \
+    eta_row("Flexo-comp. viga",          "EC5 \\S6.3.2",           _eta(r_fx),   _ok(r_fx)) + \
+    eta_row("Cisalhamento",              "EC5 \\S6.1.7",           _eta(r_ci),   _ok(r_ci)) + \
+    eta_row("Apoio",                     "EC5 \\S6.1.5+\\S6.2.2",  _eta(r_ap),   _ok(r_ap)) + \
+    eta_row("Pilar -- compressão",       "EC5 \\S6.3.2",           _eta(r_pilar),_ok(r_pilar)) + \
+    eta_row("ELS -- flechas",            "EC5 \\S2.3.2.2",         _eta(r_els),  _ok(r_els)) + \
+    eta_row("L1 -- Viga-pilar",          "EC5 \\S8.2+\\S8.6",      _eta(r_L1),   _ok(r_L1)) + \
+    eta_row("L2 -- Cumeeira",            "EC5 \\S8.6",             _eta(r_L2),   _ok(r_L2)) + \
+    eta_row("L3 -- Sapata",              "EN 1993-1-8",            _eta(r_L3),   _ok(r_L3)) + \
+    eta_row("L1c -- Base central",       "EC5 \\S8.2+\\S8.6",      _eta(r_L1c),  _ok(r_L1c)) + \
+    eta_row("L2c -- Cumeeira central",   "EC5 \\S8.6",             _eta(r_L2c),  _ok(r_L2c)) + \
+    eta_row("L3c -- Sapata central",     "EN 1993-1-8",            _eta(r_L3c),  _ok(r_L3c)) + \
+    eta_row("Fadiga L1 ($\\eta_{slip}$)", "EC5 \\S7.1",            _eta(r_fL1),  _ok(r_fL1)) + \
+    eta_row("Fadiga L2 ($\\eta_{slip}$)", "EC5 \\S7.1",            _eta(r_fL2),  _ok(r_fL2)) + \
+    eta_row("Fadiga L1c ($\\eta_{slip}$)","EC5 \\S7.1",            _eta(r_fL1c), _ok(r_fL1c)) + \
 r"""  \midrule
   \multicolumn{2}{l}{\textbf{$\eta$ máximo}} &
   \multicolumn{2}{c}{\textbf{""" + \
-    f"{max(r_cum.get('eta',0), r_fl.get('eta',0), r_fx.get('eta',0), r_ci.get('eta',0), r_ap.get('eta',0), r_pilar.get('eta',0), r_els.get('eta',0), r_L1.get('eta',0), r_L2.get('eta',0), r_L3.get('eta',0)):.4f}" + \
+    f"{max(_eta(r_cum), _eta(r_fl), _eta(r_fx), _eta(r_ci), _eta(r_ap), _eta(r_pilar), _eta(r_els), _eta(r_L1), _eta(r_L2), _eta(r_L3), _eta(r_L1c), _eta(r_L2c), _eta(r_L3c), _eta(r_fL1), _eta(r_fL2), _eta(r_fL1c)):.4f}" + \
 r"""}} \\
   \bottomrule
 \end{tabular}
@@ -481,14 +568,27 @@ def gerar_relatorio(
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     # ── Excel ─────────────────────────────────────────────────
+    # Ignora chaves auxiliares (ex.: k_def escalar)
+    ordem = [
+        "cumeeira", "flambagem", "flexao", "cisalhamento", "apoio",
+        "flexo_comp", "pilar_central", "terca", "contraventamento", "ELS",
+        "L1", "L2", "L3", "L1c", "L2c", "L3c",
+        "fadiga_L1", "fadiga_L2", "fadiga_L1c",
+    ]
     linhas = []
-    for verif, res in resultados.items():
-        if isinstance(res, dict) and "eta" in res:
-            linhas.append({
-                "Verificação": verif,
-                "η":           round(res["eta"], 4),
-                "OK":          "✓" if res.get("ok") else "✗",
-            })
+    vistos = set()
+    for verif in ordem + list(resultados.keys()):
+        if verif in vistos:
+            continue
+        res = resultados.get(verif)
+        if not isinstance(res, dict) or "eta" not in res:
+            continue
+        vistos.add(verif)
+        linhas.append({
+            "Verificação": verif,
+            "η":           round(float(res["eta"]), 4),
+            "OK":          "✓" if res.get("ok") else "✗",
+        })
 
     df = pd.DataFrame(linhas)
     xlsx_path = OUTPUT_DIR / f"{nome}.xlsx"
