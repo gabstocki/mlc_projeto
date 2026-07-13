@@ -288,24 +288,29 @@ def dimensionar_ligacao_base(
     d_mm:    float = 20.0,
     k_mod:   float | None = None,
     gamma_M: float = GAMMA_M_LIGACAO,
+    eta_alvo: float = 0.85,
 ) -> dict:
     """
     Dimensiona a ligação viga-pilar — rótula na base.
 
-    Esforços no eixo da viga (EC5 + estática do pórtico de 3 rótulas):
+    Esforços no eixo da viga (biarticulada):
         N_d = N_viga  (compressão axial no apoio)
         V_d = V_viga  (cortante no eixo no apoio)
         M_d = 0       (rótula)
-        F_res = √(N_d² + V_d²) = √(R_v² + H²)
+        F_res = √(N_d² + V_d²)
 
-    Solução: pinos lisos em chapa embutida central (EC5 §8.2+§8.6).
+    Solução: pinos lisos em chapa embutida central (EC5 §8.2+§8.5.1.1+§8.6).
     γ_M = 1,30 (EC5 Tab. 2.3 — ligações).
     k_mod: duração da combinação (padrão = mat.k_mod).
+    eta_alvo: margem de projecto (uso público) — R ≥ F_res / eta_alvo.
+              EC5 exige η ≤ 1,0; o alvo 0,85 é critério de projecto.
     """
     if k_mod is None:
         k_mod = mat.k_mod
+    if eta_alvo <= 0 or eta_alvo > 1.0:
+        raise ValueError("eta_alvo deve estar em (0, 1]")
 
-    # Componentes no eixo da viga — análise de 3 rótulas
+    # Componentes no eixo da viga — análise biarticulada
     N_d = load.N_max_ELU()     # kN — axial (// fibras)
     V_d = load.V_viga_ELU()    # kN — cortante (⊥ eixo)
     R_v = load.V_max_ELU()
@@ -313,6 +318,8 @@ def dimensionar_ligacao_base(
 
     F_res_kN = math.sqrt(N_d ** 2 + V_d ** 2)
     F_res_N  = F_res_kN * 1e3
+    # Capacidade mínima de projecto (margem)
+    R_req_N  = F_res_N / eta_alvo
     # Ângulo da resultante com as fibras (eixo) — EC5 §8.3 distâncias
     theta_deg = math.degrees(math.atan2(abs(V_d), max(abs(N_d), 1e-9)))
 
@@ -336,13 +343,13 @@ def dimensionar_ligacao_base(
     n_vert_max = max(1, int((h0_mm - 2 * a4_mm) / a2_mm) + 1) if a2_mm > 0 else 1
 
     # Procura malha (n_horiz × n_vert) com n_ef por fileira // fibras
-    # EC5 §8.3.1.1: n_ef aplica-se a cada fileira paralela às fibras
+    # EC5 §8.5.1.1 (pernos/pinos): n_ef = n^0,9·(a1/(13d))^1/4 ≤ n
     best = None
     for n_vert in range(1, n_vert_max + 1):
         for n_horiz in range(1, 21):  # limite prático ao longo da viga
             nef_row = n_ef(n_horiz, a1_mm, d_mm)
             R_N = n_vert * nef_row * F_v_Rd
-            if R_N < F_res_N:
+            if R_N < R_req_N:
                 continue
             geo_ok = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
@@ -362,19 +369,45 @@ def dimensionar_ligacao_base(
                 best = cand
 
     if best is None:
-        # Sem malha factível — reporta a melhor tentativa (máx. geometria)
-        n_horiz = 12
-        n_vert  = n_vert_max
-        nef_row = n_ef(n_horiz, a1_mm, d_mm)
-        R_N     = n_vert * nef_row * F_v_Rd
-        geo_ok  = verificar_geometria_grupo(
-            n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
-            h0_mm=h0_mm, theta_deg=theta_deg,
-        )
-        eta = F_res_N / R_N if R_N > 0 else 999.0
-        n_pinos = n_horiz * n_vert
-        nef_final = n_vert * nef_row
-    else:
+        # Sem malha factível com eta_alvo — tenta pelo menos η ≤ 1,0
+        best_norm = None
+        for n_vert in range(1, n_vert_max + 1):
+            for n_horiz in range(1, 21):
+                nef_row = n_ef(n_horiz, a1_mm, d_mm)
+                R_N = n_vert * nef_row * F_v_Rd
+                if R_N < F_res_N:
+                    continue
+                geo_ok = verificar_geometria_grupo(
+                    n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
+                    h0_mm=h0_mm, theta_deg=theta_deg,
+                )
+                if not geo_ok["ok_geometria"]:
+                    continue
+                n_tot = n_horiz * n_vert
+                eta_i = F_res_N / R_N
+                cand = {
+                    "n_horiz": n_horiz, "n_vert": n_vert, "n_tot": n_tot,
+                    "nef_row": nef_row, "R_N": R_N, "eta": eta_i, "geo": geo_ok,
+                }
+                if best_norm is None or n_tot < best_norm["n_tot"]:
+                    best_norm = cand
+        if best_norm is not None:
+            best = best_norm
+        else:
+            n_horiz = 12
+            n_vert  = n_vert_max
+            nef_row = n_ef(n_horiz, a1_mm, d_mm)
+            R_N     = n_vert * nef_row * F_v_Rd
+            geo_ok  = verificar_geometria_grupo(
+                n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
+                h0_mm=h0_mm, theta_deg=theta_deg,
+            )
+            eta = F_res_N / R_N if R_N > 0 else 999.0
+            n_pinos = n_horiz * n_vert
+            nef_final = n_vert * nef_row
+            best = None
+
+    if best is not None:
         n_horiz   = best["n_horiz"]
         n_vert    = best["n_vert"]
         n_pinos   = best["n_tot"]
@@ -384,7 +417,9 @@ def dimensionar_ligacao_base(
         eta       = best["eta"]
         geo_ok    = best["geo"]
 
-    ok = eta <= 1.0 and geo_ok["ok_geometria"]
+    ok_norma = eta <= 1.0 and geo_ok["ok_geometria"]
+    ok_alvo  = eta <= eta_alvo + 1e-9 and geo_ok["ok_geometria"]
+    ok       = ok_norma and ok_alvo
 
     return {
         "ligacao":       "L1 — Viga-pilar (rótula base)",
@@ -398,11 +433,12 @@ def dimensionar_ligacao_base(
         "t_lado_mm":     round(t_mm,           1),
         "k_mod":         k_mod,
         "gamma_M":       gamma_M,
+        "eta_alvo":      eta_alvo,
         "F_v_Rd_kN":     round(F_v_Rd/1e3,    3),
         "modo_gov":      joh["modo_gov"],
         "n_pinos":       n_pinos,
         "n_ef":          round(nef_final,      3),
-        "n_ef_row":      round(nef_row if best else nef_row, 3),
+        "n_ef_row":      round(nef_row,        3),
         "R_total_kN":    round(R_N/1e3,        3),
         "n_linha":       n_horiz,
         "n_linhas":      n_vert,
@@ -413,8 +449,9 @@ def dimensionar_ligacao_base(
         "a1_mm":         dist["a1_mm"],
         "a2_mm":         dist["a2_mm"],
         "eta":           round(eta,            4),
+        "ok_alvo":       ok_alvo,
         "ok":            ok,
-        "norma":         "EC5 §8.2+§8.3+§8.6 | γ_M=1,30 Tab.2.3",
+        "norma":         "EC5 §8.2+§8.5.1.1+§8.6 | γ_M=1,30 | η_alvo projecto",
     }
 
 
@@ -429,19 +466,16 @@ def dimensionar_ligacao_cumeeira(
     gamma_M: float = GAMMA_M_LIGACAO,
 ) -> dict:
     """
-    Dimensiona a ligação na cumeeira — rótula.
+    Verifica a zona de cumeeira da peça monolítica (sem rótula).
 
-    Esforços (simetria de carga vertical):
-        M = 0 na rótula
-        N no eixo ≈ H / cos(α)  (empuxo horizontal projetado no eixo)
-        Componentes na secção:
+    Esforços (simetria de carga vertical + empuxo H):
+        M_ap da análise biarticulada (verificação t90 em cumeeira.py)
+        Componentes de compressão na secção (H decomposoto):
             N_c0  = H · cos(α)  → EC5 §6.1.4
             N_c90 = H · sin(α)  → EC5 §6.1.5
 
-    Pino passante: resiste a cortante residual por assimetria de vento.
-    V_asim estimado como diferença de carga de vento entre águas:
-        |w_C1bv − w_C1st| · área_trib · (L/4)  (meia viga, conservador)
-    Se vento simétrico nulo → V_asim = 0 e o pino é construtivo (n ≥ 1).
+    Pino passante (se detalhe de montagem): cortante residual por
+    assimetria de vento |w_C1bv − w_C1st| · (L/4).
     """
     if k_mod is None:
         k_mod = mat.k_mod
@@ -476,7 +510,7 @@ def dimensionar_ligacao_cumeeira(
     ok      = eta_gov <= 1.0
 
     return {
-        "ligacao":        "L2 — Cumeeira (rótula)",
+        "ligacao":        "L2 — Cumeeira (continuidade MLC)",
         "H_kN":           round(H,          3),
         "alpha_deg":      round(math.degrees(alpha), 2),
         "N_c0_kN":        round(N_c0_kN,    3),
@@ -507,67 +541,65 @@ def dimensionar_sapata(
     geo:      GeometriaViga,
     F_chu_kN: float = 80.0,
     d_chu_mm: float = 20.0,
+    eta_alvo: float = 0.85,
 ) -> dict:
     """
     Dimensiona a sapata articulada na base do pilar.
 
-    Esforços:
-        N_d = V_max_ELU = 97,84 kN  (compressão vertical)
-        H_d = H_ELU     = 621,60 kN (empuxo horizontal → chumbadores)
-        M_d = 0                      (rótula)
+    Esforços (biarticulada):
+        N_d = V_max_ELU  (compressão vertical do pilar)
+        H_d = H_ELU      (empuxo horizontal → chumbadores)
+        M_d = 0          (rótula)
 
     Chumbadores: resistem ao cisalhamento H_d.
-    Resistência típica por chumbador M20 S355 em concreto:
-        Calculada por EN 1992-4 (ancoragem) ou conservadoramente
-        pela resistência ao cisalhamento da seção do chumbador.
-
-    F_v,Rd por chumbador = A_s × f_y / (γ_M × √3)
-    Para M20 S355: A_s = 245 mm², f_y = 355 MPa
-        F_v,Rd = 245 × 355 / (1,25 × 1,732) = 40,2 kN
+    n = ceil(H_d / (F_chu · eta_alvo))  — margem de projecto (uso público).
+    EC5/EN não impõem eta_alvo; 0,85 é critério de projecto.
 
     Args:
         load      : Carregamentos
         geo       : Geometria
         F_chu_kN  : Resistência por chumbador ao cisalhamento (kN)
         d_chu_mm  : Diâmetro do chumbador (mm)
+        eta_alvo  : taxa de utilização máxima de projecto
 
     Returns:
         dict com número de chumbadores, η e ok
     """
+    if eta_alvo <= 0 or eta_alvo > 1.0:
+        raise ValueError("eta_alvo deve estar em (0, 1]")
+
     N_d = load.V_max_ELU()   # kN
     H_d = load.H_ELU()       # kN
 
-    # Número de chumbadores para H_d
-    n_chu = math.ceil(H_d / F_chu_kN)
+    # Número de chumbadores com margem: H_d ≤ eta_alvo · n · F_chu
+    n_chu = max(1, math.ceil(H_d / (F_chu_kN * eta_alvo)))
     eta_H = H_d / (n_chu * F_chu_kN)
 
     # Chapa de base — compressão N_d no pilar
-    # Área da chapa: N_d / f_c,90,concreto
-    # f_c,90,concreto ≈ 1,5 MPa (C25/30 sob carga localizada)
-    f_c_conc = 1.5   # MPa — conservador
+    f_c_conc = 1.5   # MPa — conservador (C25/30 localizado)
     A_chapa_m2 = N_d * 1e3 / (f_c_conc * 1e6)
     A_chapa_cm2 = A_chapa_m2 * 1e4
-
-    # Dimensões mínimas da chapa (quadrada)
     lado_chapa = math.sqrt(A_chapa_m2) * 100   # cm
+
+    ok_norma = eta_H <= 1.0
+    ok_alvo  = eta_H <= eta_alvo + 1e-9
 
     return {
         "ligacao":        "L3 — Sapata na fundação",
         "N_d_kN":         round(N_d,          3),
         "H_d_kN":         round(H_d,          3),
-        # Chumbadores
         "d_chu_mm":       d_chu_mm,
         "F_chu_kN":       F_chu_kN,
         "n_chumbadores":  n_chu,
+        "eta_alvo":       eta_alvo,
         "eta_H":          round(eta_H,         4),
-        # Chapa de base
         "A_chapa_cm2":    round(A_chapa_cm2,  2),
         "lado_chapa_cm":  round(lado_chapa,   1),
-        # Resultado
         "eta":            round(eta_H,         4),
-        "ok":             eta_H <= 1.0,
-        "norma":          "EN 1993-1-8 + EN 1992-4",
-        "nota":           "Chumbadores dimensionados conservadoramente. "
+        "ok_alvo":        ok_alvo,
+        "ok":             ok_norma and ok_alvo,
+        "norma":          "EN 1993-1-8 + EN 1992-4 | η_alvo projecto",
+        "nota":           "Chumbadores com margem eta_alvo. "
                           "Verificação final conforme EN 1992-4.",
     }
 
@@ -581,16 +613,20 @@ def dimensionar_ligacoes(
     d_base_mm:    float = 20.0,
     d_cum_mm:     float = 30.0,
     F_chu_kN:     float = 80.0,
+    eta_alvo:     float = 0.85,
 ) -> dict:
     """
-    Dimensiona as três ligações do pórtico de 3 rótulas.
+    Dimensiona as três ligações do pórtico (biarticulada).
 
-    Returns:
-        dict com resultados das três ligações e η governante global
+    eta_alvo: margem de projecto para L1 e L3 (uso público). L2 usa η ≤ 1,0.
     """
-    L1 = dimensionar_ligacao_base(mat, load, geo, d_mm=d_base_mm)
+    L1 = dimensionar_ligacao_base(
+        mat, load, geo, d_mm=d_base_mm, eta_alvo=eta_alvo,
+    )
     L2 = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
-    L3 = dimensionar_sapata(load, geo, F_chu_kN=F_chu_kN)
+    L3 = dimensionar_sapata(
+        load, geo, F_chu_kN=F_chu_kN, eta_alvo=eta_alvo,
+    )
 
     eta_gov = max(L1["eta"], L2["eta"], L3["eta"])
     lig_gov = (
@@ -650,6 +686,7 @@ def dimensionar_ligacao_base_central(
     d_mm:      float = 20.0,
     k_mod:     float | None = None,
     gamma_M:   float = GAMMA_M_LIGACAO,
+    eta_alvo:  float = 0.85,
 ) -> dict:
     """
     Ligação viga-pilar central — duas chapas independentes.
@@ -659,20 +696,20 @@ def dimensionar_ligacao_base_central(
     """
     if k_mod is None:
         k_mod = mat.k_mod
+    if eta_alvo <= 0 or eta_alvo > 1.0:
+        raise ValueError("eta_alvo deve estar em (0, 1]")
 
-    # Mesmos esforços por chapa que a ligação lateral (uma viga por chapa).
-    # t de esmagamento usa a metade da largura do pilar central.
+    # Base com eta_alvo; redimensiona malha se t do pilar ≠ b/2 da viga
     res = dimensionar_ligacao_base(
         mat=mat, load=load, geo=geo,
-        d_mm=d_mm, k_mod=k_mod, gamma_M=gamma_M,
+        d_mm=d_mm, k_mod=k_mod, gamma_M=gamma_M, eta_alvo=eta_alvo,
     )
-    # Recalcular Johansen e malha com t = b_pilar_c/2
-    # (capacidade por pino sobe se o pilar for mais largo que a viga)
     rho_k = mat.rho_k
     t_mm  = b_pilar_c / 2 * 1000
     joh   = johansen_chapa_embutida(rho_k, d_mm, t_mm, F_U_K_PINO)
     F_v_Rd = k_mod * joh["F_v_Rk_N"] * 2 / gamma_M
     F_res_N = res["F_res_kN"] * 1e3
+    R_req_N = F_res_N / eta_alvo
     theta_deg = res.get("theta_deg", 0.0)
     dist = distancias_minimas(d_mm, theta_deg=theta_deg)
     a1_mm = dist["a1_mm"]
@@ -686,7 +723,7 @@ def dimensionar_ligacao_base_central(
         for n_horiz in range(1, 21):
             nef_row = n_ef(n_horiz, a1_mm, d_mm)
             R_N = n_vert * nef_row * F_v_Rd
-            if R_N < F_res_N:
+            if R_N < R_req_N:
                 continue
             geo_ok = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
@@ -698,25 +735,32 @@ def dimensionar_ligacao_base_central(
             if best is None or n_tot < best["n_tot"]:
                 best = dict(
                     n_horiz=n_horiz, n_vert=n_vert, n_tot=n_tot,
-                    nef=n_vert * nef_row, R_N=R_N, eta=F_res_N / R_N,
-                    geo=geo_ok,
+                    nef=n_vert * nef_row, nef_row=nef_row,
+                    R_N=R_N, eta=F_res_N / R_N, geo=geo_ok,
                 )
 
     res["ligacao"]   = "L1c — Viga-pilar central (por chapa)"
     res["t_lado_mm"] = round(t_mm, 1)
     res["F_v_Rd_kN"] = round(F_v_Rd / 1e3, 3)
+    res["eta_alvo"]  = eta_alvo
     res["nota"]      = "2 chapas independentes por pilar central"
     if best is not None:
         res["n_pinos"]      = best["n_tot"]
         res["n_linha"]      = best["n_horiz"]
         res["n_linhas"]     = best["n_vert"]
         res["n_ef"]         = round(best["nef"], 3)
+        res["n_ef_row"]     = round(best["nef_row"], 3)
         res["R_total_kN"]   = round(best["R_N"] / 1e3, 3)
         res["eta"]          = round(best["eta"], 4)
         res["h_ocupado_mm"] = best["geo"]["h_ocupado_mm"]
         res["L_ocupado_mm"] = best["geo"]["L_ocupado_mm"]
         res["ok_geometria"] = best["geo"]["ok_geometria"]
-        res["ok"]           = best["eta"] <= 1.0 and best["geo"]["ok_geometria"]
+        res["ok_alvo"]      = best["eta"] <= eta_alvo + 1e-9
+        res["ok"]           = (
+            best["eta"] <= 1.0
+            and best["eta"] <= eta_alvo + 1e-9
+            and best["geo"]["ok_geometria"]
+        )
     return res
 
 
@@ -769,6 +813,7 @@ def dimensionar_ligacoes_central(
     b_pilar_c: float = 0.26,
     d_base_mm: float = 20.0,
     d_cum_mm:  float = 30.0,
+    eta_alvo:  float = 0.85,
 ) -> dict:
     """
     Dimensiona as ligações do pilar central compartilhado.
@@ -778,7 +823,7 @@ def dimensionar_ligacoes_central(
     L3c: sapata — sem empuxo horizontal, chumbadores construtivos
     """
     L1c = dimensionar_ligacao_base_central(
-        mat, load, geo, b_pilar_c, d_base_mm
+        mat, load, geo, b_pilar_c, d_base_mm, eta_alvo=eta_alvo,
     )
     # Cumeeira central: mesma análise EC5 que a lateral (geometria e esforços iguais)
     L2c = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
@@ -871,7 +916,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.loads     import carregamentos_com_vento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="curta")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="curta")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

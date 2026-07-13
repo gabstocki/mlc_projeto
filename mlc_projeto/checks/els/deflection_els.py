@@ -1,15 +1,8 @@
 """
-checks/els/deflection_els.py — Verificações ELS completas. v2
+checks/els/deflection_els.py — Verificações ELS completas.
 
-ATUALIZAÇÃO v2 — Pórtico de 3 rótulas:
-    Os diagramas M_g(x) e M_q(x) agora são calculados pela análise
-    estrutural correta de 3 rótulas via analisar_3rotulas().
-
-    A integração numérica w = ∫∫M/(EI)dx² permanece idêntica.
-    O que muda é APENAS o M(x) de entrada — não a mecânica do cálculo.
-
-    Consequência: flechas menores que no pórtico rígido porque
-    M_max é ~75% menor. A flecha raramente governa neste sistema.
+Diagramas M_g(x) e M_q(x) da análise biarticulada (continuidade na cumeeira).
+Integração numérica w = ∫∫ M/(E I(x)) dx² com E = E_mean (EC5 §2.2.3).
 
 Verificações ELS (EN 1990 §6.5):
     S1: G + Q + 0,6W  — característico → w_inst ≤ L/300
@@ -33,7 +26,7 @@ from scipy.integrate import cumulative_trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
-from mlc_projeto.core.loads     import Carregamentos, analisar_3rotulas
+from mlc_projeto.core.loads     import Carregamentos, analisar_biarticulada
 
 
 # ── Integração numérica da flecha ─────────────────────────────────────────────
@@ -81,9 +74,9 @@ def verificar_ELS(
     w_camber:  float = 0.0,
 ) -> dict:
     """
-    Verificação ELS completa — pórtico de 3 rótulas.
+    Verificação ELS completa — viga biarticulada monolítica.
 
-    Calcula M_g(x) e M_q(x) pela análise de 3 rótulas e integra
+    Calcula M_g(x) e M_q(x) pela análise biarticulada e integra
     numericamente para obter flechas com seção variável I(x).
 
     Args:
@@ -109,11 +102,10 @@ def verificar_ELS(
     comb_S1 = load.combinacoes["ELS_S1"]
     comb_S2 = load.combinacoes["ELS_S2"]
 
-    # ── Diagramas M(x) pela análise de 3 rótulas ─────────────
+    # ── Diagramas M(x) pela análise biarticulada ──────────────
     def _M_interp(q: float) -> tuple[np.ndarray, np.ndarray]:
         """Retorna (x, M_Nm) interpolados nos pontos de geo."""
-        r = analisar_3rotulas(q, L, h0, h_ap, alpha_rad)
-        # Interpolar nos pontos de geo.x para manter coerência com I(x)
+        r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, geo.b)
         M_interp = np.interp(geo.x, r["x"], r["M_x"]) * 1e3  # N·m
         return geo.x, M_interp
 
@@ -171,7 +163,7 @@ def verificar_ELS(
         "q_q_kNm":       round(load.q_k,             4),
         # Referência
         "norma":         "EC5 §2.3.2.2, Tab. 7.2 | EN 1990 §6.5",
-        "sistema":       "3 rótulas",
+        "sistema":       "biarticulada",
     }
 
 
@@ -188,7 +180,7 @@ def relatorio_ELS(resultado: dict) -> None:
     print(f"  k_def = {resultado['k_def']:.2f} | "
           f"E_mean = {resultado['E_mean_GPa']:.2f} GPa\n")
 
-    print(f"  Combinações ELS (3 rótulas — M_max ≈ 75% menor que pórtico rígido):")
+    print(f"  Combinações ELS (viga biarticulada — M da compatibilidade):")
     print(f"    S1 (caracter.): q = {resultado['q_S1_kNm']:+.4f} kN/m")
     print(f"    S2 (frequente): q = {resultado['q_S2_kNm']:+.4f} kN/m")
     print(f"    G (permanente): q = {resultado['q_g_kNm']:+.4f} kN/m")
@@ -235,7 +227,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.loads     import carregamentos_com_vento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="longa")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="longa")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

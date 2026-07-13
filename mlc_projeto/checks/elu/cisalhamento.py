@@ -338,7 +338,7 @@ if __name__ == "__main__":
 
     mat = GlulamMaterial(
         classe="GL24h",
-        classe_servico=2,
+        classe_servico=3,
         duracao="longa",
     )
 

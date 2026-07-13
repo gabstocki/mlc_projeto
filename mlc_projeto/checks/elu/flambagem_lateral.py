@@ -7,12 +7,15 @@ A aba comprimida de uma viga em flexão tende a deslocar-se lateralmente
 (flambagem lateral), reduzindo a resistência efetiva à flexão. O EC5 §6.3.3
 controla isso pelo fator k_crit, que depende da esbeltez relativa λ_rel,m.
 
-Comprimento efetivo adotado:
-    Terças com chumbador lateral — restrição contínua no topo
+Comprimento efetivo:
     l_ef = 0,9 · l_1  (EC5 Tab. 6.1 — carga dist. + restrição no topo)
-    l_ef = 0,9 × 5,75 = 5,175 m
 
-Referência: EC5 §6.3.3
+    l_1 NÃO é livre: só pode ser o espaçamento entre terças (s) se o
+    contraventamento de cobertura validar a restrição lateral
+    (EC5 §9.2.5 → `l_1_efetivo_m` em contraventamento.py).
+    Sem cobertura válida, l_1 deve ser o vão entre baías rígidas (ℓ).
+
+Referência: EC5 §6.3.3 + §9.2.5
 """
 
 from __future__ import annotations
@@ -174,8 +177,8 @@ def verifica_flambagem_lateral(
     Condição (flexão simples):
         σ_m,d ≤ k_crit · f_m,d
 
-    Secção crítica: ponto de M_max (não a cumeeira no pórtico de
-    3 rótulas, onde M ≈ 0). Altura h = h(x_Mmax).
+    Secção crítica: ponto de M_max da análise biarticulada.
+    Altura h = h(x_Mmax).
 
     σ_m,crit: EC5 §6.3.3(2) Eq. (6.32) — secção retangular.
 
@@ -183,12 +186,14 @@ def verifica_flambagem_lateral(
         geo  : Geometria da viga
         mat  : Material
         load : Carregamentos
-        l_1  : Espaçamento entre terças (m)
+        l_1  : Distância entre restrições laterais efectivas (m).
+               Usar `contraventamento['l_1_efetivo_m']` do pipeline.
 
     Returns:
         dict com resultados intermediários, η e ok
     """
     # ── Comprimento efetivo ───────────────────────────────────
+    # l_1 já deve incorporar a validade do contraventamento (§9.2.5)
     l_ef = calcular_l_ef(l_1, restricao="continua_topo", tipo_carga="distribuida")
 
     # ── Seção crítica — ponto de momento máximo ───────────────
@@ -210,7 +215,7 @@ def verifica_flambagem_lateral(
     k_crit  = calcular_k_crit(lam_rel)
 
     # ── Tensão atuante ────────────────────────────────────────
-    M_max_Nm = gov.M_max_kNm * 1e3        # N·m
+    M_max_Nm = abs(gov.M_max_kNm) * 1e3   # N·m
     W_y      = b * h_crit ** 2 / 6
     sigma_md = M_max_Nm / W_y             # Pa
 
@@ -563,7 +568,7 @@ if __name__ == "__main__":
 
     mat = GlulamMaterial(
         classe="GL24h",
-        classe_servico=2,
+        classe_servico=3,
         duracao="longa",
     )
 

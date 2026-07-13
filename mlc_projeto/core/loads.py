@@ -1,42 +1,38 @@
 """
-core/loads.py — Carregamentos e combinações EN 1990. v3
+core/loads.py — Carregamentos e combinações EN 1990. v4
 
-MUDANÇA v3 — Pórtico de três rótulas:
-    Sistema estrutural: isostático com três rótulas
-        - Rótulas nas bases dos pilares
-        - Rótula na cumeeira
-    
-    Diagrama de momento correto para 3 rótulas (eixo centroidal):
-        M(x) = R_v·x - H·y_c(x) - q·x²/2
+MUDANÇA v4 — Viga biarticulada (peça monolítica de MLC):
+    Peça única de secção variável (extradorso em duas águas, intradorso reto).
+    Rótulas apenas nos apoios — NÃO há rótula na cumeeira (continuidade real).
 
-    onde (intradorso horizontal, rótulas no centroide da secção):
-        R_v  = q·L/2
-        f_c  = (h_ap - h0)/2          (flecha do eixo entre rótulas)
-        y_c(x) = x·tan(α)/2           (ordenada do centroide)
-        H    = [R_v·(L/2) - q·(L/2)²/2] / f_c  = (q·L²/8) / f_c
+    Grau de hiperestaticidade: 1 (empuxo H por compatibilidade).
+
+    Eixo centroidal (intradorso horizontal):
+        y_c(x) = x_sim · tan(α)/2
+        f_c    = (h_ap − h0)/2
+        I(x)   = b · h(x)³ / 12
+
+    Sistema isostático auxiliar (H = 0):
+        M_0(x) = (q/2) · x · (L − x)
+
+    Momento real:
+        M(x) = M_0(x) − H · y_c(x)
+
+    Empuxo (Castigliano / força unitária, integração em dx — projecção horizontal):
+        H = ∫ M_0 y_c / I dx  /  ∫ y_c² / I dx     (0 → L)
 
     Consequências:
-        - M na cumeeira = 0  (rótula)
-        - M na base    = 0  (rótula)
-        - M_max ocorre em x ≈ L/4 (não no meio do vão)
-        - M_max ≈ 75% menor que pórtico rígido
-        - Viga sujeita a M + N (flexo-compressão)
-        - H vai direto para a fundação (sapata com chumbadores)
+        - M na cumeeira ≠ 0 em geral  → EC5 §6.4.3 activo
+        - M na base = 0               → rótula de apoio
+        - H tipicamente menor que no modelo triarticulado (fictício)
 
-Combinações EN 1990 mantidas (inalteradas):
-    ELU_C1: 1,35G + 1,5Q + 0,9W_C1bv
-    ELU_C2: 1,35G + 1,5W_C1bv + 1,05Q  ← governante
-    ELU_C3: 0,9G  + 1,5W_C2st
-    ELU_C4: 1,35G + 1,5W_C2bv + 1,05Q
-    ELS_S1: G + Q + 0,6W_C1bv
-    ELS_S2: G + 0,5Q
-    ELS_S3: G
+Combinações EN 1990 mantidas:
+    ELU_C1…C4, ELS_S1…S3
 
-Área tributária (pórtico intermédio): L_t = espaçamento entre pórticos.
-    Pórtico de extremidade: usar fator_trib=0,5 (meia baia).
+Área tributária (pórtico intermédio): L_t; extremidade: fator_trib=0,5.
 
 Referência: EN 1990 §6.4, §6.5
-            Estática de pórtico de três rótulas (eixo centroidal)
+            Teoria da elasticidade — viga/arco biarticulado, secção variável
 """
 
 from __future__ import annotations
@@ -68,20 +64,113 @@ PSI_2_W     = 0.00
 @dataclass
 class Combinacao:
     """Uma combinação de ações com esforços resultantes."""
-    nome:        str
-    tipo:        str
-    descricao:   str
-    q_tot:       float    # kN/m — carga distribuída total
-    M_max_kNm:   float    # kN·m — momento máximo na viga
-    V_max_kN:    float    # kN   — reação vertical R_v no apoio
-    N_viga_kN:   float    # kN   — força normal no eixo da viga (apoio)
-    V_viga_kN:   float    # kN   — cortante no eixo da viga (apoio)
-    H_kN:        float    # kN   — empuxo horizontal na fundação
-    x_Mmax_m:    float    # m    — posição do momento máximo
-    duracao:     str
+    nome:            str
+    tipo:            str
+    descricao:       str
+    q_tot:           float    # kN/m — carga distribuída total
+    M_max_kNm:       float    # kN·m — momento máximo na viga
+    M_cumeeira_kNm:  float    # kN·m — momento na cumeeira (x=L/2)
+    V_max_kN:        float    # kN   — reação vertical R_v no apoio
+    N_viga_kN:       float    # kN   — força normal no eixo da viga (apoio)
+    V_viga_kN:       float    # kN   — cortante no eixo da viga (apoio)
+    H_kN:            float    # kN   — empuxo horizontal na fundação
+    x_Mmax_m:        float    # m    — posição do momento máximo
+    duracao:         str
 
 
-# ── Análise estrutural do pórtico de três rótulas ────────────────────────────
+# ── Análise estrutural — viga biarticulada (MLC monolítica) ───────────────────
+
+def analisar_biarticulada(
+    q:         float,
+    L:         float,
+    h0:        float,
+    h_ap:      float,
+    alpha_rad: float,
+    b:         float,
+    n_pts:     int = 401,
+) -> dict:
+    """
+    Viga de secção variável biarticulada (rótulas só nos apoios).
+
+    Peça monolítica de MLC — continuidade na cumeeira (sem rótula).
+    Uma vez hiperestática: H por compatibilidade (projecção horizontal dx).
+
+        M_0(x) = (q/2)·x·(L−x)
+        M(x)   = M_0(x) − H·y_c(x)
+        H = ∫ M_0 y_c / I dx  /  ∫ y_c² / I dx
+
+    y_c, I no eixo centroidal (intradorso horizontal).
+    """
+    x = np.linspace(0.0, L, n_pts)
+
+    if abs(q) < 1e-10:
+        return {
+            "R_v_kN": 0.0, "H_kN": 0.0,
+            "M_max_kNm": 0.0, "M_cumeeira_kNm": 0.0,
+            "x_Mmax_m": 0.0,
+            "N_apoio_kN": 0.0, "V_apoio_kN": 0.0,
+            "f_c_m": (h_ap - h0) / 2.0,
+            "theta_rad": math.atan(math.tan(alpha_rad) / 2.0),
+            "sistema": "biarticulada",
+            "M_x": np.zeros(n_pts),
+            "M0_x": np.zeros(n_pts),
+            "y_c": np.zeros(n_pts),
+            "x": x,
+        }
+
+    f_c = (h_ap - h0) / 2.0
+    if f_c <= 0 or b <= 0:
+        raise ValueError(
+            f"Geometria inválida para biarticulada: "
+            f"h_ap={h_ap:.3f}, h0={h0:.3f}, b={b:.3f}"
+        )
+
+    tan_a = math.tan(alpha_rad)
+    x_sim = np.where(x <= L / 2.0, x, L - x)
+    y_c   = x_sim * tan_a / 2.0
+    h_x   = h0 + x_sim * tan_a
+    I_x   = b * h_x ** 3 / 12.0
+
+    # Evitar divisão por zero numérica (I sempre > 0 se h0>0)
+    I_x = np.maximum(I_x, 1e-18)
+
+    M0 = 0.5 * q * x * (L - x)
+
+    num = float(np.trapezoid(M0 * y_c / I_x, x))
+    den = float(np.trapezoid(y_c ** 2 / I_x, x))
+    if den <= 0:
+        raise ValueError("Integral ∫ y_c²/I dx nula — verificar geometria.")
+    H = num / den
+
+    M_x = M0 - H * y_c
+
+    R_v = q * L / 2.0
+    idx_max = int(np.argmax(np.abs(M_x)))
+    M_max   = float(M_x[idx_max])
+    x_Mmax  = float(x[idx_max])
+    M_cum   = float(np.interp(L / 2.0, x, M_x))
+
+    theta   = math.atan(tan_a / 2.0)
+    N_apoio = H * math.cos(theta) + R_v * math.sin(theta)
+    V_apoio = R_v * math.cos(theta) - H * math.sin(theta)
+
+    return {
+        "R_v_kN":          round(R_v, 4),
+        "H_kN":            round(H, 4),
+        "M_max_kNm":       round(M_max, 4),
+        "M_cumeeira_kNm":  round(M_cum, 4),
+        "x_Mmax_m":        round(x_Mmax, 4),
+        "N_apoio_kN":      round(N_apoio, 4),
+        "V_apoio_kN":      round(V_apoio, 4),
+        "f_c_m":           round(f_c, 4),
+        "theta_rad":       round(theta, 6),
+        "sistema":         "biarticulada",
+        "M_x":             M_x,
+        "M0_x":            M0,
+        "y_c":             y_c,
+        "x":               x,
+    }
+
 
 def analisar_3rotulas(
     q:     float,
@@ -90,95 +179,50 @@ def analisar_3rotulas(
     h_ap:  float,
     alpha_rad: float,
     n_pts: int = 200,
+    b:     float | None = None,
 ) -> dict:
     """
-    Analisa o pórtico de três rótulas com carga uniforme q.
+    LEGADO — pórtico triarticulado (rótula fictícia na cumeeira).
 
-    Sistema isostático: rótulas nas bases + rótula na cumeeira.
-    Válido para pórtico simétrico de duas águas.
-
-    Equações de equilíbrio (rótulas no centroide):
-        ΣFy = 0 → R_v = q·L/2
-        ΣM_cumeeira = 0 (meia viga):
-            R_v·(L/2) - H·f_c - q·(L/2)²/2 = 0
-            H = [R_v·(L/2) - q·(L/2)²/2] / f_c
-
-    Hipótese geométrica (RM + pórtico de 3 rótulas):
-        intradorso horizontal; rótulas no centroide da secção retangular
-        → ordenada do eixo: y_c(x) = x·tan(α)/2
-        → flecha entre rótulas: f_c = (h_ap - h0)/2
-
-    Diagrama de momento (0 ≤ x ≤ L/2, simetria para x > L/2):
-        M(x) = R_v·x - H·y_c(x) - q·x²/2
-
-    Esforços no extremo da viga (apoio):
-        N = H·cos(α) + R_v·sin(α)   (compressão no eixo)
-        V = R_v·cos(α) - H·sin(α)   (cortante no eixo)
-
-    Args:
-        q         : Carga distribuída (kN/m) — positivo=para baixo
-        L         : Vão total (m)
-        h0        : Altura da seção no apoio (m)
-        h_ap      : Altura da seção na cumeeira (m)
-        alpha_rad : Ângulo de inclinação da face superior (rad)
-        n_pts     : Número de pontos para integração
-
-    Returns:
-        dict com R_v, H, M_max, x_Mmax, N_apoio, V_apoio, M_x, x
+    Mantido só para comparação. O pipeline de projeto usa
+    ``analisar_biarticulada``. Se ``b`` for fornecido, ignora-se (API).
     """
+    f_c = (h_ap - h0) / 2.0
     if abs(q) < 1e-10:
         return {
-            "R_v_kN":    0.0, "H_kN":      0.0,
-            "M_max_kNm": 0.0, "x_Mmax_m":  0.0,
-            "N_apoio_kN":0.0, "V_apoio_kN":0.0,
-            "M_x":       np.zeros(n_pts),
-            "x":         np.linspace(0, L, n_pts),
+            "R_v_kN": 0.0, "H_kN": 0.0,
+            "M_max_kNm": 0.0, "M_cumeeira_kNm": 0.0,
+            "x_Mmax_m": 0.0,
+            "N_apoio_kN": 0.0, "V_apoio_kN": 0.0,
+            "f_c_m": f_c, "sistema": "3rotulas_legado",
+            "M_x": np.zeros(n_pts),
+            "x": np.linspace(0, L, n_pts),
         }
-
-    # Flecha do eixo centroidal (intradorso horizontal)
-    f_c = (h_ap - h0) / 2.0
-
     if f_c <= 0:
-        raise ValueError(
-            f"h_ap={h_ap:.3f} deve ser maior que h0={h0:.3f} "
-            f"para o pórtico de 3 rótulas. f_c={f_c:.3f} m"
-        )
+        raise ValueError(f"h_ap={h_ap:.3f} deve ser > h0={h0:.3f}")
 
-    # Reações
     R_v = q * L / 2
     H   = (R_v * (L / 2) - q * (L / 2) ** 2 / 2) / f_c
-
-    # Diagrama de momento (meia viga por simetria)
     x_half = np.linspace(0, L / 2, n_pts // 2)
-    y_c    = x_half * math.tan(alpha_rad) / 2.0  # centroide
+    y_c    = x_half * math.tan(alpha_rad) / 2.0
     M_half = R_v * x_half - H * y_c - q * x_half ** 2 / 2
-
-    # Espelhar para o vão completo
     M_x = np.concatenate([M_half, M_half[-2::-1]])
     x   = np.linspace(0, L, len(M_x))
-
-    # Momento máximo
-    idx_max  = np.argmax(np.abs(M_x))
-    M_max    = float(M_x[idx_max])
-    x_Mmax   = float(x[idx_max])
-
-    # Ângulo do eixo centroidal (intradorso horizontal, bisel linear):
-    # y_c(x) = x·tan(α)/2  →  θ = arctan(tan(α)/2)
+    idx_max = int(np.argmax(np.abs(M_x)))
     theta = math.atan(math.tan(alpha_rad) / 2.0)
-    N_apoio = H * math.cos(theta) + R_v * math.sin(theta)
-    V_apoio = R_v * math.cos(theta) - H * math.sin(theta)
-
     return {
-        "R_v_kN":     round(R_v,     4),
-        "H_kN":       round(H,       4),
-        "M_max_kNm":  round(M_max,   4),
-        "x_Mmax_m":   round(x_Mmax,  4),
-        "N_apoio_kN": round(N_apoio, 4),
-        "V_apoio_kN": round(V_apoio, 4),
-        "f_c_m":      round(f_c,     4),
-        "theta_rad":  round(theta,   6),
-        "M_x":        M_x,
-        "x":          x,
+        "R_v_kN":         round(R_v, 4),
+        "H_kN":           round(H, 4),
+        "M_max_kNm":      round(float(M_x[idx_max]), 4),
+        "M_cumeeira_kNm": 0.0,
+        "x_Mmax_m":       round(float(x[idx_max]), 4),
+        "N_apoio_kN":     round(H * math.cos(theta) + R_v * math.sin(theta), 4),
+        "V_apoio_kN":     round(R_v * math.cos(theta) - H * math.sin(theta), 4),
+        "f_c_m":          round(f_c, 4),
+        "theta_rad":      round(theta, 6),
+        "sistema":        "3rotulas_legado",
+        "M_x":            M_x,
+        "x":              x,
     }
 
 
@@ -259,12 +303,14 @@ class Carregamentos:
 
     # ── Análise estrutural para uma carga q ──────────────────
     def _analisar(self, q: float) -> dict:
-        return analisar_3rotulas(
+        """Viga biarticulada monolítica — sem rótula na cumeeira."""
+        return analisar_biarticulada(
             q         = q,
             L         = self.geo.L,
             h0        = self.geo.h0,
             h_ap      = self.geo.h_ap,
             alpha_rad = self.geo.alpha_rad,
+            b         = self.geo.b,
         )
 
     # ── Montagem das combinações ──────────────────────────────
@@ -281,17 +327,18 @@ class Carregamentos:
         def _comb(nome, tipo, desc, q_tot, duracao):
             r = self._analisar(q_tot)
             return Combinacao(
-                nome       = nome,
-                tipo       = tipo,
-                descricao  = desc,
-                q_tot      = q_tot,
-                M_max_kNm  = r["M_max_kNm"],
-                V_max_kN   = r["R_v_kN"],
-                N_viga_kN  = r["N_apoio_kN"],
-                V_viga_kN  = r["V_apoio_kN"],
-                H_kN       = r["H_kN"],
-                x_Mmax_m   = r["x_Mmax_m"],
-                duracao    = duracao,
+                nome            = nome,
+                tipo            = tipo,
+                descricao       = desc,
+                q_tot           = q_tot,
+                M_max_kNm       = r["M_max_kNm"],
+                M_cumeeira_kNm  = r["M_cumeeira_kNm"],
+                V_max_kN        = r["R_v_kN"],
+                N_viga_kN       = r["N_apoio_kN"],
+                V_viga_kN       = r["V_apoio_kN"],
+                H_kN            = r["H_kN"],
+                x_Mmax_m        = r["x_Mmax_m"],
+                duracao         = duracao,
             )
 
         # ELU
@@ -357,11 +404,15 @@ class Carregamentos:
                 if v.tipo == "ELS"}
 
     def combinacao_ELU_governante(self) -> Combinacao:
-        """Combinação ELU com maior M_max (carga positiva)."""
-        return max(
-            (c for c in self.combinacoes_ELU().values() if c.q_tot > 0),
-            key=lambda c: c.M_max_kNm,
-        )
+        """
+        Combinação ELU governante: maior |M_max| entre combinações
+        com carga vertical de sentido gravítico (q_tot > 0).
+        """
+        cands = [c for c in self.combinacoes_ELU().values() if c.q_tot > 0]
+        if not cands:
+            # fallback: maior |M| entre todas as ELU
+            cands = list(self.combinacoes_ELU().values())
+        return max(cands, key=lambda c: abs(c.M_max_kNm))
 
     def combinacao_ELU_succao(self) -> Combinacao:
         return self._combinacoes["ELU_C3"]
@@ -370,6 +421,10 @@ class Carregamentos:
 
     def M_max_ELU(self) -> float:
         return self.combinacao_ELU_governante().M_max_kNm
+
+    def M_cumeeira_ELU(self) -> float:
+        """Momento na cumeeira (x=L/2) — biarticulada, em geral ≠ 0."""
+        return self.combinacao_ELU_governante().M_cumeeira_kNm
 
     def V_max_ELU(self) -> float:
         return self.combinacao_ELU_governante().V_max_kN
@@ -413,7 +468,7 @@ class Carregamentos:
     def resumo(self) -> None:
         """Imprime resumo de todas as combinações."""
         print("=" * 76)
-        print("  COMBINAÇÕES DE AÇÕES — EN 1990 | Pórtico de 3 Rótulas v3")
+        print("  COMBINAÇÕES DE AÇÕES — EN 1990 | Viga biarticulada MLC v4")
         print(f"  L={self.geo.L}m | h0={self.geo.h0}m | "
               f"h_ap={self.geo.h_ap:.3f}m | "
               f"Área trib.={self._area_trib}m "
@@ -426,24 +481,27 @@ class Carregamentos:
               f"W_C2st = {self.w_C2st_k:+.4f} kN/m")
 
         print(f"\n  {'Comb.':<10} {'Tipo':<5} {'q(kN/m)':>10} "
-              f"{'M_max(kN·m)':>12} {'V_max(kN)':>11} "
-              f"{'N_viga(kN)':>11} {'H_fund(kN)':>11}  Duração")
-        print(f"  {'-'*82}")
+              f"{'M_max':>10} {'M_cum':>10} {'V':>9} "
+              f"{'N':>10} {'H':>10}  Dur.")
+        print(f"  {'-'*88}")
 
         for nome, c in self._combinacoes.items():
             print(
                 f"  {nome:<10} {c.tipo:<5} {c.q_tot:>+9.3f}  "
-                f"{c.M_max_kNm:>12.2f} {c.V_max_kN:>11.2f} "
-                f"{c.N_viga_kN:>11.2f} {c.H_kN:>11.2f}  {c.duracao}"
+                f"{c.M_max_kNm:>10.2f} {c.M_cumeeira_kNm:>10.2f} "
+                f"{c.V_max_kN:>9.2f} {c.N_viga_kN:>10.2f} "
+                f"{c.H_kN:>10.2f}  {c.duracao}"
             )
 
         gov = self.combinacao_ELU_governante()
-        print(f"\n  ELU governante: {gov.nome}")
+        print(f"\n  ELU governante: {gov.nome} | sistema biarticulado")
         print(f"    M_max = {gov.M_max_kNm:.2f} kN·m  "
               f"em x = {gov.x_Mmax_m:.3f} m")
+        print(f"    M_cumeeira = {gov.M_cumeeira_kNm:.2f} kN·m  "
+              f"(§6.4.3 — continuidade MLC)")
         print(f"    V_max = {gov.V_max_kN:.2f} kN")
-        print(f"    N_viga = {gov.N_viga_kN:.2f} kN  (flexo-compressão na viga)")
-        print(f"    H_fund = {gov.H_kN:.2f} kN  (empuxo → sapata)")
+        print(f"    N_viga = {gov.N_viga_kN:.2f} kN")
+        print(f"    H_fund = {gov.H_kN:.2f} kN  (empuxo por compatibilidade)")
         print("=" * 76)
 
 
@@ -496,7 +554,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.wind      import ParametrosVento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="longa")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="longa")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

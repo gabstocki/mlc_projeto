@@ -247,7 +247,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.loads     import carregamentos_com_vento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="curta")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="curta")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

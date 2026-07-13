@@ -31,7 +31,7 @@ from scipy.integrate import cumulative_trapezoid
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind      import ParametrosVento, calcular_vento
-from mlc_projeto.core.loads     import analisar_3rotulas
+from mlc_projeto.core.loads     import analisar_biarticulada
 
 from mlc_projeto.checks.elu.flambagem_lateral import (
     calcular_l_ef, calcular_sigma_m_crit,
@@ -80,8 +80,8 @@ def eta_flexo_compressao_viga(
     W_y  = b * h_x**2 / 6
     i_y  = math.sqrt(I_y / A)
 
-    # Esbeltez no plano do pórtico (entre rótulas = L/2)
-    lam_y  = (L / 2) / i_y
+    # Esbeltez no plano — biarticulada: l_ef = L
+    lam_y  = L / i_y
     lam_rel_y = (lam_y / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
 
     beta_c = 0.1   # glulam
@@ -104,7 +104,7 @@ def pre_dimensionar(
     L_v:           float,
     L_t:           float,
     classe:        str   = "GL24h",
-    classe_servico: int  = 2,
+    classe_servico: int  = 3,
     h0_range:      tuple = (0.40, 1.20, 0.05),
     alpha_range:   tuple = (3.0,  8.0,  0.5),
     b_range:       tuple = (0.10, 0.28, 0.02),
@@ -174,10 +174,10 @@ def pre_dimensionar(
                 if f_geo <= 0:
                     continue
 
-                # ── Análise estrutural 3 rótulas ──────────────
-                r_C2 = analisar_3rotulas(
+                # ── Análise biarticulada (continuidade cumeeira)
+                r_C2 = analisar_biarticulada(
                     q=q_C2, L=L_v, h0=h0_f, h_ap=h_ap,
-                    alpha_rad=al_r
+                    alpha_rad=al_r, b=b_f,
                 )
 
                 M_max_Nm = r_C2["M_max_kNm"] * 1e3   # N·m
@@ -221,8 +221,10 @@ def pre_dimensionar(
                     eta_ci = tau_d / mat_curta.f_v_d
 
                     # ── 4. ELS — FLECHA ───────────────────────
-                    r_g  = analisar_3rotulas(g_k, L_v, h0_f, h_ap, al_r)
-                    r_q  = analisar_3rotulas(q_k, L_v, h0_f, h_ap, al_r)
+                    r_g  = analisar_biarticulada(
+                        g_k, L_v, h0_f, h_ap, al_r, b_f)
+                    r_q  = analisar_biarticulada(
+                        q_k, L_v, h0_f, h_ap, al_r, b_f)
 
                     x_pts = geo.x
                     M_g_Nm = np.interp(x_pts, r_g["x"], r_g["M_x"]) * 1e3
@@ -384,7 +386,7 @@ if __name__ == "__main__":
         L_v           = 20.25,
         L_t           = 5.75,
         classe        = "GL24h",
-        classe_servico= 2,
+        classe_servico=3,
         h0_range      = (0.40, 1.20, 0.05),
         alpha_range   = (3.0,  8.0,  0.5),
         b_range       = (0.10, 0.28, 0.02),

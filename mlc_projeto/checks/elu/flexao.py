@@ -1,7 +1,7 @@
 """
 checks/elu/flexao.py — Flexo-compressão da viga — EC5 §6.3.2 + §6.3.3.
 
-Pórtico de 3 rótulas: M + N na secção de M_max.
+Viga biarticulada monolítica: M + N na secção de M_max.
 
 Verificações:
     EC5 §6.3.2 Eq. (6.23) — instabilidade no plano (k_c,y)
@@ -9,7 +9,7 @@ Verificações:
     EC5 §6.3.3 Eq. (6.35) — compressão + flexão com flambagem lateral
 
 Comprimentos efetivos:
-    l_ef,y = L/2  (entre rótulas base e cumeeira)
+    l_ef,y = L      (rótulas só nos apoios)
     l_ef,z = 0,9 · s  (terças — EC5 Tab. 6.1)
     l_ef,m = 0,9 · s  (flambagem lateral — Tab. 6.1)
 
@@ -50,7 +50,7 @@ def verifica_flexao(
     Args:
         geo  : Geometria da viga
         mat  : Material com k_mod da duração da combinação
-        load : Carregamentos (pórtico de 3 rótulas)
+        load : Carregamentos (viga biarticulada)
         s    : Espaçamento entre terças (m)
 
     Returns:
@@ -58,8 +58,8 @@ def verifica_flexao(
     """
     gov = load.combinacao_ELU_governante()
 
-    M_max_Nm = gov.M_max_kNm * 1e3
-    N_d_N    = gov.N_viga_kN * 1e3
+    M_max_Nm = abs(gov.M_max_kNm) * 1e3
+    N_d_N    = abs(gov.N_viga_kN) * 1e3   # compressão no eixo
     x_Mmax   = gov.x_Mmax_m
 
     h_x = float(geo.h(x_Mmax))
@@ -73,11 +73,12 @@ def verifica_flexao(
     beta_c = 0.1  # glulam — EC5 §6.3.2
 
     # ── Flambagem no plano (eixo y) ───────────────────────────
-    l_ef_y    = geo.L / 2
+    # Biarticulada: rótulas apenas nos apoios → l_ef,y = L
+    l_ef_y    = geo.L
     lam_y     = l_ef_y / i_y
     lam_rel_y = (lam_y / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
     k_y       = 0.5 * (1 + beta_c * (lam_rel_y - 0.3) + lam_rel_y ** 2)
-    k_c_y     = min(1.0 / (k_y + math.sqrt(k_y ** 2 - lam_rel_y ** 2)), 1.0)
+    k_c_y     = min(1.0 / (k_y + math.sqrt(max(k_y ** 2 - lam_rel_y ** 2, 0.0))), 1.0)
 
     # ── Flambagem fora do plano (eixo z) ──────────────────────
     I_z       = h_x * b ** 3 / 12
@@ -86,9 +87,9 @@ def verifica_flexao(
     lam_z     = l_ef_z / i_z
     lam_rel_z = (lam_z / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
     k_z       = 0.5 * (1 + beta_c * (lam_rel_z - 0.3) + lam_rel_z ** 2)
-    k_c_z     = min(1.0 / (k_z + math.sqrt(k_z ** 2 - lam_rel_z ** 2)), 1.0)
+    k_c_z     = min(1.0 / (k_z + math.sqrt(max(k_z ** 2 - lam_rel_z ** 2, 0.0))), 1.0)
 
-    # ── Tensões ───────────────────────────────────────────────
+    # ── Tensões (valores absolutos para taxa de utilização) ───
     sigma_c = N_d_N / A_sec
     sigma_m = M_max_Nm / W_y
 
@@ -158,7 +159,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.loads     import carregamentos_com_vento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="curta")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="curta")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

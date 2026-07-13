@@ -263,7 +263,7 @@ def verificar_fadiga_deslizamento(
     return resultados
 
 
-def relatorio(res: dict, k_def: float = 0.80, psi_2: float = 0.0) -> None:
+def relatorio(res: dict, k_def: float = 2.00, psi_2: float = 0.0) -> None:
     sep = "═" * 68
     print(sep)
     print("  FADIGA E DESLIZAMENTO — EC5 §7.1 + §8.1.5")

@@ -120,7 +120,7 @@ def verifica_flexo_compressao(
         "ok":       eta_gov <= 1.0,
         "elem_gov": elem_gov,
         "norma":    "EC5 §6.3.2 Eq. 6.23",
-        "sistema":  "3 rótulas",
+        "sistema":  "biarticulada",
     }
 
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     from mlc_projeto.core.loads import carregamentos_com_vento
 
     geo = GeometriaViga(L=20.25, h0=0.60, alpha_deg=4.5, b=0.26)
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="curta")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="curta")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,

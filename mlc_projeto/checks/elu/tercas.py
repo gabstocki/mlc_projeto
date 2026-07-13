@@ -403,7 +403,7 @@ def relatorio_tercas(df: pd.DataFrame, n: int = 25) -> None:
 
 if __name__ == "__main__":
 
-    mat = GlulamMaterial(classe="GL24h", classe_servico=2, duracao="longa")
+    mat = GlulamMaterial(classe="GL24h", classe_servico=3, duracao="longa")
 
     params_vento = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
