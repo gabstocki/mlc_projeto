@@ -1,7 +1,12 @@
 """
-visualization/viz_3d.py — Visualização 3D estilo SAP2000. v3
+visualization/viz_3d.py — Visualização 3D estilo SAP2000. v4
 
-ATUALIZAÇÃO v3 — Dois pórticos lado a lado (vão total 40,5 m):
+ATUALIZAÇÃO v4 — Sistema biarticulado (alinhado ao modelo de cálculo):
+    - Viga MLC monolítica de duplo-bisel — continuidade na cumeeira
+    - Sem rótula na cumeeira (as águas não se articulam ao centro)
+    - Rótulas apenas nos apoios (base e topo do pilar / ligação viga–pilar)
+
+v3 — Dois pórticos lado a lado (vão total 40,5 m):
     - 2 pórticos × 20,25 m = 40,50 m
     - Pilar central compartilhado 0,26×0,26 m (N = 2×R_v)
     - Pilares laterais 0,20×0,20 m
@@ -190,6 +195,7 @@ def visualizar_galpao(
     """
     Visualização 3D estilo SAP2000 — dois pórticos lado a lado.
 
+    Viga biarticulada monolítica: rótulas só nos apoios (sem rótula na cumeeira).
     Pilar central compartilhado recebe carga dos dois pórticos.
     Empuxos horizontais se cancelam no pilar central.
     """
@@ -251,13 +257,10 @@ def visualizar_galpao(
         m2 = _viga_sap(L, y, H_pilar, L, h0, h_ap, alpha, b_viga)
         plotter.add_mesh(m2, color=cor_viga, smooth_shading=True,
                          show_edges=False)
-
-        # Rótulas cumeeira (duas — uma por pórtico)
-        plotter.add_mesh(_rotula(L/2,     y, H_pilar + h_ap), color=cor_rot,
-                         label="Rótulas" if y == y_pos[0] else "")
-        plotter.add_mesh(_rotula(L + L/2, y, H_pilar + h_ap), color=cor_rot)
+        # Cumeeira: continuidade da viga monolítica — sem rótula
 
     # ── Pilares laterais esquerdo (x=0) e direito (x=2L) ─────
+    # Rótulas nos apoios (base e topo = ligação viga–pilar)
     for y in y_pos:
         for x_p, label_flag in [(0.0, True), (L_total, False)]:
             m = _pilar_sap(x_p, y, H_pilar, b_pilar, h_pilar)
@@ -268,7 +271,10 @@ def visualizar_galpao(
                     label=f"Pilar lateral  η={eta_pilar_lat:.3f}"
                           if (y == y_pos[0] and label_flag) else "",
                 )
-            plotter.add_mesh(_rotula(x_p, y, 0.0),     color=cor_rot)
+            plotter.add_mesh(
+                _rotula(x_p, y, 0.0), color=cor_rot,
+                label="Rótulas (apoios)" if (y == y_pos[0] and label_flag) else "",
+            )
             plotter.add_mesh(_rotula(x_p, y, H_pilar), color=cor_rot)
 
     # ── Pilar central compartilhado (x=L) ────────────────────
@@ -366,7 +372,7 @@ def visualizar_galpao(
         ["η 0,50–0,80  Atenção",    (0.95, 0.78, 0.05)],
         ["η 0,80–0,95  Próx. lim.", (0.92, 0.42, 0.07)],
         ["η ≥ 0,95  Crítico",       (0.82, 0.07, 0.07)],
-        ["Rótulas",                  cor_rot],
+        ["Rótulas (apoios)",         cor_rot],
     ]
     plotter.add_legend(
         legenda, bcolor=(0.97, 0.97, 0.97),
@@ -377,7 +383,8 @@ def visualizar_galpao(
     eta_max = max(eta_viga, eta_pilar_lat, eta_pilar_cen, eta_terca)
     info = (
         f"STOCKI Engenharia Estrutural\n"
-        f"Galpão MLC GL24h — Pórtico de 3 Rótulas (2 pórticos)\n"
+        f"Galpão MLC GL24h — Viga biarticulada (2 pórticos)\n"
+        f"Sem rótula na cumeeira | Continuidade MLC monolítica\n"
         f"Vão total={L_total}m ({L}+{L}m) | h0={h0}m | α={geo.alpha_deg}°\n"
         f"Pilar lateral {b_pilar}×{h_pilar}m | "
         f"Pilar central {b_pilar_c}×{h_pilar_c}m | "
@@ -399,7 +406,9 @@ def visualizar_galpao(
         plotter.close()
         print(f"  Imagem 3D salva: {salvar_imagem}")
     else:
-        plotter.show(title="Galpão MLC — Vão total 40,5m (estilo SAP2000)")
+        plotter.show(
+            title="Galpão MLC — Viga biarticulada | Vão total 40,5m"
+        )
 
 
 # ── Execução direta ───────────────────────────────────────────────────────────
