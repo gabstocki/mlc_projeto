@@ -1,9 +1,8 @@
 """
-output/report.py — Memorial de cálculo em LaTeX.
+output/report.py — Memorial de cálculo em LaTeX (estilo institucional SIA).
 
 Gera o arquivo .tex e compila para PDF se pdflatex estiver disponível.
-Estrutura: tabelas de resultados com referências normativas.
-Simples, direto, uso interno do escritório.
+Layout minimalista: Helvetica, A4, margens 2,5 cm, Booktabs, preto/branco.
 """
 
 from __future__ import annotations
@@ -31,6 +30,101 @@ def _f(x, default: float = 0.0) -> float:
         return float(default)
 
 
+# Catálogo único terminal / Excel / resumo LaTeX — mesma ordem e rótulos
+# (chave em `resultados`, rótulo de exportação, norma)
+VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
+    ("cumeeira",            "Cumeeira t90",              "EC5 §6.4.3"),
+    ("flambagem",           "Flambagem lateral",         "EC5 §6.3.3"),
+    ("flexao",              "Flexo-comp. viga",          "EC5 §6.3.2+§6.3.3"),
+    ("cisalhamento",        "Cisalhamento",              "EC5 §6.1.7"),
+    ("apoio",               "Apoio",                     "EC5 §6.1.5+§6.2.2"),
+    ("flexo_comp",          "Pilar lateral (N)",         "EC5 §6.3.2"),
+    ("pilar_central",       "Pilar central (N)",         "EC5 §6.3.2"),
+    ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
+    ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
+    ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
+    ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
+    ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
+    ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
+    ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
+    ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
+    ("L1",                  "Ligação L1 base",           "EC5 §8.2+§8.5.1.1+§8.6"),
+    ("L2",                  "Ligação L2 cumeeira",       "EC5 §6.1.4+§6.1.5+§8.6"),
+    ("L3",                  "Ligação L3 sapata",         "EN 1993-1-8+EN 1992-4"),
+    ("L1c",                 "Ligação L1c base central",  "EC5 §8.2+§8.5.1.1+§8.6"),
+    ("L2c",                 "Ligação L2c cumeeira",      "EC5 §6.1.4+§6.1.5+§8.6"),
+    ("L3c",                 "Ligação L3c sapata central","EN 1993-1-8+EN 1992-4"),
+    ("fadiga_L1",           "Fadiga/slip L1",            "EC5 §7.1+§8.1.5"),
+    ("fadiga_L2",           "Fadiga/slip L2",            "EC5 §7.1+§8.1.5"),
+    ("fadiga_L1c",          "Fadiga/slip L1c",           "EC5 §7.1+§8.1.5"),
+]
+
+# Chaves que não são verificações η (excluir do Excel automático residual)
+_META_KEYS = frozenset({
+    "meta", "k_def", "load", "geo", "mat",
+})
+
+
+def extrair_eta_ok(res: dict | None) -> tuple[float, bool]:
+    """Extrai (η, ok) de um dict de verificação de forma robusta."""
+    if not isinstance(res, dict):
+        return 0.0, False
+    eta = _f(res.get("eta", res.get("eta_gov", res.get("eta_slip", 0.0))))
+    if "ok" in res:
+        ok = bool(res["ok"])
+    elif "ok_alvo" in res:
+        ok = bool(res["ok_alvo"]) and eta <= 1.0 + 1e-9
+    else:
+        ok = eta <= 1.0 + 1e-9
+    return eta, ok
+
+
+def tabela_verificacoes(resultados: dict) -> list[dict]:
+    """
+    Linhas padronizadas para terminal, Excel e resumo.
+    Ordem fixa = VERIFICACOES_EXPORT; só inclui chaves presentes com η.
+    """
+    linhas: list[dict] = []
+    vistos: set[str] = set()
+    for chave, rotulo, norma in VERIFICACOES_EXPORT:
+        res = resultados.get(chave)
+        if not isinstance(res, dict):
+            continue
+        if "eta" not in res and "eta_gov" not in res and "eta_slip" not in res:
+            continue
+        eta, ok = extrair_eta_ok(res)
+        if "eta" in res:
+            eta = _f(res["eta"])
+        linhas.append({
+            "chave":       chave,
+            "Verificação": rotulo,
+            "Norma":       norma,
+            "η":           round(eta, 4),
+            "OK":          "✓" if ok else "✗",
+            "ok_bool":     ok,
+        })
+        vistos.add(chave)
+    for chave, res in resultados.items():
+        if chave in vistos or chave in _META_KEYS:
+            continue
+        if not isinstance(res, dict):
+            continue
+        if "eta" not in res and "eta_gov" not in res:
+            continue
+        eta, ok = extrair_eta_ok(res)
+        if "eta" in res:
+            eta = _f(res["eta"])
+        linhas.append({
+            "chave":       chave,
+            "Verificação": chave,
+            "Norma":       str(res.get("norma", "—"))[:40],
+            "η":           round(eta, 4),
+            "OK":          "✓" if ok else "✗",
+            "ok_bool":     ok,
+        })
+    return linhas
+
+
 def _i(x, default: int = 0) -> int:
     return int(round(_f(x, default)))
 
@@ -41,10 +135,11 @@ def _br(x, nd: int = 2) -> str:
 
 
 def _tex_escape(s: object) -> str:
-    """Escapa caracteres especiais LaTeX em texto livre."""
+    """Escapa caracteres especiais LaTeX e Unicode técnico em texto livre."""
     if s is None:
         return ""
     t = str(s)
+    # Ordem: barras primeiro; depois Unicode técnico → LaTeX
     for a, b in (
         ("\\", r"\textbackslash{}"),
         ("&", r"\&"),
@@ -57,11 +152,42 @@ def _tex_escape(s: object) -> str:
         ("~", r"\textasciitilde{}"),
         ("^", r"\textasciicircum{}"),
         ("←", r"$\leftarrow$"),
+        ("→", r"$\rightarrow$"),
         ("—", "--"),
         ("–", "--"),
         ("×", r"$\times$"),
         ("ℓ", r"$\ell$"),
         ("º", r"\textordmasculine{}"),
+        ("°", r"$^\circ$"),
+        ("α", r"$\alpha$"),
+        ("β", r"$\beta$"),
+        ("γ", r"$\gamma$"),
+        ("δ", r"$\delta$"),
+        ("Δ", r"$\Delta$"),
+        ("ε", r"$\varepsilon$"),
+        ("θ", r"$\theta$"),
+        ("λ", r"$\lambda$"),
+        ("μ", r"$\mu$"),
+        ("π", r"$\pi$"),
+        ("ρ", r"$\rho$"),
+        ("σ", r"$\sigma$"),
+        ("φ", r"$\varphi$"),
+        ("ϕ", r"$\phi$"),
+        ("ψ", r"$\psi$"),
+        ("ω", r"$\omega$"),
+        ("η", r"$\eta$"),
+        ("≥", r"$\geq$"),
+        ("≤", r"$\leq$"),
+        ("≠", r"$\neq$"),
+        ("≈", r"$\approx$"),
+        ("≪", r"$\ll$"),
+        ("≫", r"$\gg$"),
+        ("²", r"$^2$"),
+        ("³", r"$^3$"),
+        ("·", r"$\cdot$"),
+        ("§", r"\S"),
+        ("✓", r"\checkmark"),
+        ("✗", r"$\times$"),
     ):
         t = t.replace(a, b)
     return t
@@ -85,6 +211,168 @@ def _clean_dict(d: object) -> dict:
         else:
             out[k] = v
     return out
+
+
+def _latex_preamble() -> str:
+    """
+    Preâmbulo LaTeX — especificação tipográfica institucional.
+
+    tgheros + mathastext; A4 2,5 cm; seções não numeradas (titlesec);
+    Booktabs; paginação só inferior direita; monocromático.
+    """
+    return r"""\documentclass[a4paper,11pt]{article}
+
+% ── Codificação e idioma ─────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+
+% ── Página A4, margens uniformes 2,5 cm ──────────────────────
+\usepackage[
+  a4paper,
+  margin=2.5cm
+]{geometry}
+
+% ── Matemática e tabelas (antes da tipografia sans) ──────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+% ── Tipografia sans-serif em todo o documento ────────────────
+% Helvetica (TeX Gyre Heros) + matemática no mesmo corpo
+\usepackage{tgheros}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[italic,defaultmathsizes,symbolgreek]{mathastext}
+
+% ── Layout tipográfico ───────────────────────────────────────
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% ── Cores (monocromático + código) ───────────────────────────
+\definecolor{codebg}{RGB}{247,247,247}
+\definecolor{codeframe}{RGB}{220,220,220}
+\definecolor{codenum}{RGB}{120,120,120}
+
+% Hiperlinks pretos, sem decoração
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  filecolor=black,
+  pdfborder={0 0 0},
+  pdftitle={Memorial de Cálculo -- Galpão MLC},
+  pdfauthor={STOCKI Engenharia Estrutural},
+}
+
+% ── Parágrafos e tabelas ─────────────────────────────────────
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.28}
+\setlength{\aboverulesep}{0.55ex}
+\setlength{\belowrulesep}{0.55ex}
+
+% ── Hierarquia de seções (todas via \section* / \subsection*) ─
+% numberless: formato das seções com estrela (sem prefixo numérico)
+\titleformat{name=\section,numberless}
+  {\sffamily\Large\bfseries}{}{0pt}{}
+\titleformat{\section}
+  {\sffamily\Large\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{2.4em}{1.1em}
+
+\titleformat{name=\subsection,numberless}
+  {\sffamily\large\bfseries}{}{0pt}{}
+\titleformat{\subsection}
+  {\sffamily\large\bfseries}{}{0pt}{}
+\titlespacing*{\subsection}{0pt}{1.7em}{0.75em}
+
+\titleformat{name=\subsubsection,numberless}
+  {\sffamily\normalsize\bfseries}{}{0pt}{}
+\titleformat{\subsubsection}
+  {\sffamily\normalsize\bfseries}{}{0pt}{}
+\titlespacing*{\subsubsection}{0pt}{1.2em}{0.55em}
+
+% ── Listas compactas ─────────────────────────────────────────
+\setlist{
+  nosep,
+  leftmargin=1.35em,
+  itemsep=0.18em,
+  topsep=0.45em,
+  parsep=0pt,
+  partopsep=0pt
+}
+
+% ── Figuras e legendas ───────────────────────────────────────
+\captionsetup{
+  font={sf,small},
+  labelfont={bf},
+  labelsep=period,
+  justification=raggedright,
+  singlelinecheck=false,
+  skip=8pt,
+  margin=0pt
+}
+\setkeys{Gin}{width=0.78\textwidth}
+
+% ── Blocos de código (listings) ──────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  framerule=0.3pt,
+  numbers=left,
+  numberstyle=\tiny\color{codenum},
+  numbersep=8pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  tabsize=2,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{codenum},
+  stringstyle=\color{black!65},
+  aboveskip=0.85em,
+  belowskip=0.85em,
+  xleftmargin=2.1em,
+  framexleftmargin=1.6em,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+% ── Paginação: só número inferior direito ────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyfoot[R]{\small\thepage}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+  \fancyfoot[R]{\small\thepage}%
+}
+
+% ── Nota de registro (sem caixa / borda) ─────────────────────
+\newcommand{\registonota}[2]{%
+  \par\vspace{0.9em}%
+  \noindent\textbf{#1}\par
+  {\small #2}\par
+  \vspace{0.5em}%
+}
+
+\begin{document}
+"""
 
 
 def gerar_tex(
@@ -132,7 +420,11 @@ def gerar_tex(
     r_fL1c = _clean_dict(resultados.get("fadiga_L1c",  {}))
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
     r_ter  = _clean_dict(resultados.get("terca", {}))
+    r_eg   = _clean_dict(resultados.get("estabilidade_global", {}))
+    r_iv   = _clean_dict(resultados.get("impacto_veiculo", {}))
+    r_tir  = _clean_dict(resultados.get("tirante_base", {}))
     meta   = _clean_dict(resultados.get("meta", {}))
+    com_tirante = bool(r_tir.get("ativo") or meta.get("com_tirante"))
 
     # Extrair sub-dicts de flexo_comp
     r_viga  = r_fc.get("viga",  {}) if r_fc else {}
@@ -152,7 +444,7 @@ def gerar_tex(
     f_c    = (geo.h_ap - geo.h0) / 2.0
     cob_ok = bool(r_cv.get("cobertura_ok", r_cv.get("ok", False))) if r_cv else False
     cob_txt = "válida" if cob_ok else "NÃO válida"
-    eta_lig_alvo = _f(meta.get("eta_lig_alvo", r_L1.get("eta_alvo", 0.85)), 0.85)
+    eta_lig_alvo = _f(meta.get("eta_lig_alvo", r_L1.get("eta_alvo", 0.75)), 0.75)
 
     # Combinação governante e cargas (se load disponível)
     if load is not None:
@@ -171,12 +463,12 @@ def gerar_tex(
         combs = {}
 
     def eta_row(nome_verif, norma, eta, ok=True):
-        simbolo = r"\checkmark" if ok else r"\times"
-        cor     = "etaok" if ok else "etaerr"
+        """Linha Booktabs: η e status em preto (sem cores de alerta)."""
+        simbolo = r"\checkmark" if ok else r"$\times$"
         return (
             f"  {nome_verif} & {norma} & "
-            f"\\textcolor{{{cor}}}{{{_f(eta):.4f}}} & "
-            f"\\textcolor{{{cor}}}{{{simbolo}}} \\\\\n"
+            f"{_f(eta):.4f} & "
+            f"{simbolo} \\\\\n"
         )
 
     def _eta(d, key="eta", default=0.0):
@@ -195,10 +487,11 @@ def gerar_tex(
             c = combs[nome]
             tag = r" \textit{(governa)}" if gov and c.nome == gov.nome else ""
             # remove marcador de console se existir (o tag LaTeX basta)
-            desc = (c.descricao
-                    .replace(" ← GOVERNA", "")
-                    .replace("← GOVERNA", "")
-                    .replace("_", r"\_"))
+            desc = _tex_escape(
+                c.descricao
+                .replace(" ← GOVERNA", "")
+                .replace("← GOVERNA", "")
+            )
             comb_lines += (
                 f"  {nome.replace('_', '\\_')}{tag} & "
                 f"{desc} & {_br(c.q_tot, 3)} \\\\\n"
@@ -220,15 +513,13 @@ def gerar_tex(
         H_gov = Mmax_gov = Mcum_gov = N_gov = xM_gov = q_gov = Rv_gov = 0.0
         gov_nome = "--"
 
-    # ELS — cores e símbolos por verificação
+    # ELS — status em preto (sem cores)
     eta_S1 = float(r_els.get("eta_S1", 0) or 0)
     eta_nf = float(r_els.get("eta_net_fin", 0) or 0)
     ok_S1  = eta_S1 <= 1.0
     ok_nf  = eta_nf <= 1.0
-    cor_S1 = "etaok" if ok_S1 else "etaerr"
-    cor_nf = "etaok" if ok_nf else "etaerr"
-    sim_S1 = r"\checkmark" if ok_S1 else r"\times"
-    sim_nf = r"\checkmark" if ok_nf else r"\times"
+    sim_S1 = r"\checkmark" if ok_S1 else r"$\times$"
+    sim_nf = r"\checkmark" if ok_nf else r"$\times$"
 
     cand = str(meta.get("candidato", "R2"))
 
@@ -239,19 +530,69 @@ def gerar_tex(
         _eta(r_L1), _eta(r_L2), _eta(r_L3),
         _eta(r_L1c), _eta(r_L2c), _eta(r_L3c),
         _eta(r_fL1), _eta(r_fL2), _eta(r_fL1c),
+        _eta(r_eg), _eta(r_iv),
+        _eta(r_tir) if com_tirante else 0.0,
     ]
     eta_max = max(etas_resumo) if etas_resumo else 0.0
 
     parts: list[str] = []
-    # Secções LaTeX em subexpressões (evita profundidade AST excessiva)
+    # Seções LaTeX em subexpressões (evita profundidade AST excessiva)
 
-    parts.append('\\documentclass[a4paper,11pt]{article}\n\n% ── Pacotes ──────────────────────────────────────────────────\n\\usepackage[T1]{fontenc}\n\\usepackage[utf8]{inputenc}\n\\usepackage[brazil]{babel}\n\\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}\n\\usepackage{booktabs}\n\\usepackage{array}\n\\usepackage{xcolor}\n\\usepackage{helvet}\n\\usepackage{fancyhdr}\n\\usepackage{lastpage}\n\\usepackage{multirow}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\n\\renewcommand{\\familydefault}{\\sfdefault}\n\n% Cores\n\\definecolor{etaok}{RGB}{0,128,0}\n\\definecolor{etaerr}{RGB}{200,0,0}\n\\definecolor{cabec}{RGB}{40,40,40}\n\\definecolor{cinza}{RGB}{245,245,245}\n\n% Cabeçalho e rodapé\n\\pagestyle{fancy}\n\\fancyhf{}\n\\renewcommand{\\headrulewidth}{0.4pt}\n\\fancyhead[L]{\\small\\textbf{STOCKI Engenharia Estrutural}}\n\\fancyhead[R]{\\small Memorial de Cálculo -- Galpão MLC}\n\\fancyfoot[C]{\\small Página \\thepage\\ de \\pageref{LastPage}}\n\\fancyfoot[R]{\\small ')
-    parts.append(hoje)
-    parts.append('}\n\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{4pt}\n\n% ── Início do documento ───────────────────────────────────────\n\\begin{document}\n\n% Capa / Cabeçalho\n\\begin{center}\n  {\\Large\\textbf{MEMORIAL DE CÁLCULO}} \\\\[6pt]\n  {\\large Estrutura em Madeira Lamelada Colada (MLC)} \\\\[4pt]\n  {\\normalsize Galpão para Estacionamento Coberto} \\\\[12pt]\n  \\begin{tabular}{ll}\n    \\textbf{Responsável Técnico:} & Gabriel Stocki \\\\\n    \\textbf{CREA:}                & PR 195315/D \\\\\n    \\textbf{Empresa:}             & STOCKI Engenharia Estrutural \\\\\n    \\textbf{Data:}                & ')
-    parts.append(hoje)
-    parts.append(' \\\\\n  \\end{tabular}\n\\end{center}\n\n\\vspace{6pt}\n\\hrule\n\\vspace{10pt}\n\n% ── 1. Normas de Referência ───────────────────────────────────\n\\section*{1. Normas de Referência}\n\n\\begin{tabular}{ll}\n  EN 1995-1-1:2004 & Eurocode 5 -- Estruturas de madeira \\\\\n  EN 1990:2002     & Eurocode -- Bases de projeto \\\\\n  EN 14080:2013    & Madeira lamelada colada -- Requisitos \\\\\n  EN 14592:2008    & Fixadores de aço para estruturas de madeira \\\\\n  EN 1993-1-8:2005 & Eurocode 3 -- Ligações \\\\\n  ABNT NBR 6123:1988 & Forças devidas ao vento em edificações \\\\\n\\end{tabular}\n\n% ── 2. Dados Gerais ───────────────────────────────────────────\n\\section*{2. Dados Gerais do Projeto}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Item} & \\textbf{Valor} & \\textbf{Observação} \\\\\n  \\midrule\n  Uso & Estacionamento coberto & Galpão aberto nas laterais \\\\\n  Localização & Londrina -- PR & -- \\\\\n  Vão total & 40{,}50~m & 2 pórticos $\\times$ 20{,}25~m \\\\\n  Comprimento & 46{,}00~m & -- \\\\\n  Pé-direito & 7{,}00~m & -- \\\\\n  Espaçamento entre pórticos & 5{,}75~m & Vão das terças \\\\\n  Sistema estrutural & Viga biarticulada MLC & 1$\\times$ hiperestática \\\\\n  \\bottomrule\n\\end{tabular}\n\n% ── 3. Material ───────────────────────────────────────────────\n\\section*{3. Material -- ')
+    # Preâmbulo + capa (tipografia institucional)
+    parts.append(_latex_preamble())
+    parts.append(
+        '% ── Página de título (sem titlepage) ─────────────────────\n'
+        '\\thispagestyle{plain}\n'
+        '\\vspace*{2.0cm}\n'
+        '\\begin{center}\n'
+        '  {\\fontsize{22}{26}\\selectfont\\bfseries Memorial de Cálculo}\\\\[0.9em]\n'
+        '  {\\large Estrutura em Madeira Lamelada Colada (MLC)}\\\\[0.5em]\n'
+        '  {\\normalsize Galpão para Estacionamento Coberto}\\\\[1.8em]\n'
+        '  {\\small\n'
+        '  \\begin{tabular}{@{}ll@{}}\n'
+        '    Responsável técnico & Gabriel Stocki \\\\\n'
+        '    CREA                & PR 195315/D \\\\\n'
+        '    Empresa             & STOCKI Engenharia Estrutural \\\\\n'
+        f'    Data                & {hoje} \\\\\n'
+        '    Documento           & Verificação estrutural -- EC5 / EN 1990 / NBR 6123 \\\\\n'
+        '  \\end{tabular}}\n'
+        '\\end{center}\n'
+        '\\vspace{1.6cm}\n\n'
+        '% ── 1. Normas de Referência ───────────────────────────────\n'
+        '\\section*{1. Normas de Referência}\n\n'
+        '\\begin{tabular}{@{}ll@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Norma} & \\textbf{Descrição} \\\\\n'
+        '  \\midrule\n'
+        '  EN 1995-1-1:2004     & Eurocode 5 -- Estruturas de madeira \\\\\n'
+        '  EN 1990:2002         & Eurocode -- Bases de projeto \\\\\n'
+        '  EN 14080:2013        & Madeira lamelada colada -- Requisitos \\\\\n'
+        '  EN 14592:2008        & Fixadores de aço para estruturas de madeira \\\\\n'
+        '  EN 1993-1-8:2005     & Eurocode 3 -- Ligações \\\\\n'
+        '  EN 1991-1-7:2006     & Ações acidentais -- Impacto \\\\\n'
+        '  ABNT NBR 6123:1988   & Forças devidas ao vento em edificações \\\\\n'
+        '  \\bottomrule\n'
+        '\\end{tabular}\n\n'
+        '% ── 2. Dados Gerais ───────────────────────────────────────\n'
+        '\\section*{2. Dados Gerais do Projeto}\n\n'
+        '\\begin{tabular}{@{}lll@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Item} & \\textbf{Valor} & \\textbf{Observação} \\\\\n'
+        '  \\midrule\n'
+        '  Uso & Estacionamento coberto & Galpão aberto nas laterais \\\\\n'
+        '  Localização & Londrina -- PR & -- \\\\\n'
+        '  Vão total & 40{,}50~m & 2 pórticos $\\times$ 20{,}25~m \\\\\n'
+        '  Comprimento & 46{,}00~m & -- \\\\\n'
+        '  Pé-direito & 7{,}00~m & -- \\\\\n'
+        '  Espaçamento entre pórticos & 5{,}75~m & Vão das terças \\\\\n'
+        '  Sistema estrutural & Viga biarticulada MLC & 1$\\times$ hiperestática \\\\\n'
+        '  \\bottomrule\n'
+        '\\end{tabular}\n\n'
+        '% ── 3. Material ───────────────────────────────────────────\n'
+        '\\section*{3. Material -- '
+    )
     parts.append(mat.classe)
-    parts.append(' (EN 14080)}\n\n\\begin{tabular}{llll}\n  \\toprule\n  \\textbf{Propriedade} & \\textbf{Valor} & \\textbf{Propriedade} & \\textbf{Valor} \\\\\n  \\midrule\n  $f_{m,k}$    & ')
+    parts.append(' (EN 14080)}\n\n\\begin{tabular}{@{}llll@{}}\n  \\toprule\n  \\textbf{Propriedade} & \\textbf{Valor} & \\textbf{Propriedade} & \\textbf{Valor} \\\\\n  \\midrule\n  $f_{m,k}$    & ')
     parts.append(_br(mat.f_m_k / 1000000.0, 1))
     parts.append('~MPa  & $E_{0,mean}$ & ')
     parts.append(_br(mat.E0_mean / 1000000.0, 0))
@@ -275,15 +616,38 @@ def gerar_tex(
     parts.append(_br(k_def, 2))
     parts.append('$ \\quad (EC5 Tab.~3.2)} \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{CS')
     parts.append(f'{mat.classe_servico}')
-    parts.append(': estrutura aberta nas laterais / exposição a intempérie.}\n\n\\vspace{4pt}\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Duração} & $k_{mod}$ (CS')
+    parts.append(': estrutura aberta nas laterais / exposição a intempérie.}\n\n\\vspace{4pt}\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Duração} & $k_{mod}$ (CS')
     parts.append(f'{mat.classe_servico}')
     parts.append(') & \\textbf{Combinação} \\\\\n  \\midrule\n  Curta       & ')
     parts.append(_br(GlulamMaterial(mat.classe, mat.classe_servico, 'curta').k_mod, 2))
-    parts.append(' & ELU com vento dominante \\\\\n  Longa       & ')
+    parts.append(' & ELU com vento dominante (\\textbf{adotado}) \\\\\n  Instantânea & ')
+    parts.append(_br(GlulamMaterial(mat.classe, mat.classe_servico, 'instantanea').k_mod, 2))
+    parts.append(' & Alternativa normativa para vento -- \\textbf{não} adotada \\\\\n  Longa       & ')
     parts.append(_br(GlulamMaterial(mat.classe, mat.classe_servico, 'longa').k_mod, 2))
-    parts.append(' & ELS / acções de longa duração \\\\\n  Permanente  & ')
+    parts.append(' & ELS / ações de longa duração \\\\\n  Permanente  & ')
     parts.append(_br(GlulamMaterial(mat.classe, mat.classe_servico, 'permanente').k_mod, 2))
-    parts.append(' & Comb. quase-permanente (fluência) \\\\\n  \\bottomrule\n\\end{tabular}\n\n% ── 4. Ações e Combinações ────────────────────────────────────\n\\section*{4. Ações e Combinações}\n\n\\textbf{Cargas características (pórtico intermédio):}\n\n\\begin{tabular}{llll}\n  \\toprule\n  \\textbf{Ação} & \\textbf{Valor por área} & \\textbf{Valor linear} & \\textbf{Norma} \\\\\n  \\midrule\n  Permanente $g_k$ & ')
+    parts.append(' & Comb. quase-permanente (fluência) \\\\\n  \\bottomrule\n\\end{tabular}\n\n')
+
+    # Critério de duração do vento — EC5 §2.3.1.2 / Tab. 3.1
+    _k_curta = GlulamMaterial(mat.classe, mat.classe_servico, 'curta').k_mod
+    _k_inst  = GlulamMaterial(mat.classe, mat.classe_servico, 'instantanea').k_mod
+    parts.append('\\vspace{4pt}\n\\textbf{Critério adotado -- $k_{mod}$ para vento ')
+    parts.append('(EC5~\\S2.3.1.2 + Tab.~3.1):}\n\n')
+    parts.append(
+        'A EN~1995-1-1 permite enquadrar a ação do vento como duração '
+        '\\textbf{curta} ou \\textbf{instantânea}. '
+        'Neste projeto adota-se explicitamente a duração \\textbf{curta} '
+        f'($k_{{mod}} = {_br(_k_curta, 2)}$ em CS{mat.classe_servico}), '
+        'e \\textbf{não} a instantânea '
+        f'($k_{{mod}} = {_br(_k_inst, 2)}$). '
+        'O critério é \\textbf{conservador}: $k_{mod}$ menor reduz as '
+        'resistências de cálculo $f_d = k_{mod}\\,f_k/\\gamma_M$ nas '
+        'combinações ELU com vento dominante. '
+        'A classificação como instantânea seria admissível pela norma, '
+        'mas não é utilizada neste memorial.\n\n'
+    )
+
+    parts.append('% ── 4. Ações e Combinações ────────────────────────────────────\n\\section*{4. Ações e Combinações}\n\n\\textbf{Cargas características (pórtico intermediário):}\n\n\\begin{tabular}{@{}llll@{}}\n  \\toprule\n  \\textbf{Ação} & \\textbf{Valor por área} & \\textbf{Valor linear} & \\textbf{Norma} \\\\\n  \\midrule\n  Permanente $g_k$ & ')
     parts.append(_br(g_area, 2))
     parts.append('~kN/m² & ')
     parts.append(_br(g_k, 3))
@@ -293,17 +657,24 @@ def gerar_tex(
     parts.append(_br(q_k, 3))
     parts.append('~kN/m & EN 1991-1-1 \\\\\n  \\multicolumn{3}{l}{Área tributária $= L_t = ')
     parts.append(_br(area_trib, 2))
-    parts.append('$~m (pórtico intermédio)} & Geometria \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Vento -- NBR 6123 (cobertura isolada 2 águas):}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n  \\midrule\n  $V_0$ (Londrina/PR) & 45{,}0~m/s & Fig.~1 \\\\\n  $S_1$ & 1{,}0 & \\S5.2 \\\\\n  $S_2$ (Cat.~IV, Cl.~B) & 0{,}83 & Tab.~3 \\\\\n  $S_3$ & 1{,}0 & \\S5.5 \\\\\n  $H_1 = h_{ap}-h_0$ & ')
+    parts.append('$~m (pórtico intermediário)} & Geometria \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Vento -- NBR 6123 (cobertura isolada 2 águas):}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n  \\midrule\n  $V_0$ (Londrina/PR) & 45{,}0~m/s & Fig.~1 \\\\\n  $S_1$ & 1{,}0 & \\S5.2 \\\\\n  $S_2$ (Cat.~IV, Cl.~B) & 0{,}83 & Tab.~3 \\\\\n  $S_3$ & 1{,}0 & \\S5.5 \\\\\n  $H_1 = h_{ap}-h_0$ & ')
     parts.append(_br(geo.h_ap - geo.h0, 3))
     parts.append('~m & Geometria ')
     parts.append(cand)
     parts.append(' \\\\\n  $\\tan\\beta = H_1/(L/2)$ & ')
     parts.append(_br((geo.h_ap - geo.h0) / (geo.L / 2), 4))
-    parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Combinações de ações -- EN 1990 (valores do pipeline):}\n\n\\begin{tabular}{p{3.2cm}p{7.5cm}r}\n  \\toprule\n  \\textbf{Combinação} & \\textbf{Descrição} & \\textbf{$q_{tot}$ (kN/m)} \\\\\n  \\midrule\n')
+    parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Combinações de ações -- EN 1990 (valores do pipeline):}\n\n{\\small\\begin{tabular}{@{}p{2.8cm}p{8.2cm}r@{}}\n  \\toprule\n  \\textbf{Combinação} & \\textbf{Descrição} & \\textbf{$q_{tot}$ (kN/m)} \\\\\n  \\midrule\n')
     parts.append(comb_lines)
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 5. Sistema Estrutural ─────────────────────────────────────\n\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projecção horizontal $\\mathrm{d}x$ (autorizada no projecto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 activo.\n  \\item Classe de serviço ')
+    parts.append('  \\bottomrule\n\\end{tabular}}\n\n% ── 5. Sistema Estrutural ─────────────────────────────────────\n\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projeção horizontal $\\mathrm{d}x$ (autorizada no projeto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 ativo.\n  \\item Classe de serviço ')
     parts.append(f'{mat.classe_servico}')
-    parts.append(': galpão aberto nas laterais.\n  \\item \\textbf{Contraventamento horizontal} (cruzes de St.~André + terças-biela):\n        garante a função estrutural da cobertura e valida $l_1=s$ no LTB\n        (EC5~\\S9.2.5) -- ver \\S9.\n\\end{itemize}\n\n\\textbf{Análise (combinação governante ')
+    parts.append(': galpão aberto nas laterais.\n  \\item \\textbf{Contraventamento horizontal} (cruzes de St.~André + terças-biela):\n        garante a função estrutural da cobertura e valida $l_1=s$ no LTB\n        (EC5~\\S9.2.5) -- ver \\S9.\n')
+    if com_tirante:
+        parts.append(
+            '  \\item \\textbf{Tirante de base} ao nível do piso: fecha o empuxo $H$ '
+            'entre bases de cada vão; $H_{\\mathrm{sapata}}\\approx 0$, '
+            '$T_{\\mathrm{tirante}}\\approx H$ (EN~1993-1-1~\\S6.2.3).\n'
+        )
+    parts.append('\\end{itemize}\n\n\\textbf{Análise (combinação governante ')
     parts.append(gov_nome.replace('_', '\\_'))
     parts.append('):}\n\n\\[\n  R_v = \\frac{qL}{2} = ')
     parts.append(_br(Rv_gov, 2))
@@ -319,9 +690,9 @@ def gerar_tex(
     parts.append(_br(Mcum_gov, 2))
     parts.append('~\\text{kN·m},\\quad\n  N_{apoio} = ')
     parts.append(_br(N_gov, 2))
-    parts.append('~\\text{kN}\n\\]\n\n% ── 6. Geometria da Viga (candidata de projecto) ──────────────\n\\section*{6. Geometria da Viga -- Candidata ')
+    parts.append('~\\text{kN}\n\\]\n\n% ── 6. Geometria da Viga (candidata de projeto) ──────────────\n\\section*{6. Geometria da Viga -- Candidata ')
     parts.append(cand)
-    parts.append('}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Observação} \\\\\n  \\midrule\n  Vão $L$ & ')
+    parts.append('}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Observação} \\\\\n  \\midrule\n  Vão $L$ & ')
     parts.append(_br(geo.L, 2))
     parts.append('~m & Por pórtico \\\\\n  Altura no apoio $h_0$ & ')
     parts.append(_br(geo.h0, 2))
@@ -337,7 +708,7 @@ def gerar_tex(
     parts.append(_br(f_c, 3))
     parts.append('~m & $(h_{ap}-h_0)/2$ \\\\\n  Espaçamento terças $s$ & ')
     parts.append(_br(s_m, 2))
-    parts.append('~m & Geometria de cobertura \\\\\n  $l_1$ efectivo (LTB) & ')
+    parts.append('~m & Geometria de cobertura \\\\\n  $l_1$ efetivo (LTB) & ')
     parts.append(_br(l_1_ef, 2))
     parts.append('~m & ')
     parts.append('Cobertura OK $\\Rightarrow l_1=s$' if cob_ok else 'Cobertura falha $\\Rightarrow l_1=\\ell$ (penalizado)')
@@ -345,33 +716,247 @@ def gerar_tex(
     parts.append(_br(0.9 * l_1_ef, 3))
     parts.append('~m & EC5 Tab.~6.1 ($0{,}9\\,l_1$) \\\\\n  Placa de apoio $l_{ap}$ & ')
     parts.append(_br(l_ap, 2))
-    parts.append('~m & \\\\\n  \\bottomrule\n\\end{tabular}\n\n% ── 7. Verificações ELU ───────────────────────────────────────\n\\section*{7. Verificações ELU -- Viga}\n\n\\begin{tabular}{p{5.5cm}lcc}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Norma} & $\\boldsymbol{\\eta}$ & \\textbf{Status} \\\\\n  \\midrule\n')
+    parts.append('~m & \\\\\n  \\bottomrule\n\\end{tabular}\n\n% ── 7. Verificações ELU ───────────────────────────────────────\n\\section*{7. Verificações ELU -- Viga}\n\n\\begin{tabular}{@{}p{5.5cm}lcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Norma} & $\\eta$ & \\textbf{Status} \\\\\n  \\midrule\n')
     parts.append(eta_row('Cumeeira ($t_{90}$, $M\\neq 0$)', 'EC5 \\S6.4.3', _eta(r_cum), _ok(r_cum)))
     parts.append(eta_row('Flambagem lateral', 'EC5 \\S6.3.3', _eta(r_fl), _ok(r_fl)))
     parts.append(eta_row('Flexo-compressão viga', 'EC5 \\S6.3.2+\\S6.3.3', _eta(r_fx), _ok(r_fx)))
     parts.append(eta_row('Cisalhamento ($b_{ef}=k_{cr}b$)', 'EC5 \\S6.1.7', _eta(r_ci), _ok(r_ci)))
     parts.append(eta_row('Compressão no apoio', 'EC5 \\S6.1.5+\\S6.2.2', _eta(r_ap), _ok(r_ap)))
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textbf{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23):}\n\n\\[\n  \\left(\\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\\right)^2\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\begin{tabular}{lllll}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23)}\n\n\\[\n  \\left(\\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\\right)^2\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\begin{tabular}{@{}lllll@{}}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
     parts.append(f'  {r_viga.get('M_max_kNm', 0):.2f} & ')
     parts.append(f'{r_viga.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_viga.get('sigma_c_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('sigma_m_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('k_c_y', 0):.4f} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 8. Verificações ELU -- Pilares ────────────────────────────\n\\section*{8. Verificações ELU -- Pilares}\n\nCompressão simples EC5~\\S6.3.2; $l_{ef}=1{,}0\\cdot H$ (rótulas nas extremidades).\n\n\\begin{tabular}{llllllc}\n  \\toprule\n  \\textbf{Pilar} & Secção (m) & $N_d$ (kN) & $\\lambda$ & $\\lambda_{rel}$ & $k_c$ & $\\eta$ \\\\\n  \\midrule\n  Lateral & ')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 8. Verificações ELU -- Pilares ────────────────────────────\n\\section*{8. Verificações ELU -- Pilares}\n\nCompressão simples EC5~\\S6.3.2; $l_{ef}=1{,}0\\cdot H$ (rótulas nas extremidades).\n\n\\begin{tabular}{@{}llllllc@{}}\n  \\toprule\n  \\textbf{Pilar} & Seção (m) & $N_d$ (kN) & $\\lambda$ & $\\lambda_{rel}$ & $k_c$ & $\\eta$ \\\\\n  \\midrule\n  Lateral & ')
     parts.append(f'{r_pilar.get('b_m', 0.22):.2f}$\\times${r_pilar.get('h_m', 0.26):.2f} & ')
     parts.append(f'{r_pilar.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_pilar.get('lambda', 0):.1f} & ')
     parts.append(f'{r_pilar.get('lambda_rel', 0):.4f} & ')
     parts.append(f'{r_pilar.get('k_c', 0):.4f} & ')
-    parts.append(f'\\textcolor{{{('etaok' if _ok(r_pilar) else 'etaerr')}}}{{{_eta(r_pilar):.4f}}} \\\\\n')
+    parts.append(f'{_eta(r_pilar):.4f} \\\\\n')
     parts.append('  Central ($N\\approx 2R_v$) & ')
     parts.append(f'{r_pc.get('b_m', 0.28):.2f}$\\times${r_pc.get('h_m', 0.28):.2f} & ')
     parts.append(f'{r_pc.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_pc.get('lambda', 0):.1f} & ')
     parts.append(f'{r_pc.get('lambda_rel', 0):.4f} & ')
     parts.append(f'{r_pc.get('k_c', 0):.4f} & ')
-    parts.append(f'\\textcolor{{{('etaok' if _ok(r_pc) else 'etaerr')}}}{{{_eta(r_pc):.4f}}} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 9. Contraventamento / integridade da cobertura ────────────\n\\section*{9. Contraventamento -- Integridade Estrutural da Cobertura}\n\nO contraventamento horizontal \\textbf{não é acessório}: é o que torna as\nterças apoios laterais válidos da viga principal. Sem ele, a hipótese\n$l_{ef}=0{,}9s$ da flambagem lateral (EC5~\\S6.3.3) deixa de ser legítima.\n\n\\textbf{Cadeia de forças (plano da cobertura):}\n\\begin{enumerate}\n  \\item Viga MLC comprimida ($N$ + $M$) gera força de estabilização\n        (EC5~\\S9.2.5).\n  \\item Terças actuam como \\textbf{bielas} (compressão + rigidez $EA/L$).\n  \\item Cruzes de St.~André nos módulos extremos (diagonal tracionada).\n  \\item Reacções no pórtico de extremidade $\\rightarrow$ fundação.\n\\end{enumerate}\n\n\\vspace{4pt}\n\\textbf{9.1 Compressão a estabilizar e sistema (EC5~\\S9.2.5)}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n  \\midrule\n  $N_{axial}$ (biarticulada) & ')
+    parts.append(f'{_eta(r_pc):.4f} \\\\\n')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+
+    # ── 8b. Estabilidade global ────────────────────────────────
+    _ok_imp = r_eg.get('ok_nocional', True)
+    _ok_acr = r_eg.get('ok_alpha_cr', True)
+    _ok_geo = r_eg.get('ok_geometria', True)
+    def _sim_eg(o):
+        return r'\checkmark' if o else r'$\times$'
+    parts.append(
+        '% ── 8b. Estabilidade global ────────────────────────────\n'
+        '\\section*{8b. Estabilidade Global -- P-$\\Delta$, '
+        'Forças Nocionais e $\\alpha_{cr}$}\n\n'
+        'A análise adotada é de \\textbf{1.\\textsuperscript{a} ordem} '
+        '(Castigliano biarticulada). '
+        'A estabilidade de \\textbf{barra} está coberta por EC5~\\S6.3.2 '
+        '($k_c$) e \\S6.3.3 ($k_{crit}$). '
+        'A escala \\textbf{global} verifica-se por analogia com '
+        'EN~1993-1-1~\\S5.2.1 ($\\alpha_{cr}$) e \\S5.3.2 '
+        '(forças nocionais $\\varphi$), face ao silêncio do EC5 sobre '
+        'limiares numéricos de pórtico.\n\n'
+        '\\textbf{Critérios de dispensa de 2.\\textsuperscript{a} ordem \\emph{global}:}\n'
+        '\\begin{enumerate}\n'
+        '  \\item Sistema \\textbf{non-sway} (biarticulado: $H$ à fundação);\n'
+        '  \\item $\\alpha_{cr,arco}\\geq 10$ com $L_{ef}\\approx L/2$ (modo de sistema);\n'
+        '  \\item $w_{Ed}/f_c \\leq 0{,}05$ (abaixamento do freche);\n'
+        '  \\item $H_{imp}/H_{Ed} \\leq 0{,}10$ (nocional coberta pelo empuxo).\n'
+        '\\end{enumerate}\n'
+        'A 2.\\textsuperscript{a} ordem de \\textbf{barra} ($\\alpha_{cr}$ com $L_{ef}=L$ ou $H$) pode ser $<10$ e está coberta por $k_c$ (EC5~\\S6.3.2) -- não exige, por si, análise global de 2.\\textsuperscript{a} ordem.\n\n'
+        '\\begin{tabular}{@{}lll@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Limite / ref.} \\\\\n'
+        '  \\midrule\n'
+    )
+    parts.append(
+        f'  $H_{{Ed}}$ (empuxo 1.\\textsuperscript{{a}} ordem) & '
+        f'{_br(r_eg.get("H_Ed_kN", 0), 1)}~kN & Castigliano \\\\\n'
+    )
+    parts.append(
+        f'  $V_{{portal}}=2R_v$ & '
+        f'{_br(r_eg.get("V_portal_kN", 0), 1)}~kN & \\\\\n'
+    )
+    parts.append(
+        f'  $\\varphi=\\varphi_0\\alpha_h\\alpha_m$ & '
+        f'{float(r_eg.get("phi", 0)):.5f} & EN~1993-1-1~\\S5.3.2 \\\\\n'
+    )
+    parts.append(
+        f'  $H_{{imp}}=\\varphi\\,V$ & '
+        f'{_br(r_eg.get("H_imp_kN", 0), 2)}~kN & \\\\\n'
+    )
+    parts.append(
+        f'  $H_{{imp}}/H_{{Ed}}$ & '
+        f'{float(r_eg.get("H_imp_over_H", 0)):.4f} & '
+        f'$\\leq {_br(r_eg.get("lim_H_imp", 0.10), 2)}$ '
+        f'{_sim_eg(_ok_imp)} \\\\\n'
+    )
+    parts.append(
+        f'  $\\alpha_{{cr}}$ (governante) & '
+        f'{_br(r_eg.get("alpha_cr", 0), 1)} & '
+        f'$\\geq {_br(r_eg.get("alpha_cr_min", 10), 0)}$ '
+        f'{_sim_eg(_ok_acr)} \\\\\n'
+    )
+    parts.append(
+        f'  $k_{{II}}=1/(1-1/\\alpha_{{cr}})$ & '
+        f'{_br(r_eg.get("k_II", 1), 4)} & amplificação \\\\\n'
+    )
+    parts.append(
+        f'  $w_{{Ed}}/f_c$ & '
+        f'{float(r_eg.get("w_over_f", 0)):.5f} & '
+        f'$\\leq {_br(r_eg.get("lim_w_over_f", 0.05), 2)}$ '
+        f'{_sim_eg(_ok_geo)} \\\\\n'
+    )
+    parts.append(
+        f'  $e_0$ (pilar, nocional) & '
+        f'{_br(r_eg.get("e_0_mm", 0), 2)}~mm & $\\varphi\\cdot H$ \\\\\n'
+    )
+    parts.append(
+        f'  $M_{{imp}}$ pilar & '
+        f'{_br(r_eg.get("M_imp_pilar_kNm", 0), 3)}~kN·m & $N\\cdot e_0$ \\\\\n'
+    )
+    _conc = _tex_escape(r_eg.get("conclusao", "—"))
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
+    parts.append(f'\\textbf{{Conclusão:}} {_conc}\n\n')
+    # Registro explícito no memorial: análise feita e resultado
+    _eg_ok = bool(r_eg) and bool(r_eg.get("ok", False))
+    _eg_sim = r"\checkmark" if _eg_ok else r"$\times$"
+    _eg_met = str(r_eg.get("metodo_analise", "—")).replace("_", r"\_")
+    _eg_st = (
+        r"\textbf{Verificado -- OK}"
+        if _eg_ok
+        else r"\textbf{Não conforme -- rever}"
+    )
+    _eg_body = (
+        f"{_eg_sim}\\ {_eg_st}"
+        f"\\quad método: \\texttt{{{_eg_met}}}"
+        f"\\quad $\\alpha_{{cr,arco}}={_br(r_eg.get('alpha_cr', 0), 1)}$"
+        f"\\quad $H_{{imp}}/H_{{Ed}}={float(r_eg.get('H_imp_over_H', 0)):.4f}$"
+        f"\\quad $\\eta_{{crit}}={float(r_eg.get('eta', 0)):.4f}$"
+        "\\\\[0.35em]\n"
+        "Análise de estabilidade global \\textbf{executada} no pipeline "
+        "e \\textbf{registrada} neste memorial. "
+        + (
+            "Dispensa-se análise de 2.\\textsuperscript{a} ordem global; "
+            "mantém-se a análise de 1.\\textsuperscript{a} ordem (Castigliano) "
+            "com estabilidade de barra por $k_c$."
+            if _eg_ok
+            else "Requer reanálise com efeitos de 2.\\textsuperscript{a} ordem."
+        )
+    )
+    parts.append(
+        "\\registonota{Registro -- Estabilidade global "
+        "(P-$\\Delta$ / nocionais / $\\alpha_{cr}$)}{"
+        + _eg_body
+        + "}\n\n"
+    )
+    parts.append(
+        '\\textit{Nota:} num pórtico biarticulado baixo ($H\\approx 7$~m) com '
+        'empuxo $H$ já da ordem de $1{,}6$~MN, a força nocional e o P-$\\Delta$ '
+        'global são tipicamente desprezáveis. O empuxo de 1.\\textsuperscript{a} '
+        'ordem governa fundações e L1/L3.\n\n'
+    )
+
+    # ── 8c. Impacto de veículo ─────────────────────────────────
+    _iv_ok = bool(r_iv) and bool(r_iv.get("ok", False))
+    _iv_f = r_iv.get("forcas", {}) if isinstance(r_iv.get("forcas"), dict) else {}
+    _iv_casos = r_iv.get("casos", []) if isinstance(r_iv.get("casos"), list) else []
+    parts.append(
+        '% ── 8c. Impacto de veículo ─────────────────────────────\n'
+        '\\section*{8c. Impacto de Veículo em Pilares '
+        '(Estacionamento)}\n\n'
+        'Tratando-se de \\textbf{estacionamento coberto} com pilares '
+        'acessíveis a veículos (laterais abertas), a verificação de '
+        'choque é aplicável como \\textbf{ação acidental} '
+        '(EN~1991-1-7). Não se combina com vento ELU.\n\n'
+        '\\textbf{Forças estáticas equivalentes de projeto '
+        '(veículos ligeiros):}\n'
+        '\\begin{itemize}\n'
+        f'  \\item $F_{{dx}} = {_br(_iv_f.get("F_dx_kN", 50), 0)}$~kN '
+        '(direção de marcha);\n'
+        f'  \\item $F_{{dy}} = {_br(_iv_f.get("F_dy_kN", 25), 0)}$~kN '
+        '(transversal);\n'
+        f'  \\item $h_{{\\mathrm{{imp}}}} = {_br(_iv_f.get("h_imp_m", 0.5), 2)}$~m '
+        'acima do pavimento.\n'
+        '\\end{itemize}\n'
+        'Combinação EN~1990~\\S6.4.3.3: $A_d + G + \\psi_2 Q$ '
+        '($\\psi_2\\approx 0$ na cobertura). '
+        f'$k_{{\\mathrm{{mod}}}} = {_br(r_iv.get("k_mod", 0.9), 2)}$ '
+        '(duração \\textbf{instantânea}).\n\n'
+        '\\begin{tabular}{@{}llcccc@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Pilar / caso} & $N_d$ & $M_d$ & $V_d$ & '
+        '$\\eta$ & \\\\\n'
+        '  \\midrule\n'
+    )
+    for _c in _iv_casos:
+        if not isinstance(_c, dict):
+            continue
+        _cok = bool(_c.get("ok", False))
+        parts.append(
+            f'  {_c.get("rotulo", "—").replace("_", " ")} & '
+            f'{_br(_c.get("N_d_kN", 0), 1)}~kN & '
+            f'{_br(_c.get("M_d_kNm", 0), 2)}~kN·m & '
+            f'{_br(_c.get("V_d_kN", 0), 2)}~kN & '
+            f'{_eta(_c):.4f} & '
+            f'{"\\checkmark" if _cok else "$\\\\times$"} \\\\\n'
+        )
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+    _iv_sim = r"\checkmark" if _iv_ok else r"$\times$"
+    _iv_st = (
+        r"\textbf{Verificado -- OK}"
+        if _iv_ok
+        else r"\textbf{Não conforme -- proteger / reforçar}"
+    )
+    _iv_rec = _tex_escape(r_iv.get("recomendacao", "—"))
+    _iv_body = (
+        f"{_iv_sim}\\ {_iv_st}"
+        f"\\quad $\\eta_{{\\mathrm{{gov}}}}={_eta(r_iv):.4f}$"
+        f"\\quad gov: {_tex_escape(str(r_iv.get('gov', '—')).replace('_', ' '))}"
+        "\\\\[0.35em]\n"
+        f"{_iv_rec}"
+    )
+    parts.append(
+        "\\registonota{Registro -- Impacto de veículo (EN~1991-1-7)}{"
+        + _iv_body
+        + "}\n\n"
+    )
+    parts.append(
+        '\\textit{Nota:} mesmo com $\\eta\\leq 1$, recomenda-se '
+        'defensas ou pilaretes junto a pilares em corredores de '
+        'circulação (limitação de dano local e proteção da MLC). '
+        'Confirmar $F_{dx}/F_{dy}$ com AN nacional ou especificação '
+        'do cliente se veículos pesados forem admitidos.\n\n'
+    )
+
+    parts.append(
+        '% ── 9. Contraventamento / integridade da cobertura ────────────\n'
+        '\\section*{9. Contraventamento -- Integridade Estrutural da Cobertura}\n\n'
+        'O contraventamento horizontal \\textbf{não é acessório}: é o que torna as\n'
+        'terças apoios laterais válidos da viga principal. Sem ele, a hipótese\n'
+        '$l_{ef}=0{,}9s$ da flambagem lateral (EC5~\\S6.3.3) deixa de ser legítima.\n\n'
+        '\\textbf{Cadeia de forças (plano da cobertura):}\n'
+        '\\begin{enumerate}\n'
+        '  \\item Viga MLC comprimida ($N$ + $M$) gera força de estabilização\n'
+        '        (EC5~\\S9.2.5).\n'
+        '  \\item Terças atuam como \\textbf{bielas} (compressão + rigidez $EA/L$).\n'
+        '  \\item Cruzes de St.~André nos módulos extremos (diagonal tracionada).\n'
+        '  \\item Reações no pórtico de extremidade $\\rightarrow$ fundação.\n'
+        '\\end{enumerate}\n\n'
+        '\\vspace{4pt}\n'
+        '\\subsection*{9.1 Compressão a estabilizar e sistema (EC5~\\S9.2.5)}\n\n'
+        '\\begin{tabular}{@{}lll@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n'
+        '  \\midrule\n'
+        '  $N_{axial}$ (biarticulada) & '
+    )
     parts.append(_br(r_cv.get('N_axial_kN', 0), 2))
     parts.append('~kN & Análise \\\\\n  $N_{flex}=(1-k_{crit})M_d/h$ & ')
     parts.append(_br(r_cv.get('N_flex_kN', 0), 2))
@@ -399,7 +984,7 @@ def gerar_tex(
     parts.append(_br(r_cv.get('C_min_kNpm', 0), 1))
     parts.append('~kN/m &\n    $k_s=')
     parts.append(_br(r_cv.get('k_s', 4), 0))
-    parts.append('$ \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textbf{9.2 Diagonal de aço (EN~1993-1-1~\\S6.2.3)}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n  Layout & Cruzes nos ')
+    parts.append('$ \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.2 Diagonal de aço (EN~1993-1-1~\\S6.2.3)}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n  Layout & Cruzes nos ')
     parts.append(_tex_escape(r_cv.get('posicao', '2 modulos extremos')))
     parts.append(' & \\\\\n  Painel & ')
     parts.append(_br(r_cv.get('L_panel_m', 5.75), 2))
@@ -410,43 +995,43 @@ def gerar_tex(
     parts.append('$~m,\n    $\\theta=')
     parts.append(_br(r_cv.get('theta_deg', 0), 1))
     parts.append('$° \\\\\n  Barra & $\\varnothing$')
-    parts.append(f'{r_cv.get('d_barra_mm', 16):.0f}')
+    parts.append(f'{r_cv.get('d_barra_mm', 18):.0f}')
     parts.append('~mm ')
     parts.append(f'{r_cv.get('aco', 'S235')}')
     parts.append(' &\n    $A=')
     parts.append(_br(r_cv.get('A_mm2', 0), 1))
     parts.append('$~mm² \\\\\n  $F_{diag}$ & ')
     parts.append(_br(r_cv.get('F_diag_kN', 0), 2))
-    parts.append('~kN & Tração (1 diagonal activa) \\\\\n  $N_{t,Rd}$ & ')
+    parts.append('~kN & Tração (1 diagonal ativa) \\\\\n  $N_{t,Rd}$ & ')
     parts.append(_br(r_cv.get('N_t_Rd_kN', 0), 2))
     parts.append('~kN & $A f_y/\\gamma_{M0}$ \\\\\n  $\\eta_N$ (diagonal) & ')
-    parts.append(f'\\textcolor{{{('etaok' if r_cv.get('ok_diag', False) else 'etaerr')}}}{{{_eta(r_cv, 'eta_diag_N'):.4f}}}')
-    parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textbf{9.3 Flecha do sistema e terça-biela}\n\n\\begin{tabular}{lll}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & $\\boldsymbol{\\eta}$ \\\\\n  \\midrule\n  $\\delta\\leq\\ell/500$ (rigidez global) &\n    ')
+    parts.append(f'{_eta(r_cv, "eta_diag_N"):.4f}')
+    parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.3 Flecha do sistema e terça-biela}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & $\\eta$ \\\\\n  \\midrule\n  $\\delta\\leq\\ell/500$ (rigidez global) &\n    ')
     parts.append(f'{r_cv.get('delta_mm', 0):.2f}')
     parts.append('~mm $\\leq$ ')
     parts.append(f'{r_cv.get('delta_lim_mm', 0):.1f}')
     parts.append('~mm & ')
-    parts.append(f'\\textcolor{{{('etaok' if r_cv.get('ok_delta', False) else 'etaerr')}}}{{{_eta(r_cv, 'eta_delta'):.4f}}}')
+    parts.append(f'{_eta(r_cv, "eta_delta"):.4f}')
     parts.append(' \\\\\n  Terça-biela $N_{Ed}/N_{Rd}$ (EC5~\\S6.3.2) &\n    $F=')
     parts.append(_br(r_cv.get('F_terca_kN', 0), 2))
     parts.append('$~kN,\n    $N_{Rd}=')
     parts.append(_br(r_ter_biela.get('N_Rd_kN', 0), 1))
     parts.append('$~kN & ')
-    parts.append(f'\\textcolor{{{('etaok' if r_cv.get('ok_terca', False) else 'etaerr')}}}{{{_eta(r_cv, 'eta_terca'):.4f}}}')
+    parts.append(f'{_eta(r_cv, "eta_terca"):.4f}')
     parts.append(' \\\\\n  Rigidez terça $EA/L\\geq C_{\\min}$ &\n    ')
     parts.append(_br(r_cv.get('C_terca_kNpm', 0), 0))
     parts.append(' $\\geq$ ')
     parts.append(_br(r_cv.get('C_min_kNpm', 0), 0))
     parts.append('~kN/m & ')
-    parts.append(f'\\textcolor{{{('etaok' if r_cv.get('ok_C_terca', False) else 'etaerr')}}}{{{_eta(r_cv, 'eta_C_terca'):.4f}}}')
-    parts.append(' \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textbf{9.4 Função estrutural da cobertura (acoplamento ao LTB)}\n\n\\begin{tabular}{ll}\n  \\toprule\n  \\textbf{Indicador} & \\textbf{Resultado} \\\\\n  \\midrule\n  $\\mathtt{cobertura\\_ok}$ & ')
-    parts.append('\\textcolor{etaok}{\\textbf{SIM}}' if cob_ok else '\\textcolor{etaerr}{\\textbf{NÃO}}')
+    parts.append(f'{_eta(r_cv, "eta_C_terca"):.4f}')
+    parts.append(' \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.4 Função estrutural da cobertura (acoplamento ao LTB)}\n\n\\begin{tabular}{@{}ll@{}}\n  \\toprule\n  \\textbf{Indicador} & \\textbf{Resultado} \\\\\n  \\midrule\n  $\\mathtt{cobertura\\_ok}$ & ')
+    parts.append('\\textbf{Sim}' if cob_ok else '\\textbf{Não}')
     parts.append(' \\\\\n  Restrição lateral das terças & ')
     parts.append(cob_txt)
-    parts.append(' para LTB \\\\\n  $l_1$ efectivo adoptado & ')
+    parts.append(' para LTB \\\\\n  $l_1$ efetivo adotado & ')
     parts.append(_br(l_1_ef, 3))
     parts.append('~m \\\\\n  $\\eta$ governante (contravent.) & ')
-    parts.append(f'\\textcolor{{{('etaok' if _ok(r_cv) else 'etaerr')}}}{{{_eta(r_cv):.4f}}}')
+    parts.append(f'{_eta(r_cv):.4f}')
     parts.append(' \\quad(')
     parts.append(str(r_cv.get('eta_gov_key', '--')).replace('_', '\\_'))
     parts.append(') \\\\\n  Quantitativo & ')
@@ -457,28 +1042,134 @@ def gerar_tex(
     parts.append(_br(r_cv.get('L_total_m', 0), 1))
     parts.append('~m\n    (')
     parts.append(_br(r_cv.get('peso_total_kg', 0), 1))
-    parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto. Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{lllcc}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\boldsymbol{\\eta}$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
+    parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto. Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{@{}lllcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\eta$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
     parts.append(f'{r_els.get('w_S1_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_inst_mm', 67.5):.2f}~mm & ')
-    parts.append(f'\\textcolor{{{cor_S1}}}{{{eta_S1:.4f}}} & ')
-    parts.append(f'\\textcolor{{{cor_S1}}}{{{sim_S1}}} \\\\\n')
+    parts.append(f'{eta_S1:.4f} & ')
+    parts.append(f'{sim_S1} \\\\\n')
     parts.append('  $w_{net,fin} \\leq L/250$ & ')
     parts.append(f'{r_els.get('w_net_fin_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_fin_mm', 81.0):.2f}~mm & ')
-    parts.append(f'\\textcolor{{{cor_nf}}}{{{eta_nf:.4f}}} & ')
-    parts.append(f'\\textcolor{{{cor_nf}}}{{{sim_nf}}} \\\\\n')
+    parts.append(f'{eta_nf:.4f} & ')
+    parts.append(f'{sim_nf} \\\\\n')
     parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
     parts.append(f'Fluência (EC5~\\S2.3.2.2): $w_{{fin}} = {r_els.get('w_G_mm', 0):.2f}(1+{k_def:.2f}) + {r_els.get('w_Q1_mm', 0):.2f} = {r_els.get('w_fin_mm', 0):.2f}$~mm ($k_{{def}}={k_def:.2f}$, $\\psi_2=0$).\n\n')
-    parts.append('\n% ── 11. Ligações ──────────────────────────────────────────────\n\\section*{11. Ligações}\n\n\\textit{Critério de projecto (uso público):} $\\eta_{\\mathrm{alvo}}=')
+    # ── Tirante de base (se ativo) ─────────────────────────────
+    if com_tirante and r_tir:
+        parts.append(
+            '\n% ── 10b. Tirante de base ─────────────────────────────────\n'
+            '\\section*{10b. Tirante de Base -- Fecho do Empuxo}\n\n'
+            'O pórtico biarticulado gera empuxo horizontal $H$ nas bases '
+            '(Castigliano). Em vez de transmitir $H$ à sapata (chumbadores L3), '
+            'adota-se \\textbf{tirante de aço ao nível do piso} ligando as bases '
+            'de cada vão -- solução usual em coberturas MLC / arcos abatidos.\n\n'
+            '\\begin{tabular}{@{}lll@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n'
+            '  \\midrule\n'
+        )
+        parts.append(
+            f'  $H_{{\\mathrm{{arco}}}}$ (ELU gov.) & '
+            f'{_br(r_tir.get("H_arco_kN", r_tir.get("T_d_kN", 0)), 1)}~kN & '
+            f'Castigliano \\\\\n'
+        )
+        parts.append(
+            f'  $T_d$ (tirante) & '
+            f'{_br(r_tir.get("T_d_kN", 0), 1)}~kN & $=H_{{\\mathrm{{arco}}}}$ \\\\\n'
+        )
+        parts.append(
+            f'  $H_{{\\mathrm{{sapata}}}}$ & '
+            f'{_br(r_tir.get("H_sapata_kN", 0), 1)}~kN & residual $\\approx 0$ \\\\\n'
+        )
+        parts.append(
+            f'  Comprimento $L$ & {_br(r_tir.get("L_m", geo.L), 2)}~m & '
+            f'vão do pórtico \\\\\n'
+        )
+        parts.append(
+            f'  Aço / $\\varnothing$ & {r_tir.get("aco", "S355")} / '
+            f'{_br(r_tir.get("d_mm", 0), 0)}~mm & '
+            f'{"auto" if r_tir.get("d_auto") else "fixo"} \\\\\n'
+        )
+        parts.append(
+            f'  $A$ & {_br(r_tir.get("A_mm2", 0), 0)}~mm$^2$ & \\\\\n'
+        )
+        parts.append(
+            f'  $N_{{t,Rd}}=A f_y/\\gamma_{{M0}}$ & '
+            f'{_br(r_tir.get("N_t_Rd_kN", 0), 1)}~kN & EN~1993-1-1~\\S6.2.3 \\\\\n'
+        )
+        parts.append(
+            f'  $\\eta$ & {_eta(r_tir):.4f} & '
+            f'alvo {_br(r_tir.get("eta_alvo", 0.75), 2)} \\\\\n'
+        )
+        parts.append(
+            f'  $\\delta_{{\\mathrm{{el}}}}$ & '
+            f'{_br(r_tir.get("delta_el_mm", 0), 1)}~mm & '
+            f'$TL/(EA)$ \\\\\n'
+        )
+        parts.append(
+            f'  Quantitativo & {r_tir.get("n_barras", 0)} barras / '
+            f'{_br(r_tir.get("peso_total_kg", 0), 0)}~kg & '
+            f'2 vãos $\\times$ n pórticos \\\\\n'
+        )
+        parts.append(
+            '  \\bottomrule\n'
+            '\\end{tabular}\n\n'
+            '\\textit{Nota:} com tirante, a L3 (sapata lateral) deixa de ser '
+            'governada por $H$ -- chumbadores construtivos e $\\eta=\\eta_N$ '
+            '(compressão $N$). Ancoragem do tirante e proteção a impacto '
+            'no estacionamento a detalhar em projeto de execução.\n\n'
+        )
+
+    parts.append('\n% ── 11. Ligações ──────────────────────────────────────────────\n\\section*{11. Ligações}\n\n\\textit{Critério de projeto (uso público):} $\\eta_{\\mathrm{alvo}}=')
     parts.append(_br(eta_lig_alvo, 2))
-    parts.append('$ para L1/L1c e L3 (ligações em madeira tendem a falha frágil;\nEC5 exige $\\eta\\leq 1{,}0$ -- o alvo 0{,}85 é margem de projecto).\n$n_{ef}$ por fileira // fibras: EC5~\\S8.5.1.1\n($n_{ef}=n^{0,9}(a_1/(13d))^{1/4}\\leq n$).\n\n\\vspace{4pt}\n\\begin{tabular}{p{4.5cm}p{5cm}cc}\n  \\toprule\n  \\textbf{Ligação} & \\textbf{Norma} & $\\boldsymbol{\\eta}$ & \\textbf{Status} \\\\\n  \\midrule\n')
+    parts.append(
+        f'$ para L1/L1c e L3 (ligações em madeira tendem a falha frágil;\n'
+        f'EC5 exige $\\eta\\leq 1{{,}}0$ -- o alvo '
+        f'{eta_lig_alvo:.2f}'.replace('.', '{,}') +
+        ' é margem de projeto).\n'
+        '$n_{ef}$ por fileira // fibras: EC5~\\S8.5.1.1\n'
+        '($n_{ef}=n^{0,9}(a_1/(13d))^{1/4}\\leq n$).\n\n'
+        '\\vspace{4pt}\n'
+        '{\\small\n'
+        '\\begin{tabularx}{\\textwidth}{@{}'
+        '>{\\raggedright\\arraybackslash}p{3.6cm}'
+        '>{\\raggedright\\arraybackslash}X'
+        'cc@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Ligação} & \\textbf{Norma} & '
+        '$\\eta$ & \\textbf{Status} \\\\\n'
+        '  \\midrule\n'
+    )
     parts.append(eta_row('L1 -- Viga-pilar (base)', 'EC5 \\S8.2+\\S8.5.1.1+\\S8.6', _eta(r_L1), _ok(r_L1)))
     parts.append(eta_row('L2 -- Cumeeira', 'EC5 \\S6.1.4+\\S6.1.5+\\S8.6', _eta(r_L2), _ok(r_L2)))
-    parts.append(eta_row('L3 -- Sapata (fundação)', 'EN 1993-1-8+EN 1992-4', _eta(r_L3), _ok(r_L3)))
+    _l3_lab = (
+        'L3 -- Sapata (com tirante, $H\\approx 0$)'
+        if com_tirante or r_L3.get('com_tirante')
+        else 'L3 -- Sapata (fundação)'
+    )
+    parts.append(eta_row(_l3_lab, 'EN 1993-1-8+EN 1992-4', _eta(r_L3), _ok(r_L3)))
     parts.append(eta_row('L1c -- Base pilar central', 'EC5 \\S8.2+\\S8.3+\\S8.6', _eta(r_L1c), _ok(r_L1c)))
     parts.append(eta_row('L2c -- Cumeeira central', 'EC5 \\S6.1.4+\\S6.1.5+\\S8.6', _eta(r_L2c), _ok(r_L2c)))
     parts.append(eta_row('L3c -- Sapata central', 'EN 1993-1-8+EN 1992-4', _eta(r_L3c), _ok(r_L3c)))
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\begin{tabular}{llll}\n  \\toprule\n  \\textbf{Ligação} & \\textbf{Detalhe} & \\textbf{Parâmetro} & \\textbf{Valor} \\\\\n  \\midrule\n  L1 -- Viga-pilar & Pinos em chapa embutida &\n    $d$, $n$, layout &\n    ')
+    # Tabela de detalhes §11: largura = \textwidth (margens 2,5 cm)
+    parts.append(
+        '  \\bottomrule\n'
+        '\\end{tabularx}}\n\n'
+        '\\vspace{4pt}\n'
+        '{\\small\\setlength{\\tabcolsep}{5pt}\n'
+        '\\begin{tabularx}{\\textwidth}{@{}'
+        '>{\\raggedright\\arraybackslash}p{2.3cm}'
+        '>{\\raggedright\\arraybackslash}p{3.0cm}'
+        '>{\\raggedright\\arraybackslash}p{3.4cm}'
+        '>{\\raggedright\\arraybackslash}X'
+        '@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Ligação} & \\textbf{Detalhe} & '
+        '\\textbf{Parâmetro} & \\textbf{Valor} \\\\\n'
+        '  \\midrule\n'
+        '  L1 -- Viga-pilar & Pinos em chapa embutida &\n'
+        '    $d$, $n$, layout &\n    '
+    )
     parts.append(f'{r_L1.get('d_mm', 0):.0f}~mm, {r_L1.get('n_pinos', 0)}, ')
     parts.append(f'{r_L1.get('n_linha', 0)}$\\times${r_L1.get('n_linhas', 0)} \\\\\n')
     parts.append('  & & $F_{v,Rd}/\\text{pino}$ (2 planos) & ')
@@ -490,51 +1181,142 @@ def gerar_tex(
     parts.append(f'{r_L1.get('R_total_kN', 0):.1f}~kN, ')
     parts.append(f'{r_L1.get('F_res_kN', 0):.1f}~kN \\\\\n')
     parts.append('  & & $\\eta$, $\\eta_{alvo}$ & ')
-    parts.append(f'{_eta(r_L1):.4f}, {r_L1.get('eta_alvo', 0.85):.2f} \\\\\n')
+    parts.append(f'{_eta(r_L1):.4f}, {r_L1.get('eta_alvo', 0.75):.2f} \\\\\n')
     parts.append('  \\midrule\n  L2 -- Cumeeira & Pino passante & $d$, $n$ & ')
     parts.append(f'{r_L2.get('d_pino_mm', r_L2.get('d_mm', 0)):.0f}~mm, {r_L2.get('n_pino', r_L2.get('n_pinos', 0))} \\\\\n')
     parts.append('  & Compressão axial & $\\sigma_{c,0,d}$ & ')
     parts.append(f'{r_L2.get('sigma_c0_MPa', 0):.4f}~MPa \\\\\n')
     parts.append('  & & $\\eta$ & ')
     parts.append(f'{_eta(r_L2):.4f} \\\\\n')
-    parts.append('  \\midrule\n  L3 -- Sapata & Chumbadores & $n$, $F_{chu}$ & ')
-    parts.append(f'{r_L3.get('n_chumbadores', 0)}, {r_L3.get('F_chu_kN', 0):.0f}~kN/chu \\\\\n')
-    parts.append('  & Chapa de base & Dimensões & ')
-    parts.append(f'{r_L3.get('lado_chapa_cm', 0):.1f}$\\times${r_L3.get('lado_chapa_cm', 0):.1f}~cm \\\\\n')
-    parts.append('  & & $H_d$, $\\eta$, $\\eta_{alvo}$ & ')
-    parts.append(f'{r_L3.get('H_d_kN', 0):.1f}~kN, {_eta(r_L3):.4f}, ')
-    parts.append(f'{r_L3.get('eta_alvo', 0.85):.2f} \\\\\n')
+    if com_tirante or r_L3.get('com_tirante'):
+        parts.append(
+            '  \\midrule\n  L3 -- Sapata & Com tirante ($H\\approx 0$) &\n'
+            '    $H_{\\mathrm{arco}}$, $H_d$ &\n    '
+        )
+        parts.append(
+            f'{r_L3.get("H_arco_kN", 0):.1f}~kN, '
+            f'{r_L3.get("H_d_kN", 0):.1f}~kN \\\\\n'
+        )
+        parts.append('  & Chumbadores construtivos & $n$ & ')
+        parts.append(f'{r_L3.get("n_chumbadores", 0)} \\\\\n')
+        parts.append('  & Compressão $N$ & $\\sigma_c$, $\\eta_N$ & ')
+        parts.append(
+            f'{r_L3.get("sigma_c_MPa", 0):.3f}~MPa, '
+            f'{r_L3.get("eta_N", r_L3.get("eta", 0)):.4f} \\\\\n'
+        )
+        parts.append('  & Chapa de base & Dimensões & ')
+        parts.append(
+            f'{r_L3.get("lado_chapa_cm", 0):.1f}$\\times$'
+            f'{r_L3.get("lado_chapa_cm", 0):.1f}~cm \\\\\n'
+        )
+    else:
+        parts.append('  \\midrule\n  L3 -- Sapata & Chumbadores & $n$, $F_{chu}$ & ')
+        parts.append(f'{r_L3.get('n_chumbadores', 0)}, {r_L3.get('F_chu_kN', 0):.0f}~kN/chu \\\\\n')
+        parts.append('  & & $n_{\\eta\\leq 1}$, $n_{\\times 4}$ & ')
+        parts.append(f'{r_L3.get('n_chu_eta1', r_L3.get('n_chumbadores', 0))}, ')
+        parts.append(f'{r_L3.get('n_chu_x4', r_L3.get('n_chumbadores', 0))} \\\\\n')
+        parts.append('  & Chapa de base & Dimensões & ')
+        parts.append(f'{r_L3.get('lado_chapa_cm', 0):.1f}$\\times${r_L3.get('lado_chapa_cm', 0):.1f}~cm \\\\\n')
+        parts.append('  & & $H_d$, $\\eta$, $\\eta_{alvo}$ & ')
+        parts.append(f'{r_L3.get('H_d_kN', 0):.1f}~kN, {_eta(r_L3):.4f}, ')
+        parts.append(f'{r_L3.get('eta_alvo', 0.75):.2f} \\\\\n')
     parts.append('  \\midrule\n  L1c -- Central & 2 chapas independentes &\n    $d$, $n$/chapa, layout &\n    ')
     parts.append(f'{r_L1c.get('d_mm', 0):.0f}~mm, {r_L1c.get('n_pinos', 0)}, {r_L1c.get('n_linha', 0)}$\\times${r_L1c.get('n_linhas', 0)} \\\\\n')
     parts.append('  & & $\\eta$ & ')
     parts.append(f'{_eta(r_L1c):.4f} \\\\\n')
-    parts.append('  \\midrule\n  L3c -- Sapata central & Chumbadores (H$\\approx$0) & $n$ & ')
-    parts.append(f'{r_L3c.get('n_chumbadores', 0)} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\subsection*{11.1 Fadiga e deslizamento (EC5 \\S7.1 + \\S8.1.5)}\n\n\\begin{tabular}{llcccc}\n  \\toprule\n  \\textbf{Lig.} & \\textbf{Descrição} & $u_{inst}$ & $u_{fin}$ &\n  $\\eta_{slip}$ & $\\eta_{alt}$ \\\\\n  \\midrule\n')
-    parts.append(f'  L1 & {_tex_escape(r_fL1.get('descricao', 'Base lateral'))} & {r_fL1.get('u_inst_mm', 0):.3f}~mm & {r_fL1.get('u_fin_mm', 0):.3f}~mm & {_eta(r_fL1, 'eta_slip'):.4f} & {_eta(r_fL1, 'eta_alt'):.4f} \\\\\n  L2 & {_tex_escape(r_fL2.get('descricao', 'Cumeeira'))} & {r_fL2.get('u_inst_mm', 0):.3f}~mm & {r_fL2.get('u_fin_mm', 0):.3f}~mm & {_eta(r_fL2, 'eta_slip'):.4f} & {_eta(r_fL2, 'eta_alt'):.4f} \\\\\n  L1c & {_tex_escape(r_fL1c.get('descricao', 'Base central'))} & {r_fL1c.get('u_inst_mm', 0):.3f}~mm & {r_fL1c.get('u_fin_mm', 0):.3f}~mm & {_eta(r_fL1c, 'eta_slip'):.4f} & {_eta(r_fL1c, 'eta_alt'):.4f} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 12. Resumo ────────────────────────────────────────────────\n\\section*{12. Resumo das Taxas de Utilização}\n\n\\begin{tabular}{llcc}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Norma} & $\\boldsymbol{\\eta}$ & \\textbf{Status} \\\\\n  \\midrule\n')
-    parts.append(eta_row('Cumeeira ($t_{90}$, $M\\neq 0$)', 'EC5 \\S6.4.3', _eta(r_cum), _ok(r_cum, True)))
-    parts.append(eta_row('Flambagem lateral', 'EC5 \\S6.3.3', _eta(r_fl), _ok(r_fl)))
-    parts.append(eta_row('Flexo-comp. viga', 'EC5 \\S6.3.2', _eta(r_fx), _ok(r_fx)))
-    parts.append(eta_row('Cisalhamento', 'EC5 \\S6.1.7', _eta(r_ci), _ok(r_ci)))
-    parts.append(eta_row('Apoio', 'EC5 \\S6.1.5+\\S6.2.2', _eta(r_ap), _ok(r_ap)))
-    parts.append(eta_row('Pilar lateral', 'EC5 \\S6.3.2', _eta(r_pilar), _ok(r_pilar)))
-    parts.append(eta_row('Pilar central', 'EC5 \\S6.3.2', _eta(r_pc), _ok(r_pc)))
-    parts.append(eta_row('Cobertura / contravent.', 'EC5 \\S9.2.5', _eta(r_cv), _ok(r_cv)))
-    parts.append(eta_row('Terça (flexão)', 'EC5 \\S6.1.6+\\S6.1.7', _eta(r_ter), _ok(r_ter)))
-    parts.append(eta_row('ELS -- flechas', 'EC5 \\S2.3.2.2', _eta(r_els), _ok(r_els)))
-    parts.append(eta_row('L1 -- Viga-pilar', 'EC5 \\S8.2+\\S8.6', _eta(r_L1), _ok(r_L1)))
-    parts.append(eta_row('L2 -- Cumeeira', 'EC5 \\S8.6', _eta(r_L2), _ok(r_L2)))
-    parts.append(eta_row('L3 -- Sapata', 'EN 1993-1-8', _eta(r_L3), _ok(r_L3)))
-    parts.append(eta_row('L1c -- Base central', 'EC5 \\S8.2+\\S8.6', _eta(r_L1c), _ok(r_L1c)))
-    parts.append(eta_row('L2c -- Cumeeira central', 'EC5 \\S8.6', _eta(r_L2c), _ok(r_L2c)))
-    parts.append(eta_row('L3c -- Sapata central', 'EN 1993-1-8', _eta(r_L3c), _ok(r_L3c)))
-    parts.append(eta_row('Fadiga L1 ($\\eta_{slip}$)', 'EC5 \\S7.1', _eta(r_fL1), _ok(r_fL1)))
-    parts.append(eta_row('Fadiga L2 ($\\eta_{slip}$)', 'EC5 \\S7.1', _eta(r_fL2), _ok(r_fL2)))
-    parts.append(eta_row('Fadiga L1c ($\\eta_{slip}$)', 'EC5 \\S7.1', _eta(r_fL1c), _ok(r_fL1c)))
+    parts.append(
+        '  \\midrule\n'
+        '  L3c -- Sapata central &\n'
+        '    Compressão $N{=}2R_v$ (H$\\approx$0) &\n'
+        '    $N_d$, $\\sigma_c$, $\\eta_N$ &\n    '
+    )
+    parts.append(
+        f'{r_L3c.get("N_d_kN", 0):.1f}~kN, '
+        f'{r_L3c.get("sigma_c_MPa", 0):.3f}~MPa, '
+        f'{r_L3c.get("eta_N", r_L3c.get("eta", 0)):.4f} \\\\\n'
+    )
+    parts.append('  & Chumbadores (só construtivo) & $n$ & ')
+    parts.append(f'{r_L3c.get("n_chumbadores", 0)} '
+                 f'(H$\\approx$0 $\\Rightarrow$ $\\eta_H{{=}}0$) \\\\\n')
+    parts.append(
+        '  \\bottomrule\n'
+        '\\end{tabularx}}\n\n'
+        '\\vspace{6pt}\n'
+        '\\subsection*{11.1 Fadiga e deslizamento '
+        '(EC5 \\S7.1 + \\S8.1.5)}\n\n'
+        '{\\small\\setlength{\\tabcolsep}{5pt}\n'
+        '\\begin{tabularx}{\\textwidth}{@{}'
+        'l'
+        '>{\\raggedright\\arraybackslash}X'
+        'cccc@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Lig.} & \\textbf{Descrição} & '
+        '$u_{inst}$ & $u_{fin}$ &\n'
+        '  $\\eta_{slip}$ & $\\eta_{alt}$ \\\\\n'
+        '  \\midrule\n'
+    )
+    parts.append(
+        f'  L1 & {_tex_escape(r_fL1.get("descricao", "Base lateral"))} & '
+        f'{r_fL1.get("u_inst_mm", 0):.3f}~mm & {r_fL1.get("u_fin_mm", 0):.3f}~mm & '
+        f'{_eta(r_fL1, "eta_slip"):.4f} & {_eta(r_fL1, "eta_alt"):.4f} \\\\\n'
+        f'  L2 & {_tex_escape(r_fL2.get("descricao", "Cumeeira"))} & '
+        f'{r_fL2.get("u_inst_mm", 0):.3f}~mm & {r_fL2.get("u_fin_mm", 0):.3f}~mm & '
+        f'{_eta(r_fL2, "eta_slip"):.4f} & {_eta(r_fL2, "eta_alt"):.4f} \\\\\n'
+        f'  L1c & {_tex_escape(r_fL1c.get("descricao", "Base central"))} & '
+        f'{r_fL1c.get("u_inst_mm", 0):.3f}~mm & {r_fL1c.get("u_fin_mm", 0):.3f}~mm & '
+        f'{_eta(r_fL1c, "eta_slip"):.4f} & {_eta(r_fL1c, "eta_alt"):.4f} \\\\\n'
+    )
+    parts.append(
+        '  \\bottomrule\n'
+        '\\end{tabularx}}\n\n'
+        '% ── 12. Resumo ────────────────────────────────────────────────\n'
+        '\\section*{12. Resumo das Taxas de Utilização}\n\n'
+        '{\\small\n'
+        '\\begin{tabularx}{\\textwidth}{@{}'
+        '>{\\raggedright\\arraybackslash}p{4.2cm}'
+        '>{\\raggedright\\arraybackslash}X'
+        'cc@{}}\n'
+        '  \\toprule\n'
+        '  \\textbf{Verificação} & \\textbf{Norma} & '
+        '$\\eta$ & \\textbf{Status} \\\\\n'
+        '  \\midrule\n'
+    )
+    # Resumo a partir do catálogo único (igual terminal/Excel)
+    _tab_resumo = tabela_verificacoes(resultados)
+    for _row in _tab_resumo:
+        _ok_r = bool(_row.get("ok_bool", False))
+        parts.append(eta_row(
+            _tex_escape(str(_row["Verificação"]).replace("_", " ")),
+            _tex_escape(str(_row["Norma"])),
+            float(_row["η"]),
+            _ok_r,
+        ))
+    _eta_max_tab = max((float(r["η"]) for r in _tab_resumo), default=eta_max)
+    _all_ok_tab = all(bool(r.get("ok_bool")) for r in _tab_resumo) if _tab_resumo else False
     parts.append('  \\midrule\n  \\multicolumn{2}{l}{\\textbf{$\\eta$ máximo}} &\n  \\multicolumn{2}{c}{\\textbf{')
-    parts.append(f'{eta_max:.4f}')
-    parts.append('}} \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{10pt}\n\\hrule\n\\vspace{4pt}\n{\\small Calculado por pipeline automatizado em Python -- EC5 + EN 1990 + NBR 6123.\nTodos os valores conferidos pelo Eng.\\ Resp.\\ antes da emissão.}\n\n\\end{document}\n')
+    parts.append(f'{_eta_max_tab:.4f}')
+    parts.append('}} \\\\\n')
+    _status_global = (
+        'APROVADO' if _all_ok_tab and _eta_max_tab <= 1.0 else 'REPROVADO'
+    )
+    parts.append(
+        '  \\multicolumn{2}{l}{\\textbf{Status global}} &\n'
+        '  \\multicolumn{2}{c}{\\textbf{'
+        + _status_global
+        + '}} \\\\\n'
+    )
+    parts.append(
+        '  \\bottomrule\n'
+        '\\end{tabularx}}\n\n'
+        '\\vspace{1.6em}\n'
+        '{\\small\n'
+        'Documento gerado por pipeline automatizado em Python '
+        '(EC5 + EN~1990 + NBR~6123).\\\\\n'
+        'Valores sujeitos a conferência do engenheiro responsável '
+        'antes da emissão.\n'
+        '}\n\n'
+        '\\end{document}\n'
+    )
 
     tex = "".join(parts)
 
@@ -579,41 +1361,31 @@ def gerar_relatorio(
 
     Args:
         resultados : resultados do pipeline (incl. L1–L3, fadiga, meta)
-        geo, mat   : geometria e material de projecto
+        geo, mat   : geometria e material de projeto
         load       : Carregamentos (combinações e esforços no memorial)
-        nome       : nome base dos ficheiros de saída
+        nome       : nome base dos arquivos de saída
     """
     import pandas as pd
 
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    # ── Excel ─────────────────────────────────────────────────
-    ordem = [
-        "cumeeira", "flambagem", "flexao", "cisalhamento", "apoio",
-        "flexo_comp", "pilar_central", "terca", "contraventamento", "ELS",
-        "L1", "L2", "L3", "L1c", "L2c", "L3c",
-        "fadiga_L1", "fadiga_L2", "fadiga_L1c",
+    # ── Excel (mesma tabela que o terminal / resumo) ──────────
+    tab = tabela_verificacoes(resultados)
+    linhas_xlsx = [
+        {
+            "Verificação": r["Verificação"],
+            "Norma":       r["Norma"],
+            "η":           r["η"],
+            "OK":          r["OK"],
+            "chave":       r["chave"],
+        }
+        for r in tab
     ]
-    linhas = []
-    vistos = set()
-    for verif in ordem + list(resultados.keys()):
-        if verif in vistos:
-            continue
-        res = resultados.get(verif)
-        if not isinstance(res, dict) or "eta" not in res:
-            continue
-        vistos.add(verif)
-        linhas.append({
-            "Verificação": verif,
-            "η":           round(_f(res.get("eta")), 4),
-            "OK":          "✓" if res.get("ok") else "✗",
-        })
-
     xlsx_path = OUTPUT_DIR / f"{nome}.xlsx"
-    if linhas:
-        pd.DataFrame(linhas).to_excel(xlsx_path, index=False)
+    if linhas_xlsx:
+        pd.DataFrame(linhas_xlsx).to_excel(xlsx_path, index=False)
     else:
-        pd.DataFrame(columns=["Verificação", "η", "OK"]).to_excel(
+        pd.DataFrame(columns=["Verificação", "Norma", "η", "OK", "chave"]).to_excel(
             xlsx_path, index=False
         )
     print(f"  Excel: {xlsx_path}")

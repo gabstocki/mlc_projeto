@@ -1,7 +1,7 @@
 # Varredura factível — pórtico de 3 rótulas (EC5)
 
 **Data:** 2026-07-08  
-**Concepção mantida:** pórtico isostático de 3 rótulas · MLC GL24h · CS2 · vão L = 20,25 m · espaçamento L_t = 5,75 m · pórtico intermédio (área tributária = L_t) · terças s = 2,53 m  
+**Concepção mantida:** pórtico isostático de 3 rótulas · MLC GL24h · CS2 · vão L = 20,25 m · espaçamento L_t = 5,75 m · pórtico intermediário (área tributária = L_t) · terças s = 2,53 m  
 
 **Modelo estrutural (RM):** intradorso horizontal · rótulas no centroide ·  
 `f_c = (h_ap − h0)/2 = (L/4)·tan(α)` · `H = (q·L²/8)/f_c`
@@ -12,7 +12,7 @@
 
 ## Por que α = 4,5° original é inviável
 
-Com `α = 4,5°`, `f_c ≈ 0,40 m` e cargas de intermédio:
+Com `α = 4,5°`, `f_c ≈ 0,40 m` e cargas de intermediário:
 
 | Grandeza | Ordem de grandeza |
 |----------|-------------------|
@@ -20,13 +20,13 @@ Com `α = 4,5°`, `f_c ≈ 0,40 m` e cargas de intermédio:
 | N na viga | ~2500 kN |
 | F_res na L1 | ~2500 kN |
 
-A ligação de base (pinos EC5 §8) **não fecha** geometria de distâncias mínimas Tab. 8.2 na secção do apoio. Não é falha de “calibragem”: é estática do arco abatido de 3 rótulas.
+A ligação de base (pinos EC5 §8) **não fecha** geometria de distâncias mínimas Tab. 8.2 na seção do apoio. Não é falha de “calibragem”: é estática do arco abatido de 3 rótulas.
 
 ---
 
 ## Resultados da varredura
 
-- Grelha: `α ∈ [6; 18]°`, `h0 ∈ [0,60; 1,10] m`, `b ∈ [0,22; 0,34] m`
+- Grade: `α ∈ [6; 18]°`, `h0 ∈ [0,60; 1,10] m`, `b ∈ [0,22; 0,34] m`
 - **57 combinações** com todas as η ≤ 1 (viga, ELS, apoio, pilar, L1/L2/L3 factíveis)
 - CSV: `output/varredura_factivel.csv`
 
@@ -57,7 +57,7 @@ pinos L2 = d30
 chumbadores L3 = M20 @ 80 kN → n ≈ 15 (H≈1189 kN)
 ```
 
-**Critério de escolha:** menor α próximo da concepção original entre soluções robustas; `h0` com margem face a η_cis ≈ 0,95 de B; secções comerciais; todas as verificações EC5 implementadas com η ≤ 1.
+**Critério de escolha:** menor α próximo da concepção original entre soluções robustas; `h0` com margem face a η_cis ≈ 0,95 de B; seções comerciais; todas as verificações EC5 implementadas com η ≤ 1.
 
 ---
 

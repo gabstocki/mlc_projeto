@@ -1,18 +1,26 @@
 """
 core/wind.py — Carregamento de vento conforme NBR 6123.
 
-Cobertura isolada a duas águas simétricas — Tabela 25.
-Vento perpendicular à cumeeira.
+Cobertura isolada a duas águas simétricas — Tabela 25 (NBR 6123:2023;
+equiv. Tab. 18 na ed. 1988).
 
-Estrutura: 2 pórticos independentes, cada um com vão L = 20,25 m.
-Vão total do galpão = 40,50 m.
+Direcções (convenção NBR / ensaios coberturas isoladas):
+    θ = 90° — vento **perpendicular à cumeeira** (no plano dos pórticos)
+              → Cpb (barlavento) + Cps (sotavento) em **dois carregamentos**
+    θ = 0°  — vento **paralelo à cumeeira** (longitudinal ao galpão)
+              → força horizontal em pilares livres + contraventamento
+                (estrutura aberta sem vedações)
 
-Referência: ABNT NBR 6123:2023
+Referência: ABNT NBR 6123:2023 § coberturas isoladas; EN 1990 (combinações)
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 import math
 
+
+# ── Parâmetros ────────────────────────────────────────────────────────────────
 
 @dataclass
 class ParametrosVento:
@@ -30,19 +38,17 @@ class ParametrosVento:
         h           : Pé-direito do pilar (m)
         dist_portico: Distância entre pórticos (m)
     """
-    V0:           float = 45.0   # m/s — Londrina, PR
-    S1:           float = 1.0    # terreno plano
-    categoria:    str   = "IV"   # rugosidade urbana
-    classe:       str   = "B"    # maior dimensão entre 20 e 50 m
-    S3:           float = 1.0    # grupo 2 — edificações em geral
-    L:            float = 20.25  # m — vão de cada pórtico
-    H1:           float = 1.0    # m — variação de altura da cobertura
-    h:            float = 7.0    # m — pé-direito
-    dist_portico: float = 5.75   # m — espaçamento entre pórticos
+    V0:           float = 45.0
+    S1:           float = 1.0
+    categoria:    str   = "IV"
+    classe:       str   = "B"
+    S3:           float = 1.0
+    L:            float = 20.25
+    H1:           float = 1.0
+    h:            float = 7.0
+    dist_portico: float = 5.75
 
-    # Tabela de S2 — NBR 6123 Tabela 3
-    # chave: (categoria, classe)
-    _S2_TABLE: dict = None
+    _S2_TABLE: dict = field(default=None, repr=False)
 
     def __post_init__(self):
         self._S2_TABLE = {
@@ -55,7 +61,6 @@ class ParametrosVento:
 
     @property
     def S2(self) -> float:
-        """Fator de rugosidade S2 — NBR 6123 Tabela 3."""
         key = (self.categoria, self.classe)
         if key not in self._S2_TABLE:
             raise ValueError(
@@ -66,50 +71,40 @@ class ParametrosVento:
 
     @property
     def Vk(self) -> float:
-        """Velocidade característica Vk (m/s) — NBR 6123 §5.1."""
         return self.V0 * self.S1 * self.S2 * self.S3
 
     @property
     def q(self) -> float:
         """Pressão dinâmica q (kN/m²) — NBR 6123 §6.2."""
-        return 0.613e-3 * self.Vk ** 2   # 0,613 Pa·s²/m² → kN/m²
+        return 0.613e-3 * self.Vk ** 2
 
     @property
     def tg_beta(self) -> float:
-        """
-        Tangente do ângulo de inclinação β.
-
-        O ângulo é definido pela variação de altura H1 sobre o quarto
-        do vão (L/2), pois a cumeeira está no centro do pórtico:
-        tg β = H1 / (L/2)
-        """
         return self.H1 / (self.L / 2)
 
     @property
     def beta_deg(self) -> float:
-        """Ângulo de inclinação β (graus)."""
         return math.degrees(math.atan(self.tg_beta))
 
     @property
     def H_max(self) -> float:
-        """Altura máxima da estrutura (m) — pé-direito + variação."""
         return self.h + self.H1
 
+
+# ── Tabela 25 — θ = 90° (perpendicular à cumeeira) ───────────────────────────
 
 def coeficientes_tabela25(tg_beta: float) -> dict:
     """
     Coeficientes de pressão Cpb e Cps — NBR 6123 Tabela 25.
 
     Cobertura isolada a duas águas simétricas.
-    Vento perpendicular à cumeeira.
+    Vento **perpendicular à cumeeira** (θ = 90°).
+
+    Dois carregamentos obrigatórios (a norma exige avaliar ambos):
+        Carregamento 1 — pressão / compressão dominante
+        Carregamento 2 — sucção dominante
 
     Intervalos válidos: 0,07 ≤ tg β ≤ 0,6
-
-    Args:
-        tg_beta: Tangente do ângulo de inclinação
-
-    Returns:
-        dict com Cpb e Cps para Carregamento 1 e Carregamento 2
     """
     if tg_beta < 0.07:
         raise ValueError(
@@ -123,18 +118,13 @@ def coeficientes_tabela25(tg_beta: float) -> dict:
         )
 
     if 0.07 <= tg_beta <= 0.4:
-        # Carregamento 1
         Cpb_1 = 2.4 * tg_beta + 0.6
         Cps_1 = 3.0 * tg_beta - 0.5
-        # Carregamento 2
         Cpb_2 = 0.6 * tg_beta - 0.74
         Cps_2 = -1.0
-
     else:  # 0.4 < tg_beta <= 0.6
-        # Carregamento 1
         Cpb_1 = min(2.4 * tg_beta + 0.6, 2.0)
         Cps_1 = +0.7
-        # Carregamento 2
         Cpb_2 = 6.5 * tg_beta - 3.1
         Cps_2 = 5.0 * tg_beta - 3.0
 
@@ -144,39 +134,214 @@ def coeficientes_tabela25(tg_beta: float) -> dict:
     }
 
 
+def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
+    """
+    Todos os padrões de Cpe da Tab. 25 a varrer no pórtico (θ = 90°).
+
+    Para cada carregamento normativo (C1, C2) geram-se:
+      • assimétrico: meia-água esq. = Cpb, dir. = Cps
+      • reverso:     esq. = Cps, dir. = Cpb  (vento do outro lado)
+      • uniforme bv: ambas as águas = Cpb  (envelope conservador)
+      • uniforme st: ambas as águas = Cps  (envelope / sucção geral)
+
+    Isto cobre barlavento, sotavento, sucção geral **e** a combinação
+    simultânea Cpb+Cps exigida pela tabela — não só extremos uniformes.
+    """
+    coef = coeficientes_tabela25(tg_beta)
+    padroes: list[dict] = []
+
+    for caso in ("C1", "C2"):
+        Cpb = coef[caso]["Cpb"]
+        Cps = coef[caso]["Cps"]
+        padroes.extend([
+            {
+                "id": f"{caso}_asim",
+                "caso_tab": caso,
+                "tipo": "assimetrico",
+                "C_esq": Cpb,
+                "C_dir": Cps,
+                "descricao": f"Tab.25 {caso} assimétrico (esq=Cpb, dir=Cps)",
+            },
+            {
+                "id": f"{caso}_rev",
+                "caso_tab": caso,
+                "tipo": "assimetrico_reverso",
+                "C_esq": Cps,
+                "C_dir": Cpb,
+                "descricao": f"Tab.25 {caso} reverso (esq=Cps, dir=Cpb)",
+            },
+            {
+                "id": f"{caso}_unif_bv",
+                "caso_tab": caso,
+                "tipo": "uniforme_barlavento",
+                "C_esq": Cpb,
+                "C_dir": Cpb,
+                "descricao": f"Tab.25 {caso} uniforme Cpb (envelope)",
+            },
+            {
+                "id": f"{caso}_unif_st",
+                "caso_tab": caso,
+                "tipo": "uniforme_sotavento",
+                "C_esq": Cps,
+                "C_dir": Cps,
+                "descricao": f"Tab.25 {caso} uniforme Cps (sucção/pressão geral)",
+            },
+        ])
+    return padroes
+
+
+# ── θ = 0° — paralelo à cumeeira (estrutura aberta) ───────────────────────────
+
+# Coeficiente de arrasto de elementos prismáticos livres — NBR 6123 §6.3 / Tab. 13
+# Valor conservador para seção retangular (pilares MLC): Ca = 1,2
+CA_PILAR_RET = 1.2
+
+# Fricção no extradorso (vento paralelo) — ordem de grandeza NBR Cf ≈ 0,02–0,04
+# Usa-se 0,04 (superfície «rugosa» / terças) sobre a área em planta da cobertura.
+CF_COBERTURA = 0.04
+
+
+def forca_vento_paralelo_cumeeira(
+    params: ParametrosVento,
+    b_pilar: float,
+    h_pilar: float,
+    n_pilares_linha: int,
+    n_linhas_portico: int = 2,
+    L_cob_m: float | None = None,
+    B_cob_m: float | None = None,
+) -> dict:
+    """
+    Força horizontal de vento **paralelo à cumeeira** (θ = 0°).
+
+    Estrutura aberta (sem vedações): a Tab. 25 não governa esta direção.
+    Modelo de projeto:
+      1) Arrasto nos pilares (elementos livres): F = q · Ca · A_proj
+         A_proj = b_pilar × H  (face perpendicular ao vento longitudinal)
+      2) Fricção na cobertura: F_f = q · Cf · A_planta
+
+    A força total alimenta:
+      • contraventamento longitudinal (cruzes + terças-biela)
+      • estabilidade lateral dos pilares (fora do plano do pórtico)
+
+    Args:
+        params           : ParametrosVento
+        b_pilar, h_pilar : seção do pilar (m) — b face ao vento longitudinal
+        n_pilares_linha  : pilares por alinhamento (ao longo do comprimento)
+        n_linhas_portico : alinhamentos (tipicamente 2 por pórtico × n pórticos
+                           em planta; para 2 pórticos lado a lado = 3 eixos se
+                           compartilham central — ver main)
+        L_cob_m          : comprimento da cobertura // cumeeira (default L_comp)
+        B_cob_m          : largura total ⊥ cumeeira (default 2·L pórtico se n=2)
+    """
+    q = params.q
+    H = params.h
+
+    # Área projetada de um pilar (face ⊥ vento longitudinal)
+    A_pil = b_pilar * H                          # m²
+    F_pil_kN = q * CA_PILAR_RET * A_pil          # kN por pilar
+
+    n_total = n_pilares_linha * n_linhas_portico
+    F_pilares_kN = F_pil_kN * n_total
+
+    # Fricção na cobertura
+    if L_cob_m is None:
+        L_cob_m = (n_pilares_linha - 1) * params.dist_portico
+    if B_cob_m is None:
+        B_cob_m = params.L                       # um vão; main pode passar 2·L
+    A_planta = max(L_cob_m, 0.0) * max(B_cob_m, 0.0)
+    F_fric_kN = q * CF_COBERTURA * A_planta
+
+    F_total_kN = F_pilares_kN + F_fric_kN
+
+    # Pressão linear equivalente no alinhamento de contraventamento (kN/m)
+    L_trib = max(L_cob_m, 1e-6)
+    w_long_kNpm = F_total_kN / L_trib
+
+    return {
+        "theta_deg":        0.0,
+        "direcao":          "paralelo à cumeeira (longitudinal)",
+        "q_kNm2":           round(q, 4),
+        "Ca_pilar":         CA_PILAR_RET,
+        "Cf_cobertura":     CF_COBERTURA,
+        "A_pilar_m2":       round(A_pil, 4),
+        "F_pilar_kN":       round(F_pil_kN, 3),
+        "n_pilares":        n_total,
+        "F_pilares_kN":     round(F_pilares_kN, 3),
+        "A_planta_m2":      round(A_planta, 2),
+        "F_friccao_kN":     round(F_fric_kN, 3),
+        "F_total_kN":       round(F_total_kN, 3),
+        "w_long_kNpm":      round(w_long_kNpm, 4),
+        "L_trib_m":         round(L_trib, 3),
+        "norma":            "NBR 6123 §6.3 (Ca) + Cf cobertura | estrutura aberta",
+        "nota":             (
+            "Tab.25 não se aplica a θ=0°. Arrasto em pilares livres + "
+            "fricção no extradorso. Força → contraventamento e pilares."
+        ),
+    }
+
+
+def forca_vento_pilar_90(
+    params: ParametrosVento,
+    b_pilar: float,
+    h_pilar: float,
+) -> dict:
+    """
+    Arrasto no pilar sob vento θ = 90° (perpendicular à cumeeira).
+
+    Face projetada = h_pilar × H (dimensão no plano do pórtico).
+    Em pórtico biarticulado a força horizontal no pilar vai para as
+    rótulas (topo/base); a base transmite à sapata. Verifica-se também
+    o pilar como elemento livre se o contraventamento de fachada for fraco.
+    """
+    q = params.q
+    H = params.h
+    A = h_pilar * H
+    F = q * CA_PILAR_RET * A
+    # Força repartida topo/base (biarticulado) → V_topo = V_base = F/2
+    # Momento máximo no meio se considerar carga uniforme no fuste:
+    #   w = F/H ; M_max = w·H²/8 = F·H/8  (biapoiado)
+    M_mid = F * H / 8.0
+    return {
+        "theta_deg":   90.0,
+        "direcao":     "perpendicular à cumeeira",
+        "q_kNm2":      round(q, 4),
+        "Ca":          CA_PILAR_RET,
+        "A_proj_m2":   round(A, 4),
+        "F_pilar_kN":  round(F, 3),
+        "V_rotula_kN": round(F / 2.0, 3),
+        "M_mid_kNm":   round(M_mid, 3),
+        "norma":       "NBR 6123 §6.3 Ca=1,2 | pilar livre biapoiado",
+    }
+
+
+# ── Resultado agregado ────────────────────────────────────────────────────────
+
 @dataclass
 class ResultadoVento:
-    """Resultados completos do cálculo de vento."""
-    params:    ParametrosVento
-    coef:      dict
-    pressoes:  dict   # pressões em kN/m²
-    cargas:    dict   # cargas lineares na viga em kN/m
+    """Resultados completos do cálculo de vento (θ=90° Tab.25 + θ=0°)."""
+    params:     ParametrosVento
+    coef:       dict
+    pressoes:   dict          # legado C1/C2 bv/st
+    cargas:     dict
+    padroes_90: list          # todos os padrões Tab.25
+    pressoes_padrao: dict     # id → {w_esq, w_dir} kN/m² e kN/m
 
 
 def calcular_vento(params: ParametrosVento) -> ResultadoVento:
     """
-    Calcula as pressões e cargas de vento sobre a viga.
+    Calcula pressões e padrões de carga de vento (θ = 90°, Tab. 25).
 
-    Convenção de sinais (Tabela 25):
+    Convenção de sinais:
         Positivo → empurra para baixo (mesma direção do peso próprio)
-        Negativo → puxa para cima (sucção — contrário ao peso próprio)
-
-    Para o dimensionamento, avalia os dois carregamentos e
-    retorna os valores em módulo para cada situação.
-
-    Args:
-        params: Parâmetros geométricos e de vento
-
-    Returns:
-        ResultadoVento com coeficientes, pressões e cargas lineares
+        Negativo → puxa para cima (sucção)
     """
     tg_b = params.tg_beta
     q    = params.q
-    d    = params.dist_portico  # espaçamento entre pórticos
+    d    = params.dist_portico
 
     coef = coeficientes_tabela25(tg_b)
+    padroes = padroes_cpe_tabela25(tg_b)
 
-    # ── Pressões por zona (kN/m²) ─────────────────────────────
     pressoes = {
         "C1": {
             "barlavento_kNm2": coef["C1"]["Cpb"] * q,
@@ -187,10 +352,6 @@ def calcular_vento(params: ParametrosVento) -> ResultadoVento:
             "sotavento_kNm2":  coef["C2"]["Cps"] * q,
         },
     }
-
-    # ── Cargas lineares na viga (kN/m) ────────────────────────
-    # Cada meia água recebe carga de uma zona (barlavento ou sotavento)
-    # A carga linear = pressão × distância entre pórticos
     cargas = {
         "C1": {
             "barlavento_kNm": coef["C1"]["Cpb"] * q * d,
@@ -202,11 +363,25 @@ def calcular_vento(params: ParametrosVento) -> ResultadoVento:
         },
     }
 
+    pressoes_padrao = {}
+    for p in padroes:
+        pe = p["C_esq"] * q
+        pd = p["C_dir"] * q
+        pressoes_padrao[p["id"]] = {
+            **p,
+            "w_esq_kNm2": pe,
+            "w_dir_kNm2": pd,
+            "w_esq_kNm":  pe * d,
+            "w_dir_kNm":  pd * d,
+        }
+
     return ResultadoVento(
         params=params,
         coef=coef,
         pressoes=pressoes,
         cargas=cargas,
+        padroes_90=padroes,
+        pressoes_padrao=pressoes_padrao,
     )
 
 
@@ -217,65 +392,46 @@ def resumo_vento(resultado: ResultadoVento) -> None:
     pr = resultado.pressoes
     ca = resultado.cargas
 
-    print("=" * 58)
+    print("=" * 68)
     print("  CÁLCULO DE VENTO — NBR 6123 Tabela 25")
-    print("  Cobertura isolada a duas águas — vento perpendicular")
-    print("=" * 58)
+    print("  Cobertura isolada a duas águas | θ=90° ⊥ cumeeira")
+    print("=" * 68)
 
-    print(f"\n{'PARÂMETROS GERAIS':}")
-    print(f"  V0          = {p.V0:.1f} m/s")
-    print(f"  S1          = {p.S1:.2f}")
-    print(f"  S2          = {p.S2:.2f}  (Cat. {p.categoria}, Classe {p.classe})")
-    print(f"  S3          = {p.S3:.2f}")
-    print(f"  Vk          = {p.Vk:.2f} m/s")
-    print(f"  q           = {p.q:.4f} kN/m²")
+    print(f"\n  V0={p.V0:.1f} m/s | S1={p.S1:.2f} | S2={p.S2:.2f} "
+          f"(Cat.{p.categoria}/Cl.{p.classe}) | S3={p.S3:.2f}")
+    print(f"  Vk={p.Vk:.2f} m/s | q={p.q:.4f} kN/m² | "
+          f"tgβ={p.tg_beta:.4f} | β={p.beta_deg:.2f}°")
 
-    print(f"\n{'GEOMETRIA':}")
-    print(f"  Vão (L)     = {p.L:.2f} m  (cada pórtico)")
-    print(f"  H1          = {p.H1:.2f} m  (variação de altura)")
-    print(f"  h           = {p.h:.2f} m  (pé-direito)")
-    print(f"  H_max       = {p.H_max:.2f} m")
-    print(f"  tg β        = {p.tg_beta:.4f}")
-    print(f"  β           = {p.beta_deg:.2f}°")
+    print(f"\n  COEFICIENTES Tab.25:")
+    print(f"  {'Caso':<6} {'Cpb':>8} {'Cps':>8}")
+    for caso in ("C1", "C2"):
+        print(f"  {caso:<6} {c[caso]['Cpb']:>+8.4f} {c[caso]['Cps']:>+8.4f}")
 
-    print(f"\n{'COEFICIENTES — TABELA 25':}")
-    print(f"  {'Caso':<14} {'Cpb':>8} {'Cps':>8}")
-    print(f"  {'-'*30}")
-    for caso in ["C1", "C2"]:
-        label = "Carregamento 1" if caso == "C1" else "Carregamento 2"
-        print(f"  {label:<14} {c[caso]['Cpb']:>8.4f} {c[caso]['Cps']:>8.4f}")
+    print(f"\n  PADRÕES VARRIDOS ({len(resultado.padroes_90)}):")
+    for pid, pp in resultado.pressoes_padrao.items():
+        print(f"    {pid:<14} C=({pp['C_esq']:+.3f},{pp['C_dir']:+.3f})  "
+              f"w=({pp['w_esq_kNm']:+.3f},{pp['w_dir_kNm']:+.3f}) kN/m  "
+              f"— {pp['tipo']}")
 
-    print(f"\n{'PRESSÕES RESULTANTES (kN/m²)':}")
-    print(f"  {'Caso':<14} {'Barlavento':>12} {'Sotavento':>12}")
-    print(f"  {'-'*40}")
-    for caso in ["C1", "C2"]:
-        label = "Carregamento 1" if caso == "C1" else "Carregamento 2"
-        bv = pr[caso]["barlavento_kNm2"]
-        sv = pr[caso]["sotavento_kNm2"]
-        print(f"  {label:<14} {bv:>+12.4f} {sv:>+12.4f}")
-
-    print(f"\n{'CARGAS LINEARES NA VIGA (kN/m)  d = '+str(p.dist_portico)+' m':}")
-    print(f"  {'Caso':<14} {'Barlavento':>12} {'Sotavento':>12}")
-    print(f"  {'-'*40}")
-    for caso in ["C1", "C2"]:
-        label = "Carregamento 1" if caso == "C1" else "Carregamento 2"
-        bv = ca[caso]["barlavento_kNm"]
-        sv = ca[caso]["sotavento_kNm"]
-        print(f"  {label:<14} {bv:>+12.4f} {sv:>+12.4f}")
-
-    print(f"\n{'NOTA':}")
-    print("  Positivo = empurra para baixo (mesma direção do peso próprio)")
-    print("  Negativo = puxa para cima (sucção)")
-    print("  Para o dimensionamento, avaliar cada carregamento")
-    print("  e verificar qual combinação é mais desfavorável.")
-    print("=" * 58)
+    print(f"\n  Legado (pressões uniformes por zona):")
+    for caso in ("C1", "C2"):
+        print(f"    {caso} bv={pr[caso]['barlavento_kNm2']:+.4f}  "
+              f"st={pr[caso]['sotavento_kNm2']:+.4f} kN/m²")
+    print("=" * 68)
 
 
-# ── Execução direta para teste ────────────────────────────────
 if __name__ == "__main__":
     params = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
-        L=20.25, H1=1.0, h=7.0, dist_portico=5.75,
+        L=20.25, H1=1.785, h=7.0, dist_portico=5.75,
     )
     resultado = calcular_vento(params)
     resumo_vento(resultado)
+    print("\n  θ=0° (exemplo 9 pilares × 3 eixos, b=0,22):")
+    f0 = forca_vento_paralelo_cumeeira(
+        params, b_pilar=0.22, h_pilar=0.26,
+        n_pilares_linha=9, n_linhas_portico=3,
+        L_cob_m=46.0, B_cob_m=40.5,
+    )
+    for k, v in f0.items():
+        print(f"    {k}: {v}")

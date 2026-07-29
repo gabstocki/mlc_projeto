@@ -40,57 +40,82 @@ from mlc_projeto.core.loads     import Carregamentos
 
 # ── Verificação pontual ───────────────────────────────────────────────────────
 
+def _kc_ec5(lam_rel: float, beta_c: float = 0.1) -> float:
+    """Fator de instabilidade k_c — EC5 §6.3.2."""
+    k = 0.5 * (1 + beta_c * (lam_rel - 0.3) + lam_rel ** 2)
+    return min(1.0 / (k + math.sqrt(max(k ** 2 - lam_rel ** 2, 0.0))), 1.0)
+
+
 def verifica_pilar(
     mat:   GlulamMaterial,
     b:     float,
     h:     float,
     H:     float,
     N_d:   float,
+    M_d_kNm: float = 0.0,
+    eixo: str = "min",
 ) -> dict:
     """
-    Verifica pilar em compressão simples com instabilidade — EC5 §6.3.2.
+    Verifica pilar em compressão (e flexo-compressão se M_d > 0) — EC5 §6.3.2.
 
     Pilar com rótulas em ambas as extremidades:
         l_ef = 1,0 · H
 
-    Condição (sem momento):
+    Sem momento:
         (σ_c,0,d / (k_c · f_c,0,d))² ≤ 1,0
+    Com momento (vento lateral no fuste):
+        σ_c/(k_c·f_c0d) + σ_m/f_md ≤ 1   (Eq. 6.23 simplificada, um eixo)
 
     Args:
-        mat : Material do pilar
-        b   : Largura da seção (m)
-        h   : Altura da seção no plano do pórtico (m)
-        H   : Comprimento do pilar (m)
-        N_d : Força normal de cálculo (kN) — compressão
+        mat     : Material do pilar
+        b       : Largura da seção (m) — // cumeeira (eixo fraco tipicamente)
+        h       : Altura da seção no plano do pórtico (m)
+        H       : Comprimento do pilar (m)
+        N_d     : Força normal de cálculo (kN) — compressão
+        M_d_kNm : Momento de cálculo no fuste (kN·m) — ex. vento no fuste
+        eixo    : "min" | "y" (plano pórtico, I~h) | "z" (// cumeeira, I~b)
 
     Returns:
         dict com k_c, λ_rel, η e ok
     """
     # ── Propriedades da seção ─────────────────────────────────
-    A     = b * h
-    I_min = min(b * h**3, h * b**3) / 12   # inércia mínima
-    i_min = math.sqrt(I_min / A)           # raio de giração mínimo
+    A = b * h
+    I_y = b * h ** 3 / 12.0   # plano do pórtico
+    I_z = h * b ** 3 / 12.0   # fora do plano (// cumeeira)
+    if eixo == "y":
+        I_use = I_y
+        W_use = b * h ** 2 / 6.0
+    elif eixo == "z":
+        I_use = I_z
+        W_use = h * b ** 2 / 6.0
+    else:
+        I_use = min(I_y, I_z)
+        W_use = b * h ** 2 / 6.0 if I_y <= I_z else h * b ** 2 / 6.0
+
+    i_use = math.sqrt(I_use / A) if A > 0 else 1e-9
 
     # ── Comprimento efetivo ───────────────────────────────────
-    # Articulado-articulado: l_ef = 1,0·H
     l_ef = 1.0 * H
 
     # ── Esbeltez ─────────────────────────────────────────────
-    lam     = l_ef / i_min
-    lam_rel = (lam / math.pi) * math.sqrt(
-        mat.f_c0_k / mat.E0_05
-    )
+    lam     = l_ef / i_use
+    lam_rel = (lam / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+    k_c     = _kc_ec5(lam_rel)
 
-    # ── Fator k_c — EC5 §6.3.2 ───────────────────────────────
-    beta_c = 0.1   # glulam
-    k      = 0.5 * (1 + beta_c*(lam_rel - 0.3) + lam_rel**2)
-    k_c    = min(1.0 / (k + math.sqrt(k**2 - lam_rel**2)), 1.0)
-
-    # ── Tensão de compressão ──────────────────────────────────
-    sigma_c = N_d * 1e3 / A   # Pa
+    # ── Tensões ───────────────────────────────────────────────
+    sigma_c = N_d * 1e3 / A if A > 0 else 0.0          # Pa
+    sigma_m = (abs(M_d_kNm) * 1e3) / W_use if W_use > 0 else 0.0  # N/m / m² = Pa? 
+    # M in kN·m = 1e3 N·m; W in m³ → σ = M/W in N/m² = Pa. Yes: M*1e3/W
 
     # ── Verificação EC5 §6.3.2 ────────────────────────────────
-    eta = (sigma_c / (k_c * mat.f_c0_d))**2
+    if abs(M_d_kNm) < 1e-9:
+        eta = (sigma_c / (k_c * mat.f_c0_d)) ** 2
+    else:
+        # Eq. 6.23 (um eixo): σc/(kc fc0d) + σm/fmd ≤ 1
+        eta = (
+            sigma_c / (k_c * mat.f_c0_d)
+            + sigma_m / mat.f_m_d
+        )
 
     return {
         "b_m":          b,
@@ -98,6 +123,9 @@ def verifica_pilar(
         "H_m":          H,
         "l_ef_m":       round(l_ef,          3),
         "lambda":       round(lam,           2),
+        "eixo":         eixo,
+        "M_d_kNm":      round(M_d_kNm,       3),
+        "sigma_m_MPa":  round(sigma_m / 1e6, 4),
         "lambda_rel":   round(lam_rel,       4),
         "k_c":          round(k_c,           4),
         "N_d_kN":       round(N_d,           3),
@@ -105,8 +133,73 @@ def verifica_pilar(
         "f_c0d_MPa":    round(mat.f_c0_d/1e6,4),
         "eta":          round(eta,            4),
         "ok":           eta <= 1.0,
-        "norma":        "EC5 §6.3.2 Eq. 6.23 (compressão pura)",
+        "norma":        (
+            "EC5 §6.3.2 Eq. 6.23 (flexo-compressão)"
+            if abs(M_d_kNm) > 1e-9
+            else "EC5 §6.3.2 Eq. 6.23 (compressão pura)"
+        ),
     }
+
+
+def verifica_pilar_vento_lateral(
+    mat: GlulamMaterial,
+    b: float,
+    h: float,
+    H: float,
+    N_d: float,
+    params_vento,
+    theta_deg: float = 0.0,
+) -> dict:
+    """
+    Estabilidade lateral do pilar sob vento (estrutura aberta).
+
+    θ = 0° (// cumeeira): arrasto na face b×H → M no eixo fraco (z)
+    θ = 90° (⊥ cumeeira): arrasto na face h×H → M no plano do pórtico (y)
+
+    Modelo: carga uniforme no fuste, biapoiado (rótulas topo/base):
+        F = q · Ca · A_proj
+        M_mid = F · H / 8
+
+    Combina N_d (reação vertical ELU) + M do vento com γ_Q=1,5.
+    """
+    from mlc_projeto.core.wind import (
+        forca_vento_pilar_90,
+        CA_PILAR_RET,
+    )
+    from mlc_projeto.core.loads import GAMMA_Q
+
+    q = params_vento.q
+    if abs(theta_deg - 90.0) < 1e-6:
+        info = forca_vento_pilar_90(params_vento, b_pilar=b, h_pilar=h)
+        F_k = info["F_pilar_kN"]
+        eixo = "y"
+        face = "h×H (plano pórtico)"
+    else:
+        A = b * H
+        F_k = q * CA_PILAR_RET * A
+        eixo = "z"
+        face = "b×H (// cumeeira)"
+        info = {
+            "F_pilar_kN": round(F_k, 3),
+            "A_proj_m2": round(A, 4),
+            "Ca": CA_PILAR_RET,
+            "q_kNm2": round(q, 4),
+        }
+
+    F_d = GAMMA_Q * F_k
+    M_d = F_d * H / 8.0
+
+    res = verifica_pilar(mat, b, h, H, N_d, M_d_kNm=M_d, eixo=eixo)
+    res["theta_deg"] = theta_deg
+    res["face"] = face
+    res["F_k_kN"] = round(F_k, 3)
+    res["F_d_kN"] = round(F_d, 3)
+    res["vento"] = info
+    res["descricao"] = (
+        f"Pilar vento θ={theta_deg:.0f}° ({face}) — "
+        f"N={N_d:.1f} kN + M={M_d:.2f} kNm"
+    )
+    return res
 
 
 # ── Varredura paramétrica ─────────────────────────────────────────────────────

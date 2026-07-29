@@ -62,10 +62,10 @@ Governantes frequentes: **L1**, **L3**, por vezes **cisalhamento**.
 | **R1** | 9,5° | 1,00 | 0,30 | 0,22×0,26 | 48×d36 | 1700 kN | 0,993 L1 | α mínima; L1 no limite |
 | **R2** | 10° | 1,00 | 0,30 | 0,22×0,26 | 48×d36 | 1631 kN | 0,971 L3 | **recomendada** |
 | **R3** | 12° | 0,80 | 0,32 | 0,22×0,26 | 42×d36 | 1429 kN | 0,993 L3 | menos h0, mais α |
-| **R4** | 16,5° | 0,80 | 0,40 | 0,24×0,24 | 35×d36 | 1120 kN | 0,934 L3 | menor H; secção muito alta |
+| **R4** | 16,5° | 0,80 | 0,40 | 0,24×0,24 | 35×d36 | 1120 kN | 0,934 L3 | menor H; seção muito alta |
 | C antiga | 11° | 0,70 | 0,30 | 0,22×0,22 | — | 1544 kN | — | **REPROVADA** CS3 |
 
-### Recomendação de trabalho: **R2** (adoptada em `main.py`)
+### Recomendação de trabalho: **R2** (adotada em `main.py`)
 
 ```
 CS3 global | biarticulada | GL24h
@@ -76,13 +76,28 @@ h_ap ≈ 2,79 m
 l_ap = 0,90 m
 Pilar lateral = 0,22 × 0,26 m
 Pilar central = 0,28 × 0,28 m   # N≈2·R_v; 0,26×0,26 falha em CS3
-L1: d = 36 mm, n ≈ 48 (layout ~6×8)
-L3: n_chu ≈ 21 @ 80 kN  (H ≈ 1631 kN)
+L1: d = 36 mm, n = 64 (layout 8×8)  — η_alvo=0,75 (uso público)
+L3: n_chu = 28 @ 80 kN  (H ≈ 1631 kN) — η_alvo=0,75
 k_mod,curta = 0,70 | k_def = 2,00
 ```
 
-**Critério:** α ainda baixo; L1 com margem face a R1; volume próximo do mínimo CS3.  
-**Nota:** a varredura dimensionava o pilar **lateral**; o central (carga duplicada) exige secção própria — adoptado 0,28×0,28 (η≈0,73).
+**Critério:** α ainda baixo; volume próximo do mínimo CS3.  
+**Revisão de margem (uso público):** a varredura original fechava L1/L3 com η ≈ 0,95–0,97
+(legenda «crítico»). Como a ruptura de grupo de pinos em madeira tende a ser **frágil**
+(fissuração), distinta da flexão dúctil da viga, o pipeline adota
+`ETA_LIG_ALVO = 0,75` e redimensiona:
+
+| | Varredura (η≤1) | η_alvo=0,85 | **Projeto η_alvo=0,75** |
+|--|-----------------|-------------|--------------------------|
+| L1 pinos | ~48 (≈6×8), η≈0,95 | 56 (7×8), η≈0,83 | **64 (8×8)**, η≈0,74 |
+| L1 L_lig | ~1,26 m | ~1,44 m | **~1,62 m** (L_max detalhe 1,8 m) |
+| L1 n_ef | — | n_ef,row≈4,54 | n_ef,row≈5,12; n_ef≈40,9 |
+| L3 chumb. | 21 @ 80 kN, η≈0,97 | 24, η≈0,85 | **28 @ 80 kN**, η≈0,73 |
+
+`n_ef` por fileira // fibras é aplicado: \(R = n_{\mathrm{linhas}}\cdot n_{ef,row}\cdot F_{v,Rd}\)
+(não \(n\cdot F_{v,Rd}\)).  
+
+**Nota:** a varredura dimensionava o pilar **lateral**; o central (carga duplicada) exige seção própria — adotado 0,28×0,28 (η≈0,73).
 
 ---
 
@@ -102,12 +117,12 @@ k_mod,curta = 0,70 | k_def = 2,00
 
 ---
 
-## 5. Impactos de projecto (críticos)
+## 5. Impactos de projeto (críticos)
 
 1. **Mais madeira na viga** (h0 sobe ~30 cm face a C) e **ligação L1 ainda mais pesada** (n≈48).  
 2. **Fundação:** H continua ~1,6 MN — CS3 **não reduz** empuxo.  
-3. **ELS:** com \(k_{def}=2\) a fluência sobe, mas no modelo actual a flecha **ainda não governa** (η_ELS ~0,03).  
-4. **Pilar:** secção mínima sobe (0,22×0,26 vs 0,22×0,22).  
+3. **ELS:** com \(k_{def}=2\) a fluência sobe, mas no modelo atual a flecha **ainda não governa** (η_ELS ~0,03).  
+4. **Pilar:** seção mínima sobe (0,22×0,26 vs 0,22×0,22).  
 5. **Fabrico:** \(h_{ap}\approx 2{,}8\,\mathrm{m}\) e grupo grande de pinos — crítico em montagem e chapa (EN 1993-1-8).  
 6. O modelo de **arco no centroide** mantém M de **fecho** na cumeeira e H grande; CS3 só agrava resistências, não a estática.
 
@@ -115,6 +130,8 @@ k_mod,curta = 0,70 | k_def = 2,00
 
 ## 6. Avisos
 
-- Soluções no **fio da navalha** em L1 (η > 0,95) exigem pormenor cuidadoso e preferência por candidatas com margem (R2/R3).  
-- Se no futuro se adoptar eixo **reto** (H≈0), a varredura CS3 **tem de ser refeita** — números actuais não se aplicam.  
+- A varredura com η ≤ 1 deixava L1/L3 no limiar «crítico» (≥ 0,95). No projeto adotado
+  impõe-se **η_alvo = 0,75** (mais pinos / chumbadores) por acesso de público e falha frágil
+  de ligações em madeira — ver tabela na seção 3.
+- Se no futuro se adotar eixo **reto** (H≈0), a varredura CS3 **tem de ser refeita** — números atuais não se aplicam.  
 - OpenSees de validação de H/M continua pendente.

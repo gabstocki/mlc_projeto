@@ -43,6 +43,11 @@ _PROPS: dict[str, dict] = {
 
 # k_mod — EC5 Tabela 3.1 (glulam)
 # chave: (classe_servico, duracao)
+#
+# Vento (EC5 §2.3.1.2): a ação do vento pode ser enquadrada em duração
+# «curta» ou «instantânea». Neste projeto adota-se «curta» (conservador):
+#   CS1/CS2: k_mod = 0,90  (instantânea permitiria 1,10)
+#   CS3:     k_mod = 0,70  (instantânea permitiria 0,90)
 _KMOD: dict[tuple, float] = {
     (1, "permanente"): 0.60, (1, "longa"): 0.70, (1, "media"): 0.80,
     (1, "curta"):      0.90, (1, "instantanea"): 1.10,

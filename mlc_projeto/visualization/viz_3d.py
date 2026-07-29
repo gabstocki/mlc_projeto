@@ -291,6 +291,43 @@ def visualizar_galpao(
         plotter.add_mesh(_rotula(L, y, 0.0),     color=cor_rot)
         plotter.add_mesh(_rotula(L, y, H_pilar), color=cor_rot)
 
+    # ── Tirantes de base (nível do piso — fecho do empuxo) ─────
+    r_tir = resultados.get("tirante_base", {}) if isinstance(resultados, dict) else {}
+    tem_tirante = bool(r_tir.get("ativo"))
+    eta_tir = float(r_tir.get("eta", 0.0) or 0.0)
+    cor_tir = (0.15, 0.15, 0.15)   # aço escuro — contraste com pilares
+    d_tir_m = float(r_tir.get("d_mm", 80) or 80) / 1000.0
+    raio_tir = max(d_tir_m / 2.0, 0.025)
+    z_tir = 0.08   # ligeiramente acima do piso
+    if tem_tirante:
+        first_tir = True
+        for y in y_pos:
+            for x0, x1 in ((0.0, L), (L, L_total)):
+                p0 = np.array([x0, y, z_tir])
+                p1 = np.array([x1, y, z_tir])
+                # cilindro ao longo do tirante
+                direction = p1 - p0
+                height = float(np.linalg.norm(direction))
+                if height < 1e-6:
+                    continue
+                center = (p0 + p1) / 2.0
+                cyl = pv.Cylinder(
+                    center=center,
+                    direction=direction,
+                    radius=raio_tir,
+                    height=height,
+                    resolution=16,
+                )
+                plotter.add_mesh(
+                    cyl, color=cor_tir, smooth_shading=True, show_edges=False,
+                    label=(
+                        f"Tirante base ∅{r_tir.get('d_mm', 0):.0f} mm "
+                        f"{r_tir.get('aco', '')}  η={eta_tir:.3f}"
+                        if first_tir else ""
+                    ),
+                )
+                first_tir = False
+
     # ── Terças ────────────────────────────────────────────────
     s_terca  = 2.53
     n_half   = round((L/2) / s_terca)
@@ -321,7 +358,7 @@ def visualizar_galpao(
 
 
     # ── Contraventamento horizontal (módulos extremos) ────────
-    # Cruzes de St. André — aço S235 d=12mm — 2 módulos extremos
+    # Cruzes de St. André — 2 baías extremas; d da diagonal vem do pipeline
     brace_modules = [(y_pos[0], y_pos[1]), (y_pos[-2], y_pos[-1])]
     first_cv = True
     for x_off in [0, L]:
@@ -368,12 +405,18 @@ def visualizar_galpao(
         [f"Pilar central  η={eta_pilar_cen:.3f}",  cor_pilar_cen],
         [f"Terça          η={eta_terca:.3f}",      cor_terca],
         [f"Contravent.    η={eta_cv:.3f}",         cor_cv],
+    ]
+    if tem_tirante:
+        legenda.append(
+            [f"Tirante base   η={eta_tir:.3f}", cor_tir]
+        )
+    legenda.extend([
         ["η < 0,50  Confortável",   (0.18, 0.62, 0.18)],
         ["η 0,50–0,80  Atenção",    (0.95, 0.78, 0.05)],
         ["η 0,80–0,95  Próx. lim.", (0.92, 0.42, 0.07)],
         ["η ≥ 0,95  Crítico",       (0.82, 0.07, 0.07)],
         ["Rótulas (apoios)",         cor_rot],
-    ]
+    ])
     plotter.add_legend(
         legenda, bcolor=(0.97, 0.97, 0.97),
         border=True, size=(0.26, 0.24),
@@ -381,6 +424,18 @@ def visualizar_galpao(
 
     # ── Informações ───────────────────────────────────────────
     eta_max = max(eta_viga, eta_pilar_lat, eta_pilar_cen, eta_terca)
+    # Diâmetro da diagonal: do pipeline (main: D_BARRA_CV_MM=18), nunca hardcoded
+    _cv = resultados.get("contraventamento", {}) if isinstance(resultados, dict) else {}
+    _d_cv = _cv.get("d_barra_mm", 18)
+    _aco_cv = _cv.get("aco", "S235")
+    _eta_cv = _cv.get("eta", eta_cv)
+    _tir_txt = ""
+    if tem_tirante:
+        _tir_txt = (
+            f"Tirante base ∅{r_tir.get('d_mm', 0):.0f} mm "
+            f"{r_tir.get('aco', '')} | T={r_tir.get('T_d_kN', 0):.0f} kN "
+            f"| H_sapata≈0 | η={eta_tir:.3f}\n"
+        )
     info = (
         f"STOCKI Engenharia Estrutural\n"
         f"Galpão MLC GL24h — Viga biarticulada (2 pórticos)\n"
@@ -388,7 +443,8 @@ def visualizar_galpao(
         f"Vão total={L_total}m ({L}+{L}m) | h0={h0}m | α={geo.alpha_deg}°\n"
         f"Pilar lateral {b_pilar}×{h_pilar}m | "
         f"Pilar central {b_pilar_c}×{h_pilar_c}m | "
-        f"Contravent. d=12mm S235\n"
+        f"Contravent. d={_d_cv:.0f}mm {_aco_cv} (η={_eta_cv:.3f})\n"
+        f"{_tir_txt}"
         f"η máximo = {eta_max:.4f}"
     )
     plotter.add_text(info, position="upper_left", font_size=9, color="black")

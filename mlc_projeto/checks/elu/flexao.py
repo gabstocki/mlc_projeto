@@ -1,7 +1,7 @@
 """
 checks/elu/flexao.py — Flexo-compressão da viga — EC5 §6.3.2 + §6.3.3.
 
-Viga biarticulada monolítica: M + N na secção de M_max.
+Viga biarticulada monolítica: M + N na seção de M_max.
 
 Verificações:
     EC5 §6.3.2 Eq. (6.23) — instabilidade no plano (k_c,y)
@@ -30,7 +30,7 @@ from mlc_projeto.checks.elu.flambagem_lateral import (
     calcular_k_crit,
 )
 
-# EC5 §6.1.6 — factor de redistribuição para secção retangular
+# EC5 §6.1.6 — fator de redistribuição para seção retangular
 K_M = 0.7
 
 
@@ -41,7 +41,7 @@ def verifica_flexao(
     s:    float = 1.00,
 ) -> dict:
     """
-    Verifica flexo-compressão da viga na secção de M_max.
+    Verifica flexo-compressão da viga na seção de M_max.
 
     Eq. (6.23): (σ_c,0,d/(k_c,y·f_c,0,d))² + σ_m,y,d/f_m,d ≤ 1
     Eq. (6.24): (σ_c,0,d/(k_c,z·f_c,0,d))² + k_m·σ_m,y,d/f_m,d ≤ 1
@@ -98,7 +98,7 @@ def verifica_flexao(
     eta_623 = (sigma_c / (k_c_y * mat.f_c0_d)) ** 2 + sigma_m / mat.f_m_d
     eta_624 = (sigma_c / (k_c_z * mat.f_c0_d)) ** 2 + K_M * sigma_m / mat.f_m_d
 
-    # ── EC5 §6.3.3 — k_crit na mesma secção ───────────────────
+    # ── EC5 §6.3.3 — k_crit na mesma seção ───────────────────
     sigma_crit = calcular_sigma_m_crit(mat.E0_05, b, h_x, l_ef_z)
     lam_rel_m  = calcular_lambda_rel_m(mat.f_m_k, sigma_crit)
     k_crit     = calcular_k_crit(lam_rel_m)

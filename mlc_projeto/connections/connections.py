@@ -26,13 +26,14 @@ LIGAÇÃO 3 — Sapata na fundação:
     Chumbadores dimensionados pelo cisalhamento H_d.
 
 Referências normativas:
-    EC5 §8.2   — teoria de Johansen
-    EC5 §8.3   — número efetivo e distâncias mínimas
-    EC5 §8.6   — pinos lisos
-    EC5 §6.1.4 — compressão paralela às fibras
-    EC5 §6.1.5 — compressão perpendicular às fibras
-    EN 14592   — especificação dos pinos de aço
-    EN 1993-1-8 — chapa metálica e chumbadores
+    EC5 §8.2     — teoria de Johansen
+    EC5 §8.5.1.1 — número efetivo de pernos/pinos (fileira // fibras)
+    EC5 §8.3.1.2 — distâncias mínimas (Tab. 8.2; pinos via §8.6)
+    EC5 §8.6     — pinos lisos (remete a §8.5)
+    EC5 §6.1.4   — compressão paralela às fibras
+    EC5 §6.1.5   — compressão perpendicular às fibras
+    EN 14592     — especificação dos pinos de aço
+    EN 1993-1-8  — chapa metálica e chumbadores
 """
 
 from __future__ import annotations
@@ -155,25 +156,31 @@ def johansen_chapa_embutida(
     return modos
 
 
-# ── Número efetivo — EC5 §8.3.1.1 ────────────────────────────────────────────
+# ── Número efetivo — EC5 §8.5.1.1 (pernos; pinos via §8.6) ───────────────────
 
 def n_ef(n: int, a1_mm: float, d_mm: float) -> float:
     """
-    Número efetivo de pinos em linha paralela às fibras — EC5 §8.3.1.1.
+    Número efetivo de pinos/pernos em fileira // fibras — EC5 §8.5.1.1.
 
-        n_ef = n^0,9 · (a₁ / (13·d))^(1/4)
+        n_ef = min( n , n^0,9 · (a₁ / (13·d))^(1/4) )
 
-    Reduz a resistência total do grupo por redistribuição plástica.
-    Aplica-se a grupos de pinos alinhados na direção das fibras.
+    Redução de grupo: a resistência da fileira não é n·F_v,Rd (não-conservador),
+    mas n_ef·F_v,Rd.  Para pinos lisos, EC5 §8.6 remete às regras de §8.5.1.
 
     Args:
-        n     : Número de pinos na linha
+        n     : Número de pinos na fileira (// fibras)
         a1_mm : Espaçamento entre pinos na direção das fibras (mm)
         d_mm  : Diâmetro do pino (mm)
 
     Returns:
         n_ef (adimensional, ≤ n)
     """
+    if n <= 0:
+        return 0.0
+    if n == 1:
+        return 1.0  # sem grupo — redução §8.5.1.1 só para fileira
+    if a1_mm <= 0 or d_mm <= 0:
+        raise ValueError("a1_mm e d_mm devem ser positivos")
     return min(n ** 0.9 * (a1_mm / (13 * d_mm)) ** 0.25, float(n))
 
 
@@ -220,14 +227,14 @@ def verificar_geometria_grupo(
     d_mm:    float,
     h0_mm:   float,
     theta_deg: float = 0.0,
-    L_max_mm: float = 1500.0,
+    L_max_mm: float = 1800.0,
 ) -> dict:
     """
     Verifica o grupo de pinos na chapa embutida no extremo da viga.
 
     Orientação EC5 Tab. 8.2 (fibras ≈ eixo longitudinal da viga):
         - Horizontal (// fibras, no plano da chapa): espaçamento a1, extremos a3t/a3c
-        - Vertical   (⊥ fibras, altura da secção):   espaçamento a2, bordas a4t/a4c
+        - Vertical   (⊥ fibras, altura da seção):   espaçamento a2, bordas a4t/a4c
 
     A chapa fica no plano longitudinal-vertical (fenda central em b).
     Os pinos atravessam a largura b (espessura de madeira t = b/2 por lado).
@@ -236,10 +243,11 @@ def verificar_geometria_grupo(
         n_horiz  : pinos por fileira // fibras
         n_vert   : número de fileiras na altura
         d_mm     : diâmetro do pino (mm)
-        h0_mm    : altura disponível na secção do apoio (mm)
+        h0_mm    : altura disponível na seção do apoio (mm)
         theta_deg: ângulo força–fibras (para distâncias mínimas)
         L_max_mm : comprimento máximo da ligação ao longo da viga (mm)
-                   — critério de pormenorização (não EC5); default 1,5 m
+                   — critério de detalhamento (não EC5); default 1,8 m
+                   (η_alvo≤0,75 com d=36 exige ~1,62 m em layout 8×8)
 
     Returns:
         dict com ocupação e ok_geometria
@@ -288,7 +296,8 @@ def dimensionar_ligacao_base(
     d_mm:    float = 20.0,
     k_mod:   float | None = None,
     gamma_M: float = GAMMA_M_LIGACAO,
-    eta_alvo: float = 0.85,
+    eta_alvo: float = 0.75,
+    L_max_mm: float = 1800.0,
 ) -> dict:
     """
     Dimensiona a ligação viga-pilar — rótula na base.
@@ -302,8 +311,9 @@ def dimensionar_ligacao_base(
     Solução: pinos lisos em chapa embutida central (EC5 §8.2+§8.5.1.1+§8.6).
     γ_M = 1,30 (EC5 Tab. 2.3 — ligações).
     k_mod: duração da combinação (padrão = mat.k_mod).
-    eta_alvo: margem de projecto (uso público) — R ≥ F_res / eta_alvo.
-              EC5 exige η ≤ 1,0; o alvo 0,85 é critério de projecto.
+    eta_alvo: margem de projeto (uso público) — R ≥ F_res / eta_alvo.
+              EC5 exige η ≤ 1,0; o alvo 0,75 é critério de projeto.
+    L_max_mm: comprimento máximo da chapa ao longo da viga (detalhamento).
     """
     if k_mod is None:
         k_mod = mat.k_mod
@@ -318,7 +328,7 @@ def dimensionar_ligacao_base(
 
     F_res_kN = math.sqrt(N_d ** 2 + V_d ** 2)
     F_res_N  = F_res_kN * 1e3
-    # Capacidade mínima de projecto (margem)
+    # Capacidade mínima de projeto (margem)
     R_req_N  = F_res_N / eta_alvo
     # Ângulo da resultante com as fibras (eixo) — EC5 §8.3 distâncias
     theta_deg = math.degrees(math.atan2(abs(V_d), max(abs(N_d), 1e-9)))
@@ -353,7 +363,7 @@ def dimensionar_ligacao_base(
                 continue
             geo_ok = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
-                h0_mm=h0_mm, theta_deg=theta_deg,
+                h0_mm=h0_mm, theta_deg=theta_deg, L_max_mm=L_max_mm,
             )
             if not geo_ok["ok_geometria"]:
                 continue
@@ -379,7 +389,7 @@ def dimensionar_ligacao_base(
                     continue
                 geo_ok = verificar_geometria_grupo(
                     n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
-                    h0_mm=h0_mm, theta_deg=theta_deg,
+                    h0_mm=h0_mm, theta_deg=theta_deg, L_max_mm=L_max_mm,
                 )
                 if not geo_ok["ok_geometria"]:
                     continue
@@ -400,7 +410,7 @@ def dimensionar_ligacao_base(
             R_N     = n_vert * nef_row * F_v_Rd
             geo_ok  = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
-                h0_mm=h0_mm, theta_deg=theta_deg,
+                h0_mm=h0_mm, theta_deg=theta_deg, L_max_mm=L_max_mm,
             )
             eta = F_res_N / R_N if R_N > 0 else 999.0
             n_pinos = n_horiz * n_vert
@@ -451,7 +461,7 @@ def dimensionar_ligacao_base(
         "eta":           round(eta,            4),
         "ok_alvo":       ok_alvo,
         "ok":            ok,
-        "norma":         "EC5 §8.2+§8.5.1.1+§8.6 | γ_M=1,30 | η_alvo projecto",
+        "norma":         "EC5 §8.2+§8.5.1.1+§8.6 | γ_M=1,30 | η_alvo projeto",
     }
 
 
@@ -470,7 +480,7 @@ def dimensionar_ligacao_cumeeira(
 
     Esforços (simetria de carga vertical + empuxo H):
         M_ap da análise biarticulada (verificação t90 em cumeeira.py)
-        Componentes de compressão na secção (H decomposoto):
+        Componentes de compressão na seção (H decomposoto):
             N_c0  = H · cos(α)  → EC5 §6.1.4
             N_c90 = H · sin(α)  → EC5 §6.1.5
 
@@ -541,66 +551,115 @@ def dimensionar_sapata(
     geo:      GeometriaViga,
     F_chu_kN: float = 80.0,
     d_chu_mm: float = 20.0,
-    eta_alvo: float = 0.85,
+    eta_alvo: float = 0.75,
+    com_tirante: bool = False,
+    b_pilar_m: float = 0.32,
+    h_pilar_m: float = 0.27,
+    f_c_conc_MPa: float = 1.5,
 ) -> dict:
     """
     Dimensiona a sapata articulada na base do pilar.
 
     Esforços (biarticulada):
         N_d = V_max_ELU  (compressão vertical do pilar)
-        H_d = H_ELU      (empuxo horizontal → chumbadores)
+        H_arco = H_ELU   (empuxo Castigliano do pórtico)
         M_d = 0          (rótula)
 
-    Chumbadores: resistem ao cisalhamento H_d.
-    n = ceil(H_d / (F_chu · eta_alvo))  — margem de projecto (uso público).
-    EC5/EN não impõem eta_alvo; 0,85 é critério de projecto.
+    Sem tirante (com_tirante=False):
+        H_d = H_arco → chumbadores ao cisalhamento
+        η = η_H (com margem eta_alvo)
+
+    Com tirante ao nível do piso (com_tirante=True):
+        H_d ≈ 0 na sapata (H absorvido pelo tirante)
+        chumbadores: mínimo construtivo (4×)
+        η = η_N compressão no concreto sob a chapa (como L3c)
 
     Args:
-        load      : Carregamentos
-        geo       : Geometria
-        F_chu_kN  : Resistência por chumbador ao cisalhamento (kN)
-        d_chu_mm  : Diâmetro do chumbador (mm)
-        eta_alvo  : taxa de utilização máxima de projecto
+        load, geo, F_chu_kN, d_chu_mm, eta_alvo
+        com_tirante : se True, H_sapata≈0
+        b_pilar_m, h_pilar_m, f_c_conc_MPa : para η_N com tirante
 
     Returns:
-        dict com número de chumbadores, η e ok
+        dict com H_arco, H_d, n_chu, η e ok
     """
     if eta_alvo <= 0 or eta_alvo > 1.0:
         raise ValueError("eta_alvo deve estar em (0, 1]")
 
     N_d = load.V_max_ELU()   # kN
-    H_d = load.H_ELU()       # kN
+    H_arco = load.H_ELU()    # kN — empuxo estrutural do pórtico
+    H_d = 0.0 if com_tirante else H_arco
 
-    # Número de chumbadores com margem: H_d ≤ eta_alvo · n · F_chu
-    n_chu = max(1, math.ceil(H_d / (F_chu_kN * eta_alvo)))
-    eta_H = H_d / (n_chu * F_chu_kN)
-
-    # Chapa de base — compressão N_d no pilar
-    f_c_conc = 1.5   # MPa — conservador (C25/30 localizado)
-    A_chapa_m2 = N_d * 1e3 / (f_c_conc * 1e6)
+    # Chapa de base — compressão N_d
+    A_pilar_m2 = max(b_pilar_m * h_pilar_m, 1e-6)
+    A_req_m2 = (
+        N_d * 1e3 / (f_c_conc_MPa * 1e6) if f_c_conc_MPa > 0 else A_pilar_m2
+    )
+    A_chapa_m2 = max(A_pilar_m2, A_req_m2) if com_tirante else (
+        N_d * 1e3 / (f_c_conc_MPa * 1e6)
+    )
     A_chapa_cm2 = A_chapa_m2 * 1e4
     lado_chapa = math.sqrt(A_chapa_m2) * 100   # cm
+    sigma_c_MPa = (N_d * 1e3) / (A_chapa_m2 * 1e6) if A_chapa_m2 > 0 else 0.0
+    eta_N = sigma_c_MPa / f_c_conc_MPa if f_c_conc_MPa > 0 else 999.0
 
-    ok_norma = eta_H <= 1.0
-    ok_alvo  = eta_H <= eta_alvo + 1e-9
+    if com_tirante:
+        n_chu = 4
+        n_chu_eta1 = 4
+        n_chu_x4 = 4
+        R_chu_kN = n_chu * F_chu_kN
+        eta_H = 0.0
+        eta_H_x4 = 0.0
+        eta = eta_N
+        ok_norma = eta_N <= 1.0 + 1e-9
+        ok_alvo = ok_norma  # margem eta_alvo aplica-se ao tirante, não a H
+        nota = (
+            f"Com tirante de base: H_arco={H_arco:.1f} kN absorvido pelo tirante; "
+            f"H_sapata≈0. Chumbadores n={n_chu} construtivos. "
+            f"η=η_N compressão no concreto (N={N_d:.1f} kN, "
+            f"σ={sigma_c_MPa:.2f} MPa)."
+        )
+        ligacao = "L3 — Sapata (com tirante de base, H≈0)"
+    else:
+        n_chu = max(1, math.ceil(H_d / (F_chu_kN * eta_alvo)))
+        n_chu_eta1 = max(1, math.ceil(H_d / F_chu_kN)) if F_chu_kN > 0 else 1
+        R_chu_kN = n_chu * F_chu_kN
+        eta_H = H_d / R_chu_kN if R_chu_kN > 0 else 999.0
+        n_chu_x4 = n_chu if n_chu % 4 == 0 else n_chu + (4 - n_chu % 4)
+        eta_H_x4 = H_d / (n_chu_x4 * F_chu_kN) if F_chu_kN > 0 else 999.0
+        eta = eta_H
+        ok_norma = eta_H <= 1.0
+        ok_alvo = eta_H <= eta_alvo + 1e-9
+        nota = (
+            f"Sem tirante: H_sapata=H_arco={H_d:.1f} kN. "
+            f"Chumbadores n={n_chu} (mín η≤1: {n_chu_eta1}; "
+            f"grade ×4: {n_chu_x4}). Verificação final EN 1992-4."
+        )
+        ligacao = "L3 — Sapata na fundação"
 
     return {
-        "ligacao":        "L3 — Sapata na fundação",
+        "ligacao":        ligacao,
+        "com_tirante":    com_tirante,
         "N_d_kN":         round(N_d,          3),
+        "H_arco_kN":      round(H_arco,       3),
         "H_d_kN":         round(H_d,          3),
         "d_chu_mm":       d_chu_mm,
         "F_chu_kN":       F_chu_kN,
         "n_chumbadores":  n_chu,
+        "n_chu_eta1":     n_chu_eta1,
+        "n_chu_x4":       n_chu_x4,
+        "R_chu_kN":       round(R_chu_kN,     1),
         "eta_alvo":       eta_alvo,
         "eta_H":          round(eta_H,         4),
+        "eta_H_x4":       round(eta_H_x4,      4),
+        "eta_N":          round(eta_N,         4),
+        "sigma_c_MPa":    round(sigma_c_MPa,   4),
         "A_chapa_cm2":    round(A_chapa_cm2,  2),
         "lado_chapa_cm":  round(lado_chapa,   1),
-        "eta":            round(eta_H,         4),
+        "eta":            round(eta,           4),
         "ok_alvo":        ok_alvo,
         "ok":             ok_norma and ok_alvo,
-        "norma":          "EN 1993-1-8 + EN 1992-4 | η_alvo projecto",
-        "nota":           "Chumbadores com margem eta_alvo. "
-                          "Verificação final conforme EN 1992-4.",
+        "norma":          "EN 1993-1-8 + EN 1992-4 | η_alvo projeto",
+        "nota":           nota,
     }
 
 
@@ -613,12 +672,16 @@ def dimensionar_ligacoes(
     d_base_mm:    float = 20.0,
     d_cum_mm:     float = 30.0,
     F_chu_kN:     float = 80.0,
-    eta_alvo:     float = 0.85,
+    eta_alvo:     float = 0.75,
+    com_tirante:  bool = False,
+    b_pilar_m:    float = 0.32,
+    h_pilar_m:    float = 0.27,
 ) -> dict:
     """
     Dimensiona as três ligações do pórtico (biarticulada).
 
-    eta_alvo: margem de projecto para L1 e L3 (uso público). L2 usa η ≤ 1,0.
+    eta_alvo: margem de projeto para L1 e L3 (uso público). L2 usa η ≤ 1,0.
+    com_tirante: se True, L3 com H_sapata≈0 (empuxo no tirante de base).
     """
     L1 = dimensionar_ligacao_base(
         mat, load, geo, d_mm=d_base_mm, eta_alvo=eta_alvo,
@@ -626,6 +689,8 @@ def dimensionar_ligacoes(
     L2 = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
     L3 = dimensionar_sapata(
         load, geo, F_chu_kN=F_chu_kN, eta_alvo=eta_alvo,
+        com_tirante=com_tirante,
+        b_pilar_m=b_pilar_m, h_pilar_m=h_pilar_m,
     )
 
     eta_gov = max(L1["eta"], L2["eta"], L3["eta"])
@@ -686,7 +751,7 @@ def dimensionar_ligacao_base_central(
     d_mm:      float = 20.0,
     k_mod:     float | None = None,
     gamma_M:   float = GAMMA_M_LIGACAO,
-    eta_alvo:  float = 0.85,
+    eta_alvo:  float = 0.75,
 ) -> dict:
     """
     Ligação viga-pilar central — duas chapas independentes.
@@ -727,7 +792,7 @@ def dimensionar_ligacao_base_central(
                 continue
             geo_ok = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
-                h0_mm=h0_mm, theta_deg=theta_deg,
+                h0_mm=h0_mm, theta_deg=theta_deg, L_max_mm=1800.0,
             )
             if not geo_ok["ok_geometria"]:
                 continue
@@ -768,41 +833,80 @@ def dimensionar_sapata_central(
     load:     Carregamentos,
     geo:      GeometriaViga,
     d_chu_mm: float = 20.0,
+    b_pilar_m: float = 0.32,
+    h_pilar_m: float = 0.27,
+    f_c_conc_MPa: float = 1.5,
 ) -> dict:
     """
-    Sapata do pilar central — sem empuxo horizontal.
+    Sapata do pilar central — empuxo horizontal nulo por simetria.
 
-    N_d = 2 × R_v = 195,68 kN (dois pórticos)
-    H_d ≈ 0 (empuxos horizontais se cancelam)
-    Chumbadores: mínimo construtivo = 4 M20
+    Esforços:
+        N_d = 2 × R_v   (dois pórticos compartilham o pilar central)
+        H_d ≈ 0         (empuxos dos dois vãos cancelam-se)
 
-    A chapa de base é dimensionada para N_d / f_c,concreto.
+    Verificações:
+        1) Compressão no concreto sob a chapa (EN 1992-4 / apoio localizado
+           simplificado): σ = N / A_contato ≤ f_c,conc
+           A_contato = área do topo do pilar (ou chapa ≥ pilar).
+        2) Chumbadores: só mínimo construtivo (4×M20) — sem H de cálculo.
+           eta_H = 0 porque H_d = 0 (não significa “sem carga na sapata”).
+
+    η reportado = η_N (compressão) — o valor relevante; eta_H fica
+    documentado à parte para não confundir com η=0 “vazio”.
     """
     import math
     N_d = 2 * load.V_max_ELU()   # kN
-    H_d = 0.0                     # kN — cancelamento
+    H_d = 0.0                     # kN — cancelamento simétrico
 
-    f_c_conc   = 1.5   # MPa — C25/30 sob carga localizada
-    A_chapa_m2 = N_d * 1e3 / (f_c_conc * 1e6)
-    lado_cm    = math.sqrt(A_chapa_m2) * 100
+    # Área do topo do pilar e área necessária no concreto (mesmo f_c que L3)
+    A_pilar_m2 = max(b_pilar_m * h_pilar_m, 1e-6)
+    A_req_m2 = (
+        N_d * 1e3 / (f_c_conc_MPa * 1e6) if f_c_conc_MPa > 0 else A_pilar_m2
+    )
+    # Chapa ≥ pilar; alarga se o concreto sob a pegada do pilar for insuficiente
+    A_chapa_m2 = max(A_pilar_m2, A_req_m2)
+    lado_cm = math.sqrt(A_chapa_m2) * 100
+    chapa_alargada = A_chapa_m2 > A_pilar_m2 + 1e-9
 
-    n_chu_min  = 4   # construtivo — sem esforço horizontal
-    eta_H      = 0.0   # H_d = 0
+    # Tensão e η sob a chapa (área efetiva de apoio no concreto)
+    sigma_c_MPa = (N_d * 1e3) / (A_chapa_m2 * 1e6)
+    eta_N = sigma_c_MPa / f_c_conc_MPa if f_c_conc_MPa > 0 else 999.0
+
+    n_chu_min = 4   # construtivo — sem esforço horizontal de projeto
+    eta_H = 0.0     # H_d = 0 (não confundir com “sapata sem carga”)
+
+    eta = eta_N
+    ok = eta_N <= 1.0 + 1e-9
 
     return {
-        "ligacao":        "L3c — Sapata central (sem empuxo)",
-        "N_d_kN":         round(N_d,         3),
-        "H_d_kN":         0.0,
-        "d_chu_mm":       d_chu_mm,
-        "n_chumbadores":  n_chu_min,
-        "nota_chu":       "Mínimo construtivo — H_d ≈ 0",
-        "A_chapa_cm2":    round(A_chapa_m2 * 1e4, 1),
-        "lado_chapa_cm":  round(lado_cm,    1),
-        "eta_H":          0.0,
-        "eta":            0.0,
-        "ok":             True,
-        "norma":          "EN 1993-1-8 + EN 1992-4",
-        "nota":           "Empuxos horizontais cancelam no pilar central",
+        "ligacao":         "L3c — Sapata central (H≈0, N=2·R_v)",
+        "N_d_kN":          round(N_d, 3),
+        "H_d_kN":          0.0,
+        "d_chu_mm":        d_chu_mm,
+        "n_chumbadores":   n_chu_min,
+        "nota_chu":        "Mínimo construtivo 4× — H_d≈0 (empuxos cancelam)",
+        "b_pilar_m":       b_pilar_m,
+        "h_pilar_m":       h_pilar_m,
+        "A_pilar_cm2":     round(A_pilar_m2 * 1e4, 1),
+        "A_chapa_cm2":     round(A_chapa_m2 * 1e4, 1),
+        "lado_chapa_cm":   round(lado_cm, 1),
+        "chapa_alargada":  chapa_alargada,
+        "f_c_conc_MPa":    f_c_conc_MPa,
+        "sigma_c_MPa":     round(sigma_c_MPa, 4),
+        "eta_N":           round(eta_N, 4),
+        "eta_H":           eta_H,
+        "eta":             round(eta, 4),
+        "ok":              ok,
+        "norma":           "EN 1993-1-8 + EN 1992-4 (apoio localizado simplificado)",
+        "nota": (
+            "H_d≈0: empuxos dos dois vãos cancelam no pilar central "
+            "(eta_H=0 não significa sapata sem carga). "
+            f"η=η_N compressão no concreto sob a chapa "
+            f"(N={N_d:.1f} kN, σ={sigma_c_MPa:.2f} MPa, "
+            f"A_chapa={A_chapa_m2*1e4:.0f} cm²"
+            + (", chapa alargada face ao pilar" if chapa_alargada else "")
+            + ")."
+        ),
     }
 
 
@@ -811,16 +915,17 @@ def dimensionar_ligacoes_central(
     load:  Carregamentos,
     geo:   GeometriaViga,
     b_pilar_c: float = 0.26,
+    h_pilar_c: float = 0.26,
     d_base_mm: float = 20.0,
     d_cum_mm:  float = 30.0,
-    eta_alvo:  float = 0.85,
+    eta_alvo:  float = 0.75,
 ) -> dict:
     """
     Dimensiona as ligações do pilar central compartilhado.
 
     L1c: viga-pilar — 2 chapas independentes, mesma força que lateral
     L2c: cumeeira — idêntica à lateral (força igual, geometria igual)
-    L3c: sapata — sem empuxo horizontal, chumbadores construtivos
+    L3c: sapata — H≈0; η = compressão N no concreto (não eta_H=0)
     """
     L1c = dimensionar_ligacao_base_central(
         mat, load, geo, b_pilar_c, d_base_mm, eta_alvo=eta_alvo,
@@ -828,7 +933,10 @@ def dimensionar_ligacoes_central(
     # Cumeeira central: mesma análise EC5 que a lateral (geometria e esforços iguais)
     L2c = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
     L2c = {**L2c, "ligacao": "L2c — Cumeeira central (rótula)"}
-    L3c = dimensionar_sapata_central(load, geo, d_cum_mm)
+    L3c = dimensionar_sapata_central(
+        load, geo, d_chu_mm=20.0,
+        b_pilar_m=b_pilar_c, h_pilar_m=h_pilar_c,
+    )
 
     eta_gov = max(L1c["eta"], L2c["eta"], L3c["eta"])
     if L1c["eta"] >= L2c["eta"] and L1c["eta"] >= L3c["eta"]:

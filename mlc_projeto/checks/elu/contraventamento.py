@@ -1,7 +1,7 @@
 """
 checks/elu/contraventamento.py — Integridade estrutural da cobertura.
 
-Objectivo
+Objetivo
 ---------
 O contraventamento NÃO é um acessório: é o que torna as terças apoios
 laterais válidos da viga principal. Sem ele, a cobertura deixa de cumprir
@@ -19,7 +19,7 @@ Cadeia de forças (plano da cobertura)
 
 Verificações (EC5 + EN 1993)
 ----------------------------
-  §9.2.5.2  — apoio intermédio individual (força F_d + rigidez C)
+  §9.2.5.2  — apoio intermediário individual (força F_d + rigidez C)
   §9.2.5.3  — sistema de n vigas paralelas (carga q_d, δ ≤ ℓ/500)
   §6.3.2    — terça como biela comprimida
   EN 1993-1-1 §6.2.3 — diagonal de aço à tração
@@ -47,11 +47,11 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
 
 
-# ── Factores recomendados EC5 §9.2.5 (valores recomendados da norma) ────────
+# ── Fatores recomendados EC5 §9.2.5 (valores recomendados da norma) ────────
 # Intervalos NDP: k_s ∈ [1,4], k_f1 ∈ [50,80], k_f2 ∈ [80,100], k_f3 ∈ [30,80]
 # Usam-se os valores recomendados clássicos da EN 1995-1-1.
 
-K_S   = 4.0    # rigidez do apoio intermédio
+K_S   = 4.0    # rigidez do apoio intermediário
 K_F1  = 50.0   # força — madeira maciça (não usado aqui)
 K_F2  = 80.0   # força — MLC / LVL  (§9.2.5.2)
 K_F3  = 50.0   # carga de sistema   (§9.2.5.3)
@@ -76,7 +76,7 @@ class LayoutContraventamento:
     s_terca:      float = 2.53    # m — espaçamento entre terças (ao longo da viga)
     n_porticos:   int   = 2       # pórticos lado a lado (dois vãos de 20,25 m)
     n_modulos_cv: int   = 2       # baías com cruzes (extremos)
-    d_barra_mm:   float = 12.0
+    d_barra_mm:   float = 18.0    # mm — adotado no projeto (main.D_BARRA_CV_MM)
     aco:          str   = "S235"
 
     @property
@@ -99,6 +99,13 @@ class LayoutContraventamento:
         Vão do sistema estabilizador ℓ (EC5 §9.2.5.3 Fig. 9.9).
         Distância entre baías rígidas de contraventamento.
         Com só extremos: ℓ = L_comp.
+
+        Nota de projeto: aumentar n_modulos_cv (mais baías com cruzes)
+        reduz ℓ e sobe k_ℓ=min(1,√(15/ℓ)), o que **aumenta** a reação
+        R_ext = k_ℓ·n·N_d/(2·k_f3) enquanto k_ℓ < 1. Por isso encher
+        todas as baías da linha frontal/final **não** é, em geral, a
+        solução mais económica para §9.2.5 — preferir extremos +
+        diagonal dimensionada (e baía intermediária só se robustez/arquitectura).
         """
         if self.n_modulos_cv <= 1:
             return self.L_comp
@@ -172,16 +179,16 @@ def forca_compressao_estabilizar(
     }
 
 
-# ── EC5 §9.2.5.2 — apoio intermédio individual ───────────────────────────────
+# ── EC5 §9.2.5.2 — apoio intermediário individual ───────────────────────────────
 
-def verifica_apoio_intermedio(
+def verifica_apoio_intermediario(
     N_d_kN: float,
     a_m:    float,
     k_s:    float = K_S,
     k_f2:   float = K_F2,
 ) -> dict:
     """
-    Apoio lateral intermédio de peça comprimida (MLC) — EC5 §9.2.5.2.
+    Apoio lateral intermediário de peça comprimida (MLC) — EC5 §9.2.5.2.
 
         C ≥ k_s · N_d / a
         F_d = N_d / k_f,2     (glulam)
@@ -220,7 +227,7 @@ def verifica_sistema_vigas(
 
         δ_lim = ℓ / 500
 
-    q_d em kN/m; reacção por baía extrema (simétrica) R = q_d·ℓ/2.
+    q_d em kN/m; reação por baía extrema (simétrica) R = q_d·ℓ/2.
     """
     if ell_m <= 0:
         raise ValueError("ℓ (vão do sistema estabilizador) deve ser > 0")
@@ -262,7 +269,7 @@ def verifica_terca_biela(
 
     Flambagem no plano fraco da terça (eixo z, I_z = h·b³/12 se h>b em
     orientação usual de terça deitada…):
-      Orientação adoptada no projecto: b largura (horizontal no plano da
+      Orientação adotada no projeto: b largura (horizontal no plano da
       cobertura), h altura (perpendicular à cobertura).
       Flambagem crítica no plano da cobertura: esbeltez com i = b/√12.
     """
@@ -316,7 +323,7 @@ def verificar_diagonal_aco(
     e rigidez axial horizontal do painel.
 
         N_t,Rd = A · f_y / γ_M0
-        C_h = (E·A / L) · cos²θ     (kN/m) — uma diagonal activa
+        C_h = (E·A / L) · cos²θ     (kN/m) — uma diagonal ativa
     """
     if aco not in ACO:
         raise ValueError(f"Aço '{aco}' não reconhecido.")
@@ -376,7 +383,7 @@ def flecha_sistema_estabilizador(
     (EC5 §9.2.5.3).
 
     Aproximação conservadora:
-      • cada baía extrema tem n_paineis diagonais activas em paralelo
+      • cada baía extrema tem n_paineis diagonais ativas em paralelo
       • rigidez total de uma baía K_bay = n_paineis · C_h
       • sistema simétrico: duas baías; deslocamento relativo sob carga
         uniforme q_d modelado como flecha de viga biapoiada com
@@ -384,7 +391,7 @@ def flecha_sistema_estabilizador(
 
         δ ≈ (5/384) · q_d · ℓ⁴ / (EI)_eq   não aplicável directamente;
 
-      Alternativa (usada): reacção R = q_d·ℓ/2 em cada baía;
+      Alternativa (usada): reação R = q_d·ℓ/2 em cada baía;
         δ_bay = R / K_bay
         (deslocamento da baía de apoio — conservador se o “meio” se
          desloca mais; para só 2 baías extremas o meio move-se com as
@@ -421,7 +428,7 @@ def verificar_contraventamento(
     L_comp:         float = 46.0,
     n_modulos_cv:   int   = 2,
     s_terca:        float = 2.53,
-    d_barra_mm:     float = 16.0,
+    d_barra_mm:     float = 18.0,
     aco:            str   = "S235",
     n_porticos:     int   = 2,
     dist_portico:   float = 5.75,
@@ -456,18 +463,29 @@ def verificar_contraventamento(
     N_d = ncomp["N_d_kN"]
 
     # 2) §9.2.5.2 — cada restrição por terça na viga
-    ap = verifica_apoio_intermedio(N_d, layout.a_restricao_m, k_s=k_s, k_f2=k_f2)
+    ap = verifica_apoio_intermediario(N_d, layout.a_restricao_m, k_s=k_s, k_f2=k_f2)
 
     # 3) §9.2.5.3 — sistema de n vigas
     sis = verifica_sistema_vigas(N_d, layout.n_vigas, layout.ell_m, k_f3=k_f3)
 
-    # 4) Distribuição às diagonais
-    #    Reacção do extremo repartida pelos painéis do módulo
+    # 4) Vento θ=0° (// cumeeira) — força longitudinal na estrutura aberta
+    #    A reação de extremo do sistema de estabilização EC5 e a força de
+    #    vento longitudinal compartilham o mesmo caminho (baías de contraventamento).
+    vento_0 = getattr(load, "vento_0", None) or {}
+    F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
+    # Metade da força total em cada baía extrema (simetria)
+    R_vento0 = F_vento0_kN / 2.0
+    # Reação de projeto por baía = máx(estabilização §9.2.5.3, vento θ=0°)
+    R_ext_estab = sis["R_ext_kN"]
+    R_ext_proj  = max(R_ext_estab, R_vento0)
+    gov_forca   = "vento_0" if R_vento0 > R_ext_estab else "estab_9.2.5"
+
+    # 5) Distribuição às diagonais
     n_pan = layout.n_paineis_por_mod
-    F_painel = sis["R_ext_kN"] / max(n_pan, 1)
+    F_painel = R_ext_proj / max(n_pan, 1)
     F_diag   = F_painel / diag["cos_theta"] if diag["cos_theta"] > 0 else 1e9
 
-    # 5) Diagonal — dimensionada à TRAÇÃO (§6.2.3).
+    # 6) Diagonal — dimensionada à TRAÇÃO (§6.2.3).
     #    A rigidez do SISTEMA verifica-se por δ ≤ ℓ/500 (§9.2.5.3),
     #    não por C_min de um apoio individual na barra (isso é papel da
     #    terça-biela: EA/L ≥ C_min).
@@ -480,17 +498,20 @@ def verificar_contraventamento(
         C_req_kNpm=None,
     )
 
-    # 6) Flecha do sistema (critério de rigidez global §9.2.5.3)
+    # 7) Flecha do sistema (critério de rigidez global §9.2.5.3)
+    #    Para vento θ=0°: q_eq = F_total/ℓ  (carga longitudinal repartida)
+    q_vento0 = F_vento0_kN / layout.ell_m if layout.ell_m > 0 else 0.0
+    q_flecha = max(sis["q_d_kNpm"], q_vento0)
     fl = flecha_sistema_estabilizador(
-        q_d_kNpm=sis["q_d_kNpm"],
+        q_d_kNpm=q_flecha,
         ell_m=layout.ell_m,
         C_h_kNpm=bar["C_h_kNpm"],
         n_paineis=n_pan,
         n_modulos_cv=n_modulos_cv,
     )
 
-    # 7) Terça como biela (força + flambagem + rigidez local EA/L ≥ C_min)
-    F_terca = sis["R_ext_kN"] / max(n_pan, 1)
+    # 8) Terça como biela (força + flambagem + rigidez local EA/L ≥ C_min)
+    F_terca = R_ext_proj / max(n_pan, 1)
     F_terca = max(F_terca, ap["F_d_kN"])
 
     ter = verifica_terca_biela(
@@ -513,7 +534,7 @@ def verificar_contraventamento(
     ter["ok"]           = ter["ok"] and ok_C_terca
     ter["eta"]          = max(ter["eta"], eta_C_terca)
 
-    # 8) Agregação — função estrutural da cobertura
+    # 9) Agregação — função estrutural da cobertura
     ok_forca_diag = bar["ok_N"]
     ok_flecha     = fl["ok"]
     ok_terca      = ter["ok"]
@@ -521,7 +542,7 @@ def verificar_contraventamento(
     cobertura_ok = all([ok_forca_diag, ok_flecha, ok_terca])
     restricao_lateral_valida = cobertura_ok
 
-    # l_1 efectivo para LTB
+    # l_1 efetivo para LTB
     if restricao_lateral_valida:
         l_1_ef = s_terca
         l_1_nota = "terças válidas como restrição lateral (cobertura OK)"
@@ -552,11 +573,15 @@ def verificar_contraventamento(
         # Identificação
         "sistema": "Cruzes St.André + terças-biela — integridade cobertura",
         "posicao": f"{n_modulos_cv} modulos (ell={layout.ell_m:.1f} m entre baias)",
-        "norma":   "EC5 §9.2.5.2+§9.2.5.3+§6.3.2 | EN 1993-1-1 §6.2.3",
+        "norma":   "EC5 §9.2.5.2+§9.2.5.3+§6.3.2 | EN 1993-1-1 §6.2.3 | vento θ=0°",
 
-        # Compressão a estabilizar
+        # Compressão a estabilizar + vento longitudinal
         "N_d_kN":         ncomp["N_d_kN"],
         "N_axial_kN":     ncomp["N_axial_kN"],
+        "F_vento0_kN":    round(F_vento0_kN, 3),
+        "R_ext_estab_kN": round(R_ext_estab, 3),
+        "R_ext_proj_kN":  round(R_ext_proj, 3),
+        "gov_forca":      gov_forca,
         "N_flex_kN":      ncomp["N_flex_kN"],
         "n_vigas":        layout.n_vigas,
         "comb":           ncomp["comb"],
@@ -624,7 +649,7 @@ def verificar_contraventamento(
         "L_total_m":      round(L_tot, 2),
         "peso_total_kg":  round(peso, 1),
 
-        # Factores usados
+        # Fatores usados
         "k_s": k_s, "k_f2": k_f2, "k_f3": k_f3,
     }
 
@@ -644,7 +669,7 @@ def relatorio(res: dict) -> None:
           f"N_flex = {res['N_flex_kN']:.2f} kN")
     print(f"    N_d     = {res['N_d_kN']:.2f} kN  ×  {res['n_vigas']} vigas")
     print()
-    print("  ── §9.2.5.2 Apoio intermédio (por terça) ──")
+    print("  ── §9.2.5.2 Apoio intermediário (por terça) ──")
     print(f"    a = {res['a_restricao_m']:.2f} m | "
           f"F_d = {res['F_d_apoio_kN']:.3f} kN | "
           f"C_min = {res['C_min_kNpm']:.1f} kN/m")
@@ -683,7 +708,7 @@ def relatorio(res: dict) -> None:
     print(f"    cobertura_ok = {'✓ SIM' if ok else '✗ NÃO'}")
     print(f"    restrição lateral válida para LTB: "
           f"{'SIM' if res['restricao_lateral_valida'] else 'NÃO'}")
-    print(f"    l_1 efectivo = {res['l_1_efetivo_m']:.3f} m")
+    print(f"    l_1 efetivo = {res['l_1_efetivo_m']:.3f} m")
     print(f"    ({res['l_1_nota']})")
     print()
     print(f"  η governante ({res['eta_gov_key']}) = {res['eta']:.4f}  "
@@ -716,7 +741,7 @@ if __name__ == "__main__":
     res = verificar_contraventamento(
         geo=geo, mat=mat_elu, load=load,
         L_comp=46.0, n_modulos_cv=2, s_terca=2.53,
-        d_barra_mm=12.0, aco="S235", n_porticos=2,
+        d_barra_mm=18.0, aco="S235", n_porticos=2,
         b_terca=0.20, h_terca=0.58,
     )
     relatorio(res)

@@ -1,12 +1,12 @@
 # Varredura — modelo biarticulado (MLC monolítica)
 
 **Data:** 2026-07-10  
-**Modelo estrutural (código actual):**
+**Modelo estrutural (código atual):**
 - Viga de duplo-bisel **monolítica** (sem rótula na cumeeira)
 - Rótulas **só** nos apoios
 - Eixo centroidal com flecha \(f_c=(h_{ap}-h_0)/2\), \(y_c=x_{\mathrm{sim}}\tan\alpha/2\)
-- Empuxo \(H\) por Castigliano: \(H=\int M_0 y_c/I\,\mathrm{d}x\big/\int y_c^2/I\,\mathrm{d}x\) (projecção \(\mathrm{d}x\))
-- Área tributária \(L_t=5{,}75\,\mathrm{m}\) (pórtico intermédio)
+- Empuxo \(H\) por Castigliano: \(H=\int M_0 y_c/I\,\mathrm{d}x\big/\int y_c^2/I\,\mathrm{d}x\) (projeção \(\mathrm{d}x\))
+- Área tributária \(L_t=5{,}75\,\mathrm{m}\) (pórtico intermediário)
 - Material GL24h, CS2; vento NBR 6123
 
 **CSV:** `output/varredura_biarticulada.csv` — **196** combinações com η ≤ 1 em todas as verificações EC5 + ligações factíveis.
@@ -15,7 +15,7 @@
 
 ## Leitura crítica do modelo (RM + norma)
 
-1. **H não é ~0.** Com \(y_c\neq 0\), o modelo é de **arco abatido de secção variável**. Em toda a grelha aprovada:
+1. **H não é ~0.** Com \(y_c\neq 0\), o modelo é de **arco abatido de seção variável**. Em toda a grade aprovada:
    - \(H \approx 1{,}26\) a \(1{,}86\,\mathrm{MN}\)
    - sempre **maior** que o H do triarticulado legado (\(H/H_3\approx 1{,}35\)–\(1{,}45\)), por \(I\) maior na cumeeira.
 2. **Momento na cumeeira é de fecho** (\(M_{ap}<0\)):  
@@ -37,9 +37,9 @@
 | α | 6° … 22° (passo 0,5°) |
 | h0 | 0,60 … 1,20 m (0,05) |
 | b | 0,22 … 0,36 m (0,02) |
-| h_ap/b | ≤ 9 (filtro de esbeltez de secção) |
+| h_ap/b | ≤ 9 (filtro de esbeltez de seção) |
 | l_ap | 0,40 … 0,80 m |
-| Pilar | secções comerciais 0,20–0,32 |
+| Pilar | seções comerciais 0,20–0,32 |
 | Pinos L1 | d ∈ {20,24,30,36}, n ≤ 40, L_lig ≤ 1,5 m, distâncias EC5 |
 | Chumbadores | F_chu = 80 kN (100 kN se necessário) |
 | ELU/ELS | EC5 §6.x, §2.3.2.2, Tab. 7.2; k_cr = 0,67; γ_M lig. = 1,30 |
@@ -60,7 +60,7 @@ Todas: cumeeira §6.4.3, flexão/LTB, ELS, terças, contraventamento e fadiga **
 
 ---
 
-## Recomendação de projecto: **C**
+## Recomendação de projeto: **C**
 
 ```
 Sistema:   viga MLC biarticulada (continuidade na cumeeira)
@@ -83,17 +83,17 @@ L3       ≈ 20 chumbadores @ 80 kN (H≈1544 kN)
 
 ## Avisos de engenharia (não suavizar)
 
-1. **Fundação:** H ≈ 1,5 MN por pórtico intermédio — sapata e chumbadores são **dimensionantes**.
-2. **L1:** grupo grande de pinos; detalhe de chapa (EN 1993-1-8), fenda, e montagem exigem estudo de pormenor além do Johansen.
-3. **Momento de fecho na cumeeira:** confirmar com o produtor MLC a combinação flexão + compressão + t90 na zona de cumeeira (laminação e secção).
-4. Se o objectivo de projecto for **H≈0 e M≈qL²/8**, este modelo de eixo **não** é o adequado — haveria de se adoptar eixo reto (\(y_c=0\)), decisão de modelo à parte.
+1. **Fundação:** H ≈ 1,5 MN por pórtico intermediário — sapata e chumbadores são **dimensionantes**.
+2. **L1:** grupo grande de pinos; detalhe de chapa (EN 1993-1-8), fenda, e montagem exigem estudo de detalhe além do Johansen.
+3. **Momento de fecho na cumeeira:** confirmar com o produtor MLC a combinação flexão + compressão + t90 na zona de cumeeira (laminação e seção).
+4. Se o objetivo de projeto for **H≈0 e M≈qL²/8**, este modelo de eixo **não** é o adequado — seria necessário adotar eixo reto (\(y_c=0\)), decisão de modelo à parte.
 5. OpenSees de validação do H/M ainda **não** foi corrido (combinado: analítico primeiro).
 
 ---
 
 ## Comparação com a varredura “3 rótulas” (inválida fisicamente)
 
-| | 3 rótulas (legado) | Biarticulada (actual) |
+| | 3 rótulas (legado) | Biarticulada (atual) |
 |--|--------------------|------------------------|
 | M cumeeira | 0 (fictício) | ≠0 (fecho) |
 | H (ordem) | ~1,2 MN (α=10°) | ~1,5–1,9 MN |

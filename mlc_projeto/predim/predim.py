@@ -133,7 +133,7 @@ def pre_dimensionar(
     res_vento  = calcular_vento(params_vento)
     w_C1bv_m2  = res_vento.pressoes["C1"]["barlavento_kNm2"]
 
-    # Cargas lineares — pórtico intermédio: área tributária = L_t
+    # Cargas lineares — pórtico intermediário: área tributária = L_t
     area_trib = L_t
     g_k = g_area * area_trib
     q_k = q_area * area_trib

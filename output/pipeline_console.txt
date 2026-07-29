@@ -1,0 +1,137 @@
+========================================================================
+  PIPELINE MLC — STOCKI Engenharia Estrutural
+  Biarticulada MLC | CS3 | R2 | EC5 + EN 1990 + NBR 6123
+========================================================================
+
+[FASE 0] Dados de entrada...
+  Geometria : L=20.25m | h0=1.0m | α=10.0° | b=0.32m | h_ap=2.785m
+  Material  : GL24h | CS3 | k_mod=0.70 (curta) | k_def=2.00 (ELS)
+  k_mod vento: duração «curta» adotada (k_mod=0.70; instantânea permitida=0.90 — não usada; critério conservador, EC5 §2.3.1.2)
+  ELU gov.  : ELU_C2 | padrao=C1_unif_bv | M=-394.44 kN·m | V=209.59 kN | N=1642.60 kN | H_arco=1630.49 kN → tirante
+  Sistema   : Viga biarticulada MLC (contínua na cumeeira) | Área trib.=5.750 m (L_t×1.0)
+  M_cumeeira: -394.44 kN·m | N=1642.60 kN | H=1630.49 kN
+
+  Vento θ=90° (⊥ cumeeira) — NBR 6123 Tab.25:
+    Padrões Cpe varridos: 8 (C1_asim, C1_rev, C1_unif_bv, C1_unif_st, C2_asim, C2_rev, C2_unif_bv, C2_unif_st)
+    Comb. ELU com vento: 24 | varredura completa=True
+    Gov |M|: C1_unif_bv  M=-394.4 kNm
+    Gov |H|: C1_unif_bv  H=1630.5 kN
+    Gov sucção: C2_unif_st  q=+0.39 kN/m
+  Vento θ=0° (// cumeeira) — estrutura aberta:
+    F_total=125.8 kN (pilares=62.1 + fricção=63.7) | w=2.735 kN/m
+
+[FASE 1] Geometria pré-definida (passe rodar_varredura=True para varredura completa)
+
+[FASE 2] Verificações ELU...
+  ✓ Cumeeira §6.4.3                η = 0.1768  ███
+
+[FASE 2] Contraventamento — integridade da cobertura (§9.2.5)...
+  Layout: 2 baías rígidas (extremos) | ℓ=46.0 m | diagonal ∅18 mm S235
+  Critério: estabilização EC5 §9.2.5 (não exige cruzes em todas as baías)
+  ✓ Cobertura §9.2.5               η = 0.7711  ███████████████
+  → l_1 LTB = 2.530 m | terças válidas como restrição lateral (cobertura OK)
+  → η_diag=0.771 | η_δ=0.064 | η_terça=0.075 | F_diag=46.1 kN | peso aço≈201 kg
+  ✓ Flambagem §6.3.3               η = 0.0709  █
+  ✓ Flexo-comp. §6.3.2+6.35        η = 0.0902  █
+  ✓ Cisalhamento §6.1.7            η = 0.7481  ██████████████
+  ✓ Apoio §6.1.5+§6.2.2            η = 0.5198  ██████████
+  ✓ Pilar 0.32×0.27m §6.3.2        η = 0.1708  ███
+
+[FASE 2] Verificações ELU — Pilar central...
+  ✓ Pilar central 0.32×0.27m §6.3.2 η = 0.6832  █████████████
+
+[FASE 2] Pilares — vento lateral (estrutura aberta)...
+  ✓ Pilar vento θ=0° (// cum.)     η = 0.3569  ███████
+  · M_d=3.02 kNm | F_d=3.45 kN | eixo=z
+  ✓ Pilar vento θ=90° (⊥ cum.)     η = 0.4620  █████████
+  · M_d=2.54 kNm | F_d=2.91 kN | eixo=y
+  · Contraventamento: força governante = estab_9.2.5 | R_ext=168.8 kN (estab=168.8, vento0/2=62.9)
+
+[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
+  ✓ Estab. global α_cr/P-Δ         η = 0.6807  █████████████
+  · α_cr=14.7 (mín 10) | H_imp=1.37 kN (0.08% de H_Ed) | w/f_c=0.00171
+  · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway (biarticulado), α_cr,arco≥10, …
+
+[FASE 2] Impacto de veículo em pilares (estacionamento)...
+  ✓ Impacto veículo (A_d)          η = 0.4913  █████████
+  · F_dx=50 kN / F_dy=25 kN @ h=0.50 m | k_mod=0.90 (instantânea)
+  · Gov: central F_dx=50kN | η=0.4913
+  · Seções resistem às forças de choque de projeto (50/25 kN). Mesmo assim, recomenda-se defen…
+
+[FASE 2] Verificações ELU — Terças (flexão cobertura)...
+  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.2993  █████
+  ✓ Terça-biela §6.3.2 (estab.)    η = 0.0750  █
+
+[FASE 3] Verificações ELS...
+  ✓ ELS §2.3.2.2+Tab.7.2           η = 0.0263  
+
+[FASE 4a] Tirante de base (H_arco → tirante, H_sapata≈0)...
+  ✓ Tirante base ∅90 mm S355  η = 0.7220
+  · T_d = H_arco = 1630.5 kN | H_sapata ≈ 0.0 kN | N_t,Rd = 2258.4 kN | δ_el = 24.7 mm | n = 18 barras | peso ≈ 18203 kg
+
+[FASE 4] Ligações (η_alvo = 0.75 — uso público)...
+  ✓ L1 base (d=36mm, 8×8)          η = 0.7358  ██████████████
+  ✓ L2 cumeeira                    η = 0.6019  ████████████
+  ✓ L3 sapata (n_chu=4)            η = 1.0000  ████████████████████
+  · L1: n=64 pinos | n_ef,row=5.12 | n_ef=40.9 | F_Rd/pino=54.58 kN | R=2234 kN | L_lig=1619 mm
+  · L3: H_arco=1630.5 kN → tirante | H_sapata=0.0 kN | n_chu=4 constr. | η_N=1.0000 | σ_c=1.500 MPa
+  ✓ L1c central (d=36mm, 2 chapas) η = 0.7358  ██████████████
+  ✓ L2c cumeeira central           η = 0.6019  ████████████
+  ✓ L3c sapata central             η = 1.0000  ████████████████████
+  · L3c: N=419.2 kN (2·R_v) | H≈0 (empuxos cancelam) | σ_c=1.500 MPa | η_N=1.0000 | n_chu=4 construtivo (η_H=0)
+
+[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...
+  ✓ L1      η_slip=0.0430  η_alt=0.3066
+  ✓ L2      η_slip=0.0136  η_alt=0.6020
+  ✓ L1c     η_slip=0.0430  η_alt=0.3066
+
+========================================================================
+  RESUMO DE TAXAS DE UTILIZAÇÃO — Viga biarticulada MLC
+  (mesma tabela exportada para Excel / memorial §12)
+========================================================================
+  Verificação                      Norma                               η  St
+  ------------------------------------------------------------------------
+  Cumeeira t90                     EC5 §6.4.3                     0.1768  ✓
+  Flambagem lateral                EC5 §6.3.3                     0.0709  ✓
+  Flexo-comp. viga                 EC5 §6.3.2+§6.3.3              0.0902  ✓
+  Cisalhamento                     EC5 §6.1.7                     0.7481  ✓
+  Apoio                            EC5 §6.1.5+§6.2.2              0.5198  ✓
+  Pilar lateral (N)                EC5 §6.3.2                     0.1708  ✓
+  Pilar central (N)                EC5 §6.3.2                     0.6832  ✓
+  Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2            0.3569  ✓
+  Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.4620  ✓
+  Terça flexão                     EC5 §6.1.6+§6.1.7              0.2993  ✓
+  Contraventamento cobertura       EC5 §9.2.5                     0.7711  ✓
+  Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3          0.6807  ✓
+  Impacto veículo (A_d)            EN 1991-1-7                    0.4913  ✓
+  Tirante de base                  EN 1993-1-1 §6.2.3             0.7220  ✓
+  ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.0263  ✓
+  Ligação L1 base                  EC5 §8.2+§8.5.1.1+§8.6         0.7358  ✓
+  Ligação L2 cumeeira              EC5 §6.1.4+§6.1.5+§8.6         0.6019  ✓
+  Ligação L3 sapata                EN 1993-1-8+EN 1992-4          1.0000  ✓
+  Ligação L1c base central         EC5 §8.2+§8.5.1.1+§8.6         0.7358  ✓
+  Ligação L2c cumeeira             EC5 §6.1.4+§6.1.5+§8.6         0.6019  ✓
+  Ligação L3c sapata central       EN 1993-1-8+EN 1992-4          1.0000  ✓
+  Fadiga/slip L1                   EC5 §7.1+§8.1.5                0.0430  ✓
+  Fadiga/slip L2                   EC5 §7.1+§8.1.5                0.0136  ✓
+  Fadiga/slip L1c                  EC5 §7.1+§8.1.5                0.0430  ✓
+  ------------------------------------------------------------------------
+  η máximo     = 1.0000
+  H_arco       = 1630.49 kN  (Castigliano → tirante)
+  H_sapata     = 0.00 kN  (tirante ativo)
+  T_tirante    = 1630.49 kN  (∅90.0 mm S355)
+  η_alvo lig.  = 0.75
+  k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
+  N.º verif.   = 24  |  todas OK = True
+  Status       = APROVADO
+========================================================================
+
+[FASE 5] Export relatório (Excel + LaTeX/PDF)...
+  Excel: C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.xlsx
+  LaTeX: C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.tex
+  PDF  : C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.pdf
+
+Pipeline concluído. Relatório gerado em output/
+  Status global = APROVADO | η_max = 1.0000
+
+[FASE 6] Abrindo visualização 3D interativa...

@@ -1,13 +1,14 @@
 """
 main.py — Orquestrador do pipeline de verificação MLC.
 
-Sistema estrutural (adoptado):
+Sistema estrutural (adotado):
     Viga MLC monolítica de duplo-bisel, biarticulada nos apoios.
     Continuidade na cumeeira (sem rótula real).
     H por Castigliano no eixo centroidal (1× hiperestática).
+    Tirante de base ao nível do piso: T≈H, H_sapata≈0 (EN 1993-1-1).
     Classe de serviço 3 (estrutura aberta) — EC5 §2.3.1.3.
 
-Geometria de projecto: candidata R2
+Geometria de projeto: candidata R2
     (varredura CS3 — output/varredura_biarticulada_CS3.*)
 
 Pipeline:
@@ -39,33 +40,50 @@ from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
 from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
 from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
+from mlc_projeto.checks.elu.estabilidade_global import (
+    verificar_estabilidade_global, relatorio_estabilidade_global,
+)
+from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
+from mlc_projeto.checks.elu.tirante_base import (
+    verificar_tirante_base, relatorio_tirante,
+)
 from mlc_projeto.connections.connections      import (
     dimensionar_ligacoes, dimensionar_ligacoes_central, relatorio_ligacoes
 )
 from mlc_projeto.connections.fadiga_ligacoes  import verificar_fadiga_deslizamento
-from mlc_projeto.output.report                import gerar_relatorio
+from mlc_projeto.output.report                import (
+    gerar_relatorio, tabela_verificacoes, OUTPUT_DIR,
+)
 from mlc_projeto.visualization.viz_3d         import visualizar_galpao
+
+import sys
 
 
 # =============================================================================
-# DADOS DE PROJECTO — candidata R2 (CS3, biarticulada)
+# DADOS DE PROJETO — candidata R2 (CS3, biarticulada)
 # Ref.: output/varredura_biarticulada_CS3.md
 # =============================================================================
 
 # --- Geometria da viga principal (duplo-bisel) --------------------------------
 GEO_PARAMS = dict(
     L         = 20.25,   # m — vão do pórtico
-    h0        = 1.00,    # m — altura no apoio
+    h0        = 1.00,    # m — altura no apoio (h_ap ≈ 2,79 m fixa)
     alpha_deg = 10.0,    # ° — inclinação do extradorso
-    b         = 0.30,    # m — largura da secção
+    # b alinhado à largura do pilar; η_cis≈0,75 (folga ~25%) sem subir cumeeira
+    b         = 0.32,    # m — largura da seção
 )
 
 # --- Material (EN 14080 + EC5) ------------------------------------------------
 # CS3 global: laterais abertas / intempérie (EC5 §2.3.1.3)
+#
+# Critério de duração do vento (EC5 §2.3.1.2 + Tab. 3.1):
+#   A norma permite classificar o vento como «curta» ou «instantânea».
+#   Adota-se «curta» (conservador): k_mod,CS3 = 0,70  vs  instantânea = 0,90.
+#   (Em CS1/CS2: curta = 0,90 vs instantânea = 1,10 — mesmo critério.)
 MAT_CURTA = dict(
     classe         = "GL24h",
     classe_servico = 3,
-    duracao        = "curta",      # ELU com vento dominante
+    duracao        = "curta",      # ELU vento dominante — ver critério acima
 )
 
 MAT_LONGA = dict(
@@ -94,36 +112,164 @@ L_T    = 5.75          # m — espaçamento entre pórticos = vão das terças
 S      = 2.53          # m — espaçamento entre terças (l_ef viga)
 
 # --- Pilares ------------------------------------------------------------------
-B_PILAR     = 0.22     # m — lateral (R2, N = R_v)
-H_PILAR     = 0.26     # m
+# Seção ÚNICA laterais = centrais. Largura (b) = largura da viga (apoio alinhado).
+# Profundidade (h) no plano do pórtico otimizada: folga ~25% (η ≤ 0,75).
+#   N_cen governa com h=0,27 (η≈0,68); h=0,36 sobrava (N_lat η≈0,03).
+# Orientação: b_pilar // largura da viga; h_pilar no plano do pórtico.
+B_PILAR     = 0.32     # m — = b da viga
+H_PILAR     = 0.27     # m — plano do pórtico
 H_PILAR_ALT = 7.0      # m — comprimento
-# Central: N ≈ 2·R_v (dois pórticos). Em CS3, 0,26×0,26 falha (η>1);
-# mínimo quadrado comercial com margem: 0,28×0,28 (η≈0,73).
-B_PILAR_C   = 0.28     # m — central
-H_PILAR_C   = 0.28     # m
+B_PILAR_C   = 0.32     # m — central idêntico
+H_PILAR_C   = 0.27     # m
 
 # --- Terças (pré-definidas; verificação no pipeline) --------------------------
 B_TERCA = 0.20
 H_TERCA = 0.58
 
+# --- Contraventamento horizontal (EC5 §9.2.5) ---------------------------------
+# Layout otimizado: cruzes de St. André SÓ nas baías de EXTREMIDADE
+# (linha inicial + linha final ao longo do comprimento). NÃO é necessário
+# preencher todas as baías da linha frontal/traseira — isso aumenta aço e,
+# com k_ℓ = min(1,√(15/ℓ)), pode AGRAVAR a força por baía (ℓ menor → k_ℓ↑).
+#   n_modulos_cv = 2  → ℓ = L_comp = 46 m entre baías rígidas
+#   d = 18 mm S235    → η_diag ≈ 0,77 (folga ~23%; d=16 ficava η≈0,98)
+L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
+N_MODULOS_CV    = 2       # baías com cruzes (extremos)
+D_BARRA_CV_MM   = 18.0    # mm — diagonal tracionada
+ACO_CV          = "S235"
+
 # --- Ligações / apoio ---------------------------------------------------------
 D_BASE_MM   = 36       # mm — pinos L1 (R2)
 D_CUM_MM    = 30       # mm — pino L2
 F_CHU_KN    = 80.0     # kN — resistência por chumbador (L3)
-ETA_LIG_ALVO = 0.85    # margem de projecto L1/L3 (uso público; frágil em madeira)
+ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 L_AP        = 0.90     # m — comprimento da placa de apoio
+
+# --- Tirante de base (fecho do empuxo ao nível do piso) ------------------------
+# Solução usual: barra de aço ligando as bases de cada vão → H_sapata ≈ 0.
+# T_d = H_arco (Castigliano ELU). Diâmetro None = escolha automática η≤eta_alvo.
+TIRANTE_BASE     = True
+ACO_TIRANTE      = "S355"
+D_TIRANTE_MM     = None    # None → auto (comercial, η ≤ ETA_LIG_ALVO)
+ETA_TIRANTE_ALVO = 0.75
 
 
 # ── Orquestrador ──────────────────────────────────────────────────────────────
 
+class _Tee:
+    """Duplica stdout para console e arquivo (export do terminal)."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            try:
+                s.write(data)
+                s.flush()
+            except Exception:
+                pass
+
+    def flush(self):
+        for s in self.streams:
+            try:
+                s.flush()
+            except Exception:
+                pass
+
+
 def _print_eta(nome: str, res: dict) -> None:
-    ok  = "✓" if res["ok"] else "✗"
-    bar = "█" * int(res["eta"] * 20)
-    print(f"  {ok} {nome:<30} η = {res['eta']:.4f}  {bar}")
+    """Imprime η de forma robusta (aceita dicts parciais / η>1)."""
+    if not isinstance(res, dict):
+        print(f"  ✗ {nome:<30} (sem resultado)")
+        return
+    eta = float(res.get("eta", res.get("eta_gov", res.get("eta_slip", 0.0))) or 0.0)
+    if "ok" in res:
+        ok_flag = bool(res["ok"])
+    else:
+        ok_flag = eta <= 1.0 + 1e-9
+    ok  = "✓" if ok_flag else "✗"
+    n_bar = max(0, min(40, int(eta * 20)))
+    bar = "█" * n_bar
+    print(f"  {ok} {nome:<30} η = {eta:.4f}  {bar}")
 
 
-def main(rodar_varredura: bool = False) -> None:
-    """Executa o pipeline completo."""
+def _imprimir_resumo_export(resultados: dict, load, meta: dict) -> dict:
+    """
+    Resumo unificado terminal = Excel = memorial (§12).
+    Devolve estatísticas (eta_max, all_ok, status).
+    """
+    tab = tabela_verificacoes(resultados)
+    print("\n" + "=" * 72)
+    print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Viga biarticulada MLC")
+    print("  (mesma tabela exportada para Excel / memorial §12)")
+    print("=" * 72)
+    print(f"  {'Verificação':<32} {'Norma':<28} {'η':>8}  St")
+    print(f"  {'-'*72}")
+    eta_max = 0.0
+    all_ok = True
+    for row in tab:
+        eta = float(row["η"])
+        ok_b = bool(row["ok_bool"])
+        all_ok = all_ok and ok_b
+        eta_max = max(eta_max, eta)
+        print(
+            f"  {row['Verificação']:<32} {row['Norma']:<28} "
+            f"{eta:>8.4f}  {row['OK']}"
+        )
+    print(f"  {'-'*72}")
+    H = float(load.H_ELU()) if load is not None else 0.0
+    com_tir = bool(meta.get("com_tirante", False))
+    H_sap = 0.0 if com_tir else H
+    status = "APROVADO" if all_ok and eta_max <= 1.0 + 1e-9 else "REPROVADO"
+    print(f"  η máximo     = {eta_max:.4f}")
+    if com_tir:
+        print(f"  H_arco       = {H:.2f} kN  (Castigliano → tirante)")
+        print(f"  H_sapata     = {H_sap:.2f} kN  (tirante ativo)")
+        print(f"  T_tirante    = {meta.get('T_tirante_kN', H):.2f} kN  "
+              f"(∅{meta.get('d_tirante_mm', '?')} mm "
+              f"{meta.get('aco_tirante', '')})")
+    else:
+        print(f"  H_fund      = {H:.2f} kN  (empuxo → sapata)")
+    print(f"  η_alvo lig.  = {meta.get('eta_lig_alvo', ETA_LIG_ALVO):.2f}")
+    print(f"  k_mod vento  = {meta.get('k_mod_vento', 0):.2f} "
+          f"(curta; inst.={meta.get('k_mod_vento_instantanea', 0):.2f} não usada)")
+    print(f"  N.º verif.   = {len(tab)}  |  todas OK = {all_ok}")
+    print(f"  Status       = {status}")
+    print("=" * 72)
+    return {
+        "eta_max": eta_max,
+        "all_ok": all_ok,
+        "status": status,
+        "n_verif": len(tab),
+        "tabela": tab,
+    }
+
+
+def main(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
+    """
+    Executa o pipeline completo.
+
+    Returns:
+        dict com resultados (para testes / integração).
+    """
+    # Export do terminal → output/pipeline_console.txt (UTF-8)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = OUTPUT_DIR / "pipeline_console.txt"
+    log_f = open(log_path, "w", encoding="utf-8")
+    _stdout_prev = sys.stdout
+    sys.stdout = _Tee(_stdout_prev, log_f)
+
+    try:
+        return _main_impl(rodar_varredura=rodar_varredura, abrir_viz=abrir_viz)
+    finally:
+        sys.stdout = _stdout_prev
+        log_f.close()
+        print(f"  Console export: {log_path}")
+
+
+def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
+    """Corpo do pipeline (stdout pode estar em tee)."""
 
     print("=" * 72)
     print("  PIPELINE MLC — STOCKI Engenharia Estrutural")
@@ -143,10 +289,19 @@ def main(rodar_varredura: bool = False) -> None:
     vento_kw["L"]  = geo.L
     params_vento = ParametrosVento(**vento_kw)
 
+    # θ=90° Tab.25 completo + θ=0° longitudinal (pilares + contraventamento)
+    # n_pilares_linha ≈ L_comp/dist + 1; n_linhas = 3 (2 pórticos + central compartilhado)
+    L_COMP = 46.0
+    n_pil_linha = max(2, round(L_COMP / L_T) + 1)
     load = carregamentos_com_vento(
         geo=geo, mat=mat_curta,
         g_area=G_AREA, q_area=Q_AREA,
         L_t=L_T, params_vento=params_vento,
+        b_pilar=B_PILAR, h_pilar=H_PILAR,
+        n_pilares_linha=n_pil_linha,
+        n_linhas_portico=3,
+        L_cob_m=L_COMP,
+        B_cob_m=2 * geo.L,   # dois vãos lado a lado
     )
 
     gov = load.combinacao_ELU_governante()
@@ -158,13 +313,39 @@ def main(rodar_varredura: bool = False) -> None:
     print(f"  Material  : {mat_elu.classe} | CS{mat_elu.classe_servico} | "
           f"k_mod={mat_elu.k_mod:.2f} ({gov.duracao}) | "
           f"k_def={mat_longa.k_def:.2f} (ELS)")
-    print(f"  ELU gov.  : {gov.nome} | M={gov.M_max_kNm:.2f} kN·m | "
+    print(f"  k_mod vento: duração «curta» adotada "
+          f"(k_mod={mat_elu.com_duracao('curta').k_mod:.2f}; "
+          f"instantânea permitida={mat_elu.com_duracao('instantanea').k_mod:.2f} "
+          f"— não usada; critério conservador, EC5 §2.3.1.2)")
+    print(f"  ELU gov.  : {gov.nome} | padrao={gov.padrao_vento} | "
+          f"M={gov.M_max_kNm:.2f} kN·m | "
           f"V={gov.V_max_kN:.2f} kN | N={gov.N_viga_kN:.2f} kN | "
-          f"H_fund={gov.H_kN:.2f} kN")
+          f"H_arco={gov.H_kN:.2f} kN"
+          + (" → tirante" if TIRANTE_BASE else " → sapata"))
     print(f"  Sistema   : Viga biarticulada MLC (contínua na cumeeira) | "
           f"Área trib.={load.area_trib:.3f} m (L_t×{load.fator_trib})")
     print(f"  M_cumeeira: {gov.M_cumeeira_kNm:.2f} kN·m | "
           f"N={gov.N_viga_kN:.2f} kN | H={gov.H_kN:.2f} kN")
+
+    # Varredura Cpe Tab.25 (θ=90°)
+    vv = load.varredura_vento_90
+    print(f"\n  Vento θ=90° (⊥ cumeeira) — NBR 6123 Tab.25:")
+    print(f"    Padrões Cpe varridos: {vv.get('n_padroes_cpe', 0)} "
+          f"({', '.join(vv.get('padroes', []))})")
+    print(f"    Comb. ELU com vento: {vv.get('n_combinacoes_elu_vento', 0)} "
+          f"| varredura completa={vv.get('completo', False)}")
+    print(f"    Gov |M|: {vv.get('gov_M', {}).get('padrao')}  "
+          f"M={vv.get('gov_M', {}).get('M_max', 0):.1f} kNm")
+    print(f"    Gov |H|: {vv.get('gov_H', {}).get('padrao')}  "
+          f"H={vv.get('gov_H', {}).get('H', 0):.1f} kN")
+    print(f"    Gov sucção: {vv.get('gov_succao', {}).get('padrao')}  "
+          f"q={vv.get('gov_succao', {}).get('q_tot', 0):+.2f} kN/m")
+    if load.vento_0:
+        print(f"  Vento θ=0° (// cumeeira) — estrutura aberta:")
+        print(f"    F_total={load.vento_0['F_total_kN']:.1f} kN "
+              f"(pilares={load.vento_0['F_pilares_kN']:.1f} + "
+              f"fricção={load.vento_0['F_friccao_kN']:.1f}) | "
+              f"w={load.vento_0['w_long_kNpm']:.3f} kN/m")
 
     # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
@@ -197,25 +378,29 @@ def main(rodar_varredura: bool = False) -> None:
     # ── Contraventamento ANTES do LTB ─────────────────────────────────────────
     # A cobertura só valida l_1 = s (terças) se o sistema de estabilização
     # cumprir EC5 §9.2.5 (força + rigidez + terça-biela + δ ≤ ℓ/500).
-    # Caso contrário l_1 é penalizado → LTB/flexão usam o valor efectivo.
+    # Caso contrário l_1 é penalizado → LTB/flexão usam o valor efetivo.
     print("\n[FASE 2] Contraventamento — integridade da cobertura (§9.2.5)...")
-    # Diâmetro da diagonal: EC5 §9.2.5.3 com N_d biarticulada exige
-    # d ≥ 16 mm S235 (d=12 mm → η_N≈1,74 — insuficiente).
-    D_BARRA_CV_MM = 16.0
+    print(f"  Layout: {N_MODULOS_CV} baías rígidas (extremos) | "
+          f"ℓ={L_COMP_GALPAO/(N_MODULOS_CV-1) if N_MODULOS_CV>1 else L_COMP_GALPAO:.1f} m | "
+          f"diagonal ∅{D_BARRA_CV_MM:.0f} mm {ACO_CV}")
+    print("  Critério: estabilização EC5 §9.2.5 (não exige cruzes em todas as baías)")
 
     res_elu["contraventamento"] = verificar_contraventamento(
         geo=geo, mat=mat_elu, load=load,
-        L_comp=46.0, n_modulos_cv=2,
-        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco="S235",
+        L_comp=L_COMP_GALPAO, n_modulos_cv=N_MODULOS_CV,
+        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco=ACO_CV,
         n_porticos=2, dist_portico=L_T,
         b_terca=B_TERCA, h_terca=H_TERCA,
         k_crit=1.0,   # 1.ª passagem; refinado após LTB
     )
     _print_eta("Cobertura §9.2.5", res_elu["contraventamento"])
-    l_1_ltb = float(res_elu["contraventamento"]["l_1_efetivo_m"])
-    print(f"  → l_1 LTB = {l_1_ltb:.3f} m | "
-          f"{res_elu['contraventamento']['l_1_nota']}")
-    if not res_elu["contraventamento"]["cobertura_ok"]:
+    cv0 = res_elu["contraventamento"]
+    l_1_ltb = float(cv0["l_1_efetivo_m"])
+    print(f"  → l_1 LTB = {l_1_ltb:.3f} m | {cv0['l_1_nota']}")
+    print(f"  → η_diag={cv0['eta_diag_N']:.3f} | η_δ={cv0['eta_delta']:.3f} | "
+          f"η_terça={cv0['eta_terca']:.3f} | F_diag={cv0['F_diag_kN']:.1f} kN | "
+          f"peso aço≈{cv0['peso_total_kg']:.0f} kg")
+    if not cv0["cobertura_ok"]:
         print("  ⚠ Cobertura NÃO valida restrição lateral das terças — "
               "LTB com l_1 penalizado.")
 
@@ -228,8 +413,8 @@ def main(rodar_varredura: bool = False) -> None:
     k_crit_ltb = float(res_elu["flambagem"].get("k_crit", 1.0))
     res_elu["contraventamento"] = verificar_contraventamento(
         geo=geo, mat=mat_elu, load=load,
-        L_comp=46.0, n_modulos_cv=2,
-        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco="S235",
+        L_comp=L_COMP_GALPAO, n_modulos_cv=N_MODULOS_CV,
+        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco=ACO_CV,
         n_porticos=2, dist_portico=L_T,
         b_terca=B_TERCA, h_terca=H_TERCA,
         k_crit=k_crit_ltb,
@@ -262,7 +447,10 @@ def main(rodar_varredura: bool = False) -> None:
     )
 
     print("\n[FASE 2] Verificações ELU — Pilar central...")
-    from mlc_projeto.checks.elu.pilares import verifica_pilar as _verifica_pilar
+    from mlc_projeto.checks.elu.pilares import (
+        verifica_pilar as _verifica_pilar,
+        verifica_pilar_vento_lateral as _pilar_vento,
+    )
     _N_central = 2 * load.V_max_ELU()
     res_elu["pilar_central"] = _verifica_pilar(
         mat=mat_elu,
@@ -274,6 +462,65 @@ def main(rodar_varredura: bool = False) -> None:
         f"Pilar central {B_PILAR_C}×{H_PILAR_C}m §6.3.2",
         res_elu["pilar_central"]
     )
+
+    # Estabilidade lateral dos pilares — vento θ=0° e θ=90° (estrutura aberta)
+    print("\n[FASE 2] Pilares — vento lateral (estrutura aberta)...")
+    _N_lat = load.V_max_ELU()
+    res_elu["pilar_vento_0"] = _pilar_vento(
+        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_ALT,
+        N_d=_N_lat, params_vento=params_vento, theta_deg=0.0,
+    )
+    res_elu["pilar_vento_90"] = _pilar_vento(
+        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_ALT,
+        N_d=_N_lat, params_vento=params_vento, theta_deg=90.0,
+    )
+    _print_eta("Pilar vento θ=0° (// cum.)", res_elu["pilar_vento_0"])
+    print(f"  · M_d={res_elu['pilar_vento_0']['M_d_kNm']:.2f} kNm | "
+          f"F_d={res_elu['pilar_vento_0']['F_d_kN']:.2f} kN | "
+          f"eixo={res_elu['pilar_vento_0']['eixo']}")
+    _print_eta("Pilar vento θ=90° (⊥ cum.)", res_elu["pilar_vento_90"])
+    print(f"  · M_d={res_elu['pilar_vento_90']['M_d_kNm']:.2f} kNm | "
+          f"F_d={res_elu['pilar_vento_90']['F_d_kN']:.2f} kN | "
+          f"eixo={res_elu['pilar_vento_90']['eixo']}")
+    if res_elu["contraventamento"].get("gov_forca"):
+        print(f"  · Contraventamento: força governante = "
+              f"{res_elu['contraventamento']['gov_forca']} | "
+              f"R_ext={res_elu['contraventamento'].get('R_ext_proj_kN', 0):.1f} kN "
+              f"(estab={res_elu['contraventamento'].get('R_ext_estab_kN', 0):.1f}, "
+              f"vento0/2={res_elu['contraventamento'].get('F_vento0_kN', 0)/2:.1f})")
+
+    # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
+    print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
+    res_elu["estabilidade_global"] = verificar_estabilidade_global(
+        geo=geo, mat=mat_elu, load=load,
+        H_pilar_m=H_PILAR_ALT,
+        b_pilar=B_PILAR, h_pilar=H_PILAR,
+        m_colunas=2,
+    )
+    eg = res_elu["estabilidade_global"]
+    _print_eta("Estab. global α_cr/P-Δ", eg)
+    print(f"  · α_cr={eg['alpha_cr']:.1f} (mín {eg['alpha_cr_min']:.0f}) | "
+          f"H_imp={eg['H_imp_kN']:.2f} kN "
+          f"({100*eg['H_imp_over_H']:.2f}% de H_Ed) | "
+          f"w/f_c={eg['w_over_f']:.5f}")
+    print(f"  · {eg['metodo_analise']}: {eg['conclusao'][:80]}…")
+
+    # Impacto de veículo — estacionamento coberto (EN 1991-1-7)
+    print("\n[FASE 2] Impacto de veículo em pilares (estacionamento)...")
+    res_elu["impacto_veiculo"] = verificar_impacto_veiculo(
+        geo=geo, mat=mat_elu, load=load,
+        b_pilar=B_PILAR, h_pilar=H_PILAR,
+        b_pilar_c=B_PILAR_C, h_pilar_c=H_PILAR_C,
+        H_pilar_m=H_PILAR_ALT,
+    )
+    iv = res_elu["impacto_veiculo"]
+    _print_eta("Impacto veículo (A_d)", iv)
+    print(f"  · F_dx={iv['forcas']['F_dx_kN']:.0f} kN / "
+          f"F_dy={iv['forcas']['F_dy_kN']:.0f} kN @ "
+          f"h={iv['forcas']['h_imp_m']:.2f} m | "
+          f"k_mod={iv['k_mod']:.2f} (instantânea)")
+    print(f"  · Gov: {iv['gov']} | η={iv['eta']:.4f}")
+    print(f"  · {iv['recomendacao'][:90]}…")
 
     print("\n[FASE 2] Verificações ELU — Terças (flexão cobertura)...")
     from mlc_projeto.checks.elu.tercas import verifica_terca
@@ -306,6 +553,25 @@ def main(rodar_varredura: bool = False) -> None:
     res_els["ELS"] = verificar_ELS(geo, mat_longa, load)
     _print_eta("ELS §2.3.2.2+Tab.7.2", res_els["ELS"])
 
+    # ── Fase 4a: Tirante de base (opcional — fecho do empuxo) ─────────────────
+    H_arco = float(load.H_ELU())
+    n_linhas_port = int(round(L_COMP_GALPAO / L_T)) + 1  # eixos Y (pórticos)
+    res_tirante: dict = {"ativo": False, "ok": True, "eta": 0.0}
+    if TIRANTE_BASE:
+        print(f"\n[FASE 4a] Tirante de base (H_arco → tirante, H_sapata≈0)...")
+        res_tirante = verificar_tirante_base(
+            T_d_kN=H_arco,
+            L_m=geo.L,
+            aco=ACO_TIRANTE,
+            d_mm=D_TIRANTE_MM,
+            eta_alvo=ETA_TIRANTE_ALVO,
+            n_vaos_por_linha=2,          # dois vãos de 20,25 m
+            n_linhas=n_linhas_port,
+        )
+        relatorio_tirante(res_tirante)
+    else:
+        print("\n[FASE 4a] Tirante de base: inativo (empuxo → sapata)")
+
     # ── Fase 4: Ligações ──────────────────────────────────────────────────────
     print(f"\n[FASE 4] Ligações (η_alvo = {ETA_LIG_ALVO:.2f} — uso público)...")
 
@@ -315,6 +581,9 @@ def main(rodar_varredura: bool = False) -> None:
         d_cum_mm=D_CUM_MM,
         F_chu_kN=F_CHU_KN,
         eta_alvo=ETA_LIG_ALVO,
+        com_tirante=TIRANTE_BASE,
+        b_pilar_m=B_PILAR,
+        h_pilar_m=H_PILAR,
     )
     for key, label in [
         ("L1", f"L1 base (d={D_BASE_MM}mm, "
@@ -327,11 +596,27 @@ def main(rodar_varredura: bool = False) -> None:
           f"n_ef,row={res_lig['L1']['n_ef_row']:.2f} | "
           f"n_ef={res_lig['L1']['n_ef']:.1f} | "
           f"F_Rd/pino={res_lig['L1']['F_v_Rd_kN']:.2f} kN | "
-          f"R={res_lig['L1']['R_total_kN']:.0f} kN")
+          f"R={res_lig['L1']['R_total_kN']:.0f} kN | "
+          f"L_lig={res_lig['L1'].get('L_ocupado_mm', 0):.0f} mm")
+    L3r = res_lig["L3"]
+    if TIRANTE_BASE:
+        print(f"  · L3: H_arco={L3r.get('H_arco_kN', H_arco):.1f} kN → tirante | "
+              f"H_sapata={L3r['H_d_kN']:.1f} kN | "
+              f"n_chu={L3r['n_chumbadores']} constr. | "
+              f"η_N={L3r.get('eta_N', L3r['eta']):.4f} | "
+              f"σ_c={L3r.get('sigma_c_MPa', 0):.3f} MPa")
+    else:
+        print(f"  · L3: H={L3r['H_d_kN']:.1f} kN | "
+              f"n_chu={L3r['n_chumbadores']} "
+              f"(mín η≤1: {L3r.get('n_chu_eta1', '?')}; "
+              f"grade×4: {L3r.get('n_chu_x4', '?')}) | "
+              f"F_chu={L3r['F_chu_kN']:.0f} kN | "
+              f"R={L3r.get('R_chu_kN', L3r['n_chumbadores']*L3r['F_chu_kN']):.0f} kN")
 
     res_lig_c = dimensionar_ligacoes_central(
         mat=mat_elu, load=load, geo=geo,
         b_pilar_c=B_PILAR_C,
+        h_pilar_c=H_PILAR_C,
         d_base_mm=D_BASE_MM,
         d_cum_mm=D_CUM_MM,
         eta_alvo=ETA_LIG_ALVO,
@@ -342,6 +627,11 @@ def main(rodar_varredura: bool = False) -> None:
         ("L3c", "L3c sapata central"),
     ]:
         _print_eta(label, res_lig_c[key])
+    L3c = res_lig_c["L3c"]
+    print(f"  · L3c: N={L3c['N_d_kN']:.1f} kN (2·R_v) | H≈0 (empuxos cancelam) | "
+          f"σ_c={L3c.get('sigma_c_MPa', 0):.3f} MPa | "
+          f"η_N={L3c.get('eta_N', L3c['eta']):.4f} | "
+          f"n_chu={L3c['n_chumbadores']} construtivo (η_H=0)")
 
     # ── Fase 4b: Fadiga e deslizamento das ligações ───────────────────────────
     print("\n[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...")
@@ -358,15 +648,11 @@ def main(rodar_varredura: bool = False) -> None:
               f"η_slip={r['eta_slip']:.4f}  "
               f"η_alt={r['alternada']['eta_alt']:.4f}")
 
-    # ── Resumo ────────────────────────────────────────────────────────────────
-    print("\n" + "=" * 72)
-    print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Viga biarticulada MLC")
-    print("=" * 72)
-
-    # Mesmos dados do console → memorial / Excel / 3D
+    # ── Pacote de resultados (terminal / Excel / memorial) ─────────────────────
     todos_para_relatorio = {
         **res_elu,
         **res_els,
+        **({"tirante_base": res_tirante} if res_tirante.get("ativo") else {}),
         "L1":  res_lig["L1"],
         "L2":  res_lig["L2"],
         "L3":  res_lig["L3"],
@@ -408,68 +694,49 @@ def main(rodar_varredura: bool = False) -> None:
             "area_trib": load.area_trib,
             "g_area": G_AREA,
             "q_area": Q_AREA,
-            "sistema": "biarticulada",
+            "sistema": "biarticulada" + (" + tirante base" if TIRANTE_BASE else ""),
             "classe_servico": mat_elu.classe_servico,
             "eta_lig_alvo": ETA_LIG_ALVO,
+            "d_base_mm": D_BASE_MM,
+            "d_cum_mm": D_CUM_MM,
+            "F_chu_kN": F_CHU_KN,
+            "b_pilar": B_PILAR,
+            "h_pilar": H_PILAR,
+            "b_pilar_c": B_PILAR_C,
+            "h_pilar_c": H_PILAR_C,
+            "H_pilar": H_PILAR_ALT,
+            "gov_nome": gov.nome,
+            "gov_padrao_vento": gov.padrao_vento,
+            "H_ELU_kN": load.H_ELU(),
+            "H_arco_kN": H_arco,
+            "H_sapata_kN": 0.0 if TIRANTE_BASE else H_arco,
+            "com_tirante": TIRANTE_BASE,
+            "T_tirante_kN": res_tirante.get("T_d_kN", 0.0),
+            "d_tirante_mm": res_tirante.get("d_mm", 0.0),
+            "aco_tirante": res_tirante.get("aco", ACO_TIRANTE),
+            "M_max_kNm": gov.M_max_kNm,
+            # Critério k_mod / vento — memorial
+            "duracao_vento": "curta",
+            "k_mod_vento": mat_elu.com_duracao("curta").k_mod,
+            "k_mod_vento_instantanea": mat_elu.com_duracao("instantanea").k_mod,
+            "criterio_kmod_vento": (
+                "Vento classificado como duração curta (EC5 §2.3.1.2 / Tab. 3.1), "
+                "não como instantânea — critério conservador de projeto."
+            ),
+            "varredura_vento_90": load.varredura_vento_90,
         },
     }
-    eta_max_val = 0.0
 
-    secoes = [
-        ("── ELU Viga ──", [
-            "cumeeira", "flambagem", "flexao",
-            "cisalhamento", "apoio",
-        ]),
-        ("── ELU Pilar ──", ["flexo_comp", "pilar_central"]),
-        ("── ELU Terças ──", ["terca"]),
-        ("── ELU Contravent. ──", ["contraventamento"]),
-        ("── ELS ──", ["ELS"]),
-    ]
-
-    for titulo, chaves in secoes:
-        print(f"\n  {titulo}")
-        for chave in chaves:
-            if chave not in todos_para_relatorio:
-                continue
-            res = todos_para_relatorio[chave]
-            eta = res["eta"]
-            ok  = "✓" if res["ok"] else "✗"
-            bar = "█" * int(eta * 20)
-            print(f"  {ok} {chave:<26} η = {eta:.4f}  {bar}")
-            eta_max_val = max(eta_max_val, eta)
-
-    print(f"\n  ── Ligações ──")
-    for key, label in [
-        ("L1",  "base"),
-        ("L2",  "cumeeira"),
-        ("L3",  "sapata"),
-        ("L1c", "central base"),
-        ("L2c", "central cumeeira"),
-        ("L3c", "central sapata"),
-    ]:
-        r   = todos_para_relatorio[key]
-        ok  = "✓" if r["ok"] else "✗"
-        eta = r["eta"]
-        bar = "█" * int(eta * 20)
-        print(f"  {ok} Ligação {label:<22} η = {eta:.4f}  {bar}")
-        eta_max_val = max(eta_max_val, eta)
-
-    print(f"\n  ── Fadiga (deslizamento ELS) ──")
-    for cod in ("L1", "L2", "L1c"):
-        r   = todos_para_relatorio[f"fadiga_{cod}"]
-        ok  = "✓" if r["ok"] else "✗"
-        eta = r["eta"]
-        bar = "█" * int(eta * 20)
-        print(f"  {ok} Fadiga {cod:<23} η = {eta:.4f}  {bar}")
-
-    print(f"\n  η máximo  = {eta_max_val:.4f}")
-    print(f"  H_fund    = {load.H_ELU():.2f} kN  (empuxo → sapata)")
-    status = "APROVADO" if eta_max_val <= 1.0 else "REPROVADO"
-    print(f"  Status    = {status}")
-    print("=" * 72)
+    # Resumo unificado (terminal = Excel = memorial §12)
+    resumo = _imprimir_resumo_export(
+        todos_para_relatorio, load, todos_para_relatorio["meta"],
+    )
+    todos_para_relatorio["meta"]["eta_max"] = resumo["eta_max"]
+    todos_para_relatorio["meta"]["status"] = resumo["status"]
+    todos_para_relatorio["meta"]["n_verif"] = resumo["n_verif"]
 
     # ── Fase 5: Relatório ─────────────────────────────────────────────────────
-    # Material do memorial: CS + k_def (longa); combinações via load
+    print("\n[FASE 5] Export relatório (Excel + LaTeX/PDF)...")
     gerar_relatorio(
         todos_para_relatorio,
         geo,
@@ -478,23 +745,35 @@ def main(rodar_varredura: bool = False) -> None:
         load=load,
     )
     print("\nPipeline concluído. Relatório gerado em output/")
+    print(f"  Status global = {resumo['status']} | η_max = {resumo['eta_max']:.4f}")
 
-    # ── Fase 6: Visualização 3D ───────────────────────────────────────────────
-    print("\n[FASE 6] Abrindo visualização 3D interativa...")
-    visualizar_galpao(
-        geo        = geo,
-        resultados = todos_para_relatorio,
-        H_pilar   = H_PILAR_ALT,
-        n_modulos = 8,
-        dist_mod  = L_T,
-        b_pilar   = B_PILAR,
-        h_pilar   = H_PILAR,
-        b_pilar_c = B_PILAR_C,
-        h_pilar_c = H_PILAR_C,
-        b_terca   = B_TERCA,
-        h_terca   = H_TERCA,
-    )
+    # ── Fase 6: Visualização 3D (opcional) ────────────────────────────────────
+    if abrir_viz:
+        print("\n[FASE 6] Abrindo visualização 3D interativa...")
+        visualizar_galpao(
+            geo        = geo,
+            resultados = todos_para_relatorio,
+            H_pilar   = H_PILAR_ALT,
+            n_modulos = 8,
+            dist_mod  = L_T,
+            b_pilar   = B_PILAR,
+            h_pilar   = H_PILAR,
+            b_pilar_c = B_PILAR_C,
+            h_pilar_c = H_PILAR_C,
+            b_terca   = B_TERCA,
+            h_terca   = H_TERCA,
+        )
+    else:
+        print("\n[FASE 6] Visualização 3D omitida (abrir_viz=False)")
+
+    return todos_para_relatorio
 
 
 if __name__ == "__main__":
-    main(rodar_varredura=False)
+    import argparse
+    ap = argparse.ArgumentParser(description="Pipeline MLC UFPR")
+    ap.add_argument("--varredura", action="store_true")
+    ap.add_argument("--sem-viz", action="store_true",
+                    help="Não abrir visualização 3D (útil para export)")
+    args = ap.parse_args()
+    main(rodar_varredura=args.varredura, abrir_viz=not args.sem_viz)

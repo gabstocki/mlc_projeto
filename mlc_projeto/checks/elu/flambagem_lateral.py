@@ -87,7 +87,7 @@ def calcular_sigma_m_crit(
     """
     Tensão crítica de flambagem lateral σ_m,crit — EC5 §6.3.3.
 
-    Secção retangular de coníferas — EC5 §6.3.3(2) Eq. (6.32):
+    Seção retangular de coníferas — EC5 §6.3.3(2) Eq. (6.32):
 
         σ_m,crit = 0,78 · b² · E_0,05 / (h · l_ef)
 
@@ -177,16 +177,16 @@ def verifica_flambagem_lateral(
     Condição (flexão simples):
         σ_m,d ≤ k_crit · f_m,d
 
-    Secção crítica: ponto de M_max da análise biarticulada.
+    Seção crítica: ponto de M_max da análise biarticulada.
     Altura h = h(x_Mmax).
 
-    σ_m,crit: EC5 §6.3.3(2) Eq. (6.32) — secção retangular.
+    σ_m,crit: EC5 §6.3.3(2) Eq. (6.32) — seção retangular.
 
     Args:
         geo  : Geometria da viga
         mat  : Material
         load : Carregamentos
-        l_1  : Distância entre restrições laterais efectivas (m).
+        l_1  : Distância entre restrições laterais efetivas (m).
                Usar `contraventamento['l_1_efetivo_m']` do pipeline.
 
     Returns:
