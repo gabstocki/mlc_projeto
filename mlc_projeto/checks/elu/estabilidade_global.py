@@ -156,6 +156,8 @@ def verificar_estabilidade_global(
     w_Ed_mm: float | None = None,
     m_colunas: int = 2,
     alpha_cr_min: float = ALPHA_CR_MIN,
+    contravento_vertical_ok: bool | None = None,
+    contravento_transversal_ok: bool | None = None,
 ) -> dict:
     """
     Verificação completa de estabilidade global do pórtico biarticulado.
@@ -168,6 +170,12 @@ def verificar_estabilidade_global(
                          a partir de ELS_S1 × γ (ordem de grandeza)
         m_colunas      : colunas por pórtico (2 = biarticulado simples)
         alpha_cr_min   : limiar de dispensa (default 10)
+        contravento_vertical_ok : estabilidade lateral LONGITUDINAL (issue 14).
+        contravento_transversal_ok : estabilidade lateral TRANSVERSAL (issue 31).
+                         Para cada direção: None → sistema não informado
+                         (mecanismo, α_cr,sway → 0); True → verificado (non-sway);
+                         False → não conforme (mecanismo sway). O sistema só é
+                         non-sway se AMBAS as direções forem True.
 
     Returns:
         dict com nocionais, α_cr, critérios e ok global
@@ -186,14 +194,44 @@ def verificar_estabilidade_global(
     # H de projeto a reter (empuxo 1.ª ordem já >> nocional)
     H_gov = max(H_Ed, H_imp)
 
-    # ── 2) Classificação do sistema no plano do pórtico ───────
-    # Biarticulado: bases e (efetivamente) caminho de H à sapata.
-    # Não é pórtico rígido de nós; P-Δ de «sway frame» não governa.
-    sistema_non_sway = True
+    # ── 2) Classificação do sistema (sway vs non-sway) ────────
+    # Pilares biarticulados (topo e base) + ligações viga-pilar rotuladas:
+    # NÃO há ação de pórtico. A estabilidade lateral depende de sistemas de
+    # contraventamento nas DUAS direções. Sem eles, o pórtico é um MECANISMO
+    # (α_cr,sway → 0). O α_cr de arco (passo 4) é o modo de snap-through do arco
+    # abatido — NÃO é o modo de deslocamento lateral (sway).
+    #   · Longitudinal (// cumeeira): contraventamento vertical (issue 14) →
+    #     contravento_vertical_ok  [checks/elu/contraventamento_vertical.py]
+    #   · Transversal (⊥ cumeeira, plano do pórtico): diafragma + frontões
+    #     (issue 31) → contravento_transversal_ok
+    #     [checks/elu/contraventamento_transversal.py]
+    # O sistema só é non-sway se AMBAS as direções tiverem sistema verificado.
+    def _classifica(flag, direcao, issue):
+        if flag is None:
+            return False, (f"{direcao}: sistema lateral não informado → "
+                           f"mecanismo sway (α_cr,sway → 0). Ver {issue}.")
+        if flag:
+            return True, (f"{direcao}: estabilidade lateral verificada "
+                          f"(non-sway). Ver {issue}.")
+        return False, (f"{direcao}: contraventamento NÃO conforme → mecanismo "
+                       f"sway. Rever {issue}.")
+
+    non_sway_long, nota_long = _classifica(
+        contravento_vertical_ok, "Longitudinal (// cumeeira)", "issue 14")
+    non_sway_transv, nota_direcao_transversal = _classifica(
+        contravento_transversal_ok, "Transversal (⊥ cumeeira)", "issue 31")
+
+    sistema_non_sway = non_sway_long and non_sway_transv
+    alpha_cr_sway = float("inf") if sistema_non_sway else 0.0
     nota_sistema = (
-        "Pórtico biarticulado: empuxo H de 1.ª ordem à fundação; "
-        "sem momentos de nó por ação de pórtico. "
-        "Classificado non-sway no plano (P-Δ global de piso N/A)."
+        "Sistema non-sway nas duas direções (contraventamento vertical e "
+        "transversal verificados)."
+        if sistema_non_sway
+        else "Sistema NÃO indeslocável: " + " | ".join(
+            n for n, ok in [(nota_long, non_sway_long),
+                            (nota_direcao_transversal, non_sway_transv)]
+            if not ok
+        )
     )
 
     # ── 3) α_cr de barra (INFORMATIVO — coberto por k_c) ───────
@@ -250,32 +288,45 @@ def verificar_estabilidade_global(
     eta_M_imp = sigma_m_imp / mat.f_m_d if mat.f_m_d > 0 else 0.0
 
     # ── 7) Agregação ──────────────────────────────────────────
-    # Dispensa global: non-sway + nocional + geometria.
-    # α_cr,arco: se falhar, alerta (ok=False) — modo de sistema.
-    # α_cr,barra: só informativo (k_c no ELU).
-    ok = sistema_non_sway and ok_geom and ok_imp and ok_acr
-    if ok:
+    # Pré-requisito: estabilidade LATERAL assegurada (non-sway) por um sistema
+    # de contraventamento vertical. Sem ele o sistema é um mecanismo e a
+    # dispensa de 2.ª ordem não se coloca (não há caminho de carga lateral).
+    # Verificados então: nocional + geometria do freche + α_cr de arco
+    # (snap-through). α_cr,barra é informativo (coberto por k_c no ELU).
+    if not sistema_non_sway:
+        ok = False
         conclusao = (
-            "Análise de 1.ª ordem suficiente: sistema non-sway "
-            "(biarticulado), α_cr,arco≥10, abaixamento do freche "
-            "desprezável e H_imp≪H_Ed. P-Δ global dispensado. "
-            "2.ª ordem de barra coberta por k_c (EC5 §6.3.2)."
+            "Estabilidade lateral NÃO demonstrada (mecanismo sway, α_cr,sway→0): "
+            + nota_sistema
+            + " Prover/verificar o(s) sistema(s) de contraventamento antes de "
+            "dispensar a 2.ª ordem."
         )
-        metodo = "1a_ordem"
+        metodo = "instavel_lateralmente"
     else:
-        motivos = []
-        if not ok_acr:
-            motivos.append(f"α_cr,arco={alpha_cr:.1f}<{alpha_cr_min:.0f}")
-        if not ok_geom:
-            motivos.append(f"w/f_c={w_over_f:.4f}")
-        if not ok_imp:
-            motivos.append(f"H_imp/H={ratio_imp:.3f}")
-        conclusao = (
-            "Efeitos de 2.ª ordem NÃO dispensáveis ("
-            + "; ".join(motivos)
-            + "). Reanalisar com amplificação k_II ou GNL."
-        )
-        metodo = "2a_ordem_requerida"
+        ok = ok_geom and ok_imp and ok_acr
+        if ok:
+            conclusao = (
+                "Análise de 1.ª ordem suficiente: sistema non-sway nas duas "
+                "direções (contraventamento vertical §14 + transversal §31 "
+                "verificados), α_cr,arco≥10, abaixamento do freche desprezável e "
+                "H_imp≪H_Ed. P-Δ global dispensado. 2.ª ordem de barra coberta "
+                "por k_c (EC5 §6.3.2)."
+            )
+            metodo = "1a_ordem"
+        else:
+            motivos = []
+            if not ok_acr:
+                motivos.append(f"α_cr,arco={alpha_cr:.1f}<{alpha_cr_min:.0f}")
+            if not ok_geom:
+                motivos.append(f"w/f_c={w_over_f:.4f}")
+            if not ok_imp:
+                motivos.append(f"H_imp/H={ratio_imp:.3f}")
+            conclusao = (
+                "Efeitos de 2.ª ordem NÃO dispensáveis ("
+                + "; ".join(motivos)
+                + "). Reanalisar com amplificação k_II ou GNL."
+            )
+            metodo = "2a_ordem_requerida"
 
     # η do critério de dispensa (não confundir com η de seção)
     eta_acr = alpha_cr_min / alpha_cr if alpha_cr > 0 else 999.0
@@ -306,9 +357,17 @@ def verificar_estabilidade_global(
         "H_imp_over_H":  round(ratio_imp, 5),
         "ok_nocional":   ok_imp,
         "lim_H_imp":     H_IMP_OVER_H_MAX,
-        # Classificação
+        # Classificação (sway / non-sway) — issues 14 (long.) e 31 (transv.)
         "sistema_non_sway": sistema_non_sway,
+        "non_sway_long": non_sway_long,
+        "non_sway_transv": non_sway_transv,
+        "contravento_vertical_ok": contravento_vertical_ok,
+        "contravento_transversal_ok": contravento_transversal_ok,
+        "alpha_cr_sway": (
+            round(alpha_cr_sway, 2) if math.isfinite(alpha_cr_sway) else 1e6
+        ),
         "nota_sistema":  nota_sistema,
+        "nota_direcao_transversal": nota_direcao_transversal,
         # α_cr sistema (arco) e barra (informativo)
         "alpha_cr":      round(alpha_cr, 2),
         "alpha_cr_min":  alpha_cr_min,

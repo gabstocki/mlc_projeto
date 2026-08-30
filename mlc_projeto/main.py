@@ -40,6 +40,12 @@ from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
 from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
 from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
+from mlc_projeto.checks.elu.contraventamento_vertical import (
+    verificar_contraventamento_vertical,
+)
+from mlc_projeto.checks.elu.contraventamento_transversal import (
+    verificar_contraventamento_transversal,
+)
 from mlc_projeto.checks.elu.estabilidade_global import (
     verificar_estabilidade_global, relatorio_estabilidade_global,
 )
@@ -137,6 +143,23 @@ L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
 N_MODULOS_CV    = 2       # baías com cruzes (extremos)
 D_BARRA_CV_MM   = 18.0    # mm — diagonal tracionada
 ACO_CV          = "S235"
+
+# --- Contraventamento VERTICAL (issue 14) — caminho de carga lateral à fundação
+# Cruzes de St. André nas paredes longitudinais que descem a força de vento
+# θ=0° do nível da cobertura até a fundação (EN 1993-1-1 §5.3.2+§6.2.3).
+N_PAINEIS_CV_VERT = 2       # painéis de cruz que resistem à força longitudinal
+D_BARRA_CVV_MM    = None    # mm — None → auto (comercial, η ≤ ETA_CVV_ALVO)
+ACO_CVV           = "S235"
+ETA_CVV_ALVO      = 0.90    # margem de projeto na diagonal vertical
+
+# --- Contraventamento TRANSVERSAL (issue 31, Opção 2) — diafragma + frontões
+# Diafragma de cobertura leva o vento θ=90° + nocional aos frontões
+# contraventados (cruzes de St. André), e destes à fundação. Valida l_ef=1H
+# (non-sway) dos pilares no plano do pórtico.
+N_PAINEIS_CV_TRANSV = 1     # painéis de cruz por frontão
+D_BARRA_CVT_MM      = None  # mm — None → auto (comercial, η ≤ ETA_CVT_ALVO)
+ACO_CVT             = "S235"
+ETA_CVT_ALVO        = 0.90  # margem de projeto na diagonal do frontão
 
 # --- Ligações / apoio ---------------------------------------------------------
 D_BASE_MM   = 36       # mm — pinos L1 (R2)
@@ -489,6 +512,56 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"(estab={res_elu['contraventamento'].get('R_ext_estab_kN', 0):.1f}, "
               f"vento0/2={res_elu['contraventamento'].get('F_vento0_kN', 0)/2:.1f})")
 
+    # Contraventamento VERTICAL — caminho de carga lateral até a fundação (issue 14)
+    print("\n[FASE 2] Contraventamento vertical (força lateral → fundação)...")
+    res_elu["contraventamento_vertical"] = verificar_contraventamento_vertical(
+        geo=geo, load=load,
+        H_pilar_m=H_PILAR_ALT,
+        dist_portico=L_T,
+        L_comp=L_COMP_GALPAO,
+        n_porticos=2,
+        n_paineis_long=N_PAINEIS_CV_VERT,
+        aco=ACO_CVV,
+        d_mm=D_BARRA_CVV_MM,
+        eta_alvo=ETA_CVV_ALVO,
+        R_ext_cobertura_kN=res_elu["contraventamento"].get("R_ext_proj_kN"),
+    )
+    cvv = res_elu["contraventamento_vertical"]
+    _print_eta("Contravento vertical §5.4", cvv)
+    print(f"  · F_vento0={cvv['F_vento0_kN']:.1f} kN + H_imp={cvv['H_imp_kN']:.1f} kN "
+          f"→ V_lat={cvv['V_lat_total_kN']:.1f} kN / {cvv['n_paineis']} painéis")
+    print(f"  · Diagonal ∅{cvv['d_mm']:.0f} mm {cvv['aco']} (β={cvv['beta_deg']}°) | "
+          f"N_diag={cvv['N_diag_kN']:.1f} kN | η_N={cvv['eta_diag_N']:.3f} | "
+          f"η_δ={cvv['eta_delta']:.3f}")
+    print(f"  · Caminho à fundação: H_base={cvv['H_base_kN']:.1f} kN + "
+          f"arrancamento N_uplift={cvv['N_uplift_kN']:.1f} kN")
+
+    # Contraventamento TRANSVERSAL — diafragma + frontões → fundação (issue 31)
+    print("\n[FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...")
+    res_elu["contraventamento_transversal"] = verificar_contraventamento_transversal(
+        geo=geo, load=load, params_vento=params_vento,
+        H_pilar_m=H_PILAR_ALT,
+        dist_portico=L_T,
+        L_comp=L_COMP_GALPAO,
+        n_porticos=2,
+        b_pilar=B_PILAR, h_pilar=H_PILAR,
+        n_paineis_por_gable=N_PAINEIS_CV_TRANSV,
+        aco=ACO_CVT,
+        d_mm=D_BARRA_CVT_MM,
+        eta_alvo=ETA_CVT_ALVO,
+    )
+    cvt = res_elu["contraventamento_transversal"]
+    _print_eta("Contravento transversal §5.4", cvt)
+    print(f"  · Arrasto θ=90° ({cvt['n_colunas']} pilares)={cvt['H_vento_topo_kN']:.1f} kN"
+          f" + H_imp={cvt['H_imp_kN']:.1f} kN → H_tr={cvt['H_tr_kN']:.1f} kN")
+    print(f"  · Diafragma: R_frontão={cvt['R_gable_kN']:.1f} kN | "
+          f"N_corda={cvt['N_corda_kN']:.1f} kN (→ beiral)")
+    print(f"  · Frontão ∅{cvt['d_mm']:.0f} mm {cvt['aco']} (β={cvt['beta_deg']}°) | "
+          f"N_diag={cvt['N_diag_kN']:.1f} kN | η_N={cvt['eta_diag_N']:.3f} | "
+          f"η_δ={cvt['eta_delta']:.3f}")
+    print(f"  · Caminho à fundação: H_base={cvt['H_base_kN']:.1f} kN + "
+          f"N_uplift={cvt['N_uplift_kN']:.1f} kN | l_ef=1H (non-sway) validado")
+
     # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
     print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
     res_elu["estabilidade_global"] = verificar_estabilidade_global(
@@ -496,6 +569,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         H_pilar_m=H_PILAR_ALT,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         m_colunas=2,
+        contravento_vertical_ok=cvv["lateral_estavel_long"],
+        contravento_transversal_ok=cvt["lateral_estavel_transv"],
     )
     eg = res_elu["estabilidade_global"]
     _print_eta("Estab. global α_cr/P-Δ", eg)

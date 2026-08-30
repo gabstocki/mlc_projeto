@@ -34,7 +34,7 @@ def test_k_II_proximo_de_um():
     assert amplificacao_segunda_ordem(10.0) == pytest.approx(1.1111, rel=1e-3)
 
 
-def test_estabilidade_global_R2_dispensa_2a_ordem():
+def _load_R2():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.30)
     mat = GlulamMaterial("GL24h", 3, "curta")
     pv = ParametrosVento(
@@ -45,17 +45,80 @@ def test_estabilidade_global_R2_dispensa_2a_ordem():
         geo, mat, 1.5, 0.25, 5.75, pv,
         b_pilar=0.22, h_pilar=0.26,
     )
+    return geo, mat, load
+
+
+def test_estabilidade_sem_contravento_e_mecanismo():
+    """
+    Issue 14: pórtico biarticulado SEM contraventamento vertical informado é
+    um mecanismo sway (α_cr,sway → 0) — NÃO pode ser classificado non-sway.
+    """
+    geo, mat, load = _load_R2()
+    res = verificar_estabilidade_global(
+        geo, mat, load, H_pilar_m=7.0, b_pilar=0.22, h_pilar=0.26,
+    )
+    assert res["sistema_non_sway"] is False
+    assert res["ok"] is False
+    assert res["metodo_analise"] == "instavel_lateralmente"
+    assert res["alpha_cr_sway"] == 0.0
+    # o α_cr de arco continua a existir como informativo (snap-through)
+    assert res["alpha_cr"] >= 10.0
+
+
+def test_estabilidade_so_uma_direcao_ainda_mecanismo():
+    """
+    Non-sway exige AMBAS as direções. Só a longitudinal verificada (transversal
+    ausente) ainda é mecanismo.
+    """
+    geo, mat, load = _load_R2()
+    res = verificar_estabilidade_global(
+        geo, mat, load, H_pilar_m=7.0, b_pilar=0.22, h_pilar=0.26,
+        contravento_vertical_ok=True,   # só longitudinal
+    )
+    assert res["non_sway_long"] is True
+    assert res["non_sway_transv"] is False
+    assert res["sistema_non_sway"] is False
+    assert res["ok"] is False
+    assert res["metodo_analise"] == "instavel_lateralmente"
+
+
+def test_estabilidade_com_contravento_dispensa_2a_ordem():
+    """
+    Com contraventamento vertical E transversal verificados (non-sway nas duas
+    direções), e demais critérios atendidos, dispensa-se a 2.ª ordem global.
+    """
+    geo, mat, load = _load_R2()
     res = verificar_estabilidade_global(
         geo, mat, load,
         H_pilar_m=7.0, b_pilar=0.22, h_pilar=0.26,
+        contravento_vertical_ok=True,
+        contravento_transversal_ok=True,
     )
     assert res["ok"] is True
     assert res["metodo_analise"] == "1a_ordem"
     assert res["sistema_non_sway"] is True
-    assert res["alpha_cr"] >= 10.0          # modo arco
-    assert res["H_imp_over_H"] < 0.01       # nocional << empuxo
+    assert res["non_sway_long"] is True
+    assert res["non_sway_transv"] is True
+    assert res["alpha_cr_sway"] > 1e5        # estabilidade provida pelos contraventos
+    assert res["alpha_cr"] >= 10.0           # modo arco
+    assert res["H_imp_over_H"] < 0.01        # nocional << empuxo
     assert res["w_over_f"] < 0.05
     assert res["H_imp_kN"] < 5.0
     assert res["H_Ed_kN"] > 1000.0
     # barra pode ter α_cr < 10 — informativo, coberto por k_c
     assert "k_c" in res["nota_alpha_cr_barra"]
+
+
+def test_estabilidade_contravento_reprovado():
+    """Contraventamento transversal não conforme → mecanismo sway (ok False)."""
+    geo, mat, load = _load_R2()
+    res = verificar_estabilidade_global(
+        geo, mat, load,
+        H_pilar_m=7.0, b_pilar=0.22, h_pilar=0.26,
+        contravento_vertical_ok=True,
+        contravento_transversal_ok=False,
+    )
+    assert res["sistema_non_sway"] is False
+    assert res["non_sway_transv"] is False
+    assert res["ok"] is False
+    assert res["metodo_analise"] == "instavel_lateralmente"

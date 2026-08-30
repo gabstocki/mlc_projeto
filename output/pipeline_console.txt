@@ -47,10 +47,23 @@
   · M_d=2.54 kNm | F_d=2.91 kN | eixo=y
   · Contraventamento: força governante = estab_9.2.5 | R_ext=168.8 kN (estab=168.8, vento0/2=62.9)
 
+[FASE 2] Contraventamento vertical (força lateral → fundação)...
+  ✓ Contravento vertical §5.4      η = 0.8170  ████████████████
+  · F_vento0=125.8 kN + H_imp=21.3 kN → V_lat=337.7 kN / 2 painéis
+  · Diagonal ∅42 mm S235 (β=50.6°) | N_diag=266.0 kN | η_N=0.817 | η_δ=0.559
+  · Caminho à fundação: H_base=168.8 kN + arrancamento N_uplift=205.5 kN
+
+[FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...
+  ✓ Contravento transversal §5.4   η = 0.6458  ████████████
+  · Arrasto θ=90° (27 pilares)=39.3 kN + H_imp=21.3 kN → H_tr=60.5 kN
+  · Diafragma: R_frontão=30.3 kN | N_corda=8.6 kN (→ beiral)
+  · Frontão ∅20 mm S235 (β=50.6°) | N_diag=47.7 kN | η_N=0.646 | η_δ=0.442
+  · Caminho à fundação: H_base=30.3 kN + N_uplift=36.8 kN | l_ef=1H (non-sway) validado
+
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
   ✓ Estab. global α_cr/P-Δ         η = 0.6807  █████████████
   · α_cr=14.7 (mín 10) | H_imp=1.37 kN (0.08% de H_Ed) | w/f_c=0.00171
-  · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway (biarticulado), α_cr,arco≥10, …
+  · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway nas duas direções (contraventa…
 
 [FASE 2] Impacto de veículo em pilares (estacionamento)...
   ✓ Impacto veículo (A_d)          η = 0.4913  █████████
@@ -102,6 +115,8 @@
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.4620  ✓
   Terça flexão                     EC5 §6.1.6+§6.1.7              0.2993  ✓
   Contraventamento cobertura       EC5 §9.2.5                     0.7711  ✓
+  Contravento vertical             EN 1993-1-1 §5.3+§6.2.3        0.8170  ✓
+  Contravento transversal          EN 1993-1-1 §5.3+§6.2.3        0.6458  ✓
   Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3          0.6807  ✓
   Impacto veículo (A_d)            EN 1991-1-7                    0.4913  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3             0.7220  ✓
@@ -122,16 +137,16 @@
   T_tirante    = 1630.49 kN  (∅90.0 mm S355)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 24  |  todas OK = True
+  N.º verif.   = 26  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
 [FASE 5] Export relatório (Excel + LaTeX/PDF)...
-  Excel: C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.xlsx
-  LaTeX: C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.tex
-  PDF  : C:\Users\Autosombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.pdf
+  Excel: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.xlsx
+  LaTeX: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.tex
+  PDF  : /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.pdf
 
 Pipeline concluído. Relatório gerado em output/
   Status global = APROVADO | η_max = 1.0000
 
-[FASE 6] Abrindo visualização 3D interativa...
+[FASE 6] Visualização 3D omitida (abrir_viz=False)

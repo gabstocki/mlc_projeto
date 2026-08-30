@@ -44,6 +44,8 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
+    ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
+    ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
     ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
@@ -419,6 +421,8 @@ def gerar_tex(
     r_fL2  = _clean_dict(resultados.get("fadiga_L2",   {}))
     r_fL1c = _clean_dict(resultados.get("fadiga_L1c",  {}))
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
+    r_cvv  = _clean_dict(resultados.get("contraventamento_vertical", {}))
+    r_cvt  = _clean_dict(resultados.get("contraventamento_transversal", {}))
     r_ter  = _clean_dict(resultados.get("terca", {}))
     r_eg   = _clean_dict(resultados.get("estabilidade_global", {}))
     r_iv   = _clean_dict(resultados.get("impacto_veiculo", {}))
@@ -748,8 +752,33 @@ def gerar_tex(
     _ok_imp = r_eg.get('ok_nocional', True)
     _ok_acr = r_eg.get('ok_alpha_cr', True)
     _ok_geo = r_eg.get('ok_geometria', True)
+    _non_sway = bool(r_eg.get('sistema_non_sway', False))
+    _ns_l = bool(r_eg.get('non_sway_long', False))
+    _ns_t = bool(r_eg.get('non_sway_transv', False))
     def _sim_eg(o):
         return r'\checkmark' if o else r'$\times$'
+    # Item 1 — classificação sway/non-sway condicionada aos contraventamentos
+    # nas DUAS direções: longitudinal (issue 14, \S8b.1) e transversal (issue 31,
+    # \S8b.2). Pórtico biarticulado SEM esses sistemas é mecanismo sway.
+    if _non_sway:
+        _item_nonsway = (
+            '  \\item Sistema \\textbf{non-sway} nas duas direções: '
+            'contraventamento \\textbf{vertical} (\\S8b.1) e '
+            '\\textbf{transversal} (\\S8b.2) verificados '
+            + _sim_eg(True) + ';\n'
+        )
+    else:
+        _falhas = []
+        if not _ns_l:
+            _falhas.append('longitudinal (\\S8b.1)')
+        if not _ns_t:
+            _falhas.append('transversal (\\S8b.2)')
+        _item_nonsway = (
+            '  \\item \\textbf{Estabilidade lateral não demonstrada} '
+            '(\\emph{mecanismo sway}, $\\alpha_{cr,sway}\\to 0$) na(s) direção(ões): '
+            + ', '.join(_falhas) + ' '
+            + _sim_eg(False) + ';\n'
+        )
     parts.append(
         '% ── 8b. Estabilidade global ────────────────────────────\n'
         '\\section*{8b. Estabilidade Global -- P-$\\Delta$, '
@@ -761,11 +790,13 @@ def gerar_tex(
         'A escala \\textbf{global} verifica-se por analogia com '
         'EN~1993-1-1~\\S5.2.1 ($\\alpha_{cr}$) e \\S5.3.2 '
         '(forças nocionais $\\varphi$), face ao silêncio do EC5 sobre '
-        'limiares numéricos de pórtico.\n\n'
+        'limiares numéricos de pórtico. O $\\alpha_{cr,arco}$ abaixo é o modo de '
+        '\\emph{snap-through} do arco abatido -- \\textbf{não} o modo de '
+        'deslocamento lateral (\\emph{sway}) do pórtico.\n\n'
         '\\textbf{Critérios de dispensa de 2.\\textsuperscript{a} ordem \\emph{global}:}\n'
         '\\begin{enumerate}\n'
-        '  \\item Sistema \\textbf{non-sway} (biarticulado: $H$ à fundação);\n'
-        '  \\item $\\alpha_{cr,arco}\\geq 10$ com $L_{ef}\\approx L/2$ (modo de sistema);\n'
+        + _item_nonsway +
+        '  \\item $\\alpha_{cr,arco}\\geq 10$ com $L_{ef}\\approx L/2$ (modo de arco);\n'
         '  \\item $w_{Ed}/f_c \\leq 0{,}05$ (abaixamento do freche);\n'
         '  \\item $H_{imp}/H_{Ed} \\leq 0{,}10$ (nocional coberta pelo empuxo).\n'
         '\\end{enumerate}\n'
@@ -862,6 +893,76 @@ def gerar_tex(
         'global são tipicamente desprezáveis. O empuxo de 1.\\textsuperscript{a} '
         'ordem governa fundações e L1/L3.\n\n'
     )
+
+    # ── 8b.1 Contraventamento vertical (issue 14) ──────────────
+    if r_cvv:
+        _cvv_okN = bool(r_cvv.get('ok_diag', False))
+        _cvv_okd = bool(r_cvv.get('ok_delta', False))
+        parts.append(
+            '% ── 8b.1 Contraventamento vertical ─────────────────────\n'
+            '\\subsection*{8b.1 Contraventamento Vertical -- '
+            'Caminho de Carga Lateral à Fundação '
+            '(EN~1993-1-1~\\S5.3.2+\\S6.2.3)}\n\n'
+            'Com pilares biarticulados (topo e base) e ligações viga-pilar '
+            'rotuladas não há ação de pórtico: a estabilidade lateral longitudinal '
+            'é provida por \\textbf{cruzes de St.\\ André} nas paredes, que '
+            'conduzem a força de vento $\\theta=0^\\circ$ (mais a força nocional '
+            'EN~1993-1-1~\\S5.3.2) do nível da cobertura \\textbf{até a fundação}.\n\n'
+            '\\begin{tabular}{@{}lll@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref./limite} \\\\\n'
+            '  \\midrule\n'
+            f'  $F_{{w,\\theta=0}}$ (vento long.) & {_br(r_cvv.get("F_vento0_kN", 0), 1)}~kN & NBR 6123 \\\\\n'
+            f'  $H_{{imp}}=\\varphi\\,V$ (nocional) & {_br(r_cvv.get("H_imp_kN", 0), 1)}~kN & \\S5.3.2 \\\\\n'
+            f'  $V_{{lat}}$ total & {_br(r_cvv.get("V_lat_total_kN", 0), 1)}~kN & {_i(r_cvv.get("n_paineis", 2))} painéis \\\\\n'
+            f'  $V$ por painel & {_br(r_cvv.get("V_painel_kN", 0), 1)}~kN & \\\\\n'
+            f'  Diagonal & $d={_i(r_cvv.get("d_mm", 0))}$~mm {r_cvv.get("aco", "S235")} & $\\beta={_br(r_cvv.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
+            f'  $N_{{diag}}\\leq N_{{t,Rd}}$ & {_br(r_cvv.get("N_diag_kN", 0), 1)} $\\leq$ {_br(r_cvv.get("N_t_Rd_kN", 0), 1)}~kN & $\\eta={_br(r_cvv.get("eta_diag_N", 0), 3)}$ {_sim_eg(_cvv_okN)} \\\\\n'
+            f'  $H_{{base}}$ (cortante) & {_br(r_cvv.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
+            f'  $N_{{uplift}}$ (arrancamento) & {_br(r_cvv.get("N_uplift_kN", 0), 1)}~kN & ancoragem \\\\\n'
+            f'  $\\delta\\leq H/300$ & {_br(r_cvv.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvv.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(r_cvv.get("eta_delta", 0), 3)}$ {_sim_eg(_cvv_okd)} \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
+            '\\textbf{Direção transversal (no plano do pórtico):} tratada na '
+            '\\S8b.2 (diafragma de cobertura + frontões contraventados).\n\n'
+        )
+
+    # ── 8b.2 Contraventamento transversal (issue 31) ──────────
+    if r_cvt:
+        _cvt_okN = bool(r_cvt.get('ok_diag', False))
+        _cvt_okd = bool(r_cvt.get('ok_delta', False))
+        parts.append(
+            '% ── 8b.2 Contraventamento transversal ──────────────────\n'
+            '\\subsection*{8b.2 Contraventamento Transversal -- '
+            'Diafragma de Cobertura + Frontões (EN~1993-1-1~\\S5.3.2+\\S6.2.3)}\n\n'
+            'No plano do pórtico ($\\perp$ cumeeira), os pilares birotulados '
+            'formam um mecanismo \\emph{sway}. A estabilidade é provida pelo '
+            '\\textbf{diafragma de cobertura} (viga horizontal ao longo do '
+            'comprimento), que conduz o vento $\\theta=90^\\circ$ (mais a força '
+            'nocional) aos \\textbf{frontões contraventados} (cruzes de St.\\ '
+            'André) e destes \\textbf{à fundação}. Com os topos travados pelo '
+            'diafragma, $l_{ef}=1{,}0\\,H$ (non-sway) fica \\textbf{legítimo} '
+            'para os pilares.\n\n'
+            '\\begin{tabular}{@{}lll@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref./limite} \\\\\n'
+            '  \\midrule\n'
+            f'  Arrasto $\\theta=90^\\circ$ (topo) & {_br(r_cvt.get("H_vento_topo_kN", 0), 1)}~kN & {_i(r_cvt.get("n_colunas", 0))} pilares, NBR 6123 \\\\\n'
+            f'  $H_{{imp}}=\\varphi\\,V$ (nocional) & {_br(r_cvt.get("H_imp_kN", 0), 1)}~kN & \\S5.3.2 \\\\\n'
+            f'  $H_{{tr}}$ total & {_br(r_cvt.get("H_tr_kN", 0), 1)}~kN & \\\\\n'
+            f'  $N_{{corda}}$ diafragma & {_br(r_cvt.get("N_corda_kN", 0), 1)}~kN & $M/B$ (ao beiral) \\\\\n'
+            f'  $R_{{frontão}}$ & {_br(r_cvt.get("R_gable_kN", 0), 1)}~kN & $H_{{tr}}/2$ \\\\\n'
+            f'  Diagonal frontão & $d={_i(r_cvt.get("d_mm", 0))}$~mm {r_cvt.get("aco", "S235")} & $\\beta={_br(r_cvt.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
+            f'  $N_{{diag}}\\leq N_{{t,Rd}}$ & {_br(r_cvt.get("N_diag_kN", 0), 1)} $\\leq$ {_br(r_cvt.get("N_t_Rd_kN", 0), 1)}~kN & $\\eta={_br(r_cvt.get("eta_diag_N", 0), 3)}$ {_sim_eg(_cvt_okN)} \\\\\n'
+            f'  $H_{{base}}$ (cortante) & {_br(r_cvt.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
+            f'  $N_{{uplift}}$ (arrancamento) & {_br(r_cvt.get("N_uplift_kN", 0), 1)}~kN & ancoragem \\\\\n'
+            f'  $\\delta\\leq H/300$ & {_br(r_cvt.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvt.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(r_cvt.get("eta_delta", 0), 3)}$ {_sim_eg(_cvt_okd)} \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
+            '\\textit{Nota:} a força de corda do diafragma soma-se ao '
+            'dimensionamento do elemento de beiral (verificação do membro, à '
+            'parte). Com o diafragma verificado, o dimensionamento dos pilares '
+            '(\\S8) e o modelo $pilar\\_vento\\_90$ (biapoiado, topo travado) '
+            'são legítimos nesta direção.\n\n'
+        )
 
     # ── 8c. Impacto de veículo ─────────────────────────────────
     _iv_ok = bool(r_iv) and bool(r_iv.get("ok", False))
@@ -1042,7 +1143,7 @@ def gerar_tex(
     parts.append(_br(r_cv.get('L_total_m', 0), 1))
     parts.append('~m\n    (')
     parts.append(_br(r_cv.get('peso_total_kg', 0), 1))
-    parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto. Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{@{}lllcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\eta$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
+    parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto (contraventamento vertical em \\S8b.1; transversal em \\S8b.2). Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{@{}lllcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\eta$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
     parts.append(f'{r_els.get('w_S1_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_inst_mm', 67.5):.2f}~mm & ')
     parts.append(f'{eta_S1:.4f} & ')
