@@ -20,7 +20,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 |---|-----------|-------|
 | 01 | P1 | [Peso próprio gk superestimado](01-gk-peso-proprio-superestimado.md) ✅ |
 | 02 | P1 | [Sobrecarga qk categoria H (0,25 → 0,4 kN/m²)](02-qk-categoria-H.md) |
-| 03 | P1 | [ψ₀ categoria H = 0 — sobrecarga não combina com vento](03-psi0-categoria-H-vento.md) |
+| 03 | P1 | [ψ₀ categoria H = 0 — sobrecarga não combina com vento](03-psi0-categoria-H-vento.md) ✅ |
 | 04 | P1 | [Coeficiente G favorável: 0,9G (NBR) → EN 1990 Tab. A1.2(B)](04-coef-G-favoravel-C3.md) |
 | 05 | P2 | [Combinação frequente ψ₁ categoria H = 0](05-psi1-combinacao-frequente.md) |
 | 33 | P1 | [Sucção/uplift: ancoragem ao arrancamento e tirante frouxo](33-succao-uplift-ancoragem-tirante.md) — desdobramento da 1 ✅ |

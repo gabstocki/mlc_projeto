@@ -52,10 +52,17 @@ from mlc_projeto.core.materials import GlulamMaterial
 GAMMA_G_sup = 1.35
 GAMMA_G_inf = 0.90
 GAMMA_Q     = 1.50
-PSI_0_Q     = 0.70
-PSI_0_W     = 0.60
-PSI_1_Q     = 0.50
+
+# Coeficientes ψ — cobertura CATEGORIA H (não acessível, só manutenção).
+# EN 1990 Tab. A1.1 (categoria H): ψ0 = ψ1 = ψ2 = 0 para a sobrecarga.
+# EN 1991-1-1 §3.3.2(1): a sobrecarga de cobertura (cat. H) NÃO é concomitante
+# com vento nem neve → Q e W são ações variáveis alternativas (issue 3).
+PSI_0_Q     = 0.00   # categoria H (era 0,70 — categorias A–D)
+PSI_1_Q     = 0.50   # (issue 5: para cat. H deve ser 0,0)
 PSI_2_Q     = 0.00
+# Vento: ψ0,W=0,6 (EN 1990 Tab. A1.1). Não se aplica como acompanhante da
+# sobrecarga aqui, pois Q (cat. H) e W não são concomitantes.
+PSI_0_W     = 0.60
 PSI_2_W     = 0.00
 
 # Aceleração da gravidade (peso próprio — EN 1991-1-1 §4)
@@ -542,23 +549,24 @@ class Carregamentos:
             wd = p["w_dir_kNm2"] * self._area_trib
             desc_p = p.get("descricao", pid)
 
-            # W dominante: 1,35G + 1,5W + ψ0·1,5Q
-            # Duração «curta» (não «instantanea») — EC5 §2.3.1.2; critério
-            # de projeto conservador (k_mod menor). Ver memorial / materials.
+            # Vento dominante (pressão): 1,35G + 1,5W. Categoria H → SEM Q
+            # (EN 1991-1-1 §3.3.2(1); ψ0,Q=0, EN 1990 Tab. A1.1). Duração «curta»
+            # (EC5 §2.3.1.2; critério conservador — ver materials/memorial).
             c_w = _comb(
                 f"ELU_W_{pid}", "ELU",
-                f"1,35G+1,5W+1,05Q | {desc_p}",
-                GAMMA_G_sup * g + GAMMA_Q * we + PSI_0_Q * GAMMA_Q * q,
-                GAMMA_G_sup * g + GAMMA_Q * wd + PSI_0_Q * GAMMA_Q * q,
+                f"1,35G+1,5W (cat.H: sem Q) | {desc_p}",
+                GAMMA_G_sup * g + GAMMA_Q * we,
+                GAMMA_G_sup * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
             )
             c[c_w.nome] = c_w
             elu_vento.append(c_w)
 
-            # Sucção / G favorável: 0,9G + 1,5W  (se W reduz carga vertical)
+            # Vento dominante (sucção) / G favorável: 0,9G + 1,5W (sem Q).
+            # NB: coeficiente de G favorável — ver issue 4 (EN 1990 Tab. A1.2(B)).
             c_s = _comb(
                 f"ELU_S_{pid}", "ELU",
-                f"0,9G+1,5W | {desc_p}",
+                f"0,9G+1,5W (cat.H: sem Q) | {desc_p}",
                 GAMMA_G_inf * g + GAMMA_Q * we,
                 GAMMA_G_inf * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
@@ -566,22 +574,23 @@ class Carregamentos:
             c[c_s.nome] = c_s
             elu_vento.append(c_s)
 
-            # Q dominante com W acompanhante: 1,35G + 1,5Q + ψ0·1,5W
-            c_q = _comb(
-                f"ELU_Q_{pid}", "ELU",
-                f"1,35G+1,5Q+0,9W | {desc_p}",
-                GAMMA_G_sup * g + GAMMA_Q * q + PSI_0_W * GAMMA_Q * we,
-                GAMMA_G_sup * g + GAMMA_Q * q + PSI_0_W * GAMMA_Q * wd,
-                "longa", padrao=pid,
-            )
-            c[c_q.nome] = c_q
-            elu_vento.append(c_q)
+        # Sobrecarga dominante — categoria H: SEM vento (não concomitante,
+        # EN 1991-1-1 §3.3.2(1)). Uma única combinação gravítica (independe do
+        # padrão de vento). Duração «média» — sobrecarga (EC5 Tab. 2.1 / §3.1.3).
+        c_q_grav = _comb(
+            "ELU_Q", "ELU",
+            "1,35G+1,5Q (cat.H: sem vento)",
+            GAMMA_G_sup * g + GAMMA_Q * q,
+            GAMMA_G_sup * g + GAMMA_Q * q,
+            "media",
+        )
+        c[c_q_grav.nome] = c_q_grav
+        elu_vento.append(c_q_grav)
 
         # Aliases legados (compatibilidade main/OpenSees/relatório)
-        # Governantes por |M| entre padrões com q médio > 0 e W dominante
-        grav = [x for x in elu_vento if x.q_tot > 0 and x.nome.startswith("ELU_W_")]
-        if not grav:
-            grav = [x for x in elu_vento if x.q_tot > 0]
+        # Governante por |M| entre TODAS as combinações de sentido gravítico
+        # (q_tot > 0): vento-pressão dominante (ELU_W_) e sobrecarga (ELU_Q).
+        grav = [x for x in elu_vento if x.q_tot > 0]
         gov_m = max(grav, key=lambda x: abs(x.M_max_kNm)) if grav else elu_vento[0]
 
         # Sucção: menor q_tot (mais negativo) entre ELU_S
@@ -593,10 +602,10 @@ class Carregamentos:
 
         c["ELU_C1"] = _comb(
             "ELU_C1", "ELU",
-            "1,35G + 1,5Q + 0,9W_C1bv  (Q dominante, legado)",
-            GAMMA_G_sup * g + GAMMA_Q * q + PSI_0_W * GAMMA_Q * self.w_C1bv_k,
-            GAMMA_G_sup * g + GAMMA_Q * q + PSI_0_W * GAMMA_Q * self.w_C1bv_k,
-            "longa", padrao="C1_unif_bv",
+            "1,35G + 1,5Q  (Q dominante, cat.H: sem vento)",
+            GAMMA_G_sup * g + GAMMA_Q * q,
+            GAMMA_G_sup * g + GAMMA_Q * q,
+            "media",
         )
         # ELU_C2 = alias do governante por |M| (W dominante Tab.25)
         c["ELU_C2"] = Combinacao(
@@ -644,27 +653,18 @@ class Carregamentos:
             x_Mmax_m=gov_h.x_Mmax_m, duracao="curta",
         )
 
-        # ELS (com W_C1bv legado + melhor padrão gravítico)
-        w_els_e = gov_m.q_esq - GAMMA_G_sup * g - PSI_0_Q * GAMMA_Q * q
-        # ELS usa valores característicos — G+Q+ψ0·W com padrão do gov |M|
-        # Reconstruir W característico a partir do padrão
-        pid_gov = gov_m.padrao_vento
-        we_k = wd_k = self.w_C1bv_k
-        for p in padroes:
-            if p["id"] == pid_gov:
-                we_k = p["w_esq_kNm2"] * self._area_trib
-                wd_k = p["w_dir_kNm2"] * self._area_trib
-                break
+        # ELS característico — categoria H: Q e W NÃO concomitantes
+        # (EN 1991-1-1 §3.3.2(1)). Para a flecha descendente governa G+Q (sem
+        # vento; o vento é sucção/uplift — flecha ascendente, ver issues 6/33).
         c["ELS_S1"] = _comb(
             "ELS_S1", "ELS",
-            f"G+Q+0,6W | padrão {pid_gov}",
-            g + q + PSI_0_W * we_k,
-            g + q + PSI_0_W * wd_k,
-            "longa", padrao=pid_gov,
+            "G + Q  (característico, cat.H: sem vento)",
+            g + q, g + q,
+            "longa",
         )
         c["ELS_S2"] = _comb(
             "ELS_S2", "ELS",
-            "G + 0,5Q  (frequente)",
+            "G + ψ1·Q  (frequente)",   # cat. H: ψ1=0 → G (ver issue 5)
             g + PSI_1_Q * q, g + PSI_1_Q * q,
             "longa",
         )

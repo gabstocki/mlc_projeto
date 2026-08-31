@@ -698,7 +698,18 @@ def gerar_tex(
     parts.append(_br((geo.h_ap - geo.h0) / (geo.L / 2), 4))
     parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Combinações de ações -- EN 1990 (valores do pipeline):}\n\n{\\small\\begin{tabular}{@{}p{2.8cm}p{8.2cm}r@{}}\n  \\toprule\n  \\textbf{Combinação} & \\textbf{Descrição} & \\textbf{$q_{tot}$ (kN/m)} \\\\\n  \\midrule\n')
     parts.append(comb_lines)
-    parts.append('  \\bottomrule\n\\end{tabular}}\n\n% ── 5. Sistema Estrutural ─────────────────────────────────────\n\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projeção horizontal $\\mathrm{d}x$ (autorizada no projeto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 ativo.\n  \\item Classe de serviço ')
+    parts.append(
+        '  \\bottomrule\n\\end{tabular}}\n\n\\vspace{4pt}\n'
+        '\\textit{Concomitância (categoria H):} a cobertura é \\textbf{não '
+        'acessível} (categoria~H, EN 1991-1-1 Tab.~6.9/6.10). Pela EN~1990 '
+        'Tab.~A1.1, $\\psi_0=\\psi_1=\\psi_2=0$ para a sobrecarga; e a '
+        'EN~1991-1-1~\\S3.3.2(1) determina que a sobrecarga de cobertura '
+        '\\textbf{não atua simultaneamente com o vento}. Logo $Q$ e $W$ são '
+        'ações variáveis \\textbf{alternativas}: combinações com vento dominante '
+        'não incluem $Q$, e a combinação de sobrecarga não inclui vento '
+        '(vento pela NBR~6123:2023).\n\n'
+        '% ── 5. Sistema Estrutural ─────────────────────────────────────\n'
+        '\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projeção horizontal $\\mathrm{d}x$ (autorizada no projeto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 ativo.\n  \\item Classe de serviço ')
     parts.append(f'{mat.classe_servico}')
     parts.append(': galpão aberto nas laterais.\n  \\item \\textbf{Contraventamento horizontal} (cruzes de St.~André + terças-biela):\n        garante a função estrutural da cobertura e valida $l_1=s$ no LTB\n        (EC5~\\S9.2.5) -- ver \\S9.\n')
     if com_tirante:
