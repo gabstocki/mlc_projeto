@@ -27,7 +27,7 @@ EC5 + EN 1990 + NBR 6123
 from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
 from mlc_projeto.core.wind       import ParametrosVento
-from mlc_projeto.core.loads      import carregamentos_com_vento
+from mlc_projeto.core.loads      import carregamentos_com_vento, peso_proprio_gk
 
 from mlc_projeto.predim.predim   import pre_dimensionar, relatorio
 
@@ -50,6 +50,7 @@ from mlc_projeto.checks.elu.estabilidade_global import (
     verificar_estabilidade_global, relatorio_estabilidade_global,
 )
 from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
+from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
 from mlc_projeto.checks.elu.tirante_base import (
     verificar_tirante_base, relatorio_tirante,
 )
@@ -112,7 +113,12 @@ VENTO_PARAMS = dict(
 )
 
 # --- Cargas de área e malha estrutural ----------------------------------------
-G_AREA = 1.50          # kN/m² permanente
+# Peso próprio g_k é CALCULADO por parcela (issue 1) em peso_proprio_gk():
+#   g_MLC (viga, integração de A(x)·ρ_mean) + g_terças + g_cobertura.
+#   Cobertura = telha + instalações (valores DECLARADOS — ficha técnica).
+# Não se adota mais o valor único G_AREA=1,50 kN/m² (era ~2× o real ≈ 0,80).
+G_TELHA_KNM2       = 0.10   # kN/m² — telha metálica trapezoidal (confirmar ficha)
+G_INSTALACOES_KNM2 = 0.10   # kN/m² — instalações/serviços (estimativa de projeto)
 Q_AREA = 0.25          # kN/m² sobrecarga cobertura
 L_T    = 5.75          # m — espaçamento entre pórticos = vão das terças
 S      = 2.53          # m — espaçamento entre terças (l_ef viga)
@@ -162,8 +168,8 @@ ACO_CVT             = "S235"
 ETA_CVT_ALVO        = 0.90  # margem de projeto na diagonal do frontão
 
 # --- Ligações / apoio ---------------------------------------------------------
-D_BASE_MM   = 36       # mm — pinos L1 (R2)
-D_CUM_MM    = 30       # mm — pino L2
+D_BASE_MM   = 24       # mm — cavilhas L1/L1c (EC5 §8.6(2): 6–30 mm; issue 18)
+D_CUM_MM    = 30       # mm — pino L2 (no limite; ver issue 25 — cumeeira monolítica)
 F_CHU_KN    = 80.0     # kN — resistência por chumbador (L3)
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 L_AP        = 0.90     # m — comprimento da placa de apoio
@@ -306,6 +312,23 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     mat_curta = GlulamMaterial(**MAT_CURTA)
     mat_longa = GlulamMaterial(**MAT_LONGA)
 
+    # ── Peso próprio característico g_k discriminado (issue 1) ─────────────────
+    # EN 1991-1-1 §4.1 + EN 14080 (ρ_mean). g_k_viga = MLC + terças + cobertura;
+    # g_k_terça = terças + cobertura (a terça não carrega o peso da viga MLC).
+    pp = peso_proprio_gk(
+        geo=geo, mat=mat_longa, L_t=L_T,
+        b_terca=B_TERCA, h_terca=H_TERCA, s_terca=S,
+        g_telha_kNm2=G_TELHA_KNM2, g_instalacoes_kNm2=G_INSTALACOES_KNM2,
+    )
+    g_area       = pp["g_k_viga_kNm2"]    # kN/m² — carga permanente na VIGA
+    g_area_terca = pp["g_k_terca_kNm2"]   # kN/m² — carga permanente na TERÇA
+    print(f"  g_k (calc.): viga={g_area:.3f} kN/m² "
+          f"[MLC={pp['g_mlc_kNm2']:.3f} + terças={pp['g_tercas_kNm2']:.3f} + "
+          f"cobertura={pp['g_cobertura_kNm2']:.3f}] | terça={g_area_terca:.3f} kN/m²")
+    print(f"  γ_glulam={pp['gamma_kNm3']:.2f} kN/m³ (ρ_mean={pp['rho_mean_kgm3']} "
+          f"kg/m³, EN 14080) | telha={G_TELHA_KNM2:.2f}+instal.={G_INSTALACOES_KNM2:.2f} "
+          f"kN/m² (declarados)")
+
     # H1 do vento = variação real da cobertura (coerente com a geometria)
     vento_kw = dict(VENTO_PARAMS)
     vento_kw["H1"] = geo.h_ap - geo.h0
@@ -318,7 +341,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     n_pil_linha = max(2, round(L_COMP / L_T) + 1)
     load = carregamentos_com_vento(
         geo=geo, mat=mat_curta,
-        g_area=G_AREA, q_area=Q_AREA,
+        g_area=g_area, q_area=Q_AREA,
         L_t=L_T, params_vento=params_vento,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         n_pilares_linha=n_pil_linha,
@@ -374,7 +397,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     if rodar_varredura:
         print("\n[FASE 1] Varredura paramétrica...")
         df = pre_dimensionar(
-            g_area=G_AREA, q_area=Q_AREA,
+            g_area=g_area, q_area=Q_AREA,
             params_vento=params_vento,
             L_v=geo.L, L_t=L_T,
             classe=MAT_CURTA["classe"],
@@ -471,20 +494,27 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     print("\n[FASE 2] Verificações ELU — Pilar central...")
     from mlc_projeto.checks.elu.pilares import (
-        verifica_pilar as _verifica_pilar,
+        verifica_pilar_governante as _verifica_pilar_gov,
         verifica_pilar_vento_lateral as _pilar_vento,
     )
-    _N_central = 2 * load.V_max_ELU()
-    res_elu["pilar_central"] = _verifica_pilar(
-        mat=mat_elu,
-        b=B_PILAR_C, h=H_PILAR_C,
-        H=H_PILAR_ALT,
-        N_d=_N_central,
+    # Pilar central: N = soma das reações dos dois vãos (fator_reacao=2),
+    # governante entre TODAS as combinações ELU (cada uma com o seu k_mod).
+    res_elu["pilar_central"] = _verifica_pilar_gov(
+        mat=mat_curta, load=load,
+        b=B_PILAR_C, h=H_PILAR_C, H=H_PILAR_ALT,
+        fator_reacao=2.0,
     )
+    _pc = res_elu["pilar_central"]
     _print_eta(
         f"Pilar central {B_PILAR_C}×{H_PILAR_C}m §6.3.2",
-        res_elu["pilar_central"]
+        _pc,
     )
+    print(f"  · N_d={_pc['N_d_kN']:.1f} kN (2·R_v) | governa {_pc['comb_gov']} "
+          f"({_pc['duracao']}, k_mod={_pc['k_mod']:.2f}) | "
+          f"k_c={_pc['k_c']:.3f} | η={_pc['eta']:.4f}")
+    print(f"  · Origem dos N (issue 13): R_v ELU = reação vertical = N do pilar; "
+          f"N_viga (~{load.N_max_ELU():.0f} kN, com empuxo H) é da VIGA; "
+          f"87 kN ≈ R_v de ELS (serviço), não ELU.")
 
     # Estabilidade lateral dos pilares — vento θ=0° e θ=90° (estrutura aberta)
     print("\n[FASE 2] Pilares — vento lateral (estrutura aberta)...")
@@ -608,7 +638,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         b         = B_TERCA,
         h         = H_TERCA,
         alpha_deg = GEO_PARAMS["alpha_deg"],
-        g_k_m2    = G_AREA,
+        g_k_m2    = g_area_terca,   # terça: cobertura + peso próprio da terça (issue 1)
         q_k_m2    = Q_AREA,
         w_kNm2    = _w_C1bv_m2,
     )
@@ -708,6 +738,21 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"η_N={L3c.get('eta_N', L3c['eta']):.4f} | "
           f"n_chu={L3c['n_chumbadores']} construtivo (η_H=0)")
 
+    # ── Ruptura de bloco (EC5 Anexo A) — grupos de cavilhas L1/L1c (issue 19) ──
+    print("\n[FASE 4] Ruptura de bloco (EC5 Anexo A) — L1/L1c...")
+    from mlc_projeto.connections.connections import ruptura_de_bloco_ligacao
+    res_bloco_L1 = ruptura_de_bloco_ligacao(res_lig["L1"], geo, mat_elu)
+    res_bloco_L1c = ruptura_de_bloco_ligacao(res_lig_c["L1c"], geo, mat_elu)
+    res_elu["ruptura_bloco_L1"] = res_bloco_L1
+    res_elu["ruptura_bloco_L1c"] = res_bloco_L1c
+    for lbl, rb in [("L1", res_bloco_L1), ("L1c", res_bloco_L1c)]:
+        _print_eta(f"Ruptura bloco {lbl} (Anexo A)", rb)
+        print(f"  · {lbl}: F_par={rb['F_par_kN']:.0f} kN | "
+              f"tração={rb['term_tracao_kN']:.0f} kN, cisalh={rb['term_cisalh_kN']:.0f} kN "
+              f"→ F_bs,Rk={rb['F_bs_Rk_kN']:.0f} (governa {rb['governa']}) | "
+              f"F_bs,Rd={rb['F_bs_Rd_kN']:.0f} kN | η={rb['eta']:.3f} "
+              f"(η só-cisalh={rb['eta_so_cisalh']:.3f})")
+
     # ── Fase 4b: Fadiga e deslizamento das ligações ───────────────────────────
     print("\n[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...")
 
@@ -722,6 +767,26 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         print(f"  {status} {cod:<6}  "
               f"η_slip={r['eta_slip']:.4f}  "
               f"η_alt={r['alternada']['eta_alt']:.4f}")
+
+    # ── Fase 4c: Combinação de sucção — uplift + empuxo invertido (issue 33) ───
+    print("\n[FASE 4c] Sucção/uplift — ancoragem e tirante frouxo...")
+    res_succao = verificar_succao_uplift(
+        load=load, geo=geo,
+        F_chu_kN=F_CHU_KN, n_chu=int(res_lig["L3"]["n_chumbadores"]),
+        b_pilar=B_PILAR, h_pilar=H_PILAR, H_pilar_m=H_PILAR_ALT,
+        rho_mean_kgm3=mat_longa.rho_mean,
+        com_tirante=TIRANTE_BASE,
+    )
+    res_elu["succao_uplift"] = res_succao
+    _print_eta("Sucção/uplift (ancoragem)", res_succao)
+    print(f"  · Sucção {res_succao['comb']}: R_v={res_succao['R_A_kN']:+.1f} kN "
+          f"(uplift) | H={res_succao['H_suc_kN']:+.1f} kN "
+          f"({'invertido → tirante frouxo' if res_succao['tirante_frouxo'] else 'ok'})")
+    print(f"  · Extremidade: N_uplift={res_succao['N_uplift_ext_kN']:.1f} kN + "
+          f"V_base={res_succao['V_base_ext_kN']:.1f} kN → η_ext={res_succao['eta_ext']:.3f} "
+          f"(ancoragem {res_succao['n_chu']}×{res_succao['F_chu_kN']:.0f} kN)")
+    print(f"  · Central: N_uplift={res_succao['N_uplift_cen_kN']:.1f} kN → "
+          f"η_cen={res_succao['eta_cen']:.3f} | governa: {res_succao['base_gov']}")
 
     # ── Pacote de resultados (terminal / Excel / memorial) ─────────────────────
     todos_para_relatorio = {
@@ -767,7 +832,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "s": S,
             "l_ap": L_AP,
             "area_trib": load.area_trib,
-            "g_area": G_AREA,
+            "g_area": g_area,
+            "g_area_terca": g_area_terca,
+            "peso_proprio": pp,   # parcelas discriminadas (issue 1)
             "q_area": Q_AREA,
             "sistema": "biarticulada" + (" + tirante base" if TIRANTE_BASE else ""),
             "classe_servico": mat_elu.classe_servico,

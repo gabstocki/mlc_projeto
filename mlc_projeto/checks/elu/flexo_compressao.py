@@ -30,7 +30,7 @@ from mlc_projeto.core.loads     import Carregamentos
 from mlc_projeto.core.wind      import ParametrosVento
 
 from mlc_projeto.checks.elu.flexao   import verifica_flexao
-from mlc_projeto.checks.elu.pilares  import verifica_pilar
+from mlc_projeto.checks.elu.pilares  import verifica_pilar_governante
 
 
 def verifica_flexo_compressao(
@@ -68,15 +68,15 @@ def verifica_flexo_compressao(
     # ── Viga — flexo-compressão EC5 §6.3.2 ───────────────────
     res_viga = verifica_flexao(geo, mat, load, s=s)
 
-    # ── Pilar — compressão simples EC5 §6.3.2 ────────────────
-    N_d_pilar = load.V_max_ELU()   # kN — reação vertical
-    res_pilar = verifica_pilar(
-        mat=mat,
-        b=b_pilar,
-        h=h_pilar,
-        H=H_pilar,
-        N_d=N_d_pilar,
+    # ── Pilar de extremidade — compressão, GOVERNANTE entre combinações ELU ──
+    # N_d = R_v (reação vertical) da combinação que maximiza η (cada uma com o
+    # seu k_mod, EC5 §3.1.3). fator_reacao=1 → uma reação de vão.
+    res_pilar = verifica_pilar_governante(
+        mat=mat, load=load,
+        b=b_pilar, h=h_pilar, H=H_pilar,
+        fator_reacao=1.0,
     )
+    N_d_pilar = res_pilar["N_d_kN"]
 
     # ── Resultado consolidado ─────────────────────────────────
     eta_viga  = res_viga["eta"]
@@ -114,6 +114,9 @@ def verifica_flexo_compressao(
             "sigma_c_MPa":  res_pilar["sigma_c_MPa"],
             "eta":          eta_pilar,
             "ok":           res_pilar["ok"],
+            "comb_gov":     res_pilar["comb_gov"],
+            "duracao":      res_pilar["duracao"],
+            "k_mod":        res_pilar["k_mod"],
         },
         # ── Consolidado ───────────────────────────────────────
         "eta":      round(eta_gov, 4),

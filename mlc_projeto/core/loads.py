@@ -58,6 +58,85 @@ PSI_1_Q     = 0.50
 PSI_2_Q     = 0.00
 PSI_2_W     = 0.00
 
+# Aceleração da gravidade (peso próprio — EN 1991-1-1 §4)
+G_GRAVIDADE = 9.81   # m/s²
+
+
+# ── Peso próprio característico g_k (EN 1991-1-1 §4 + EN 14080) ───────────────
+
+def peso_proprio_gk(
+    geo:          GeometriaViga,
+    mat:          GlulamMaterial,
+    L_t:          float,
+    b_terca:      float,
+    h_terca:      float,
+    s_terca:      float,
+    g_telha_kNm2:        float,
+    g_instalacoes_kNm2:  float,
+    g_ms2:        float = G_GRAVIDADE,
+) -> dict:
+    """
+    Peso próprio característico g_k por m² de projeção horizontal da cobertura,
+    DISCRIMINADO por parcela (issue 1).
+
+    Referências:
+        EN 1991-1-1 §4.1 — peso próprio a partir das dimensões nominais e da
+                           massa específica do material.
+        EN 14080       — massa específica média ρ_mean do glulam.
+
+        γ = ρ_mean · g                                   [kN/m³]
+
+    Parcelas (por m² de projeção horizontal):
+        g_MLC       = (∫ A(x) dx · γ) / L_viga / L_t     viga de duplo-bisel,
+                      volume por integração exata de A(x)=b·h(x), distribuído
+                      sobre a largura tributária L_t.
+        g_terças    = γ · (b_terça · h_terça) / s_terça
+        g_cobertura = g_telha + g_instalações            (valores DECLARADOS —
+                      da ficha técnica da telha / estimativa de projeto)
+
+    Dois g_k distintos, fisicamente corretos:
+        g_k_viga  = g_MLC + g_terças + g_cobertura   → carga na VIGA principal
+        g_k_terça = g_terças + g_cobertura           → carga na TERÇA (a terça
+                    NÃO carrega o peso próprio da viga MLC; g_terças·s reproduz
+                    o peso linear da própria terça)
+
+    Pilares excluídos: não carregam a viga; o seu peso próprio entra no axial do
+    pilar e é desprezável face a R_v (~2,5 kN vs ~200 kN).
+
+    Returns:
+        dict com γ, cada parcela e os totais g_k_viga e g_k_terça (kN/m²).
+    """
+    if L_t <= 0 or s_terca <= 0:
+        raise ValueError("L_t e s_terca devem ser positivos")
+
+    gamma = mat.rho_mean * g_ms2 / 1000.0                 # kN/m³
+
+    x = np.linspace(0.0, geo.L, 2001)
+    V_viga = float(np.trapezoid(geo.A(x), x))            # m³ por viga
+    q_viga_lin = V_viga * gamma / geo.L                  # kN/m (horizontal)
+    g_mlc = q_viga_lin / L_t                             # kN/m²
+
+    g_tercas = gamma * (b_terca * h_terca) / s_terca     # kN/m²
+    g_cobertura = g_telha_kNm2 + g_instalacoes_kNm2      # kN/m²
+
+    g_k_viga = g_mlc + g_tercas + g_cobertura
+    g_k_terca = g_tercas + g_cobertura
+
+    return {
+        "gamma_kNm3":      round(gamma, 4),
+        "rho_mean_kgm3":   mat.rho_mean,
+        "V_viga_m3":       round(V_viga, 4),
+        "q_viga_lin_kNm":  round(q_viga_lin, 4),
+        "g_mlc_kNm2":      round(g_mlc, 4),
+        "g_tercas_kNm2":   round(g_tercas, 4),
+        "g_telha_kNm2":    round(g_telha_kNm2, 4),
+        "g_instalacoes_kNm2": round(g_instalacoes_kNm2, 4),
+        "g_cobertura_kNm2": round(g_cobertura, 4),
+        "g_k_viga_kNm2":   round(g_k_viga, 4),
+        "g_k_terca_kNm2":  round(g_k_terca, 4),
+        "norma":           "EN 1991-1-1 §4.1 | EN 14080 (ρ_mean)",
+    }
+
 
 # ── Dataclass de combinação ───────────────────────────────────────────────────
 

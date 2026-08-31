@@ -43,11 +43,34 @@ import numpy as np
 import pandas as pd
 
 from mlc_projeto.core.geometry  import GeometriaViga
-from mlc_projeto.core.materials import GlulamMaterial, GAMMA_M_LIGACAO
+from mlc_projeto.core.materials import GlulamMaterial, GAMMA_M, GAMMA_M_LIGACAO
 from mlc_projeto.core.loads     import Carregamentos
 
 # Pinos de aço — EN 14592 (grau típico de cavilha; f_u a confirmar na ficha)
 F_U_K_PINO = 400.0   # MPa — f_u,k do pino (não confundir com f_y do S355)
+
+# EC5 §8.6(2) — faixa de diâmetro admissível para CAVILHAS (dowels).
+# As fórmulas de embutimento (Eq. 8.32) e o escopo de §8.5/§8.6 são calibrados
+# nesta faixa; diâmetros fora dela (ex.: Ø36 mm) estão fora do escopo normativo.
+D_CAVILHA_MIN_MM = 6.0
+D_CAVILHA_MAX_MM = 30.0
+
+
+def _validar_diametro_cavilha(d_mm: float) -> None:
+    """
+    Guarda de escopo EC5 §8.6(2): 6 mm ≤ d ≤ 30 mm para cavilhas (issue 18).
+
+    Rejeita (ValueError) diâmetros fora do escopo — evita usar silenciosamente
+    fórmulas não calibradas. Para forças elevadas, reduzir d e aumentar o número
+    de pinos/planos de corte, ou usar conector com regras próprias (parafusos
+    autoperfurantes inclinados).
+    """
+    if not (D_CAVILHA_MIN_MM <= float(d_mm) <= D_CAVILHA_MAX_MM):
+        raise ValueError(
+            f"Diâmetro de cavilha d={d_mm:.0f} mm fora do escopo EC5 §8.6(2) "
+            f"({D_CAVILHA_MIN_MM:.0f}–{D_CAVILHA_MAX_MM:.0f} mm). Reduza d "
+            f"(mais pinos/planos de corte) ou use conector com regras próprias."
+        )
 
 
 # ── Resistência por esmagamento (embedding) — EC5 §8.2 Eq. 8.25 ──────────────
@@ -154,6 +177,123 @@ def johansen_chapa_embutida(
     modos["M_y_Nmm"]   = round(M_y, 1)
 
     return modos
+
+
+# ── Ruptura de bloco — EC5 Anexo A (informativo) ─────────────────────────────
+
+def ruptura_de_bloco(
+    n_par:      int,
+    n_perp:     int,
+    a1_m:       float,
+    a2_m:       float,
+    a3t_m:      float,
+    t1_m:       float,
+    f_t0_k:     float,
+    f_v_k:      float,
+    k_mod:      float,
+    gamma_M:    float,
+    F_par_kN:   float,
+) -> dict:
+    """
+    Ruptura de bloco (block shear) — EN 1995-1-1 Anexo A, Eq. (A.1)–(A.3).
+
+    Falha frágil do bloco de madeira delimitado por um grupo de conectores sob
+    força PARALELA às fibras, próximo ao extremo da peça (Figura A.1).
+
+        F_bs,Rk = max{ 1,5·A_net,t·f_t,0,k ; 0,7·A_net,v·f_v,k }      (A.1)
+        A_net,t = L_net,t · t_1                                        (A.2)
+        A_net,v = L_net,v · t_1   (block shear, Fig. A.1)             (A.3)
+
+    Geometria do bloco (grupo retangular, força // fibras):
+        L_net,t = (n_perp − 1)·a2         largura líquida ⊥ fibras (plano de tração)
+        L_net,v = 2·[(n_par − 1)·a1 + a3,t]   comprimento total das duas faces de
+                  cisalhamento // fibras (do extremo carregado ao plano de tração)
+        t_1     = espessura de madeira mobilizada (chapa embutida central:
+                  ≈ largura b da peça; descontar a fenda da chapa — ver issue 21)
+
+    NOTA sobre a Eq. (A.1): a norma usa `max{}` (não `min{}`) — a resistência é
+    governada pelo MAIOR dos dois mecanismos idealizados (tração da face de
+    extremidade OU cisalhamento das faces laterais). Reportam-se AMBOS os termos
+    para transparência (o termo de cisalhamento costuma ser o crítico se o `max`
+    não o selecionar).
+
+    Args (SI): distâncias e t_1 em m; f_t0_k, f_v_k em Pa; F_par_kN em kN.
+
+    Returns:
+        dict com áreas líquidas, os dois termos, F_bs,Rk, F_bs,Rd, η e ok.
+    """
+    L_net_t = max(0.0, (n_perp - 1)) * a2_m
+    L_net_v = 2.0 * (max(0.0, (n_par - 1)) * a1_m + a3t_m)
+    A_net_t = L_net_t * t1_m                    # m²
+    A_net_v = L_net_v * t1_m                    # m²
+
+    F_t = 1.5 * A_net_t * f_t0_k                # N (tração // fibras)
+    F_v = 0.7 * A_net_v * f_v_k                 # N (cisalhamento // fibras)
+    F_bs_Rk = max(F_t, F_v)                     # N — Eq. (A.1)
+    F_bs_Rd = k_mod * F_bs_Rk / gamma_M         # N
+    F_bs_Rd_v = k_mod * F_v / gamma_M           # N — só cisalhamento (transparência)
+
+    eta = (F_par_kN * 1e3) / F_bs_Rd if F_bs_Rd > 0 else 999.0
+    eta_v = (F_par_kN * 1e3) / F_bs_Rd_v if F_bs_Rd_v > 0 else 999.0
+    governa = "tração" if F_t >= F_v else "cisalhamento"
+
+    return {
+        "n_par":          n_par,
+        "n_perp":         n_perp,
+        "L_net_t_mm":     round(L_net_t * 1e3, 1),
+        "L_net_v_mm":     round(L_net_v * 1e3, 1),
+        "t1_mm":          round(t1_m * 1e3, 1),
+        "A_net_t_cm2":    round(A_net_t * 1e4, 1),
+        "A_net_v_cm2":    round(A_net_v * 1e4, 1),
+        "term_tracao_kN": round(F_t / 1e3, 1),
+        "term_cisalh_kN": round(F_v / 1e3, 1),
+        "governa":        governa,
+        "F_bs_Rk_kN":     round(F_bs_Rk / 1e3, 1),
+        "F_bs_Rd_kN":     round(F_bs_Rd / 1e3, 1),
+        "F_par_kN":       round(F_par_kN, 1),
+        "eta":            round(eta, 4),
+        "eta_so_cisalh":  round(eta_v, 4),
+        "ok":             eta <= 1.0,
+        "norma":          "EN 1995-1-1 Anexo A Eq. (A.1)–(A.3)",
+        "nota": (
+            "Eq. (A.1) usa max{} — governado por "
+            f"{governa}. η só-cisalhamento={eta_v:.2f} (transparência). "
+            "t_1 = b (fenda da chapa a descontar — issue 21)."
+        ),
+    }
+
+
+def ruptura_de_bloco_ligacao(
+    res_lig:  dict,
+    geo:      GeometriaViga,
+    mat:      GlulamMaterial,
+    k_mod:    float | None = None,
+    gamma_M:  float = GAMMA_M,
+) -> dict:
+    """
+    Aplica a ruptura de bloco (Anexo A) a uma ligação de cavilhas já dimensionada
+    (resultado de dimensionar_ligacao_base / _central), lendo o layout real.
+
+    Força // fibras = |N_d| (componente axial). t_1 = b (largura da peça).
+    γ_M = GAMMA_M (glulam, material — a ruptura de bloco é falha do material da
+    peça, EC5 §2.4.1); k_mod da combinação (padrão = mat.k_mod).
+    """
+    if k_mod is None:
+        k_mod = mat.k_mod
+    n_par = int(res_lig["n_linha"])       # pinos // fibras por fileira
+    n_perp = int(res_lig["n_linhas"])     # fileiras ⊥ fibras (altura)
+    d_mm = float(res_lig["d_mm"])
+    a1_m = float(res_lig["a1_mm"]) / 1e3
+    a2_m = float(res_lig["a2_mm"]) / 1e3
+    # distância de extremidade carregada a3,t — EC5 Tab. 8.4 (cavilha): max(7d, 80 mm)
+    a3t_m = max(7.0 * d_mm, 80.0) / 1e3
+    t1_m = geo.b                          # largura da peça (fenda da chapa desprezada)
+    F_par_kN = abs(float(res_lig["N_d_kN"]))
+    return ruptura_de_bloco(
+        n_par=n_par, n_perp=n_perp, a1_m=a1_m, a2_m=a2_m, a3t_m=a3t_m,
+        t1_m=t1_m, f_t0_k=mat.f_t0_k, f_v_k=mat.f_v_k,
+        k_mod=k_mod, gamma_M=gamma_M, F_par_kN=F_par_kN,
+    )
 
 
 # ── Número efetivo — EC5 §8.5.1.1 (pernos; pinos via §8.6) ───────────────────
@@ -315,6 +455,7 @@ def dimensionar_ligacao_base(
               EC5 exige η ≤ 1,0; o alvo 0,75 é critério de projeto.
     L_max_mm: comprimento máximo da chapa ao longo da viga (detalhamento).
     """
+    _validar_diametro_cavilha(d_mm)   # EC5 §8.6(2): 6–30 mm (issue 18)
     if k_mod is None:
         k_mod = mat.k_mod
     if eta_alvo <= 0 or eta_alvo > 1.0:
@@ -461,7 +602,9 @@ def dimensionar_ligacao_base(
         "eta":           round(eta,            4),
         "ok_alvo":       ok_alvo,
         "ok":            ok,
-        "norma":         "EC5 §8.2+§8.5.1.1+§8.6 | γ_M=1,30 | η_alvo projeto",
+        "d_norma_ok":    D_CAVILHA_MIN_MM <= d_mm <= D_CAVILHA_MAX_MM,
+        "d_faixa_mm":    (D_CAVILHA_MIN_MM, D_CAVILHA_MAX_MM),
+        "norma":         "EC5 §8.2+§8.5.1.1+§8.6(2) 6–30 mm | γ_M=1,30 | η_alvo projeto",
     }
 
 
@@ -487,6 +630,7 @@ def dimensionar_ligacao_cumeeira(
     Pino passante (se detalhe de montagem): cortante residual por
     assimetria de vento |w_C1bv − w_C1st| · (L/4).
     """
+    _validar_diametro_cavilha(d_mm)   # EC5 §8.6(2): 6–30 mm (issue 18)
     if k_mod is None:
         k_mod = mat.k_mod
 
@@ -759,6 +903,7 @@ def dimensionar_ligacao_base_central(
     Cada chapa recebe a força de uma viga (mesmos N_d, V_d da lateral).
     Espessura de madeira por lado = b_pilar_c/2 (chapa embutida no pilar).
     """
+    _validar_diametro_cavilha(d_mm)   # EC5 §8.6(2): 6–30 mm (issue 18)
     if k_mod is None:
         k_mod = mat.k_mod
     if eta_alvo <= 0 or eta_alvo > 1.0:

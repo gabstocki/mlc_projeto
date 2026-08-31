@@ -20,15 +20,40 @@
   livremente nas fórmulas de Johansen e nas distâncias mínimas.
 
 ## O que precisa ser feito
-- [ ] Confirmar o limite do EC5 §8.6(2) para **cavilhas** (dowels): d ≤ 30 mm (e d ≥ 6 mm).
-- [ ] Como Ø36 mm excede o limite, **repensar a ligação**, por exemplo:
-      - reduzir d (≤ 30 mm) aumentando o **número de pinos/planos de corte**; ou
-      - usar **parafusos passantes** (bolts, cujo limite difere) devidamente verificados; ou
-      - **parafusos autoperfurantes inclinados** (fully threaded screws) conforme regras próprias.
-- [ ] Adicionar uma **verificação/guardas** no código que rejeite d fora do escopo do
-      conector escolhido.
-- [ ] Rever tolerâncias de furo (§10) coerentes com o tipo de conector.
+- [x] Confirmar o limite do EC5 §8.6(2) para **cavilhas**: **6 mm ≤ d ≤ 30 mm** (as
+      fórmulas de embutimento de §8.5/§8.6 são calibradas nessa faixa). Ø36 está fora.
+- [x] Repensar a ligação: **reduzir d para 24 mm** (M24 padrão, inequivocamente dentro
+      do escopo sob qualquer leitura), aumentando o número de pinos.
+- [x] Adicionar **guarda** no código que rejeita d fora de [6, 30] mm.
+- [~] Tolerâncias de furo (§10): coerentes com cavilha (mantém-se cavilha; sem mudança
+      de tipo de conector). Detalhamento de furação → memorial/execução.
+
+## Resolução (implementado)
+- **Guarda EC5 §8.6(2)** em [connections.py](../mlc_projeto/connections/connections.py):
+  constantes `D_CAVILHA_MIN_MM=6`, `D_CAVILHA_MAX_MM=30` e `_validar_diametro_cavilha`
+  (lança `ValueError` fora da faixa). Chamada em `dimensionar_ligacao_base`,
+  `dimensionar_ligacao_cumeeira` e `dimensionar_ligacao_base_central`. Resultado da L1
+  ganhou `d_norma_ok` e norma "EC5 §8.6(2) 6–30 mm".
+- **`main.py`**: `D_BASE_MM` 36 → **24** (L1/L1c). `D_CUM_MM=30` (L2, no limite — a
+  cumeeira monolítica é a issue [25](25-L2-pino-cumeeira-remover.md)).
+- **`report.py`**: §11 com nota do escopo EC5 §8.6(2) e do diâmetro adotado.
+- **Testes**: [test_diametro_cavilha.py](../tests/test_diametro_cavilha.py); atualizado
+  `test_connections_nef.py` (usava Ø36, agora Ø24).
+
+## Resultado (redimensionamento, cargas da issue 1)
+| d (mm) | n_pinos | layout | η | geometria |
+|---|---|---|---|---|
+| 36 (antigo, **fora de escopo**) | 48 | 6×8 | 0,71 | — |
+| **24 (adotado)** | **96** | **8×12** | **0,697** | OK (L=1080 mm < 1800) |
+
+L1c central Ø24: η=0,726. A guarda rejeita Ø36 e Ø4; aceita 6–30. Pipeline APROVADO.
+
+## Nota (otimização futura, não bloqueante)
+O nº de pinos sobe (48→96) por causa do limite de 30 mm + a força axial (F_res≈1226 kN,
+que inclui o empuxo H). Reduções possíveis: **múltiplas chapas embutidas** (mais planos
+de corte) ou **parafusos autoperfurantes inclinados** (regras próprias). Fica como opção
+de detalhamento, fora do escopo mínimo desta issue.
 
 ## Critério de aceite
-Conector dentro do escopo normativo (cavilha ≤ 30 mm ou outro tipo justificado);
-ligação L1/L1c redimensionada; guarda de diâmetro no código.
+Conector dentro do escopo normativo (cavilha Ø24 ≤ 30 mm) **✓**; ligação L1/L1c
+redimensionada **✓**; guarda de diâmetro no código **✓**.

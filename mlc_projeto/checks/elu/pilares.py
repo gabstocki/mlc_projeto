@@ -141,6 +141,91 @@ def verifica_pilar(
     }
 
 
+def verifica_pilar_governante(
+    mat:          GlulamMaterial,
+    load:         Carregamentos,
+    b:            float,
+    h:            float,
+    H:            float,
+    fator_reacao: float,
+    eixo:         str = "min",
+) -> dict:
+    """
+    Verifica o pilar (compressão + instabilidade, EC5 §6.3.2) contra TODAS as
+    combinações ELU, cada uma com o seu k_mod (EC5 §3.1.3 / §2.4.1), e devolve a
+    combinação GOVERNANTE (maior η) mais o detalhamento por combinação.
+
+    Definição de N — única e rastreável — SEMPRE a reação vertical de ELU:
+        N_d(comb) = fator_reacao · R_v(comb)
+          fator_reacao = 1 → pilar de extremidade (uma reação de vão)
+          fator_reacao = 2 → pilar central (soma das reações dos dois vãos;
+                             sob carga simétrica N_central = 2·R_v; para vento
+                             assimétrico adota-se 2·max(|R_A|,|R_B|) — limite
+                             superior conservador, pois o padrão inter-vãos não
+                             é modelado explicitamente)
+        R_v(comb) = Combinacao.V_max_kN = max(|R_A|, |R_B|)
+
+    IMPORTANTE (origem dos "dois N" — issue 13):
+      · O esforço normal do PILAR é a reação vertical R_v (ex.: 209,59 kN em
+        ELU_C2), NÃO o esforço normal no eixo da VIGA (Combinacao.N_viga_kN =
+        H·cosθ + R_v·senθ ≈ 1,6 MN, que inclui o empuxo H — este vai ao
+        tirante/sapata, não ao pilar).
+      · Reações de ELS (ex.: R_v de ELS_S3 ≈ 87 kN, quase-permanente só G) são
+        valores de serviço e NÃO podem ser usadas como esforço de projeto ELU.
+
+    Por que iterar TODAS as combinações: a combinação que maximiza η pode não ser
+    a de maior N, porque f_c,0,d = k_mod·f_c,0,k/γ_M depende do k_mod de cada
+    combinação (uma combinação com N menor, mas k_mod menor, pode governar).
+
+    Returns:
+        dict = resultado de verifica_pilar da combinação governante, acrescido de
+        comb_gov, duracao, k_mod, fator_reacao e a lista `combinacoes`
+        (detalhamento por combinação, ordenado por η decrescente).
+    """
+    if fator_reacao <= 0:
+        raise ValueError("fator_reacao deve ser > 0 (1=extremidade, 2=central)")
+
+    combos = load.combinacoes_ELU()
+    if not combos:
+        raise ValueError("Nenhuma combinação ELU disponível para verificar o pilar")
+
+    detalhes: list[dict] = []
+    gov = None
+    gov_nome = gov_dur = None
+    gov_kmod = 0.0
+    for nome, c in combos.items():
+        mat_c = mat.com_duracao(c.duracao)
+        R_v = abs(float(c.V_max_kN))
+        N_d = fator_reacao * R_v
+        r = verifica_pilar(mat_c, b, h, H, N_d, eixo=eixo)
+        detalhes.append({
+            "comb":        nome,
+            "duracao":     c.duracao,
+            "k_mod":       round(mat_c.k_mod, 3),
+            "R_v_kN":      round(R_v, 3),
+            "N_d_kN":      round(N_d, 3),
+            "k_c":         r["k_c"],
+            "sigma_c_MPa": r["sigma_c_MPa"],
+            "eta":         r["eta"],
+        })
+        if gov is None or r["eta"] > gov["eta"]:
+            gov = r
+            gov_nome, gov_dur, gov_kmod = nome, c.duracao, mat_c.k_mod
+
+    detalhes.sort(key=lambda d: d["eta"], reverse=True)
+    res = dict(gov)
+    res["comb_gov"] = gov_nome
+    res["duracao"] = gov_dur
+    res["k_mod"] = round(gov_kmod, 3)
+    res["fator_reacao"] = fator_reacao
+    res["combinacoes"] = detalhes
+    res["nota_N"] = (
+        "N_d = fator_reacao·R_v (reação vertical ELU). Não é o N do eixo da viga "
+        "(inclui empuxo H) nem uma reação de ELS."
+    )
+    return res
+
+
 def verifica_pilar_vento_lateral(
     mat: GlulamMaterial,
     b: float,

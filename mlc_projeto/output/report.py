@@ -48,8 +48,11 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
     ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
+    ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
     ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
+    ("ruptura_bloco_L1",    "Ruptura de bloco L1",       "EC5 Anexo A"),
+    ("ruptura_bloco_L1c",   "Ruptura de bloco L1c",      "EC5 Anexo A"),
     ("L1",                  "Ligação L1 base",           "EC5 §8.2+§8.5.1.1+§8.6"),
     ("L2",                  "Ligação L2 cumeeira",       "EC5 §6.1.4+§6.1.5+§8.6"),
     ("L3",                  "Ligação L3 sapata",         "EN 1993-1-8+EN 1992-4"),
@@ -423,6 +426,9 @@ def gerar_tex(
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
     r_cvv  = _clean_dict(resultados.get("contraventamento_vertical", {}))
     r_cvt  = _clean_dict(resultados.get("contraventamento_transversal", {}))
+    r_succ = _clean_dict(resultados.get("succao_uplift", {}))
+    r_bloco = _clean_dict(resultados.get("ruptura_bloco_L1", {}))
+    r_bloco_c = _clean_dict(resultados.get("ruptura_bloco_L1c", {}))
     r_ter  = _clean_dict(resultados.get("terca", {}))
     r_eg   = _clean_dict(resultados.get("estabilidade_global", {}))
     r_iv   = _clean_dict(resultados.get("impacto_veiculo", {}))
@@ -655,13 +661,36 @@ def gerar_tex(
     parts.append(_br(g_area, 2))
     parts.append('~kN/m² & ')
     parts.append(_br(g_k, 3))
-    parts.append('~kN/m & Estimativa \\\\\n  Sobrecarga $q_k$ & ')
+    parts.append('~kN/m & EN 1991-1-1 \\S4 \\\\\n  Sobrecarga $q_k$ & ')
     parts.append(_br(q_area, 2))
     parts.append('~kN/m² & ')
     parts.append(_br(q_k, 3))
     parts.append('~kN/m & EN 1991-1-1 \\\\\n  \\multicolumn{3}{l}{Área tributária $= L_t = ')
     parts.append(_br(area_trib, 2))
-    parts.append('$~m (pórtico intermediário)} & Geometria \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n\\textbf{Vento -- NBR 6123 (cobertura isolada 2 águas):}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n  \\midrule\n  $V_0$ (Londrina/PR) & 45{,}0~m/s & Fig.~1 \\\\\n  $S_1$ & 1{,}0 & \\S5.2 \\\\\n  $S_2$ (Cat.~IV, Cl.~B) & 0{,}83 & Tab.~3 \\\\\n  $S_3$ & 1{,}0 & \\S5.5 \\\\\n  $H_1 = h_{ap}-h_0$ & ')
+    parts.append('$~m (pórtico intermediário)} & Geometria \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n'
+    )
+    _pp = meta.get("peso_proprio", {})
+    if isinstance(_pp, dict) and _pp:
+        parts.append(
+            '\\textbf{Peso próprio $g_k$ -- discriminado (EN~1991-1-1~\\S4 + '
+            'EN~14080; $\\gamma=\\rho_{mean}\\cdot g'
+            f'={_br(_pp.get("gamma_kNm3", 0), 2)}$~kN/m$^3$):}}\n\n'
+            '\\begin{tabular}{@{}llp{6.2cm}@{}}\n  \\toprule\n'
+            '  \\textbf{Parcela} & \\textbf{kN/m$^2$} & \\textbf{Origem} \\\\\n'
+            '  \\midrule\n'
+            f'  Viga MLC (duplo-bisel) & {_br(_pp.get("g_mlc_kNm2", 0), 3)} & '
+            '$\\int A(x)\\,\\mathrm{d}x\\cdot\\gamma / L_{viga} / L_t$ (integração exata) \\\\\n'
+            f'  Terças & {_br(_pp.get("g_tercas_kNm2", 0), 3)} & '
+            '$\\gamma\\cdot b_t h_t / s$ \\\\\n'
+            f'  Telha & {_br(_pp.get("g_telha_kNm2", 0), 3)} & ficha técnica (declarado) \\\\\n'
+            f'  Instalações & {_br(_pp.get("g_instalacoes_kNm2", 0), 3)} & estimativa de projeto \\\\\n'
+            '  \\midrule\n'
+            f'  \\textbf{{Total viga}} & \\textbf{{{_br(_pp.get("g_k_viga_kNm2", 0), 3)}}} & MLC + terças + cobertura \\\\\n'
+            f'  Total terça & {_br(_pp.get("g_k_terca_kNm2", 0), 3)} & terças + cobertura (a terça não carrega a viga) \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n\\vspace{6pt}\n'
+        )
+    parts.append(
+        '\\textbf{Vento -- NBR 6123 (cobertura isolada 2 águas):}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref.} \\\\\n  \\midrule\n  $V_0$ (Londrina/PR) & 45{,}0~m/s & Fig.~1 \\\\\n  $S_1$ & 1{,}0 & \\S5.2 \\\\\n  $S_2$ (Cat.~IV, Cl.~B) & 0{,}83 & Tab.~3 \\\\\n  $S_3$ & 1{,}0 & \\S5.5 \\\\\n  $H_1 = h_{ap}-h_0$ & ')
     parts.append(_br(geo.h_ap - geo.h0, 3))
     parts.append('~m & Geometria ')
     parts.append(cand)
@@ -746,7 +775,36 @@ def gerar_tex(
     parts.append(f'{r_pc.get('lambda_rel', 0):.4f} & ')
     parts.append(f'{r_pc.get('k_c', 0):.4f} & ')
     parts.append(f'{_eta(r_pc):.4f} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
+    parts.append(
+        '\\textbf{Definição de $N_d$ e combinação governante (issue 13):} '
+        '$N_d$ é a \\textbf{reação vertical de ELU} '
+        '($N_d=\\mathrm{fator}\\cdot R_v$; fator~$=1$ no pilar de extremidade e '
+        '$=2$ no central, soma das reações dos dois vãos). Verifica-se o pilar '
+        'contra \\textbf{todas} as combinações ELU, cada uma com o seu $k_{mod}$ '
+        '(EC5~\\S3.1.3~/~\\S2.4.1), reportando-se a governante ($\\eta$ máximo):\n'
+        '\\begin{itemize}\n'
+        f'  \\item Lateral: governa \\texttt{{{_tex_escape(r_pilar.get("comb_gov", "--"))}}} '
+        f'($k_{{mod}}={_br(r_pilar.get("k_mod", 0), 2)}$), '
+        f'$N_d={_br(r_pilar.get("N_d_kN", 0), 1)}$~kN, $\\eta={_br(_eta(r_pilar), 4)}$;\n'
+        f'  \\item Central: governa \\texttt{{{_tex_escape(r_pc.get("comb_gov", "--"))}}} '
+        f'($k_{{mod}}={_br(r_pc.get("k_mod", 0), 2)}$), '
+        f'$N_d={_br(r_pc.get("N_d_kN", 0), 1)}$~kN, $\\eta={_br(_eta(r_pc), 4)}$.\n'
+        '\\end{itemize}\n'
+        '\\textit{Origem dos dois valores de $N$:} a reação vertical de ELU '
+        '($\\approx$210~kN, ELU\\_C2) é o $N$ do pilar; o esforço normal do '
+        '\\textbf{eixo da viga} ($\\approx$1{,}6~MN, que inclui o empuxo $H$) vai '
+        'ao tirante/sapata e \\textbf{não} ao pilar; e $\\approx$87~kN é a reação '
+        'de \\textbf{ELS} (quase-permanente, só $G$) -- valor de serviço, não de '
+        'dimensionamento ELU.\n\n'
+        '\\textit{Nota (duração / $k_{mod}$):} a combinação governante usa o '
+        '$k_{mod}$ declarado para cada combinação em \\texttt{loads.py}. A '
+        'classificação estrita por EC5~\\S3.1.3 ($k_{mod}$ da ação de menor '
+        'duração) é objeto da issue~5; se a combinação Q-dominante for '
+        'reclassificada como \\emph{curta}, passa a governar ELU\\_C2 '
+        '(vento dominante) com $\\eta\\approx0{,}68$. Em ambos os casos o pilar '
+        'central é adequado ($\\eta<1{,}0$).\n\n'
+    )
 
     # ── 8b. Estabilidade global ────────────────────────────────
     _ok_imp = r_eg.get('ok_nocional', True)
@@ -1230,6 +1288,10 @@ def gerar_tex(
         ' é margem de projeto).\n'
         '$n_{ef}$ por fileira // fibras: EC5~\\S8.5.1.1\n'
         '($n_{ef}=n^{0,9}(a_1/(13d))^{1/4}\\leq n$).\n\n'
+        '\\textit{Escopo das cavilhas (EC5~\\S8.6(2)):} '
+        f'$6 \\leq d \\leq 30$~mm. Adota-se $d={_i(r_L1.get("d_mm", 24))}$~mm em '
+        'L1/L1c (dentro do escopo; os 36~mm anteriores estavam fora). '
+        'O código rejeita diâmetros fora dessa faixa (issue 18).\n\n'
         '\\vspace{4pt}\n'
         '{\\small\n'
         '\\begin{tabularx}{\\textwidth}{@{}'
@@ -1370,6 +1432,90 @@ def gerar_tex(
     parts.append(
         '  \\bottomrule\n'
         '\\end{tabularx}}\n\n'
+    )
+    # ── 11.2 Sucção — uplift e empuxo invertido (issue 33) ─────
+    if r_succ:
+        _su_ok = bool(r_succ.get("ok", False))
+        parts.append(
+            '% ── 11.2 Sucção — uplift e empuxo invertido ───────────\n'
+            '\\subsection*{11.2 Combinação de Sucção -- Uplift e Empuxo '
+            'Invertido (EN~1990 + EN~1992-4)}\n\n'
+            'Com o peso próprio correto (\\S4), a combinação de sucção '
+            f'(\\texttt{{{_tex_escape(r_succ.get("comb", "ELU_C3"))}}}, $0{{,}}9G+1{{,}}5W_{{suc}}$) '
+            'apresenta \\textbf{esforços inversos}: reação vertical negativa '
+            '(\\emph{uplift}) e empuxo horizontal invertido. Como o tirante é '
+            'tração-apenas, sob sucção fica \\textbf{frouxo} e o empuxo invertido '
+            '$|H|$ vai à \\textbf{fundação} (cortante na base de extremidade, sem '
+            'atrito -- base tracionada).\n\n'
+            '\\begin{tabular}{@{}lll@{}}\n  \\toprule\n'
+            '  \\textbf{Grandeza} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n'
+            f'  $q_{{suc}}$ & {_br(r_succ.get("q_suc_kNpm", 0), 2)}~kN/m & líquido (0,9G+1,5W) \\\\\n'
+            f'  $R_v$ (uplift/apoio) & {_br(r_succ.get("R_A_kN", 0), 1)}~kN & $<0$ = tração \\\\\n'
+            f'  $H$ (invertido) & {_br(r_succ.get("H_suc_kN", 0), 1)}~kN & tirante frouxo \\\\\n'
+            '  \\midrule\n'
+            f'  Extremidade: $N_{{uplift}}$ & {_br(r_succ.get("N_uplift_ext_kN", 0), 1)}~kN & '
+            f'$-\\gamma_{{G,inf}}W_{{pilar}}$ ($\\eta_N={_br(r_succ.get("eta_N_ext", 0), 3)}$) \\\\\n'
+            f'  Extremidade: $V_{{base}}$ & {_br(r_succ.get("V_base_ext_kN", 0), 1)}~kN & '
+            f'empuxo invertido ($\\eta_V={_br(r_succ.get("eta_V_ext", 0), 3)}$) \\\\\n'
+            f'  Central: $N_{{uplift}}$ & {_br(r_succ.get("N_uplift_cen_kN", 0), 1)}~kN & '
+            f'$\\eta={_br(r_succ.get("eta_cen", 0), 3)}$ ($V\\approx0$) \\\\\n'
+            '  \\midrule\n'
+            f'  Ancoragem & {_i(r_succ.get("n_chu", 4))}$\\times${_br(r_succ.get("F_chu_kN", 80), 0)}'
+            f'~=~{_br(r_succ.get("R_anc_kN", 320), 0)}~kN & interação $N$--$V$ linear \\\\\n'
+            f'  $\\eta$ governante ({_tex_escape(r_succ.get("base_gov", "extremidade"))}) & '
+            f'\\textbf{{{_br(r_succ.get("eta", 0), 3)}}} & '
+            + (r'\checkmark' if _su_ok else r'$\times$') + ' \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
+            '\\textit{Nota:} interação $N$--$V$ linear (conservadora); o '
+            'dimensionamento definitivo dos chumbadores (aço + cone de concreto + '
+            'arrancamento + interação) segue EN~1992-4/EN~1993-1-8. O peso da '
+            'fundação (favorável, EN~1997) não está incluído. A ancoragem sob '
+            'sucção \\textbf{não} é meramente construtiva.\n\n'
+        )
+    # ── 11.3 Ruptura de bloco — EC5 Anexo A (issue 19) ─────────
+    if r_bloco:
+        _rbl = r_bloco
+        parts.append(
+            '% ── 11.3 Ruptura de bloco (EC5 Anexo A) ───────────────\n'
+            '\\subsection*{11.3 Ruptura de Bloco -- Grupos de Cavilhas '
+            '(EN~1995-1-1 Anexo~A)}\n\n'
+            'Falha \\textbf{frágil} do bloco de madeira delimitado pelo grupo de '
+            'cavilhas sob força paralela às fibras (Fig.~A.1):\n'
+            '\\[\n  F_{bs,Rk}=\\max\\{\\,1{,}5\\,A_{net,t}\\,f_{t,0,k}\\ ;\\ '
+            '0{,}7\\,A_{net,v}\\,f_{v,k}\\,\\}\\quad(A.1)\n\\]\n'
+            'com $A_{net,t}=L_{net,t}\\,t_1$, $A_{net,v}=L_{net,v}\\,t_1$; '
+            '$L_{net,t}=(n_\\perp-1)a_2$, $L_{net,v}=2[(n_\\parallel-1)a_1+a_{3,t}]$, '
+            '$t_1=b$ (fenda da chapa a descontar -- issue 21).\n\n'
+            '\\begin{tabular}{@{}lccc@{}}\n  \\toprule\n'
+            '  \\textbf{Ligação} & \\textbf{L1} & \\textbf{L1c} & \\textbf{Ref.} \\\\\n'
+            '  \\midrule\n'
+            f'  Grupo ($n_\\parallel\\times n_\\perp$) & '
+            f'{_i(_rbl.get("n_par",0))}$\\times${_i(_rbl.get("n_perp",0))} & '
+            f'{_i(r_bloco_c.get("n_par",0))}$\\times${_i(r_bloco_c.get("n_perp",0))} & -- \\\\\n'
+            f'  $1{{,}}5A_{{net,t}}f_{{t,0,k}}$ & {_br(_rbl.get("term_tracao_kN",0),0)}~kN & '
+            f'{_br(r_bloco_c.get("term_tracao_kN",0),0)}~kN & tração \\\\\n'
+            f'  $0{{,}}7A_{{net,v}}f_{{v,k}}$ & {_br(_rbl.get("term_cisalh_kN",0),0)}~kN & '
+            f'{_br(r_bloco_c.get("term_cisalh_kN",0),0)}~kN & cisalh. \\\\\n'
+            f'  $F_{{bs,Rd}}$ & {_br(_rbl.get("F_bs_Rd_kN",0),0)}~kN & '
+            f'{_br(r_bloco_c.get("F_bs_Rd_kN",0),0)}~kN & (A.1) \\\\\n'
+            f'  $F_{{//,Ed}}$ & {_br(_rbl.get("F_par_kN",0),0)}~kN & '
+            f'{_br(r_bloco_c.get("F_par_kN",0),0)}~kN & $|N_d|$ \\\\\n'
+            f'  $\\eta$ (Anexo~A) & \\textbf{{{_br(_rbl.get("eta",0),3)}}} & '
+            f'\\textbf{{{_br(r_bloco_c.get("eta",0),3)}}} & $\\leq 1$ \\\\\n'
+            f'  $\\eta$ só-cisalh. & {_br(_rbl.get("eta_so_cisalh",0),3)} & '
+            f'{_br(r_bloco_c.get("eta_so_cisalh",0),3)} & (transparência) \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
+            '\\textit{Nota crítica:} a Eq.~(A.1) usa $\\max\\{\\}$ e é governada '
+            'pelo mecanismo de \\textbf{tração} (bloco largo $\\Rightarrow$ '
+            'grande $A_{net,t}$), resultando $\\eta<1$. Porém o mecanismo de '
+            '\\textbf{cisalhamento isolado} da L1 dá $\\eta\\approx'
+            f'{_br(_rbl.get("eta_so_cisalh",0),2)}$ -- a formulação $\\max\\{{\\}}$ do '
+            'Anexo~A é reconhecidamente pouco conservadora para grupos grandes. '
+            'Recomenda-se, no detalhamento, distribuir o grupo / usar múltiplas '
+            'chapas (mais planos de corte) para trazer o mecanismo de cisalhamento '
+            'para $\\eta\\leq1$ (ver issue 18).\n\n'
+        )
+    parts.append(
         '% ── 12. Resumo ────────────────────────────────────────────────\n'
         '\\section*{12. Resumo das Taxas de Utilização}\n\n'
         '{\\small\n'

@@ -18,11 +18,12 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 ### Ações e combinações (EN 1990 / EN 1991)
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 01 | P1 | [Peso próprio gk superestimado](01-gk-peso-proprio-superestimado.md) |
+| 01 | P1 | [Peso próprio gk superestimado](01-gk-peso-proprio-superestimado.md) ✅ |
 | 02 | P1 | [Sobrecarga qk categoria H (0,25 → 0,4 kN/m²)](02-qk-categoria-H.md) |
 | 03 | P1 | [ψ₀ categoria H = 0 — sobrecarga não combina com vento](03-psi0-categoria-H-vento.md) |
 | 04 | P1 | [Coeficiente G favorável: 0,9G (NBR) → EN 1990 Tab. A1.2(B)](04-coef-G-favoravel-C3.md) |
 | 05 | P2 | [Combinação frequente ψ₁ categoria H = 0](05-psi1-combinacao-frequente.md) |
+| 33 | P1 | [Sucção/uplift: ancoragem ao arrancamento e tirante frouxo](33-succao-uplift-ancoragem-tirante.md) — desdobramento da 1 ✅ |
 
 ### ELS / flechas
 | # | Prioridade | Issue |
@@ -46,7 +47,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 12 | P1 | [Sistema de eixos: N no eixo da peça vs V vertical](12-sistema-eixos-N-V.md) |
-| 13 | P0 | [Esforços nos pilares: dois valores de N; pilar central subdimensionado](13-pilares-esforcos-central.md) |
+| 13 | P0 | [Esforços nos pilares: dois valores de N; pilar central subdimensionado](13-pilares-esforcos-central.md) ✅ |
 
 ### Estabilidade e contraventamento
 | # | Prioridade | Issue |
@@ -54,6 +55,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 14 | P0 | [Contraventamento vertical/frontões ausente — mecanismo lateral; αcr de arco ≠ sway](14-contraventamento-vertical.md) ✅ |
 | 15 | P1 | [Contraventamento do telhado: n=18 vs dois planos de 9; kf/ks e duplicação](15-contraventamento-telhado-n18.md) |
 | 31 | P0 | [Estabilidade transversal do pórtico (mecanismo sway no plano)](31-estabilidade-transversal-portico.md) — desdobramento da 14 ✅ |
+| 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 |
 
 ### Terças
 | # | Prioridade | Issue |
@@ -64,8 +66,8 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 ### Ligações (EC5 §8 / EN 1993-1-8)
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 18 | P0 | [Cavilhas Ø36 mm > limite EC5 §8.6(2) — L1/L1c fora do escopo](18-cavilhas-diametro-36mm.md) |
-| 19 | P0 | [Ruptura de bloco na ligação de 64 pinos](19-ruptura-de-bloco.md) |
+| 18 | P0 | [Cavilhas Ø36 mm > limite EC5 §8.6(2) — L1/L1c fora do escopo](18-cavilhas-diametro-36mm.md) ✅ |
+| 19 | P0 | [Ruptura de bloco na ligação de 64 pinos](19-ruptura-de-bloco.md) ✅ |
 | 20 | P1 | [Fendilhamento — F90,Rd (EC5 §8.1.4)](20-fendilhamento-f90.md) |
 | 21 | P1 | [Chapas de aço, furos e soldas (EN 1993-1-8)](21-chapas-aco-en1993.md) |
 | 22 | P1 | [Critério η-alvo 0,75: ligações com η≈1 — verificar ativação](22-criterio-eta-alvo.md) |
