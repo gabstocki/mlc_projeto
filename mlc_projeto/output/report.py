@@ -708,6 +708,11 @@ def gerar_tex(
         'ações variáveis \\textbf{alternativas}: combinações com vento dominante '
         'não incluem $Q$, e a combinação de sobrecarga não inclui vento '
         '(vento pela NBR~6123:2023).\n\n'
+        '\\textit{Sobrecarga (categoria H):} $q_k=0{,}40$~kN/m$^2$ '
+        '(EN~1991-1-1 Tab.~6.10, valor recomendado; issue~2). A norma prevê '
+        'também uma carga concentrada $Q_k=1{,}0$~kN de manutenção, para '
+        '\\textbf{verificação local} (terça/telha), não incluída no modelo global '
+        '-- ver issue~34.\n\n'
         '% ── 5. Sistema Estrutural ─────────────────────────────────────\n'
         '\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projeção horizontal $\\mathrm{d}x$ (autorizada no projeto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 ativo.\n  \\item Classe de serviço ')
     parts.append(f'{mat.classe_servico}')
@@ -1223,7 +1228,25 @@ def gerar_tex(
     parts.append(f'{eta_nf:.4f} & ')
     parts.append(f'{sim_nf} \\\\\n')
     parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
-    parts.append(f'Fluência (EC5~\\S2.3.2.2): $w_{{fin}} = {r_els.get('w_G_mm', 0):.2f}(1+{k_def:.2f}) + {r_els.get('w_Q1_mm', 0):.2f} = {r_els.get('w_fin_mm', 0):.2f}$~mm ($k_{{def}}={k_def:.2f}$, $\\psi_2=0$).\n\n')
+    parts.append(
+        f'Característico (cat.~H, $Q$ e vento \\textbf{{não}} concomitantes -- '
+        f'issue 3): governa \\textbf{{{_tex_escape(r_els.get("gov_caracteristico", "vento"))}}} '
+        f'($G{{+}}Q={_br(r_els.get("w_char_Q_mm", 0), 2)}$~mm; '
+        f'$G{{+}}W={_br(r_els.get("w_char_W_mm", 0), 2)}$~mm, vento pela NBR~6123). '
+        f'Sucção (uplift) $G{{+}}W_{{suc}}={_br(r_els.get("w_char_up_mm", 0), 2)}$~mm '
+        f'(informativo).\n\n'
+        f'Deformação por cisalhamento (EC5~\\S2.2.3(2) e Anexo~B, '
+        f'$\\kappa_s={_br(r_els.get("k_s", 1.2), 1)}$, '
+        f'$G_{{mean}}={_br(r_els.get("G_mean_GPa", 0), 2)}$~GPa): a flecha inclui '
+        f'a parcela de cortante $w_v=\\int \\kappa_s V/(G\\,A(x))\\,dx$. Em S1: '
+        f'flexão $={_br(r_els.get("w_S1_flex_mm", 0), 2)}$~mm, '
+        f'cisalhamento $={_br(r_els.get("w_S1_cis_mm", 0), 2)}$~mm '
+        f'(${_br(r_els.get("pct_cis_S1", 0), 1)}\\%$ do total).\n\n'
+        f'Fluência (EC5~\\S2.3.2.2, $\\psi_2=0$): '
+        f'$w_{{fin}} = {_br(r_els.get("w_G_mm", 0), 2)}(1+{k_def:.2f}) + '
+        f'{_br(r_els.get("w_var_fin_mm", 0), 2)} = {_br(r_els.get("w_fin_mm", 0), 2)}$~mm '
+        f'(variável dominante: {_tex_escape(r_els.get("var_gov_fin", "vento"))}).\n\n'
+    )
     # ── Tirante de base (se ativo) ─────────────────────────────
     if com_tirante and r_tir:
         parts.append(
@@ -1454,6 +1477,11 @@ def gerar_tex(
             'Com o peso próprio correto (\\S4), a combinação de sucção '
             f'(\\texttt{{{_tex_escape(r_succ.get("comb", "ELU_C3"))}}}, $0{{,}}9G+1{{,}}5W_{{suc}}$) '
             'apresenta \\textbf{esforços inversos}: reação vertical negativa '
+            '\\footnote{O uplift é uma situação de \\textbf{equilíbrio} (EQU): '
+            'adota-se $\\gamma_G=0{,}90$ para o permanente estabilizante conforme '
+            '\\textbf{EN~1990 Tab.~A1.2(A)} -- valor \\emph{do EN~1990}, não da NBR '
+            '(issue 4). Para resistência do membro (STR, Tab.~A1.2(B)) o favorável '
+            'seria $1{,}00$, mas a sucção não governa a resistência.} '
             '(\\emph{uplift}) e empuxo horizontal invertido. Como o tirante é '
             'tração-apenas, sob sucção fica \\textbf{frouxo} e o empuxo invertido '
             '$|H|$ vai à \\textbf{fundação} (cortante na base de extremidade, sem '

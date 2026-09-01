@@ -56,12 +56,19 @@ def flecha_terca(
     E:    float,
     b:    float,
     h:    float,
+    G:    float | None = None,
+    k_s:  float = 1.2,
 ) -> float:
     """
     Flecha máxima analítica para viga bi-apoiada de seção retangular
-    constante com carga uniforme.
+    constante com carga uniforme — flexão + cisalhamento (Timoshenko).
 
-        w_max = 5·q·L⁴ / (384·E·I)
+        w_flexão       = 5·q·L⁴ / (384·E·I)
+        w_cisalhamento = κ_s·q·L² / (8·G·A)      (EC5 §2.2.3(2)/Anexo B)
+        w_max          = w_flexão + w_cisalhamento
+
+    A parcela de cisalhamento vale, em fração da de flexão,
+    0,96·(E/G)·(h/L)² — não desprezível para terças (h/L ≈ 0,1).
 
     Args:
         q : Carga uniforme (N/m)
@@ -69,12 +76,19 @@ def flecha_terca(
         E : Módulo de elasticidade (Pa)
         b : Largura da seção (m)
         h : Altura da seção (m)
+        G : Módulo de distorção (Pa). Se None, omite o cortante (compat.).
+        k_s : fator de forma do cortante (1,2 para seção retangular)
 
     Returns:
         w_max (m)
     """
     I = b * h**3 / 12
-    return 5 * q * L**4 / (384 * E * I)
+    w_flexao = 5 * q * L**4 / (384 * E * I)
+    if G is None:
+        return w_flexao
+    A = b * h
+    w_cisalhamento = k_s * q * L**2 / (8 * G * A)
+    return w_flexao + w_cisalhamento
 
 
 # ── Verificação pontual de uma terça ─────────────────────────────────────────
@@ -163,14 +177,19 @@ def verifica_terca(
     eta_cis = tau_d / f_vd
 
     # ── Verificação flecha ELS ────────────────────────────────
+    # Flecha = flexão + cisalhamento (Timoshenko, EC5 §2.2.3(2)/Anexo B).
     # ELS S1: G + Q + 0,6W
     q_ELS_S1 = (g_k_lin + q_k_lin + 0.6*w_k_lin) * 1e3  # N/m
     mat_longa = GlulamMaterial(mat.classe, mat.classe_servico, "longa")
-    w_inst = flecha_terca(q_ELS_S1, L_t, mat_longa.E0_mean, b, h)
+    E_l, G_l = mat_longa.E0_mean, mat_longa.G_mean
+    w_inst      = flecha_terca(q_ELS_S1, L_t, E_l, b, h, G=G_l)
+    w_inst_flex = flecha_terca(q_ELS_S1, L_t, E_l, b, h)            # só flexão
+    w_inst_cis  = w_inst - w_inst_flex
+    pct_cis     = (w_inst_cis / w_inst * 100.0) if w_inst > 0 else 0.0
 
     # Flecha final com fluência
-    w_G  = flecha_terca(g_k_lin*1e3, L_t, mat_longa.E0_mean, b, h)
-    w_Q1 = flecha_terca(q_k_lin*1e3, L_t, mat_longa.E0_mean, b, h)
+    w_G  = flecha_terca(g_k_lin*1e3, L_t, E_l, b, h, G=G_l)
+    w_Q1 = flecha_terca(q_k_lin*1e3, L_t, E_l, b, h, G=G_l)
     w_fin = w_G*(1+mat_longa.k_def) + w_Q1
 
     lim_inst = L_t / 300
@@ -219,12 +238,15 @@ def verifica_terca(
         "verif_gov":   verif_gov,
         "ok":          eta_gov <= 1.0,
         # Flechas
-        "w_inst_mm":   round(w_inst*1000,    2),
+        "w_inst_mm":      round(w_inst*1000,      2),
+        "w_inst_flex_mm": round(w_inst_flex*1000, 2),
+        "w_inst_cis_mm":  round(w_inst_cis*1000,  2),
+        "pct_cis":        round(pct_cis,          1),
         "w_fin_mm":    round(w_fin*1000,     2),
         "lim_inst_mm": round(lim_inst*1000,  2),
         "lim_fin_mm":  round(lim_fin*1000,   2),
         # Referência
-        "norma":       "EC5 §6.1.6 Eq.6.12, §6.1.7, Tab.7.2",
+        "norma":       "EC5 §6.1.6 Eq.6.12, §6.1.7, §2.2.3(2), Tab.7.2",
     }
 
 

@@ -6,7 +6,7 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind import ParametrosVento
 from mlc_projeto.core.loads import (
     carregamentos_com_vento, peso_proprio_gk,
-    GAMMA_G_sup, GAMMA_G_inf, GAMMA_Q, PSI_0_Q,
+    GAMMA_G_sup, GAMMA_G_EQU_estab, GAMMA_Q, PSI_0_Q, PSI_1_Q, PSI_2_Q,
 )
 
 
@@ -25,6 +25,31 @@ def _load():
 
 def test_psi0_Q_categoria_H_zero():
     assert PSI_0_Q == 0.0
+
+
+def test_coeficientes_G_EN1990():
+    """
+    Issue 4: G favorável STR = 1,00 (EN 1990 Tab. A1.2(B), NÃO 0,90 da NBR);
+    EQU estabilizante = 0,90 e desestabilizante = 1,10 (Tab. A1.2(A)).
+    """
+    from mlc_projeto.core.loads import (
+        GAMMA_G_inf, GAMMA_G_EQU_estab, GAMMA_G_EQU_desestab,
+    )
+    assert GAMMA_G_inf == 1.00              # STR favorável (Tab. A1.2(B))
+    assert GAMMA_G_EQU_estab == 0.90        # EQU estabilizante (Tab. A1.2(A))
+    assert GAMMA_G_EQU_desestab == 1.10     # EQU desestabilizante (Tab. A1.2(A))
+
+
+def test_succao_usa_090_EQU():
+    """A combinação de sucção (uplift/EQU) usa 0,90·G (Tab. A1.2(A))."""
+    load = _load()
+    g = load.g_k
+    c3 = load.combinacao_ELU_succao()          # ELU_C3
+    # recupera o vento a partir de q = 0,90G + 1,5W  →  W = (q − 0,90G)/1,5
+    w = (c3.q_esq - GAMMA_G_EQU_estab * g) / GAMMA_Q
+    # coerência: reconstruído bate com 0,90G + 1,5W
+    assert c3.q_esq == pytest.approx(GAMMA_G_EQU_estab * g + GAMMA_Q * w, rel=1e-9)
+    assert c3.q_esq < 0                          # net uplift (sucção domina)
 
 
 def test_combo_Q_dominante_sem_vento():
@@ -50,8 +75,8 @@ def test_combo_vento_dominante_sem_Q():
     cs = load.combinacoes[nomes_S[0]]
     # q_esq de ELU_W = 1,35G + 1,5·w_esq  (sem termo de Q)
     w_esq_W = (cw.q_esq - GAMMA_G_sup * g) / GAMMA_Q     # recupera w_esq
-    # a mesma pressão em ELU_S deve satisfazer 0,9G + 1,5·w_esq
-    assert cs.q_esq == pytest.approx(GAMMA_G_inf * g + GAMMA_Q * w_esq_W, rel=1e-6)
+    # ELU_S (sucção/uplift) = EQU: 0,90G_estab + 1,5·w_esq (EN 1990 Tab. A1.2(A))
+    assert cs.q_esq == pytest.approx(GAMMA_G_EQU_estab * g + GAMMA_Q * w_esq_W, rel=1e-6)
 
 
 def test_els_caracteristico_sem_vento():
@@ -61,6 +86,26 @@ def test_els_caracteristico_sem_vento():
     s1 = load.combinacoes["ELS_S1"]
     assert s1.q_esq == pytest.approx(g + q, rel=1e-6)
     assert s1.q_dir == pytest.approx(g + q, rel=1e-6)
+
+
+def test_psi1_psi2_categoria_H_zero():
+    """Issue 5: cat. H → ψ1 = ψ2 = 0 (EN 1990 Tab. A1.1)."""
+    assert PSI_1_Q == 0.0
+    assert PSI_2_Q == 0.0
+
+
+def test_els_frequente_e_quasipermanente_iguais_a_G():
+    """
+    Cat. H (ψ1=ψ2=0): a combinação frequente (ELS_S2) e a quase-permanente
+    (ELS_S3) reduzem-se ambas a G.
+    """
+    load = _load()
+    g = load.g_k
+    s2 = load.combinacoes["ELS_S2"]
+    s3 = load.combinacoes["ELS_S3"]
+    assert s2.q_esq == pytest.approx(g, rel=1e-9)      # G (sem Q)
+    assert s3.q_esq == pytest.approx(g, rel=1e-9)
+    assert s2.q_esq == pytest.approx(s3.q_esq, rel=1e-9)   # S2 == S3 == G
 
 
 def test_nao_ha_combo_com_Q_e_vento_juntos():

@@ -2,12 +2,21 @@
 checks/els/deflection_els.py — Verificações ELS completas.
 
 Diagramas M_g(x) e M_q(x) da análise biarticulada (continuidade na cumeeira).
-Integração numérica w = ∫∫ M/(E I(x)) dx² com E = E_mean (EC5 §2.2.3).
+Flecha total = flexão + cisalhamento (teoria de Timoshenko), com E = E_mean e
+G = G_mean (EC5 §2.2.3):
 
-Verificações ELS (EN 1990 §6.5):
-    S1: G + Q + 0,6W  — característico → w_inst ≤ L/300
-    S2: G + 0,5Q      — frequente (informativo)
-    S3: G             — quase-permanente (base da fluência)
+    w(x) = w_flexão(x) + w_cisalhamento(x)
+    w_flexão        : ∫∫ M(x)/(E·I(x)) dx²          (dupla integração de κ=M/EI)
+    w_cisalhamento  : ∫ κ_s·V(x)/(G·A(x)) dx         (EC5 §2.2.3(2) e Anexo B)
+                      κ_s = 1,2 (seção retangular), V = dM/dx
+
+A parcela de cisalhamento NÃO é desprezível em vigas altas de vão médio
+(h_ap/L ≈ 0,14, E/G ≈ 16): responde por parcela significativa da flecha total.
+
+Verificações ELS (EN 1990 §6.5) — cobertura categoria H (ψ0=ψ1=ψ2=0):
+    S1: G + Q  — característico (sem vento; Q e W não concomitantes) → w_inst ≤ L/300
+    S2: G      — frequente (ψ1=0 ⇒ sem Q; = quase-permanente para cat. H)
+    S3: G      — quase-permanente (ψ2=0; base da fluência)
 
 Flecha final com fluência (EC5 §2.3.2.2):
     w_fin = w_G·(1+k_def) + w_Q·(1+ψ₂·k_def)
@@ -21,7 +30,6 @@ Referência: EC5 §2.3.2.2, Tab. 7.2 | EN 1990 §6.5
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from scipy.integrate import cumulative_trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
@@ -36,33 +44,61 @@ def flecha_numerica(
     mat:   GlulamMaterial,
     M_x:   np.ndarray,
     x:     np.ndarray,
-) -> tuple[float, np.ndarray]:
+    *,
+    incluir_cisalhamento: bool = True,
+    k_s:   float = 1.2,
+) -> tuple[float, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Flecha por integração numérica de κ(x) = M(x)/(E·I(x)).
+    Flecha por integração numérica — flexão + cisalhamento (Timoshenko).
 
-    Usa E_mean para ELS conforme EC5 §2.2.3.
-    Condições de contorno: w(0) = w(L) = 0.
+    Flexão (EC5 §2.2.3, E = E_mean):
+        κ(x) = M(x)/(E·I(x)) ; w_b por dupla integração de κ.
+        Condições de contorno de viga BIARTICULADA: w(0) = w(L) = 0.
+        A rotação nos apoios NÃO é nula — a constante de integração da
+        rotação é absorvida pelo termo linear em w. (Corrigir também θ
+        imporia rotação nula nos apoios, i.e. engaste bi-engastado, e
+        subestimaria a flecha em ~5× para carga uniforme.)
+
+    Cisalhamento (EC5 §2.2.3(2) e Anexo B, G = G_mean):
+        γ(x) = κ_s·V(x)/(G·A(x)) ,  V(x) = dM/dx ,  κ_s = 1,2 (retangular)
+        w_s(x) = ∫ γ dx , com o sinal coerente com a convenção w'' = +M/EI
+        usada na flexão, de modo que flexão e cisalhamento SOMAM no mesmo
+        sentido. Usa A(x) da seção variável.
 
     Args:
-        geo : Geometria da viga (fornece I(x) e L)
-        mat : Material (E_mean)
+        geo : Geometria da viga (fornece I(x), A(x) e L)
+        mat : Material (E_mean, G_mean)
         M_x : Diagrama de momento (N·m) nos pontos x
         x   : Coordenadas dos pontos (m)
+        incluir_cisalhamento : inclui a parcela de cortante (default True)
+        k_s : fator de forma do cortante (1,2 para seção retangular)
 
     Returns:
-        (w_max_m, w_x) — flecha máxima e perfil completo
+        (w_max_m, w_x, w_flexao_x, w_cisalhamento_x)
+        w_x = w_flexao_x + w_cisalhamento_x (perfis completos, m)
     """
     E     = mat.E0_mean
     I_x   = geo.I(x)          # m⁴ — seção variável
     kappa = M_x / (E * I_x)   # curvatura (1/m)
 
+    # ── Parcela de flexão (BIARTICULADA: só uma correção linear, em w) ────────
     theta = cumulative_trapezoid(kappa, x, initial=0.0)
-    theta -= theta[-1] * x / geo.L
+    w_b   = cumulative_trapezoid(theta, x, initial=0.0)
+    w_b  -= w_b[-1] * x / geo.L
 
-    w = cumulative_trapezoid(theta, x, initial=0.0)
-    w -= w[-1] * x / geo.L
+    # ── Parcela de cisalhamento (Timoshenko — EC5 §2.2.3(2)/Anexo B) ──────────
+    if incluir_cisalhamento:
+        G     = mat.G_mean
+        A_x   = geo.A(x)                 # m² — seção variável
+        V_x   = np.gradient(M_x, x)      # N — cortante = dM/dx
+        gamma = -k_s * V_x / (G * A_x)   # distorção (sinal coerente c/ w''=+M/EI)
+        w_s   = cumulative_trapezoid(gamma, x, initial=0.0)
+        w_s  -= w_s[-1] * x / geo.L
+    else:
+        w_s = np.zeros_like(w_b)
 
-    return float(np.max(np.abs(w))), w
+    w = w_b + w_s
+    return float(np.max(np.abs(w))), w, w_b, w_s
 
 
 # ── Verificação ELS completa ──────────────────────────────────────────────────
@@ -90,7 +126,11 @@ def verificar_ELS(
     """
     L         = geo.L
     k_def     = mat.k_def
-    psi_2     = 0.0   # cobertura inacessível — EN 1990 Tab. A1.1
+    # Categoria H (EN 1990 Tab. A1.1): ψ2,Q = ψ2,W = 0. Q e vento NÃO concomitantes
+    # (EN 1991-1-1 §3.3.2(1)) ⇒ ação variável dominante é Q OU vento (NBR 6123).
+    psi_2_Q   = 0.0
+    psi_2_W   = 0.0
+    k_s_forma = 1.2                              # fator de forma do cortante (retangular)
     lim_inst  = L / 300
     lim_fin   = L / 250
 
@@ -98,30 +138,77 @@ def verificar_ELS(
     h0        = geo.h0
     h_ap      = geo.h_ap
 
-    # ── Combinações ELS ───────────────────────────────────────
-    comb_S1 = load.combinacoes["ELS_S1"]
-    comb_S2 = load.combinacoes["ELS_S2"]
+    # ── Flecha assinada no ponto de máximo |w| (superposição elástica) ────────
+    # Retorna (w_total, w_flexão, w_cisalhamento) no ponto de |w_total| máximo.
+    def _parcelas_signed(
+        q_esq: float, q_dir: float | None = None
+    ) -> tuple[float, float, float]:
+        r = analisar_biarticulada(
+            q=0.5 * (q_esq + (q_dir if q_dir is not None else q_esq)),
+            L=L, h0=h0, h_ap=h_ap, alpha_rad=alpha_rad, b=geo.b,
+            q_esq=q_esq, q_dir=(q_dir if q_dir is not None else q_esq),
+        )
+        M_x = np.interp(geo.x, r["x"], r["M_x"]) * 1e3   # N·m
+        _, w_x, w_b_x, w_s_x = flecha_numerica(geo, mat, M_x, geo.x)
+        i = int(np.argmax(np.abs(w_x)))
+        return float(w_x[i]), float(w_b_x[i]), float(w_s_x[i])
 
-    # ── Diagramas M(x) pela análise biarticulada ──────────────
-    def _M_interp(q: float) -> tuple[np.ndarray, np.ndarray]:
-        """Retorna (x, M_Nm) interpolados nos pontos de geo."""
-        r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, geo.b)
-        M_interp = np.interp(geo.x, r["x"], r["M_x"]) * 1e3  # N·m
-        return geo.x, M_interp
+    def _w_signed(q_esq: float, q_dir: float | None = None) -> float:
+        return _parcelas_signed(q_esq, q_dir)[0]
 
-    x_S1, M_S1_Nm = _M_interp(comb_S1.q_tot)
-    x_S2, M_S2_Nm = _M_interp(comb_S2.q_tot)
-    x_g,  M_g_Nm  = _M_interp(load.g_k)
-    x_q,  M_q_Nm  = _M_interp(load.q_k)
+    # ── Parcelas isoladas (superponíveis) ─────────────────────────────────────
+    w_G_s, w_G_b_s, w_G_v_s = _parcelas_signed(load.g_k)   # permanente (sentido ↓)
+    w_Q_s = _w_signed(load.q_k)                 # sobrecarga
+    s     = 1.0 if w_G_s >= 0 else -1.0         # sinal do sentido descendente
+    w_G   = s * w_G_s                           # ↓ positiva
+    w_Q   = s * w_Q_s
 
-    # ── Flechas instantâneas ──────────────────────────────────
-    w_S1, w_S1_x = flecha_numerica(geo, mat, M_S1_Nm, x_S1)
-    w_S2, _      = flecha_numerica(geo, mat, M_S2_Nm, x_S2)
-    w_G,  _      = flecha_numerica(geo, mat, M_g_Nm,  x_g)
-    w_Q1, _      = flecha_numerica(geo, mat, M_q_Nm,  x_q)
+    # ── Vento (NBR 6123) como ação dominante do ELS característico ─────────────
+    # Para cada padrão Cpe: flecha sob o vento característico (γ=1,0) isolado.
+    A_trib = load.area_trib
+    w_W_dn_list: list[float] = []
+    wewd_list: list[tuple[float, float]] = []
+    padroes = list(getattr(load, "padroes_vento", []) or [])
+    for p in padroes:
+        we = float(p.get("w_esq_kNm2", 0.0)) * A_trib   # kN/m (↓ +, sucção −)
+        wd = float(p.get("w_dir_kNm2", 0.0)) * A_trib
+        w_W_dn_list.append(s * _w_signed(we, wd))       # ↓ positiva
+        wewd_list.append((we, wd))
+    # Vento-pressão governante (mais descendente) e sucção governante (mais ↑)
+    w_W_press = max(w_W_dn_list) if w_W_dn_list else 0.0
+    w_W_suc   = min(w_W_dn_list) if w_W_dn_list else 0.0
+    we_gov, wd_gov = (wewd_list[int(np.argmax(w_W_dn_list))]
+                      if w_W_dn_list else (0.0, 0.0))
 
-    # ── Flecha final com fluência — EC5 §2.3.2.2 ─────────────
-    w_fin     = w_G * (1 + k_def) + w_Q1 * (1 + psi_2 * k_def)
+    # ── Característico (instantâneo) — governante descendente ──────────────────
+    w_char_Q = w_G + w_Q                        # G + Q
+    w_char_W = w_G + w_W_press                  # G + W (pressão, NBR 6123)
+    w_S1     = max(w_char_Q, w_char_W)           # governa a flecha ↓
+    gov_char = "vento" if w_char_W >= w_char_Q else "sobrecarga Q"
+    # Sucção (uplift) — informativo (o EC5 limita a flecha descendente)
+    w_char_up = w_G + w_W_suc                    # pode ser < 0 (↑)
+
+    # ── Separação flexão vs cisalhamento da combinação S1 governante ──────────
+    # (EC5 §2.2.3(2)/Anexo B) — analisa a combinação característica que governa
+    # como um único caso de carga e mede a contribuição do cortante.
+    g_k = load.g_k
+    if gov_char == "vento":
+        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + we_gov, g_k + wd_gov)
+    else:
+        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + load.q_k)
+    w_S1_flex  = s * w_S1_b_s                    # parcela de flexão (↓ +)
+    w_S1_cis   = s * w_S1_v_s                    # parcela de cisalhamento (↓ +)
+    pct_cis_S1 = (abs(w_S1_cis) / abs(w_S1) * 100.0) if abs(w_S1) > 1e-12 else 0.0
+    # Permanente (base da fluência) — contribuição do cortante
+    w_G_flex   = s * w_G_b_s
+    w_G_cis    = s * w_G_v_s
+    pct_cis_G  = (abs(w_G_cis) / abs(w_G) * 100.0) if abs(w_G) > 1e-12 else 0.0
+
+    # ── Flecha final com fluência — EC5 §2.3.2.2 ──────────────────────────────
+    # Ação variável dominante (ψ2=0 para Q e vento): a de maior flecha ↓.
+    w_var_fin = max(w_Q, w_W_press)
+    var_gov   = "vento" if w_W_press >= w_Q else "sobrecarga Q"
+    w_fin     = w_G * (1 + k_def) + w_var_fin    # ψ2·k_def = 0
     w_net_fin = w_fin - w_camber
 
     # ── Taxas de utilização ───────────────────────────────────
@@ -135,14 +222,34 @@ def verificar_ELS(
         "L_m":           geo.L,
         "h_ap_m":        geo.h_ap,
         "b_m":           geo.b,
-        # Material
+        # Material / ψ
         "k_def":         k_def,
+        "psi_2_Q":       psi_2_Q,
+        "psi_2_W":       psi_2_W,
         "E_mean_GPa":    round(mat.E0_mean / 1e9,  3),
-        # Flechas por combinação (mm)
-        "w_S1_mm":       round(w_S1  * 1000,        2),
-        "w_S2_mm":       round(w_S2  * 1000,        2),
+        # Flechas por parcela / combinação (mm, ↓ positiva)
+        "w_S1_mm":       round(w_S1  * 1000,        2),   # característico ↓ governante
+        # Separação flexão vs cisalhamento (EC5 §2.2.3(2)/Anexo B)
+        "k_s":           k_s_forma,
+        "G_mean_GPa":    round(mat.G_mean / 1e9,    3),
+        "w_S1_flex_mm":  round(w_S1_flex * 1000,    2),   # S1: parcela de flexão
+        "w_S1_cis_mm":   round(w_S1_cis  * 1000,    2),   # S1: parcela de cisalhamento
+        "pct_cis_S1":    round(pct_cis_S1,          1),   # % do cortante em S1
+        "w_G_flex_mm":   round(w_G_flex * 1000,     2),
+        "w_G_cis_mm":    round(w_G_cis  * 1000,     2),
+        "pct_cis_G":     round(pct_cis_G,           1),
         "w_G_mm":        round(w_G   * 1000,        2),
-        "w_Q1_mm":       round(w_Q1  * 1000,        2),
+        "w_Q1_mm":       round(w_Q   * 1000,        2),
+        "w_W_press_mm":  round(w_W_press * 1000,    2),   # vento pressão (NBR 6123)
+        "w_W_suc_mm":    round(w_W_suc  * 1000,     2),   # vento sucção (↑ se <0)
+        "w_char_Q_mm":   round(w_char_Q * 1000,     2),   # G+Q
+        "w_char_W_mm":   round(w_char_W * 1000,     2),   # G+W
+        "w_char_up_mm":  round(w_char_up * 1000,    2),   # G+W_sucção (informativo)
+        "gov_caracteristico": gov_char,
+        "n_padroes_vento": len(padroes),
+        # Variável dominante do w_fin
+        "w_var_fin_mm":  round(w_var_fin * 1000,    2),
+        "var_gov_fin":   var_gov,
         # Fluência
         "w_fin_mm":      round(w_fin     * 1000,    2),
         "w_net_fin_mm":  round(w_net_fin * 1000,    2),
@@ -156,13 +263,8 @@ def verificar_ELS(
         "eta":           round(eta,                   4),
         "ok":            eta <= 1.0,
         "verif_gov":     verif_gov,
-        # Combinações
-        "q_S1_kNm":      round(comb_S1.q_tot,        4),
-        "q_S2_kNm":      round(comb_S2.q_tot,        4),
-        "q_g_kNm":       round(load.g_k,             4),
-        "q_q_kNm":       round(load.q_k,             4),
         # Referência
-        "norma":         "EC5 §2.3.2.2, Tab. 7.2 | EN 1990 §6.5",
+        "norma":         "EC5 §2.3.2.2, Tab. 7.2 | EN 1990 §6.5 | NBR 6123 (vento)",
         "sistema":       "biarticulada",
     }
 
@@ -180,29 +282,39 @@ def relatorio_ELS(resultado: dict) -> None:
     print(f"  k_def = {resultado['k_def']:.2f} | "
           f"E_mean = {resultado['E_mean_GPa']:.2f} GPa\n")
 
-    print(f"  Combinações ELS (viga biarticulada — M da compatibilidade):")
-    print(f"    S1 (caracter.): q = {resultado['q_S1_kNm']:+.4f} kN/m")
-    print(f"    S2 (frequente): q = {resultado['q_S2_kNm']:+.4f} kN/m")
-    print(f"    G (permanente): q = {resultado['q_g_kNm']:+.4f} kN/m")
-    print(f"    Q (variável):   q = {resultado['q_q_kNm']:+.4f} kN/m\n")
+    print("  Flechas por parcela (↓ positiva) — cat. H, Q e vento não concomitantes:")
+    print(f"    w(G)          = {resultado['w_G_mm']:>7.2f} mm")
+    print(f"    w(Q)          = {resultado['w_Q1_mm']:>7.2f} mm")
+    print(f"    w(vento press.)= {resultado['w_W_press_mm']:>6.2f} mm  (NBR 6123)")
+    print(f"    w(vento sucção)= {resultado['w_W_suc_mm']:>6.2f} mm  (↑ se <0)\n")
 
-    print(f"  Flechas instantâneas:")
-    print(f"    w(S1) = {resultado['w_S1_mm']:>7.2f} mm  "
-          f"← limite L/300 = {resultado['lim_inst_mm']:.2f} mm")
-    print(f"    w(S2) = {resultado['w_S2_mm']:>7.2f} mm  (frequente — informativo)")
-    print(f"    w(G)  = {resultado['w_G_mm']:>7.2f} mm")
-    print(f"    w(Q)  = {resultado['w_Q1_mm']:>7.2f} mm\n")
+    print("  Característico (instantâneo) — governante descendente:")
+    print(f"    G+Q = {resultado['w_char_Q_mm']:.2f} mm | "
+          f"G+W = {resultado['w_char_W_mm']:.2f} mm "
+          f"→ governa {resultado['gov_caracteristico']}")
+    print(f"    w(S1) = {resultado['w_S1_mm']:.2f} mm ≤ L/300 = "
+          f"{resultado['lim_inst_mm']:.2f} mm")
+    print(f"    (uplift G+W_sucção = {resultado['w_char_up_mm']:.2f} mm — informativo)\n")
 
-    print(f"  Fluência — EC5 §2.3.2.2:")
-    print(f"    w_fin = {resultado['w_G_mm']:.2f}·"
-          f"(1+{resultado['k_def']:.2f}) + {resultado['w_Q1_mm']:.2f}")
+    print("  Separação flexão vs cisalhamento (EC5 §2.2.3(2)/Anexo B, κ_s="
+          f"{resultado['k_s']:.1f}, G_mean={resultado['G_mean_GPa']:.2f} GPa):")
+    print(f"    S1: flexão = {resultado['w_S1_flex_mm']:.2f} mm | "
+          f"cisalhamento = {resultado['w_S1_cis_mm']:.2f} mm "
+          f"({resultado['pct_cis_S1']:.1f}% do total)")
+    print(f"    G : flexão = {resultado['w_G_flex_mm']:.2f} mm | "
+          f"cisalhamento = {resultado['w_G_cis_mm']:.2f} mm "
+          f"({resultado['pct_cis_G']:.1f}% do total)\n")
+
+    print("  Fluência — EC5 §2.3.2.2 (ψ2=0):")
+    print(f"    w_fin = {resultado['w_G_mm']:.2f}·(1+{resultado['k_def']:.2f}) + "
+          f"{resultado['w_var_fin_mm']:.2f} ({resultado['var_gov_fin']})")
     print(f"    w_fin = {resultado['w_fin_mm']:.2f} mm")
     print(f"    w_net,fin = {resultado['w_net_fin_mm']:.2f} mm  "
           f"(sem contra-flecha)\n")
 
     ok_s1  = "✓" if resultado["eta_S1"]     <= 1.0 else "✗"
     ok_fin = "✓" if resultado["eta_net_fin"] <= 1.0 else "✗"
-    print(f"  Verificações:")
+    print("  Verificações:")
     print(f"    {ok_s1} w(S1) ≤ L/300:     "
           f"{resultado['w_S1_mm']:>7.2f} ≤ {resultado['lim_inst_mm']:.2f} mm  "
           f"η = {resultado['eta_S1']:.4f}")
@@ -213,7 +325,7 @@ def relatorio_ELS(resultado: dict) -> None:
     status = "✓ APROVADO" if resultado["ok"] else "✗ REPROVADO"
     print(f"\n  η = {resultado['eta']:.4f}  ({resultado['verif_gov']} governa)"
           f"  → {status}")
-    print(f"\n  Nota: vibração EC5 §7.3 não aplicável — cobertura industrial.")
+    print("\n  Nota: vibração EC5 §7.3 não aplicável — cobertura industrial.")
     print("=" * 70)
 
 

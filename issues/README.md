@@ -19,17 +19,18 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 01 | P1 | [Peso próprio gk superestimado](01-gk-peso-proprio-superestimado.md) ✅ |
-| 02 | P1 | [Sobrecarga qk categoria H (0,25 → 0,4 kN/m²)](02-qk-categoria-H.md) |
+| 02 | P1 | [Sobrecarga qk categoria H (0,25 → 0,4 kN/m²)](02-qk-categoria-H.md) ✅ |
 | 03 | P1 | [ψ₀ categoria H = 0 — sobrecarga não combina com vento](03-psi0-categoria-H-vento.md) ✅ |
-| 04 | P1 | [Coeficiente G favorável: 0,9G (NBR) → EN 1990 Tab. A1.2(B)](04-coef-G-favoravel-C3.md) |
-| 05 | P2 | [Combinação frequente ψ₁ categoria H = 0](05-psi1-combinacao-frequente.md) |
+| 04 | P1 | [Coeficiente G favorável: 0,9G (NBR) → EN 1990 Tab. A1.2(B)](04-coef-G-favoravel-C3.md) ✅ |
+| 05 | P2 | [Combinação frequente ψ₁ categoria H = 0](05-psi1-combinacao-frequente.md) ✅ |
 | 33 | P1 | [Sucção/uplift: ancoragem ao arrancamento e tirante frouxo](33-succao-uplift-ancoragem-tirante.md) — desdobramento da 1 ✅ |
+| 34 | P2 | [Carga concentrada Q_k=1,0 kN (cat. H): verificação local terça/telha](34-qk-concentrado-terca-telha.md) — desdobramento da 2 |
 
 ### ELS / flechas
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 06 | P1 | [wfin omite parcela de vento (ψ₀=0,6) e ψ₂ não explícito](06-wfin-vento-psi2.md) |
-| 07 | P1 | [Flecha sem parcela de deformação por cisalhamento](07-flecha-cisalhamento.md) |
+| 06 | P1 | [wfin omite parcela de vento (ψ₀=0,6) e ψ₂ não explícito](06-wfin-vento-psi2.md) ✅ |
+| 07 | P1 | [Flecha sem parcela de deformação por cisalhamento](07-flecha-cisalhamento.md) ✅ |
 
 ### Materiais (EN 14080)
 | # | Prioridade | Issue |

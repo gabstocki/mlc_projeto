@@ -41,7 +41,8 @@ Notas
 
 Referências
 -----------
-  EN 1990 (combinação de sucção; ação permanente favorável γ_G,inf)
+  EN 1990 Tab. A1.2(A) — EQU: uplift é situação de equilíbrio; G estabilizante
+        com γ_G = 0,90 (issue 4 — valor EN 1990, não NBR; STR usaria 1,00, Tab. A1.2(B))
   EN 1993-1-1 §6.2.3 (tirante tração-apenas) ; EN 1992-4 / EN 1993-1-8 (ancoragem)
 """
 
@@ -49,7 +50,7 @@ from __future__ import annotations
 
 from mlc_projeto.core.geometry import GeometriaViga
 from mlc_projeto.core.loads import (
-    Carregamentos, analisar_biarticulada, GAMMA_G_inf, G_GRAVIDADE,
+    Carregamentos, analisar_biarticulada, GAMMA_G_EQU_estab, G_GRAVIDADE,
 )
 
 
@@ -63,7 +64,7 @@ def verificar_succao_uplift(
     H_pilar_m:     float,
     rho_mean_kgm3: float,
     com_tirante:   bool = True,
-    gamma_G_inf:   float = GAMMA_G_inf,
+    gamma_G_inf:   float = GAMMA_G_EQU_estab,   # EQU estabilizante (EN 1990 Tab. A1.2(A))
     g_ms2:         float = G_GRAVIDADE,
 ) -> dict:
     """

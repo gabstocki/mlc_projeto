@@ -49,8 +49,13 @@ from mlc_projeto.core.materials import GlulamMaterial
 
 # ── Coeficientes EN 1990 ─────────────────────────────────────────────────────
 
-GAMMA_G_sup = 1.35
-GAMMA_G_inf = 0.90
+# Coeficientes de ações permanentes — EN 1990 (issue 4).
+# STR/GEO — Tab. A1.2(B):
+GAMMA_G_sup = 1.35   # permanente desfavorável
+GAMMA_G_inf = 1.00   # permanente FAVORÁVEL (EN 1990 Tab. A1.2(B); NÃO 0,90 da NBR)
+# EQU (perda de equilíbrio estático / uplift) — Tab. A1.2(A):
+GAMMA_G_EQU_estab    = 0.90   # permanente estabilizante (resiste ao uplift)
+GAMMA_G_EQU_desestab = 1.10   # permanente desestabilizante
 GAMMA_Q     = 1.50
 
 # Coeficientes ψ — cobertura CATEGORIA H (não acessível, só manutenção).
@@ -58,7 +63,7 @@ GAMMA_Q     = 1.50
 # EN 1991-1-1 §3.3.2(1): a sobrecarga de cobertura (cat. H) NÃO é concomitante
 # com vento nem neve → Q e W são ações variáveis alternativas (issue 3).
 PSI_0_Q     = 0.00   # categoria H (era 0,70 — categorias A–D)
-PSI_1_Q     = 0.50   # (issue 5: para cat. H deve ser 0,0)
+PSI_1_Q     = 0.00   # categoria H (era 0,50 — categorias A–D); issue 5
 PSI_2_Q     = 0.00
 # Vento: ψ0,W=0,6 (EN 1990 Tab. A1.1). Não se aplica como acompanhante da
 # sobrecarga aqui, pois Q (cat. H) e W não são concomitantes.
@@ -562,13 +567,17 @@ class Carregamentos:
             c[c_w.nome] = c_w
             elu_vento.append(c_w)
 
-            # Vento dominante (sucção) / G favorável: 0,9G + 1,5W (sem Q).
-            # NB: coeficiente de G favorável — ver issue 4 (EN 1990 Tab. A1.2(B)).
+            # Vento dominante (sucção) → situação de UPLIFT/EQU: 0,9G_estab + 1,5W
+            # (EN 1990 Tab. A1.2(A), G estabilizante = 0,90 — NÃO é valor NBR;
+            # issue 4). Sem Q (cat. H, não concomitante). Alimenta a verificação
+            # de ancoragem/uplift (issue 33). Para STR o favorável seria 1,00
+            # (Tab. A1.2(B)), mas a resistência do membro é governada pela
+            # gravidade/vento-pressão, não pela sucção.
             c_s = _comb(
                 f"ELU_S_{pid}", "ELU",
-                f"0,9G+1,5W (cat.H: sem Q) | {desc_p}",
-                GAMMA_G_inf * g + GAMMA_Q * we,
-                GAMMA_G_inf * g + GAMMA_Q * wd,
+                f"0,9G+1,5W (EQU Tab.A1.2(A); sem Q) | {desc_p}",
+                GAMMA_G_EQU_estab * g + GAMMA_Q * we,
+                GAMMA_G_EQU_estab * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
             )
             c[c_s.nome] = c_s
@@ -662,15 +671,17 @@ class Carregamentos:
             g + q, g + q,
             "longa",
         )
+        # Frequente e quase-permanente — categoria H: ψ1=ψ2=0 (EN 1990 Tab. A1.1)
+        # ⇒ AMBAS reduzem-se a G (a sobrecarga não entra). Ver issue 5.
         c["ELS_S2"] = _comb(
             "ELS_S2", "ELS",
-            "G + ψ1·Q  (frequente)",   # cat. H: ψ1=0 → G (ver issue 5)
+            "G  (frequente; cat.H ψ1=0 ⇒ sem Q)",
             g + PSI_1_Q * q, g + PSI_1_Q * q,
             "longa",
         )
         c["ELS_S3"] = _comb(
             "ELS_S3", "ELS",
-            "G  (quase-permanente — fluência)",
+            "G  (quase-permanente ψ2=0; base da fluência)",
             g + PSI_2_Q * q, g + PSI_2_Q * q,
             "permanente",
         )

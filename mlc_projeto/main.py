@@ -119,7 +119,12 @@ VENTO_PARAMS = dict(
 # Não se adota mais o valor único G_AREA=1,50 kN/m² (era ~2× o real ≈ 0,80).
 G_TELHA_KNM2       = 0.10   # kN/m² — telha metálica trapezoidal (confirmar ficha)
 G_INSTALACOES_KNM2 = 0.10   # kN/m² — instalações/serviços (estimativa de projeto)
-Q_AREA = 0.25          # kN/m² sobrecarga cobertura
+# Sobrecarga de cobertura — categoria H (não acessível): EN 1991-1-1 Tab. 6.10
+#   q_k = 0,40 kN/m² (recomendado; issue 2) e Q_k = 1,0 kN concentrado.
+# O Q_k concentrado (verificação LOCAL — terça/telha) não está neste modelo global;
+# ver nota da issue 2. Não concomitante com vento (cat. H, issue 3).
+Q_AREA   = 0.40        # kN/m² — sobrecarga UDL cat. H (EN 1991-1-1 Tab. 6.10)
+QK_CONC_KN = 1.0       # kN — carga concentrada de manutenção (verificação local)
 L_T    = 5.75          # m — espaçamento entre pórticos = vão das terças
 S      = 2.53          # m — espaçamento entre terças (l_ef viga)
 

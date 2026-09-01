@@ -66,7 +66,7 @@
 
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
   ✓ Estab. global α_cr/P-Δ         η = 0.4583  █████████
-  · α_cr=21.8 (mín 10) | H_imp=0.92 kN (0.08% de H_Ed) | w/f_c=0.00081
+  · α_cr=21.8 (mín 10) | H_imp=0.92 kN (0.08% de H_Ed) | w/f_c=0.00111
   · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway nas duas direções (contraventa…
 
 [FASE 2] Impacto de veículo em pilares (estacionamento)...
@@ -76,11 +76,11 @@
   · Seções resistem às forças de choque de projeto (50/25 kN). Mesmo assim, recomenda-se defen…
 
 [FASE 2] Verificações ELU — Terças (flexão cobertura)...
-  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.1585  ███
+  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.1695  ███
   ✓ Terça-biela §6.3.2 (estab.)    η = 0.0505  █
 
 [FASE 3] Verificações ELS...
-  ✓ ELS §2.3.2.2+Tab.7.2           η = 0.0151  
+  ✓ ELS §2.3.2.2+Tab.7.2           η = 0.0139  
 
 [FASE 4a] Tirante de base (H_arco → tirante, H_sapata≈0)...
   ✓ Tirante base ∅76 mm S355  η = 0.6815
@@ -104,9 +104,9 @@
   · L1c: F_par=1106 kN | tração=3981 kN, cisalh=2333 kN → F_bs,Rk=3981 (governa tração) | F_bs,Rd=2230 kN | η=0.496 (η só-cisalh=0.846)
 
 [FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...
-  ✓ L1      η_slip=0.0232  η_alt=0.3200
+  ✓ L1      η_slip=0.0264  η_alt=0.3200
   ✓ L2      η_slip=0.0136  η_alt=0.6020
-  ✓ L1c     η_slip=0.0232  η_alt=0.2540
+  ✓ L1c     η_slip=0.0264  η_alt=0.2540
 
 [FASE 4c] Sucção/uplift — ancoragem e tirante frouxo...
   ✓ Sucção/uplift (ancoragem)      η = 0.8589  █████████████████
@@ -129,7 +129,7 @@
   Pilar central (N)                EC5 §6.3.2                     0.3096  ✓
   Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2            0.2561  ✓
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.3269  ✓
-  Terça flexão                     EC5 §6.1.6+§6.1.7              0.1585  ✓
+  Terça flexão                     EC5 §6.1.6+§6.1.7              0.1695  ✓
   Contraventamento cobertura       EC5 §9.2.5                     0.5191  ✓
   Contravento vertical             EN 1993-1-1 §5.3+§6.2.3        0.8909  ✓
   Contravento transversal          EN 1993-1-1 §5.3+§6.2.3        0.8932  ✓
@@ -137,7 +137,7 @@
   Impacto veículo (A_d)            EN 1991-1-7                    0.4774  ✓
   Sucção/uplift (ancoragem)        EN 1990+EN 1992-4              0.8589  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3             0.6815  ✓
-  ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.0151  ✓
+  ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.0139  ✓
   Ruptura de bloco L1              EC5 Anexo A                    0.2705  ✓
   Ruptura de bloco L1c             EC5 Anexo A                    0.4960  ✓
   Ligação L1 base                  EC5 §8.2+§8.5.1.1+§8.6         0.7089  ✓
@@ -146,9 +146,9 @@
   Ligação L1c base central         EC5 §8.2+§8.5.1.1+§8.6         0.7481  ✓
   Ligação L2c cumeeira             EC5 §6.1.4+§6.1.5+§8.6         0.6019  ✓
   Ligação L3c sapata central       EN 1993-1-8+EN 1992-4          1.0000  ✓
-  Fadiga/slip L1                   EC5 §7.1+§8.1.5                0.0232  ✓
+  Fadiga/slip L1                   EC5 §7.1+§8.1.5                0.0264  ✓
   Fadiga/slip L2                   EC5 §7.1+§8.1.5                0.0136  ✓
-  Fadiga/slip L1c                  EC5 §7.1+§8.1.5                0.0232  ✓
+  Fadiga/slip L1c                  EC5 §7.1+§8.1.5                0.0264  ✓
   ------------------------------------------------------------------------
   η máximo     = 1.0000
   H_arco       = 1097.60 kN  (Castigliano → tirante)
@@ -168,4 +168,4 @@
 Pipeline concluído. Relatório gerado em output/
   Status global = APROVADO | η_max = 1.0000
 
-[FASE 6] Visualização 3D omitida (abrir_viz=False)
+[FASE 6] Abrindo visualização 3D interativa...
