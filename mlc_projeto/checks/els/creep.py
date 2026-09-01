@@ -280,7 +280,7 @@ def varrer_acumulado(
 
                 # ── 1. CUMEEIRA §6.4.3 ────────────────────────
                 k_p     = calcular_k_p(al_f)
-                k_vol   = calcular_k_vol(b_f, h_ap)
+                k_vol   = calcular_k_vol(b_f, h_ap, L, al_f)
                 sig_t90 = calcular_sigma_t90d(k_p, M_max_Nm, b_f, h_ap)
                 eta_cum = sig_t90 / (K_DIS * k_vol * mat.f_t90_d)
 

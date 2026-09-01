@@ -32,6 +32,7 @@ from mlc_projeto.core.loads      import carregamentos_com_vento, peso_proprio_gk
 from mlc_projeto.predim.predim   import pre_dimensionar, relatorio
 
 from mlc_projeto.checks.elu.cumeeira          import verifica_cumeeira
+from mlc_projeto.checks.elu.misula            import verifica_misula
 from mlc_projeto.checks.elu.flambagem_lateral import verifica_flambagem_lateral
 from mlc_projeto.checks.elu.flexao            import verifica_flexao
 from mlc_projeto.checks.elu.cisalhamento      import verifica_cisalhamento
@@ -425,6 +426,14 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     res_elu["cumeeira"] = verifica_cumeeira(geo, mat_elu, load)
     _print_eta("Cumeeira §6.4.3", res_elu["cumeeira"])
+
+    res_elu["misula"] = verifica_misula(geo, mat_elu, load)
+    _mi = res_elu["misula"]
+    _print_eta("Mísula face incl. §6.4.2", _mi)
+    print(f"  · Borda inclinada α={_mi['alpha_deg']:.0f}°: {_mi['regime']} no topo "
+          f"governa em x={_mi['x_gov_m']:.2f} m ({_mi['comb_gov']}) | "
+          f"k_m,α={_mi['k_m_alpha']:.3f} (comp={_mi['k_m_alpha_compressao']:.3f}, "
+          f"tração={_mi['k_m_alpha_tracao']:.3f})")
 
     # ── Contraventamento ANTES do LTB ─────────────────────────────────────────
     # A cobertura só valida l_1 = s (terças) se o sistema de estabilização

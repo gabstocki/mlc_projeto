@@ -40,8 +40,8 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 ### Viga — mísula e ápice (EC5 §6.4)
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 09 | P1 | [Mísula: verificação da face inclinada σm,α,d ausente (§6.4.2)](09-misula-face-inclinada.md) |
-| 10 | P2 | [Zona do ápice: documentar kdis, kvol, Vap, σt,90, kr (§6.4.3)](10-apice-parametros.md) |
+| 09 | P1 | [Mísula: verificação da face inclinada σm,α,d ausente (§6.4.2)](09-misula-face-inclinada.md) ✅ |
+| 10 | P2 | [Zona do ápice: documentar kdis, kvol, Vap, σt,90, kr (§6.4.3)](10-apice-parametros.md) ✅ |
 | 11 | P2 | [Memória de cálculo da flambagem lateral (lef, σm,crit, λrel,m, kcrit)](11-flambagem-lateral-memoria.md) |
 
 ### Sistema de eixos e esforços

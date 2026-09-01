@@ -34,6 +34,7 @@ def _f(x, default: float = 0.0) -> float:
 # (chave em `resultados`, rótulo de exportação, norma)
 VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("cumeeira",            "Cumeeira t90",              "EC5 §6.4.3"),
+    ("misula",              "Mísula face incl. σm,α",    "EC5 §6.4.2"),
     ("flambagem",           "Flambagem lateral",         "EC5 §6.3.3"),
     ("flexao",              "Flexo-comp. viga",          "EC5 §6.3.2+§6.3.3"),
     ("cisalhamento",        "Cisalhamento",              "EC5 §6.1.7"),
@@ -407,6 +408,7 @@ def gerar_tex(
 
     # Extrair resultados dos módulos (mesmas chaves do console / main)
     r_cum  = _clean_dict(resultados.get("cumeeira",    {}))
+    r_mis  = _clean_dict(resultados.get("misula",      {}))
     r_fl   = _clean_dict(resultados.get("flambagem",   {}))
     r_fx   = _clean_dict(resultados.get("flexao",      {}))
     r_ci   = _clean_dict(resultados.get("cisalhamento",{}))
@@ -766,7 +768,8 @@ def gerar_tex(
     parts.append('~m & EC5 Tab.~6.1 ($0{,}9\\,l_1$) \\\\\n  Placa de apoio $l_{ap}$ & ')
     parts.append(_br(l_ap, 2))
     parts.append('~m & \\\\\n  \\bottomrule\n\\end{tabular}\n\n% ── 7. Verificações ELU ───────────────────────────────────────\n\\section*{7. Verificações ELU -- Viga}\n\n\\begin{tabular}{@{}p{5.5cm}lcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Norma} & $\\eta$ & \\textbf{Status} \\\\\n  \\midrule\n')
-    parts.append(eta_row('Cumeeira ($t_{90}$, $M\\neq 0$)', 'EC5 \\S6.4.3', _eta(r_cum), _ok(r_cum)))
+    parts.append(eta_row('Zona do ápice ($t_{90}$ e $\\sigma_{m}$, $M\\neq 0$)', 'EC5 \\S6.4.3', _eta(r_cum), _ok(r_cum)))
+    parts.append(eta_row('Mísula -- face inclinada ($\\sigma_{m,\\alpha,d}$)', 'EC5 \\S6.4.2', _eta(r_mis), _ok(r_mis)))
     parts.append(eta_row('Flambagem lateral', 'EC5 \\S6.3.3', _eta(r_fl), _ok(r_fl)))
     parts.append(eta_row('Flexo-compressão viga', 'EC5 \\S6.3.2+\\S6.3.3', _eta(r_fx), _ok(r_fx)))
     parts.append(eta_row('Cisalhamento ($b_{ef}=k_{cr}b$)', 'EC5 \\S6.1.7', _eta(r_ci), _ok(r_ci)))
@@ -777,7 +780,81 @@ def gerar_tex(
     parts.append(f'{r_viga.get('sigma_c_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('sigma_m_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('k_c_y', 0):.4f} \\\\\n')
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n% ── 8. Verificações ELU -- Pilares ────────────────────────────\n\\section*{8. Verificações ELU -- Pilares}\n\nCompressão simples EC5~\\S6.3.2; $l_{ef}=1{,}0\\cdot H$ (rótulas nas extremidades).\n\n\\begin{tabular}{@{}llllllc@{}}\n  \\toprule\n  \\textbf{Pilar} & Seção (m) & $N_d$ (kN) & $\\lambda$ & $\\lambda_{rel}$ & $k_c$ & $\\eta$ \\\\\n  \\midrule\n  Lateral & ')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+
+    # ── Detalhe: mísula / borda inclinada (EC5 §6.4.2) ────────────────────────
+    if r_mis:
+        _reg = r_mis.get("regime", "")
+        _eq  = '6.39' if _reg == "tracao" else '6.40'
+        _regtxt = ('tração paralela à borda (topo em hogging)'
+                   if _reg == "tracao"
+                   else 'compressão paralela à borda (topo em sagging)')
+        parts.append(
+            '\\subsection*{Detalhes -- Mísula / borda inclinada (EC5~\\S6.4.2)}\n\n'
+            'O extradorso é cortado em ângulo $\\alpha$ face às lâminas. Na borda '
+            'inclinada verifica-se a tensão de flexão majorada pelo estado '
+            'multiaxial local:\n'
+            '\\[\n'
+            '  \\sigma_{m,\\alpha,d} = \\frac{6\\,M_d}{b\\,h^2} \\leq k_{m,\\alpha}\\,f_{m,d}\n'
+            '\\]\n'
+            'com (Eq.~6.39 tração / Eq.~6.40 compressão):\n'
+            '\\[\n'
+            '  k_{m,\\alpha}^{\\text{trac}}=\\Big[1+\\big(\\tfrac{f_{m,d}}{0{,}75 f_{v,d}}\\tan\\alpha\\big)^2'
+            '+\\big(\\tfrac{f_{m,d}}{f_{t,90,d}}\\tan^2\\alpha\\big)^2\\Big]^{-1/2},\\quad\n'
+            '  k_{m,\\alpha}^{\\text{comp}}=\\Big[1+\\big(\\tfrac{f_{m,d}}{1{,}5 f_{v,d}}\\tan\\alpha\\big)^2'
+            '+\\big(\\tfrac{f_{m,d}}{f_{c,90,d}}\\tan^2\\alpha\\big)^2\\Big]^{-1/2}\n'
+            '\\]\n\n'
+            f'Para $\\alpha={_br(r_mis.get("alpha_deg",0),1)}^\\circ$: '
+            f'$k_{{m,\\alpha}}^{{\\text{{comp}}}}={_br(r_mis.get("k_m_alpha_compressao",0),3)}$, '
+            f'$k_{{m,\\alpha}}^{{\\text{{trac}}}}={_br(r_mis.get("k_m_alpha_tracao",0),3)}$. '
+            f'Governa a {_regtxt} (Eq.~{_eq}), na seção $x={_br(r_mis.get("x_gov_m",0),2)}$~m '
+            f'($h={_br(r_mis.get("h_gov_m",0),3)}$~m, $M_d={_br(r_mis.get("M_gov_kNm",0),1)}$~kN·m, '
+            f'comb.\\ {_tex_escape(str(r_mis.get("comb_gov","")))}):\n'
+            '\\[\n'
+            f'  \\sigma_{{m,\\alpha,d}}={_br(r_mis.get("sigma_m_alpha_MPa",0),3)}~\\text{{MPa}}'
+            f'\\leq k_{{m,\\alpha}} f_{{m,d}}={_br(r_mis.get("resistencia_MPa",0),3)}~\\text{{MPa}}'
+            f'\\;\\Rightarrow\\;\\eta={_br(r_mis.get("eta",0),3)}\n'
+            '\\]\n\n'
+            'A zona do ápice (perpendicular à fibra, $\\sigma_{t,90}$) é tratada '
+            'à parte pela \\S6.4.3 (cumeeira); esta é a verificação complementar '
+            'da tensão de flexão na face em bisel.\n\n'
+        )
+
+    # ── Detalhe: zona do ápice / cumeeira (EC5 §6.4.3) ────────────────────────
+    if r_cum:
+        parts.append(
+            '\\subsection*{Detalhes -- Zona do ápice / cumeeira (EC5~\\S6.4.3)}\n\n'
+            'Viga de duplo-bisel: raio $r\\to\\infty$ $\\Rightarrow$ $h_{ap}/r=0$, '
+            f'$k_r={_br(r_cum.get("k_r",1.0),2)}$ (\\S6.4.3(5)) e $k_l=k_1='
+            f'{_br(r_cum.get("k_l",0),3)}$ '
+            f'($=1+1{{,}}4\\tan\\alpha_{{ap}}+5{{,}}4\\tan^2\\alpha_{{ap}}$, '
+            f'$\\alpha_{{ap}}={_br(r_cum.get("alpha_ap_deg",0),1)}^\\circ$). '
+            f'Momento no ápice $M_{{ap,d}}={_br(r_cum.get("M_cumeeira_kNm",0),1)}$~kN·m.\n\n'
+            'Volumes da zona do ápice (Fig.~6.9):\n'
+            '\\[\n'
+            f'  V_b=b L\\big[h_{{ap}}-0{{,}}25 L\\tan\\alpha_{{ap}}\\big]={_br(r_cum.get("V_b_m3",0),3)}~\\text{{m}}^3,'
+            f'\\quad V=b h_{{ap}}^2\\big[1-0{{,}}25\\tan\\alpha_{{ap}}\\big]={_br(r_cum.get("V_m3",0),3)}~\\text{{m}}^3'
+            f'\\;(\\leq \\tfrac{{2}}{{3}}V_b)\n'
+            '\\]\n\n'
+            '\\begin{tabular}{@{}lll@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Verificação} & \\textbf{Tensão vs resistência} & $\\eta$ \\\\\n'
+            '  \\midrule\n'
+            f'  Flexão ápice (Eq.~6.42) $\\sigma_m=k_l\\tfrac{{6M_{{ap}}}}{{b h_{{ap}}^2}}$ & '
+            f'${_br(r_cum.get("sigma_m_ap_MPa",0),3)}\\leq k_r f_{{m,d}}={_br(r_cum.get("resist_m_MPa",0),2)}$~MPa & '
+            f'{_br(r_cum.get("eta_flexao_ap",0),3)} \\\\\n'
+            f'  Tração $\\perp$ (Eq.~6.54) $\\sigma_{{t,90}}=k_p\\tfrac{{6M_{{ap}}}}{{b h_{{ap}}^2}}$ & '
+            f'${_br(r_cum.get("sigma_t90d_MPa",0),3)}\\leq k_{{dis}}k_{{vol}}f_{{t,90,d}}={_br(r_cum.get("resist_t90_MPa",0),3)}$~MPa & '
+            f'{_br(r_cum.get("eta_t90",0),3)} \\\\\n'
+            '  \\bottomrule\n'
+            '\\end{tabular}\n\n'
+            f'\\vspace{{2pt}}\nParâmetros: $k_p={_br(r_cum.get("k_p",0),4)}$ '
+            f'($=0{{,}}2\\tan\\alpha_{{ap}}$), $k_{{dis}}={_br(r_cum.get("k_dis",1.4),1)}$ '
+            f'(duplo-bisel), $k_{{vol}}=(V_0/V)^{{0{{,}}2}}={_br(r_cum.get("k_vol",0),3)}$ '
+            f'($V_0=0{{,}}01$~m³). Governa: {_tex_escape(str(r_cum.get("verif_gov","")))}.\n\n'
+        )
+
+    parts.append('% ── 8. Verificações ELU -- Pilares ────────────────────────────\n\\section*{8. Verificações ELU -- Pilares}\n\nCompressão simples EC5~\\S6.3.2; $l_{ef}=1{,}0\\cdot H$ (rótulas nas extremidades).\n\n\\begin{tabular}{@{}llllllc@{}}\n  \\toprule\n  \\textbf{Pilar} & Seção (m) & $N_d$ (kN) & $\\lambda$ & $\\lambda_{rel}$ & $k_c$ & $\\eta$ \\\\\n  \\midrule\n  Lateral & ')
     parts.append(f'{r_pilar.get('b_m', 0.22):.2f}$\\times${r_pilar.get('h_m', 0.26):.2f} & ')
     parts.append(f'{r_pilar.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_pilar.get('lambda', 0):.1f} & ')
