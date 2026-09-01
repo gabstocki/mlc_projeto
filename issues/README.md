@@ -42,19 +42,19 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 |---|-----------|-------|
 | 09 | P1 | [Mísula: verificação da face inclinada σm,α,d ausente (§6.4.2)](09-misula-face-inclinada.md) ✅ |
 | 10 | P2 | [Zona do ápice: documentar kdis, kvol, Vap, σt,90, kr (§6.4.3)](10-apice-parametros.md) ✅ |
-| 11 | P2 | [Memória de cálculo da flambagem lateral (lef, σm,crit, λrel,m, kcrit)](11-flambagem-lateral-memoria.md) |
+| 11 | P2 | [Memória de cálculo da flambagem lateral (lef, σm,crit, λrel,m, kcrit)](11-flambagem-lateral-memoria.md) ✅ |
 
 ### Sistema de eixos e esforços
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 12 | P1 | [Sistema de eixos: N no eixo da peça vs V vertical](12-sistema-eixos-N-V.md) |
+| 12 | P1 | [Sistema de eixos: N no eixo da peça vs V vertical](12-sistema-eixos-N-V.md) ✅ |
 | 13 | P0 | [Esforços nos pilares: dois valores de N; pilar central subdimensionado](13-pilares-esforcos-central.md) ✅ |
 
 ### Estabilidade e contraventamento
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 14 | P0 | [Contraventamento vertical/frontões ausente — mecanismo lateral; αcr de arco ≠ sway](14-contraventamento-vertical.md) ✅ |
-| 15 | P1 | [Contraventamento do telhado: n=18 vs dois planos de 9; kf/ks e duplicação](15-contraventamento-telhado-n18.md) |
+| 15 | P1 | [Contraventamento do telhado: n=18 vs dois planos de 9; kf/ks e duplicação](15-contraventamento-telhado-n18.md) ✅ |
 | 31 | P0 | [Estabilidade transversal do pórtico (mecanismo sway no plano)](31-estabilidade-transversal-portico.md) — desdobramento da 14 ✅ |
 | 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 |
 

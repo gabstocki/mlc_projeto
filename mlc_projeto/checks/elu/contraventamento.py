@@ -47,14 +47,19 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
 
 
-# ── Fatores recomendados EC5 §9.2.5 (valores recomendados da norma) ────────
-# Intervalos NDP: k_s ∈ [1,4], k_f1 ∈ [50,80], k_f2 ∈ [80,100], k_f3 ∈ [30,80]
-# Usam-se os valores recomendados clássicos da EN 1995-1-1.
+# ── Fatores de modificação EC5 §9.2.5 — Tabela 9.2 ────────────────────────────
+# EN 1995-1-1:2004+A1:2008 Tabela 9.2 "Recommended values of modification factors"
+# (intervalos; o valor RECOMENDADO é o sublinhado na norma; NA pode alterar):
+#   k_s   : 1 a 4     → recomendado 4     (Eq. 9.34, rigidez C)
+#   k_f,1 : 50 a 80   → recomendado 50    (Eq. 9.35, F_d madeira maciça)
+#   k_f,2 : 80 a 100  → recomendado 80    (Eq. 9.35, F_d MLC/LVL)
+#   k_f,3 : 30 a 80   → recomendado 30    (Eq. 9.37, q_d do sistema)
+# Adotam-se os valores RECOMENDADOS da norma (nenhum NA em contrário assumido).
 
-K_S   = 4.0    # rigidez do apoio intermediário
-K_F1  = 50.0   # força — madeira maciça (não usado aqui)
-K_F2  = 80.0   # força — MLC / LVL  (§9.2.5.2)
-K_F3  = 50.0   # carga de sistema   (§9.2.5.3)
+K_S   = 4.0    # rigidez do apoio intermediário (Tab. 9.2, recomendado)
+K_F1  = 50.0   # força — madeira maciça §9.2.5.2 (não usado aqui)
+K_F2  = 80.0   # força — MLC / LVL §9.2.5.2 (Tab. 9.2, recomendado)
+K_F3  = 30.0   # carga de sistema §9.2.5.3 (Tab. 9.2, RECOMENDADO=30; era 50)
 
 E_ACO_MPA = 210_000.0   # MPa — aço
 GAMMA_M0  = 1.00        # EN 1993-1-1 §6.1
@@ -76,7 +81,7 @@ class LayoutContraventamento:
     s_terca:      float = 2.53    # m — espaçamento entre terças (ao longo da viga)
     n_porticos:   int   = 2       # pórticos lado a lado (dois vãos de 20,25 m)
     n_modulos_cv: int   = 2       # baías com cruzes (extremos)
-    d_barra_mm:   float = 18.0    # mm — adotado no projeto (main.D_BARRA_CV_MM)
+    d_barra_mm:   float = 22.0    # mm — adotado no projeto (main.D_BARRA_CV_MM); issue 15
     aco:          str   = "S235"
 
     @property
@@ -465,24 +470,29 @@ def verificar_contraventamento(
     # 2) §9.2.5.2 — cada restrição por terça na viga
     ap = verifica_apoio_intermediario(N_d, layout.a_restricao_m, k_s=k_s, k_f2=k_f2)
 
-    # 3) §9.2.5.3 — sistema de n vigas
-    sis = verifica_sistema_vigas(N_d, layout.n_vigas, layout.ell_m, k_f3=k_f3)
+    # 3) §9.2.5.3 — DOIS PLANOS INDEPENDENTES de cobertura (um por vão).
+    #    Existem n_porticos planos de telhado independentes; cada plano estabiliza
+    #    n_por_plano = n_vigas_por_linha vigas (≈9). NÃO é um sistema único de 18.
+    #    Cada plano tem o seu próprio contraventamento (cruzes) → sem duplicação:
+    #    a força de estabilização de um plano NÃO passa pelo outro.
+    n_por_plano = layout.n_vigas_por_linha            # vigas por plano (≈9)
+    n_planos    = layout.n_porticos                   # planos independentes (≈2)
+    sis = verifica_sistema_vigas(N_d, n_por_plano, layout.ell_m, k_f3=k_f3)
 
-    # 4) Vento θ=0° (// cumeeira) — força longitudinal na estrutura aberta
-    #    A reação de extremo do sistema de estabilização EC5 e a força de
-    #    vento longitudinal compartilham o mesmo caminho (baías de contraventamento).
+    # 4) Vento θ=0° (// cumeeira) — força longitudinal na estrutura aberta.
+    #    Repartida pelos n_planos planos e pelas 2 baías extremas (simetria).
     vento_0 = getattr(load, "vento_0", None) or {}
     F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
-    # Metade da força total em cada baía extrema (simetria)
-    R_vento0 = F_vento0_kN / 2.0
-    # Reação de projeto por baía = máx(estabilização §9.2.5.3, vento θ=0°)
-    R_ext_estab = sis["R_ext_kN"]
+    R_vento0 = F_vento0_kN / (2.0 * max(n_planos, 1))
+    # Reação de projeto por baía extrema (POR PLANO) = máx(§9.2.5.3, vento θ=0°)
+    R_ext_estab = sis["R_ext_kN"]                     # por plano
     R_ext_proj  = max(R_ext_estab, R_vento0)
     gov_forca   = "vento_0" if R_vento0 > R_ext_estab else "estab_9.2.5"
 
-    # 5) Distribuição às diagonais
-    n_pan = layout.n_paineis_por_mod
-    F_painel = R_ext_proj / max(n_pan, 1)
+    # 5) Distribuição às diagonais — painéis POR PLANO (2 aguas por plano)
+    n_pan_plano = max(1, layout.n_paineis_por_mod // max(n_planos, 1))  # =2
+    n_pan = layout.n_paineis_por_mod                  # total no galpão (quantitativos)
+    F_painel = R_ext_proj / n_pan_plano
     F_diag   = F_painel / diag["cos_theta"] if diag["cos_theta"] > 0 else 1e9
 
     # 6) Diagonal — dimensionada à TRAÇÃO (§6.2.3).
@@ -506,12 +516,12 @@ def verificar_contraventamento(
         q_d_kNpm=q_flecha,
         ell_m=layout.ell_m,
         C_h_kNpm=bar["C_h_kNpm"],
-        n_paineis=n_pan,
+        n_paineis=n_pan_plano,
         n_modulos_cv=n_modulos_cv,
     )
 
     # 8) Terça como biela (força + flambagem + rigidez local EA/L ≥ C_min)
-    F_terca = R_ext_proj / max(n_pan, 1)
+    F_terca = R_ext_proj / n_pan_plano
     F_terca = max(F_terca, ap["F_d_kN"])
 
     ter = verifica_terca_biela(
@@ -583,7 +593,7 @@ def verificar_contraventamento(
         "R_ext_proj_kN":  round(R_ext_proj, 3),
         "gov_forca":      gov_forca,
         "N_flex_kN":      ncomp["N_flex_kN"],
-        "n_vigas":        layout.n_vigas,
+        "n_vigas":        layout.n_vigas,           # total no galpão (informativo)
         "comb":           ncomp["comb"],
 
         # §9.2.5.2
@@ -591,12 +601,15 @@ def verificar_contraventamento(
         "C_min_kNpm":     ap["C_min_kNpm"],
         "F_d_apoio_kN":   ap["F_d_kN"],
 
-        # §9.2.5.3
+        # §9.2.5.3 — POR PLANO (dois planos independentes)
+        "n_planos":       n_planos,
+        "n_por_plano":    n_por_plano,
         "ell_m":          sis["ell_m"],
         "k_ell":          sis["k_ell"],
-        "q_d_kNpm":       sis["q_d_kNpm"],
-        "F_total_kN":     sis["F_total_kN"],
-        "R_ext_kN":       sis["R_ext_kN"],
+        "q_d_kNpm":       sis["q_d_kNpm"],          # por plano
+        "F_total_kN":     sis["F_total_kN"],        # por plano
+        "R_ext_kN":       sis["R_ext_kN"],          # por plano, por baía
+        "n_paineis_por_plano": n_pan_plano,
 
         # Painel / diagonal
         "L_panel_m":      diag["L_panel_m"],

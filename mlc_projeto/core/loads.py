@@ -768,8 +768,24 @@ class Carregamentos:
         return self.combinacao_ELU_governante().N_viga_kN
 
     def V_viga_ELU(self) -> float:
-        """Cortante no eixo da viga (apoio) — combinação ELU governante."""
+        """Cortante ⊥ ao eixo (apoio) — combinação ELU governante por |M|."""
         return self.combinacao_ELU_governante().V_viga_kN
+
+    def combinacao_ELU_Vtransversal(self) -> Combinacao:
+        """
+        Combinação que MAXIMIZA o cortante transversal |V_viga| (⊥ ao eixo).
+
+        A combinação que governa o cortante transversal NÃO é necessariamente a
+        que governa |M|: sob vento assimétrico a descompensação R_A vs empuxo H
+        pode elevar V = R_A·cosθ − H·senθ. Usada na verificação de cisalhamento
+        (§6.1.7), referida ao eixo da peça (issue 12).
+        """
+        cands = list(self.combinacoes_ELU().values())
+        return max(cands, key=lambda c: abs(c.V_viga_kN))
+
+    def V_viga_max_ELU(self) -> float:
+        """Máximo cortante transversal |V_viga| (⊥ ao eixo) entre combinações ELU."""
+        return abs(self.combinacao_ELU_Vtransversal().V_viga_kN)
 
     def H_ELU(self) -> float:
         """Empuxo horizontal na fundação — combinação ELU governante."""

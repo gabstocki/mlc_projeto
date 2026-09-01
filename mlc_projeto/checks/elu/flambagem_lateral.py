@@ -242,12 +242,22 @@ def verifica_flambagem_lateral(
         "h_ap_m":        geo.h_ap,
         "b_m":           b,
         "h_b":           round(h_crit / b, 2),
-        # Comprimento efetivo
+        # Comprimento efetivo (hipótese de restrição lateral)
         "l_1_m":         l_1,
         "l_ef_m":        round(l_ef, 3),
-        # Tensão crítica
+        "fator_l_ef":    0.9,           # EC5 Tab. 6.1 (dist. + restrição no topo)
+        "restricao":     "continua_topo (terças fixadas ao banzo comprimido)",
+        "tipo_carga":    "distribuida",
+        "l_ef_formula":  "l_ef = 0,9·l_1 (EC5 Tab. 6.1)",
+        "l_1_origem":    ("espaçamento efetivo das terças validado pelo "
+                          "contraventamento de cobertura (EC5 §9.2.5); sem "
+                          "cobertura válida, l_1 = vão entre baías rígidas"),
+        # Tensão crítica — EC5 §6.3.3(2) Eq. (6.32), com E_0,05
+        "E0_05_MPa":        round(mat.E0_05 / 1e6, 0),
         "sigma_m_crit_MPa": round(sigma_crit / 1e6, 3),
+        "sigma_m_crit_formula": "σ_m,crit = 0,78·b²·E_0,05/(h·l_ef)  (Eq. 6.32)",
         "lambda_rel_m":     round(lam_rel, 4),
+        "lambda_rel_formula": "λ_rel,m = √(f_m,k/σ_m,crit)  (Eq. 6.30)",
         "k_crit":           round(k_crit,  4),
         "regime":           regime,
         # Tensões

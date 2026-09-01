@@ -25,13 +25,47 @@
   de referencial** (conservadora no apoio, η≈0,748).
 
 ## O que precisa ser feito
-- [ ] Definir **um** referencial explícito (eixo da peça) e aplicá-lo de forma
+- [x] Definir **um** referencial explícito (eixo da peça) e aplicá-lo de forma
       consistente em N, V e nas verificações de apoio/Hankinson.
-- [ ] Decidir: usar o cortante perpendicular ao eixo (`V_viga_kN`, ~65,5 kN) — mais
+- [x] Decidir: usar o cortante perpendicular ao eixo (`V_viga_kN`, ~65,5 kN) — mais
       correto — ou manter a reação vertical declarando explicitamente que é
       conservador. Documentar a escolha.
-- [ ] Revisar todos os consumidores de `V_max_ELU()` vs `V_viga_ELU()` para coerência.
+- [x] Revisar todos os consumidores de `V_max_ELU()` vs `V_viga_ELU()` para coerência.
 
 ## Critério de aceite
 Referencial único e explícito; verificações de apoio coerentes com ele; memorial
 mostra a convenção de eixos e sinais (ver issue [27](27-memorial-castigliano-diagramas.md)).
+
+## Resolução (2026-08-31)
+**Decisão:** referencial do **eixo da peça** (θ = atan(tan α / 2) ≈ 5,04°). Não é
+só conservadorismo — usar a reação vertical como cortante da seção transversal era
+um **erro de referencial**, então adotou-se o cortante ⊥ ao eixo (correto).
+
+**Diagnóstico dos consumidores** (todos revisados):
+- `cisalhamento.py` (§6.1.7) usava `V_max_ELU()` = **reação vertical R_v** — ERRADO
+  (a seção transversal é ⊥ ao eixo). **Corrigido** para o cortante transversal
+  `V = R_v·cosθ − H·senθ`.
+- `apoio.py` (§6.1.5/§6.2.2) usa R_v (vertical) — **correto e mantido**: a compressão
+  atua na face HORIZONTAL do intradorso (plano distinto da seção). Documentado.
+- Pilares, contraventamentos, estabilidade, impacto, base das ligações: usam R_v
+  como **reação vertical / axial do pilar** — correto, mantidos.
+- `connections.py` e `fadiga_ligacoes.py` já usavam `V_viga` (⊥ eixo) — coerentes.
+
+**Cortante transversal governante:** descobri que a combinação que maximiza o
+cortante ⊥ ao eixo **não é** a de |M| (vento assimétrico governa). Adicionei
+`combinacao_ELU_Vtransversal()` e `V_viga_max_ELU()` em `loads.py`; a §6.1.7 agora
+usa o **máximo entre todas as combinações ELU** (evita subestimar V).
+
+**Resultado (projeto, GL24h):** R_v = 175,7 kN, H grande ⇒ **V_transversal = 67,7 kN**
+(comb. ELU_W_C1_asim); θ = 5,04°; N_eixo ≈ 1233 kN. η do cisalhamento cai de
+**0,69 → 0,24** (o arco leva quase toda a reação para o eixo, N; sobra pouco cortante).
+O apoio §6.1.5 permanece com R_v (correto para a face horizontal).
+
+**Memorial:** nova subseção "Convenção de eixos e esforços no apoio" com θ, a
+decomposição N/V, e por que o cisalhamento usa V (⊥ eixo) e o apoio usa R_v
+(vertical) — planos distintos, não incoerência. Campos de referencial expostos em
+`cisalhamento` e `apoio`. (Ver issue 27 para os diagramas M/V/N.)
+
+**Testes:** [test_eixos_cortante.py](../tests/test_eixos_cortante.py) (identidade
+N/V no eixo; §6.1.7 usa V transversal; V é o máximo entre combinações; apoio usa R_v;
+η menos conservador). LaTeX compila. Suíte: 133 passam.

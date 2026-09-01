@@ -12,6 +12,19 @@ Condição EC5 §6.1.7 Eq. 6.13 (+ A1:2008):
 Para viga sem entalhe: h_ef = h0 (altura no apoio).
 Para viga com entalhe: h_ef reduzida por fator k_v (EC5 §6.5.2).
 
+REFERENCIAL (issue 12) — eixo da peça:
+    A tensão de cisalhamento atua na seção transversal, que é PERPENDICULAR ao
+    eixo centroidal da peça (inclinado θ = atan(tan α / 2) ≈ 5° face à horizontal).
+    Logo V_d é o cortante TRANSVERSAL (⊥ ao eixo):
+
+        V = R_v·cos θ − H·sen θ          (não a reação vertical R_v)
+
+    Para o arco abatido, o grande empuxo H (≈8·R_v) cancela grande parte de
+    R_v·cos θ, de modo que V ≪ R_v (a reação de apoio é quase toda axial, N).
+    Usar R_v (vertical) como cortante misturava referenciais e era ~3× conservador.
+    A compressão no apoio (§6.1.5, apoio.py) permanece referida à VERTICAL R_v,
+    pois atua na face horizontal do intradorso — plano distinto da seção.
+
 Referência: EC5 §6.1.7 Eq. 6.13, §6.5.2
 """
 
@@ -104,9 +117,16 @@ def verifica_cisalhamento(
     Returns:
         dict com τ_d, f_v,d, η e ok
     """
-    # ── Cortante máximo no apoio ──────────────────────────────
-    V_d_kN = load.V_max_ELU()        # kN
-    V_d_N  = V_d_kN * 1e3           # N
+    # ── Cortante TRANSVERSAL máximo no apoio (⊥ ao eixo) — issue 12 ───────────
+    # Referencial do eixo da peça: V = R_v·cosθ − H·senθ (não a reação vertical).
+    # Máximo entre TODAS as combinações ELU (o vento assimétrico pode governar
+    # o cortante transversal, ≠ da combinação que governa |M|).
+    comb_V  = load.combinacao_ELU_Vtransversal()
+    V_d_kN  = load.V_viga_max_ELU()   # kN — |V ⊥ eixo| governante
+    V_d_N   = V_d_kN * 1e3            # N
+    R_v_kN  = abs(comb_V.V_max_kN)    # reação vertical da mesma combinação (comparação)
+    N_axis_kN = comb_V.N_viga_kN      # esforço normal no eixo (mesma combinação)
+    theta_deg = math.degrees(math.atan(math.tan(geo.alpha_rad) / 2.0))
 
     # ── Altura efetiva no apoio ───────────────────────────────
     h0    = geo.h0
@@ -144,8 +164,12 @@ def verifica_cisalhamento(
         "k_cr":       k_cr,
         "b_ef_m":     round(b_ef, 6),
         "k_v":        round(k_v, 4),
-        # Esforços
-        "V_d_kN":     round(V_d_kN, 3),
+        # Esforços — referencial do eixo da peça (issue 12)
+        "V_d_kN":         round(V_d_kN, 3),      # cortante transversal (⊥ eixo)
+        "R_v_vertical_kN": round(R_v_kN, 3),     # reação vertical (comparação)
+        "N_axis_kN":       round(N_axis_kN, 3),  # esforço normal no eixo
+        "theta_eixo_deg":  round(theta_deg, 3),  # inclinação do eixo θ=atan(tanα/2)
+        "comb_V_gov":      comb_V.nome,          # combinação que governa V transversal
         # Tensões
         "tau_d_MPa":  round(tau_d / 1e6, 4),
         "f_vd_MPa":   round(f_vd  / 1e6, 4),
@@ -153,8 +177,12 @@ def verifica_cisalhamento(
         "eta":        round(eta, 4),
         "ok":         eta <= 1.0,
         "nota":       nota,
+        "referencial": (
+            "cortante ⊥ ao eixo V=R_v·cosθ−H·senθ (não a reação vertical); "
+            f"θ={theta_deg:.2f}°; R_v={R_v_kN:.1f} kN → V={V_d_kN:.1f} kN"
+        ),
         # Referência
-        "norma":      "EC5 §6.1.7 Eq. 6.13 (b_ef=k_cr·b)",
+        "norma":      "EC5 §6.1.7 Eq. 6.13 (b_ef=k_cr·b); eixo da peça (issue 12)",
     }
 
 

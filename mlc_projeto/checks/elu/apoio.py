@@ -14,6 +14,13 @@ O ângulo α é a inclinação da viga no apoio.
 l_ap é varrido simultaneamente com (h0, α, b) para encontrar
 a combinação construtivamente viável com menor η governante.
 
+REFERENCIAL (issue 12): a compressão no apoio atua na face HORIZONTAL do
+intradorso (laminações paralelas ao intradorso reto), logo a força perpendicular
+às fibras é a REAÇÃO VERTICAL R_v — plano distinto da seção transversal (⊥ eixo)
+usada no cisalhamento (§6.1.7). Por isso o apoio usa R_v (vertical) e o
+cisalhamento usa V=R_v·cosθ−H·senθ (⊥ eixo); não é incoerência, são planos
+diferentes.
+
 Referência: EC5 §6.1.5, §6.2.2
 """
 
@@ -105,6 +112,9 @@ def verifica_apoio(
         "eta":             round(eta_gov,           4),
         "ok":              eta_gov <= 1.0,
         "verif_gov":       verif_gov,
+        "referencial":     ("R_d = reação VERTICAL R_v (compressão ⊥ às fibras na "
+                            "face horizontal do intradorso; §6.1.5). Plano distinto "
+                            "do cisalhamento (⊥ eixo, §6.1.7) — ver issue 12."),
         "norma":           "EC5 §6.1.5 + §6.2.2",
     }
 

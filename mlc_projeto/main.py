@@ -152,8 +152,9 @@ H_TERCA = 0.58
 #   n_modulos_cv = 2  → ℓ = L_comp = 46 m entre baías rígidas
 #   d = 18 mm S235    → η_diag ≈ 0,77 (folga ~23%; d=16 ficava η≈0,98)
 L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
-N_MODULOS_CV    = 2       # baías com cruzes (extremos)
-D_BARRA_CV_MM   = 18.0    # mm — diagonal tracionada
+N_MODULOS_CV    = 2       # baías com cruzes (extremos) — ver nota ell/k_ℓ (issue 15)
+D_BARRA_CV_MM   = 22.0    # mm — diagonal tracionada (issue 15: k_f,3=30 EC5 Tab.9.2
+                          #      ⇒ Ø18 reprovava η=1,19; Ø22 → η≈0,80)
 ACO_CV          = "S235"
 
 # --- Contraventamento VERTICAL (issue 14) — caminho de carga lateral à fundação

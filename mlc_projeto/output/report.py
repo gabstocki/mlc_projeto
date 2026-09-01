@@ -774,13 +774,82 @@ def gerar_tex(
     parts.append(eta_row('Flexo-compressão viga', 'EC5 \\S6.3.2+\\S6.3.3', _eta(r_fx), _ok(r_fx)))
     parts.append(eta_row('Cisalhamento ($b_{ef}=k_{cr}b$)', 'EC5 \\S6.1.7', _eta(r_ci), _ok(r_ci)))
     parts.append(eta_row('Compressão no apoio', 'EC5 \\S6.1.5+\\S6.2.2', _eta(r_ap), _ok(r_ap)))
-    parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23)}\n\n\\[\n  \\left(\\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\\right)^2\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\begin{tabular}{@{}lllll@{}}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
+    parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+
+    # ── Convenção de eixos e esforços no apoio (issue 12) ─────────────────────
+    if r_ci:
+        parts.append(
+            '\\vspace{4pt}\n\\subsection*{Convenção de eixos e esforços no apoio '
+            '(EC5~\\S6.1.5/\\S6.1.7)}\n\n'
+            'Adota-se o \\textbf{eixo da peça} como referencial. O eixo centroidal '
+            f'da viga duplo-bisel inclina-se $\\theta=\\arctan(\\tfrac{{\\tan\\alpha}}{{2}})'
+            f'={_br(r_ci.get("theta_eixo_deg",0),2)}^\\circ$. A reação de apoio '
+            'decompõe-se em:\n'
+            '\\[\n'
+            '  N = H\\cos\\theta + R_v\\sin\\theta \\quad(\\text{axial, } \\parallel'
+            f'\\text{{ fibras}})={_br(r_ci.get("N_axis_kN",0),1)}~\\text{{kN}},\\qquad\n'
+            '  V = R_v\\cos\\theta - H\\sin\\theta \\quad(\\perp\\text{ eixo})'
+            f'={_br(r_ci.get("V_d_kN",0),1)}~\\text{{kN}}\n'
+            '\\]\n'
+            'No arco abatido o empuxo $H$ é grande, de modo que $V\\ll R_v$ '
+            f'($R_v={_br(r_ci.get("R_v_vertical_kN",0),1)}$~kN): a reação é quase toda '
+            'axial. Consequências no referencial:\n'
+            '\\begin{itemize}\n'
+            '  \\item \\textbf{Cisalhamento} (\\S6.1.7): atua na seção transversal '
+            '($\\perp$ eixo) $\\Rightarrow$ usa-se $V$ (⊥ eixo), não a reação vertical. '
+            f'Governa a comb.\\ {_tex_escape(str(r_ci.get("comb_V_gov","")))} '
+            '(vento assimétrico maximiza $V$, $\\neq$ da comb.\\ de $|M|$).\n'
+            '  \\item \\textbf{Compressão no apoio} (\\S6.1.5): atua na face '
+            'horizontal do intradorso $\\Rightarrow$ usa-se a reação vertical $R_v$ '
+            '(plano distinto). Não é incoerência: são planos diferentes.\n'
+            '\\end{itemize}\n\n'
+            '\\vspace{2pt}\n\\subsection*{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23)}\n\n\\[\n  \\left(\\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\\right)^2\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\begin{tabular}{@{}lllll@{}}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
     parts.append(f'  {r_viga.get('M_max_kNm', 0):.2f} & ')
     parts.append(f'{r_viga.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_viga.get('sigma_c_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('sigma_m_MPa', 0):.4f} & ')
     parts.append(f'{r_viga.get('k_c_y', 0):.4f} \\\\\n')
     parts.append('  \\bottomrule\n\\end{tabular}\n\n')
+
+    # ── Detalhe: flambagem lateral / LTB (EC5 §6.3.3) — memória (issue 11) ─────
+    if r_fl:
+        parts.append(
+            '\\subsection*{Detalhes -- Flambagem lateral / LTB (EC5~\\S6.3.3)}\n\n'
+            'Estabilidade lateral por flexo-torção do banzo comprimido. '
+            'Hipótese de restrição: '
+            f'\\textbf{{{_tex_escape(str(r_fl.get("restricao", "")))}}}, carga '
+            f'{_tex_escape(str(r_fl.get("tipo_carga", "distribuida")))} '
+            '(EC5 Tab.~6.1):\n'
+            '\\[\n'
+            f'  l_{{ef}} = 0{{,}}9\\,l_1 = 0{{,}}9\\cdot{_br(r_fl.get("l_1_m",0),3)}'
+            f' = {_br(r_fl.get("l_ef_m",0),3)}~\\text{{m}}\n'
+            '\\]\n'
+            f'com $l_1={_br(r_fl.get("l_1_m",0),3)}$~m = {_tex_escape(str(r_fl.get("l_1_origem","")))}. '
+            'A validade de $l_1$ (restrição das terças) depende do contraventamento '
+            'de cobertura (\\S9.2.5, issues 15/16).\n\n'
+            'Seção de referência (ponto de $M_{max}$): '
+            f'$h={_br(r_fl.get("h_crit_m",0),3)}$~m, $b={_br(r_fl.get("b_m",0),3)}$~m, '
+            f'$E_{{0,05}}={_br(r_fl.get("E0_05_MPa",0),0)}$~MPa. Seção retangular de '
+            'coníferas (Eq.~6.32):\n'
+            '\\[\n'
+            '  \\sigma_{m,crit}=\\frac{0{,}78\\,b^2 E_{0,05}}{h\\,l_{ef}}'
+            f'={_br(r_fl.get("sigma_m_crit_MPa",0),3)}~\\text{{MPa}},\\quad '
+            '\\lambda_{rel,m}=\\sqrt{\\frac{f_{m,k}}{\\sigma_{m,crit}}}'
+            f'={_br(r_fl.get("lambda_rel_m",0),3)}\n'
+            '\\]\n'
+            'Fator de instabilidade (Eq.~6.34) -- '
+            f'{_tex_escape(str(r_fl.get("regime","")))}:\n'
+            '\\[\n'
+            '  k_{crit}=\\begin{cases}1{,}0 & \\lambda_{rel,m}\\leq0{,}75\\\\'
+            '1{,}56-0{,}75\\,\\lambda_{rel,m} & 0{,}75<\\lambda_{rel,m}\\leq1{,}4\\\\'
+            '1/\\lambda_{rel,m}^2 & \\lambda_{rel,m}>1{,}4\\end{cases}'
+            f'\\;=\\;{_br(r_fl.get("k_crit",0),3)}\n'
+            '\\]\n'
+            'Verificação (Eq.~6.33): '
+            f'$\\sigma_{{m,d}}={_br(r_fl.get("sigma_md_MPa",0),3)}\\leq '
+            f'k_{{crit}}f_{{m,d}}={_br(r_fl.get("resist_MPa",0),3)}$~MPa '
+            f'$\\Rightarrow\\eta={_br(r_fl.get("eta",0),3)}$.\n\n'
+        )
 
     # ── Detalhe: mísula / borda inclinada (EC5 §6.4.2) ────────────────────────
     if r_mis:
@@ -1214,17 +1283,17 @@ def gerar_tex(
     parts.append(_br(r_cv.get('N_flex_kN', 0), 2))
     parts.append('~kN & \\S9.2.5.2 \\\\\n  $N_d$ (estabilizar) & ')
     parts.append(_br(r_cv.get('N_d_kN', 0), 2))
-    parts.append('~kN & \\\\\n  N.º de vigas $n$ & ')
-    parts.append(f'{_i(r_cv.get('n_vigas', 0))}')
-    parts.append(' & 9 eixos $\\times$ 2 pórticos \\\\\n  $\\ell$ (vão do sistema) & ')
+    parts.append('~kN & \\\\\n  N.º de vigas $n$ (por plano) & ')
+    parts.append(f'{_i(r_cv.get('n_por_plano', 9))}')
+    parts.append(f' & {_i(r_cv.get("n_planos", 2))} planos independentes \\\\\n  $\\ell$ (vão do sistema) & ')
     parts.append(_br(r_cv.get('ell_m', 46), 1))
     parts.append('~m & Entre baías rígidas \\\\\n  $k_\\ell=\\min(1,\\sqrt{15/\\ell})$ & ')
     parts.append(_br(r_cv.get('k_ell', 0), 3))
-    parts.append(' & \\S9.2.5.3 \\\\\n  $q_d=k_\\ell n N_d/(k_{f,3}\\ell)$ & ')
+    parts.append(' & \\S9.2.5.3 Eq.~9.38 \\\\\n  $q_d=k_\\ell n N_d/(k_{f,3}\\ell)$ & ')
     parts.append(_br(r_cv.get('q_d_kNpm', 0), 4))
     parts.append('~kN/m &\n    $k_{f,3}=')
-    parts.append(_br(r_cv.get('k_f3', 50), 0))
-    parts.append('$ \\\\\n  $R_{ext}=q_d\\ell/2$ & ')
+    parts.append(_br(r_cv.get('k_f3', 30), 0))
+    parts.append('$ (Tab.~9.2) \\\\\n  $R_{ext}=q_d\\ell/2$ (por plano) & ')
     parts.append(_br(r_cv.get('R_ext_kN', 0), 2))
     parts.append('~kN & Por extremo \\\\\n  $a$ (restrição na viga) & ')
     parts.append(_br(r_cv.get('a_restricao_m', s_m), 2))
@@ -1236,7 +1305,19 @@ def gerar_tex(
     parts.append(_br(r_cv.get('C_min_kNpm', 0), 1))
     parts.append('~kN/m &\n    $k_s=')
     parts.append(_br(r_cv.get('k_s', 4), 0))
-    parts.append('$ \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.2 Diagonal de aço (EN~1993-1-1~\\S6.2.3)}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n  Layout & Cruzes nos ')
+    parts.append('$ \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
+    parts.append(
+        '\\textit{Fatores de modificação} (EC5 Tab.~9.2, valores recomendados '
+        'sublinhados na norma): $k_s=4$ ($1$--$4$), $k_{f,2}=80$ ($80$--$100$, MLC), '
+        '$k_{f,3}=30$ ($30$--$80$). \\textbf{Dois planos de cobertura independentes} '
+        '(um por vão), cada um estabilizando $n=9$ vigas com o seu próprio '
+        'contraventamento; a força de estabilização de um plano \\textbf{não} '
+        'transita pelo outro — não há duplicação. Aumentar o número de baías com '
+        'cruzes reduz $\\ell$ mas eleva $k_\\ell$ e a reação, logo mantêm-se apenas '
+        'as \\textbf{baías extremas}.\n\n'
+    )
+    parts.append('\\subsection*{9.2 Diagonal de aço (EN~1993-1-1~\\S6.2.3)}\n\n')
+    parts.append('\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n  Layout & Cruzes nos ')
     parts.append(_tex_escape(r_cv.get('posicao', '2 modulos extremos')))
     parts.append(' & \\\\\n  Painel & ')
     parts.append(_br(r_cv.get('L_panel_m', 5.75), 2))
