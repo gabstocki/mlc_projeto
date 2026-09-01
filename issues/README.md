@@ -35,7 +35,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 ### Materiais (EN 14080)
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 08 | P2 | [E0,mean / E0,05 sem fonte; EN 1194:1999 revogada](08-materiais-modulos-fonte.md) |
+| 08 | P2 | [E0,mean / E0,05 sem fonte; EN 1194:1999 revogada](08-materiais-modulos-fonte.md) ✅ |
 
 ### Viga — mísula e ápice (EC5 §6.4)
 | # | Prioridade | Issue |

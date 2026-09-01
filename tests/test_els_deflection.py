@@ -75,7 +75,7 @@ def test_cisalhamento_presente_e_soma_a_flexao():
     # (M=M0−H·y_c reduz a flexão) elevam a fração do cortante (~40% aqui).
     assert 8.0 < r["pct_cis_S1"] < 55.0
     assert r["k_s"] == 1.2
-    assert r["G_mean_GPa"] == pytest.approx(0.72, abs=1e-3)
+    assert r["G_mean_GPa"] == pytest.approx(0.65, abs=1e-3)   # EN 14080:2013
 
 
 def test_cisalhamento_aumenta_a_flecha():

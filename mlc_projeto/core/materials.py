@@ -2,9 +2,15 @@
 core/materials.py — Propriedades e resistências de cálculo do glulam.
 
 Referência:
-    EN 14080:2013 Tabela 1 (homogéneo)
+    EN 14080:2013 §5.1.6, Tabela 5 (MLC homogéneo — GLxxh)
     EC5 §2.4.1, Tab. 2.3, Tab. 3.1, Tab. 3.2
     EC5 §6.1.7 (k_cr — A1:2008)
+
+IMPORTANTE (issue 8): a antiga EN 1194:1999 foi REVOGADA e substituída pela
+EN 14080:2013. Os módulos e resistências abaixo são os da EN 14080:2013 Tab. 5;
+NÃO usar os valores da EN 1194:1999 (que ainda circulam em muitas fontes e
+diferem, p.ex. GL24h: E0,mean=11600, E0,05=9400, G=720 na EN 1194 vs
+11500/9600/650 na EN 14080). Ver nota de rastreabilidade ao fim deste bloco.
 """
 
 from __future__ import annotations
@@ -12,34 +18,49 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-# ── Propriedades características EN 14080:2013 Tab. 1 (homogéneo) ──────────
-# Unidades: resistências e módulos em Pa; ρ_k em kg/m³
+# ── Propriedades características EN 14080:2013 §5.1.6 Tab. 5 (homogéneo) ────────
+# Fonte: EN 14080:2013 Table 5 — "Characteristic strength and stiffness
+# properties in N/mm² and densities in kg/m³ for homogeneous glulam".
+# Constantes p/ todas as classes homogéneas (Tab. 5): f_t90,k=0,5; f_c90,k=2,5;
+# f_v,k=3,5 (corte/torção); E90,mean=300; G_mean=650; G_05=540 (N/mm²).
+# Unidades aqui: resistências e módulos em Pa; ρ em kg/m³.
 _PROPS: dict[str, dict] = {
     "GL20h": dict(
         f_m_k=20e6, f_t0_k=16.0e6, f_c0_k=20.0e6, f_v_k=3.5e6,
         f_t90_k=0.5e6, f_c90_k=2.5e6,
-        E0_mean=8400e6, E0_05=7000e6, G_mean=540e6,
+        E0_mean=8400e6, E0_05=7000e6, G_mean=650e6,
         rho_k=340, rho_mean=370,
     ),
     "GL24h": dict(
         f_m_k=24e6, f_t0_k=19.2e6, f_c0_k=24.0e6, f_v_k=3.5e6,
         f_t90_k=0.5e6, f_c90_k=2.5e6,
-        E0_mean=11600e6, E0_05=9400e6, G_mean=720e6,
+        E0_mean=11500e6, E0_05=9600e6, G_mean=650e6,
         rho_k=385, rho_mean=420,
     ),
     "GL28h": dict(
-        f_m_k=28e6, f_t0_k=22.3e6, f_c0_k=26.5e6, f_v_k=3.5e6,
+        f_m_k=28e6, f_t0_k=22.3e6, f_c0_k=28.0e6, f_v_k=3.5e6,
         f_t90_k=0.5e6, f_c90_k=2.5e6,
-        E0_mean=12600e6, E0_05=10200e6, G_mean=780e6,
-        rho_k=410, rho_mean=450,
+        E0_mean=12600e6, E0_05=10500e6, G_mean=650e6,
+        rho_k=425, rho_mean=460,
     ),
     "GL32h": dict(
-        f_m_k=32e6, f_t0_k=25.6e6, f_c0_k=29.0e6, f_v_k=3.5e6,
+        f_m_k=32e6, f_t0_k=25.6e6, f_c0_k=32.0e6, f_v_k=3.5e6,
         f_t90_k=0.5e6, f_c90_k=2.5e6,
-        E0_mean=14200e6, E0_05=11600e6, G_mean=850e6,
-        rho_k=440, rho_mean=480,
+        E0_mean=14200e6, E0_05=11800e6, G_mean=650e6,
+        rho_k=440, rho_mean=490,
     ),
 }
+
+# ── Rastreabilidade (issue 8) — EN 14080:2013 Tab. 5 vs EN 1194:1999 (revogada)
+# Valores CORRIGIDOS para a EN 14080:2013 (os antigos, entre parênteses, eram da
+# EN 1194:1999 e estavam no código):
+#   GL20h: G_mean 650 (era 540, que é o G_05 da EN 14080)
+#   GL24h: E0,mean 11500 (11600) | E0,05 9600 (9400) | G_mean 650 (720)
+#   GL28h: E0,05 10500 (10200) | G_mean 650 (780) | f_c0,k 28,0 (26,5)
+#          ρ_k 425 (410) | ρ_mean 460 (450)
+#   GL32h: E0,05 11800 (11600) | G_mean 650 (850) | f_c0,k 32,0 (29,0)
+#          ρ_mean 490 (480)
+# f_v,k, f_t90,k, f_c90,k e ρ (parcial) já estavam conforme a EN 14080:2013.
 
 # k_mod — EC5 Tabela 3.1 (glulam)
 # chave: (classe_servico, duracao)
@@ -141,6 +162,11 @@ class GlulamMaterial:
         G_0,05 — relação implícita em EC5 §6.3.3(2) para coníferas:
         a fórmula simplificada (6.32) decorre de G_0,05 = E_0,05 / 16
         na formulação geral (6.31) com I_tor ≈ h·b³/3.
+
+        Nota: a EN 14080:2013 Tab. 5 tabela G_g,05 = 540 MPa (constante). Este
+        valor derivado (E_0,05/16 ≈ 600 MPa p/ GL24h) é o que sustenta a Eq.
+        (6.32) do EC5 e é usado apenas nessa forma simplificada; a verificação
+        de flambagem lateral usa a Eq. (6.32) (não consome esta propriedade).
         """
         return self.E0_05 / 16.0
 
