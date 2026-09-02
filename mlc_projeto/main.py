@@ -53,7 +53,7 @@ from mlc_projeto.checks.elu.estabilidade_global import (
 from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
 from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
 from mlc_projeto.checks.elu.tirante_base import (
-    verificar_tirante_base, relatorio_tirante,
+    verificar_tirante_base, relatorio_tirante, impacto_flexibilidade_tirante,
 )
 from mlc_projeto.connections.connections      import (
     dimensionar_ligacoes, dimensionar_ligacoes_central, relatorio_ligacoes
@@ -144,6 +144,13 @@ H_PILAR_C   = 0.27     # m
 B_TERCA = 0.20
 H_TERCA = 0.58
 
+# --- Fixação telha→terça sob sucção (issue 17) --------------------------------
+# Parafuso autoperfurante Ø6,3 mm + arruela EPDM; espaçamento ADOTADO = a cada
+# nervura (~0,20 m) para cobrir a sucção local de canto (galpão aberto, C_pi=+0,8).
+# R_FIX_K_KN é TÍPICO de catálogo — confirmar na ficha técnica da telha adotada.
+E_FIX_TELHA_M = 0.20    # m — espaçamento de fixadores ao longo da terça
+R_FIX_K_KN    = 2.5     # kN — resistência característica do fixador (típico)
+
 # --- Contraventamento horizontal (EC5 §9.2.5) ---------------------------------
 # Layout otimizado: cruzes de St. André SÓ nas baías de EXTREMIDADE
 # (linha inicial + linha final ao longo do comprimento). NÃO é necessário
@@ -176,16 +183,23 @@ ETA_CVT_ALVO        = 0.90  # margem de projeto na diagonal do frontão
 
 # --- Ligações / apoio ---------------------------------------------------------
 D_BASE_MM   = 24       # mm — cavilhas L1/L1c (EC5 §8.6(2): 6–30 mm; issue 18)
-D_CUM_MM    = 30       # mm — pino L2 (no limite; ver issue 25 — cumeeira monolítica)
 F_CHU_KN    = 80.0     # kN — resistência por chumbador (L3)
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 L_AP        = 0.90     # m — comprimento da placa de apoio
 
+# --- Componente metálico das ligações (EN 1993-1-8; issue 21) -----------------
+# Aço S275 (escolha do projeto). A ESPESSURA das chapas não é arbitrada: sai do
+# dimensionamento no esquadro (chapas_dim.py, issue 23) — L1/L1c ≥ d = 25 mm.
+ACO_CHAPA_LIG = "S275"   # f_y=275, f_u=430 MPa (EN 1993-1-1 Tab. 3.1)
+A_SOLDA_MM    = 6.0      # mm — garganta da solda de filete chapa↔base
+
 # --- Tirante de base (fecho do empuxo ao nível do piso) ------------------------
 # Solução usual: barra de aço ligando as bases de cada vão → H_sapata ≈ 0.
 # T_d = H_arco (Castigliano ELU). Diâmetro None = escolha automática η≤eta_alvo.
+# Aço MR315 (barra redonda f_y=315 MPa) — recomendado pelo orientador como o
+# mais adequado ao tamanho do tirante (issue 24). H obtido sob apoio rígido.
 TIRANTE_BASE     = True
-ACO_TIRANTE      = "S355"
+ACO_TIRANTE      = "MR315"
 D_TIRANTE_MM     = None    # None → auto (comercial, η ≤ ETA_LIG_ALVO)
 ETA_TIRANTE_ALVO = 0.75
 
@@ -659,12 +673,56 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     )
     res_elu["terca"]["eta"] = res_elu["terca"]["eta_gov"]
     _print_eta("Terça flexão §6.1.6+§6.1.7", res_elu["terca"])
-    # η da terça-biela (estabilização) já em contraventamento
-    if "terca" in res_elu["contraventamento"]:
-        _print_eta(
-            "Terça-biela §6.3.2 (estab.)",
-            res_elu["contraventamento"]["terca"],
-        )
+
+    # Terça-biela: flexão + compressão COMBINADAS — EC5 §6.3.2 Eq.6.23/6.24
+    # (issue 16). Substitui os dois η isolados (flexão + compressão) por um
+    # único η combinado, na MESMA combinação ELU (concomitância real).
+    from mlc_projeto.checks.elu.tercas import verifica_terca_flexocompressao
+    _F_terca = float(res_elu["contraventamento"].get("F_terca_kN", 0.0))
+    res_elu["terca_flexocomp"] = verifica_terca_flexocompressao(
+        mat       = mat_elu,
+        L_t       = L_T,
+        s         = S,
+        b         = B_TERCA,
+        h         = H_TERCA,
+        alpha_deg = GEO_PARAMS["alpha_deg"],
+        g_k_m2    = g_area_terca,
+        q_k_m2    = Q_AREA,
+        w_kNm2    = _w_C1bv_m2,
+        N_c_kN    = _F_terca,
+    )
+    _tfc = res_elu["terca_flexocomp"]
+    _print_eta("Terça-biela flexo-comp. §6.3.2", _tfc)
+    print(f"  · N_c={_tfc['N_c_kN']:.1f} kN (estab. §9.2.5) + M cobertura "
+          f"[{_tfc['comb']}] → interação COMBINADA")
+    print(f"  · σ_c={_tfc['sigma_c_MPa']:.3f} | σ_m,y={_tfc['sigma_my_MPa']:.3f} | "
+          f"σ_m,z={_tfc['sigma_mz_MPa']:.3f} MPa (f_md={_tfc['f_md_MPa']:.2f})")
+    print(f"  · k_c,y={_tfc['k_c_y']:.3f} (λ_y={_tfc['lambda_y']:.0f}) | "
+          f"k_c,z={_tfc['k_c_z']:.3f} (λ_z={_tfc['lambda_z']:.0f}) | "
+          f"η_6.23={_tfc['eta_623']:.3f} η_6.24={_tfc['eta_624']:.3f} → "
+          f"η={_tfc['eta']:.4f} ({_tfc['verif_gov']})")
+
+    # Fixação telha→terça sob sucção — NBR 6123 (verificação local, issue 17)
+    print("\n[FASE 2] Fixação telha→terça (sucção — NBR 6123)...")
+    from mlc_projeto.checks.elu.fixacao_telha import verificar_fixacao_telha_succao
+    res_elu["fixacao_telha"] = verificar_fixacao_telha_succao(
+        params_vento = params_vento,
+        s_terca      = S,
+        g_telha_kNm2 = G_TELHA_KNM2,
+        e_fix_m      = E_FIX_TELHA_M,
+        R_fix_k_kN   = R_FIX_K_KN,
+    )
+    _fx = res_elu["fixacao_telha"]
+    _print_eta("Fixação telha §NBR6123", _fx)
+    print(f"  · q={_fx['q_kNm2']:.3f} kN/m² | C_pi=+{_fx['Cpi']:.1f} (galpão aberto) | "
+          f"R_fix,d={_fx['R_fix_d_kN']:.2f} kN (R_k={_fx['R_fix_k_kN']:.1f} típico)")
+    print(f"  · e_fix={_fx['e_fix_m']:.2f} m (a cada nervura) | "
+          f"canto: η={_fx['zonas']['canto']['eta']:.3f} | "
+          f"borda: η={_fx['zonas']['borda']['eta']:.3f} | "
+          f"campo: η={_fx['zonas']['campo']['eta']:.3f}")
+    print(f"  · e_fix máx p/ η≤1: campo={_fx['e_fix_req_campo_m']:.2f} | "
+          f"borda={_fx['e_fix_req_borda_m']:.2f} | canto={_fx['e_fix_req_canto_m']:.2f} m")
+    print(f"  ⚠ {_fx['caveat']}")
 
     # ── Fase 3: Verificações ELS ──────────────────────────────────────────────
     print("\n[FASE 3] Verificações ELS...")
@@ -689,6 +747,19 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             n_linhas=n_linhas_port,
         )
         relatorio_tirante(res_tirante)
+        # Impacto da flexibilidade axial do tirante sobre H (issue 24)
+        _imp_tir = impacto_flexibilidade_tirante(
+            geo, E_glulam_MPa=mat_longa.E0_mean / 1e6,
+            H_rigid_kN=H_arco, d_mm=res_tirante["d_mm"], aco=ACO_TIRANTE,
+        )
+        res_tirante["impacto_flexibilidade"] = _imp_tir
+        print(f"  · Hipótese: H por Castigliano com APOIO HORIZONTAL RÍGIDO "
+              f"(flexibilidade axial do tirante não realimentada).")
+        print(f"  · Rigidez horizontal: arco={_imp_tir['k_arco_kNmm']:.0f} kN/mm | "
+              f"tirante={_imp_tir['k_tirante_kNmm']:.0f} kN/mm | "
+              f"δ_tirante={_imp_tir['delta_tirante_mm']:.1f} mm")
+        print(f"  · H_rígido é conservador p/ o tirante (T=H máx); a restrição "
+              f"paralela (ancoragem+contravento) mantém H≈rígido → sem acoplar.")
     else:
         print("\n[FASE 4a] Tirante de base: inativo (empuxo → sapata)")
 
@@ -698,17 +769,16 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     res_lig = dimensionar_ligacoes(
         mat=mat_elu, load=load, geo=geo,
         d_base_mm=D_BASE_MM,
-        d_cum_mm=D_CUM_MM,
         F_chu_kN=F_CHU_KN,
         eta_alvo=ETA_LIG_ALVO,
         com_tirante=TIRANTE_BASE,
         b_pilar_m=B_PILAR,
         h_pilar_m=H_PILAR,
     )
+    # Sem L2 (cumeeira): peça monolítica contínua no ápice (issue 25).
     for key, label in [
         ("L1", f"L1 base (d={D_BASE_MM}mm, "
                f"{res_lig['L1']['n_linha']}×{res_lig['L1']['n_linhas']})"),
-        ("L2", "L2 cumeeira"),
         ("L3", f"L3 sapata (n_chu={res_lig['L3']['n_chumbadores']})"),
     ]:
         _print_eta(label, res_lig[key])
@@ -738,12 +808,10 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         b_pilar_c=B_PILAR_C,
         h_pilar_c=H_PILAR_C,
         d_base_mm=D_BASE_MM,
-        d_cum_mm=D_CUM_MM,
         eta_alvo=ETA_LIG_ALVO,
     )
     for key, label in [
         ("L1c", f"L1c central (d={D_BASE_MM}mm, 2 chapas)"),
-        ("L2c", "L2c cumeeira central"),
         ("L3c", "L3c sapata central"),
     ]:
         _print_eta(label, res_lig_c[key])
@@ -752,6 +820,24 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"σ_c={L3c.get('sigma_c_MPa', 0):.3f} MPa | "
           f"η_N={L3c.get('eta_N', L3c['eta']):.4f} | "
           f"n_chu={L3c['n_chumbadores']} construtivo (η_H=0)")
+
+    # ── Esquadro de chapas — espessura SAI do dimensionamento (issue 23) ───────
+    print("\n[FASE 4] Esquadro de chapas (dimensões + espessura; issue 23)...")
+    from mlc_projeto.connections.chapas_dim import esquadro_chapas
+    esquadro = esquadro_chapas(
+        res_lig, res_lig_c, geo,
+        b_pilar_m=B_PILAR, h_pilar_m=H_PILAR,
+        b_pilar_c_m=B_PILAR_C, h_pilar_c_m=H_PILAR_C,
+        aco=ACO_CHAPA_LIG,   # d do chumbador lido de cada sapata (não é o pino)
+    )
+    res_elu["esquadro_chapas"] = esquadro
+    for k in ("L1", "L1c", "L3", "L3c"):
+        c = esquadro[k]
+        print(f"  · {k} ({c['tipo']}): {c['largura_mm']:.0f}×{c['altura_mm']:.0f} mm | "
+              f"t_req={c['t_req_mm']:.1f} → t_adot={c['t_adotada_mm']:.1f} mm "
+              f"(governa {c['t_governa']})")
+    print("  → L1/L1c: t≥d=24 mm (chapa central rígida p/ rótula do pino) → 25 mm; "
+          "corrige os 16 mm arbitrados da issue 21.")
 
     # ── Ruptura de bloco (EC5 Anexo A) — grupos de cavilhas L1/L1c (issue 19) ──
     print("\n[FASE 4] Ruptura de bloco (EC5 Anexo A) — L1/L1c...")
@@ -767,6 +853,82 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"→ F_bs,Rk={rb['F_bs_Rk_kN']:.0f} (governa {rb['governa']}) | "
               f"F_bs,Rd={rb['F_bs_Rd_kN']:.0f} kN | η={rb['eta']:.3f} "
               f"(η só-cisalh={rb['eta_so_cisalh']:.3f})")
+
+    # ── Fendilhamento (EC5 §8.1.4) — componente ⊥ fibras em L1/L1c (issue 20) ──
+    print("\n[FASE 4] Fendilhamento (EC5 §8.1.4) — L1/L1c...")
+    from mlc_projeto.connections.connections import fendilhamento_ligacao
+    res_fend_L1 = fendilhamento_ligacao(res_lig["L1"], geo, mat_elu)
+    res_fend_L1c = fendilhamento_ligacao(res_lig_c["L1c"], geo, mat_elu)
+    res_elu["fendilhamento_L1"] = res_fend_L1
+    res_elu["fendilhamento_L1c"] = res_fend_L1c
+    for lbl, rf in [("L1", res_fend_L1), ("L1c", res_fend_L1c)]:
+        _print_eta(f"Fendilhamento {lbl} §8.1.4", rf)
+        print(f"  · {lbl}: F_90,Ed=|V_d|={rf['F_90_Ed_kN']:.0f} kN | "
+              f"h_e={rf['h_e_mm']:.0f} mm (h_e/h={rf['h_e_h']:.2f}) | "
+              f"F_90,Rk={rf['F_90_Rk_kN']:.0f} kN → F_90,Rd={rf['F_90_Rd_kN']:.0f} kN | "
+              f"η={rf['eta']:.3f}")
+
+    # ── Componente metálico (EN 1993-1-8) — chapa, furos, soldas (issue 21) ────
+    print("\n[FASE 4] Chapas de aço / furos / soldas (EN 1993-1-8) — L1/L1c...")
+    from mlc_projeto.connections.chapas_aco import chapas_aco_ligacao
+    # Espessura da chapa SAI do esquadro/dimensionamento (issue 23), não arbitrada.
+    _t_L1 = esquadro["L1"]["t_adotada_mm"]
+    _t_L1c = esquadro["L1c"]["t_adotada_mm"]
+    res_aco_L1 = chapas_aco_ligacao(
+        res_lig["L1"], geo, t_p_mm=_t_L1, a_solda_mm=A_SOLDA_MM, aco=ACO_CHAPA_LIG)
+    res_aco_L1c = chapas_aco_ligacao(
+        res_lig_c["L1c"], geo, t_p_mm=_t_L1c, a_solda_mm=A_SOLDA_MM, aco=ACO_CHAPA_LIG)
+    res_elu["chapa_aco_L1"] = res_aco_L1
+    res_elu["chapa_aco_L1c"] = res_aco_L1c
+    for lbl, ra in [("L1", res_aco_L1), ("L1c", res_aco_L1c)]:
+        _print_eta(f"Chapa aço {lbl} EN1993-1-8", ra)
+        print(f"  · {lbl} {ra['aco']} t={ra['t_p_mm']:.0f}mm: "
+              f"pino η={ra['eta_pino_cisalh']:.3f} | bearing η={ra['eta_furo_bearing']:.3f} | "
+              f"sec.líq η={ra['eta_chapa_liquida']:.3f} ({ra['net_gov']}) | "
+              f"solda η={ra['eta_solda']:.3f} → gov {ra['eta_gov_key']} η={ra['eta']:.3f}")
+    print(f"  ⚠ {res_aco_L1['nota_declarado']}")
+
+    # ── Critério η-alvo 0,75: aplicação CONSISTENTE por modo de falha (issue 22) ──
+    print("\n[FASE 4] Critério η-alvo das ligações (issue 22)...")
+    from mlc_projeto.connections.connections import (
+        aplicar_criterio_eta, ETA_ALVO_LIGACAO,
+    )
+    _L3_tirante = bool(res_lig["L3"].get("com_tirante", False))
+    # (chave em res, modo_frágil?) — frágil: madeira (embutimento/bloco/fendilh.)
+    # e ancoragem frágil no concreto (chumbadores sem tirante). Dúctil/compressão:
+    # concreto sob a chapa (L3 c/ tirante, L3c), compressão da madeira (cumeeira/seção), aço.
+    _classificacao = [
+        (res_lig["L1"],          True),
+        (res_lig["L3"],          not _L3_tirante),
+        (res_lig_c["L1c"],       True),
+        (res_lig_c["L3c"],       False),
+        (res_elu["ruptura_bloco_L1"],  True),
+        (res_elu["ruptura_bloco_L1c"], True),
+        (res_elu["fendilhamento_L1"],  True),
+        (res_elu["fendilhamento_L1c"], True),
+        (res_elu["chapa_aco_L1"],      False),
+        (res_elu["chapa_aco_L1c"],     False),
+    ]
+    _nomes = ["L1", "L3", "L1c", "L3c",
+              "bloco L1", "bloco L1c", "fendilh. L1", "fendilh. L1c",
+              "chapa L1", "chapa L1c"]
+    _viol = []
+    print(f"  Alvo {ETA_ALVO_LIGACAO:.2f} = margem p/ modos FRÁGEIS (sem redistribuição):")
+    for (rc, frag), nm in zip(_classificacao, _nomes):
+        aplicar_criterio_eta(rc, modo_fragil=frag, eta_alvo=ETA_LIG_ALVO)
+        _eta = float(rc.get("eta", 0.0))
+        tag = "FRÁGIL→0,75" if frag else "dúctil→1,0 "
+        flag = "" if rc["ok"] else "  ✗ VIOLA"
+        if frag and not rc["ok_alvo"]:
+            _viol.append(nm)
+        print(f"    {nm:<13} η={_eta:.4f}  [{tag}]  lim={rc['eta_limite']:.2f}  "
+              f"{'✓' if rc['ok'] else '✗'}{flag}")
+    if _viol:
+        print(f"  ⚠ Modos frágeis ACIMA de {ETA_LIG_ALVO:.2f}: {', '.join(_viol)} "
+              f"(revisar dimensionamento).")
+    else:
+        print(f"  ✓ Todos os modos frágeis ≤ {ETA_LIG_ALVO:.2f}; "
+              f"exceções (η≤1,0) são compressão no concreto/madeira e aço dúctil.")
 
     # ── Fase 4b: Fadiga e deslizamento das ligações ───────────────────────────
     print("\n[FASE 4b] Fadiga e deslizamento — EC5 §2.4 + §7.1 + §8.1.5...")
@@ -809,10 +971,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         **res_els,
         **({"tirante_base": res_tirante} if res_tirante.get("ativo") else {}),
         "L1":  res_lig["L1"],
-        "L2":  res_lig["L2"],
         "L3":  res_lig["L3"],
         "L1c": res_lig_c["L1c"],
-        "L2c": res_lig_c["L2c"],
         "L3c": res_lig_c["L3c"],
         "fadiga_L1": {
             "eta": res_fadiga["L1"]["eta_slip"],
@@ -822,15 +982,6 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "u_inst_mm": res_fadiga["L1"]["u_inst_mm"],
             "u_fin_mm":  res_fadiga["L1"]["u_fin_mm"],
             "descricao": res_fadiga["L1"]["descricao"],
-        },
-        "fadiga_L2": {
-            "eta": res_fadiga["L2"]["eta_slip"],
-            "ok":  res_fadiga["L2"]["slip_ok"] and res_fadiga["L2"]["alternada"]["ok"],
-            "eta_slip": res_fadiga["L2"]["eta_slip"],
-            "eta_alt":  res_fadiga["L2"]["alternada"]["eta_alt"],
-            "u_inst_mm": res_fadiga["L2"]["u_inst_mm"],
-            "u_fin_mm":  res_fadiga["L2"]["u_fin_mm"],
-            "descricao": res_fadiga["L2"]["descricao"],
         },
         "fadiga_L1c": {
             "eta": res_fadiga["L1c"]["eta_slip"],
@@ -855,7 +1006,6 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "classe_servico": mat_elu.classe_servico,
             "eta_lig_alvo": ETA_LIG_ALVO,
             "d_base_mm": D_BASE_MM,
-            "d_cum_mm": D_CUM_MM,
             "F_chu_kN": F_CHU_KN,
             "b_pilar": B_PILAR,
             "h_pilar": H_PILAR,

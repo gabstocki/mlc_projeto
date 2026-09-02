@@ -44,6 +44,8 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
+    ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
+    ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §6.2.5+Tab.5"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
     ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
     ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
@@ -54,14 +56,15 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
     ("ruptura_bloco_L1",    "Ruptura de bloco L1",       "EC5 Anexo A"),
     ("ruptura_bloco_L1c",   "Ruptura de bloco L1c",      "EC5 Anexo A"),
+    ("fendilhamento_L1",    "Fendilhamento L1 (perp.)",  "EC5 §8.1.4 Eq.8.4"),
+    ("fendilhamento_L1c",   "Fendilhamento L1c (perp.)", "EC5 §8.1.4 Eq.8.4"),
+    ("chapa_aco_L1",        "Chapa aço L1 (furos/solda)","EN 1993-1-8+1-1"),
+    ("chapa_aco_L1c",       "Chapa aço L1c (furos/solda)","EN 1993-1-8+1-1"),
     ("L1",                  "Ligação L1 base",           "EC5 §8.2+§8.5.1.1+§8.6"),
-    ("L2",                  "Ligação L2 cumeeira",       "EC5 §6.1.4+§6.1.5+§8.6"),
     ("L3",                  "Ligação L3 sapata",         "EN 1993-1-8+EN 1992-4"),
     ("L1c",                 "Ligação L1c base central",  "EC5 §8.2+§8.5.1.1+§8.6"),
-    ("L2c",                 "Ligação L2c cumeeira",      "EC5 §6.1.4+§6.1.5+§8.6"),
     ("L3c",                 "Ligação L3c sapata central","EN 1993-1-8+EN 1992-4"),
     ("fadiga_L1",           "Fadiga/slip L1",            "EC5 §7.1+§8.1.5"),
-    ("fadiga_L2",           "Fadiga/slip L2",            "EC5 §7.1+§8.1.5"),
     ("fadiga_L1c",          "Fadiga/slip L1c",           "EC5 §7.1+§8.1.5"),
 ]
 
@@ -417,13 +420,10 @@ def gerar_tex(
     r_pc   = _clean_dict(resultados.get("pilar_central", {}))
     r_els  = _clean_dict(resultados.get("ELS",         {}))
     r_L1   = _clean_dict(resultados.get("L1",          {}))
-    r_L2   = _clean_dict(resultados.get("L2",          {}))
     r_L3   = _clean_dict(resultados.get("L3",          {}))
     r_L1c  = _clean_dict(resultados.get("L1c",         {}))
-    r_L2c  = _clean_dict(resultados.get("L2c",         {}))
     r_L3c  = _clean_dict(resultados.get("L3c",         {}))
     r_fL1  = _clean_dict(resultados.get("fadiga_L1",   {}))
-    r_fL2  = _clean_dict(resultados.get("fadiga_L2",   {}))
     r_fL1c = _clean_dict(resultados.get("fadiga_L1c",  {}))
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
     r_cvv  = _clean_dict(resultados.get("contraventamento_vertical", {}))
@@ -432,6 +432,10 @@ def gerar_tex(
     r_bloco = _clean_dict(resultados.get("ruptura_bloco_L1", {}))
     r_bloco_c = _clean_dict(resultados.get("ruptura_bloco_L1c", {}))
     r_ter  = _clean_dict(resultados.get("terca", {}))
+    r_tfc  = _clean_dict(resultados.get("terca_flexocomp", {}))
+    r_esq  = resultados.get("esquadro_chapas", {})    # esquadro de chapas (issue 23)
+    if not isinstance(r_esq, dict):
+        r_esq = {}
     r_eg   = _clean_dict(resultados.get("estabilidade_global", {}))
     r_iv   = _clean_dict(resultados.get("impacto_veiculo", {}))
     r_tir  = _clean_dict(resultados.get("tirante_base", {}))
@@ -441,13 +445,10 @@ def gerar_tex(
     # Extrair sub-dicts de flexo_comp
     r_viga  = r_fc.get("viga",  {}) if r_fc else {}
     r_pilar = r_fc.get("pilar", {}) if r_fc else {}
-    r_ter_biela = r_cv.get("terca", {}) if r_cv else {}
     if not isinstance(r_viga, dict):
         r_viga = {}
     if not isinstance(r_pilar, dict):
         r_pilar = {}
-    if not isinstance(r_ter_biela, dict):
-        r_ter_biela = {}
 
     k_def  = _f(resultados.get("k_def", mat.k_def), getattr(mat, "k_def", 2.0))
     s_m    = _f(meta.get("s", r_fl.get("l_1_m", 2.53)), 2.53)
@@ -539,9 +540,9 @@ def gerar_tex(
     etas_resumo = [
         _eta(r_cum), _eta(r_fl), _eta(r_fx), _eta(r_ci), _eta(r_ap),
         _eta(r_pilar), _eta(r_pc), _eta(r_cv), _eta(r_ter), _eta(r_els),
-        _eta(r_L1), _eta(r_L2), _eta(r_L3),
-        _eta(r_L1c), _eta(r_L2c), _eta(r_L3c),
-        _eta(r_fL1), _eta(r_fL2), _eta(r_fL1c),
+        _eta(r_L1), _eta(r_L3),
+        _eta(r_L1c), _eta(r_L3c),
+        _eta(r_fL1), _eta(r_fL1c),
         _eta(r_eg), _eta(r_iv),
         _eta(r_tir) if com_tirante else 0.0,
     ]
@@ -1345,12 +1346,16 @@ def gerar_tex(
     parts.append(f'{r_cv.get('delta_lim_mm', 0):.1f}')
     parts.append('~mm & ')
     parts.append(f'{_eta(r_cv, "eta_delta"):.4f}')
-    parts.append(' \\\\\n  Terça-biela $N_{Ed}/N_{Rd}$ (EC5~\\S6.3.2) &\n    $F=')
-    parts.append(_br(r_cv.get('F_terca_kN', 0), 2))
-    parts.append('$~kN,\n    $N_{Rd}=')
-    parts.append(_br(r_ter_biela.get('N_Rd_kN', 0), 1))
-    parts.append('$~kN & ')
-    parts.append(f'{_eta(r_cv, "eta_terca"):.4f}')
+    parts.append(' \\\\\n  Terça-biela flexo-compr. \\textbf{combinada} (EC5~\\S6.3.2, Eq.~6.23/6.24) &\n    $\\sigma_{c}=')
+    parts.append(_br(r_tfc.get('sigma_c_MPa', 0), 3))
+    parts.append('$, $\\sigma_{m,y}=')
+    parts.append(_br(r_tfc.get('sigma_my_MPa', 0), 3))
+    parts.append('$~MPa;\n    $k_{c,z}=')
+    parts.append(_br(r_tfc.get('k_c_z', 0), 3))
+    _vg = {"Eq.6.23": "Eq.~6{,}23", "Eq.6.24": "Eq.~6{,}24"}.get(
+        str(r_tfc.get('verif_gov', '--')), '--')
+    parts.append('$ (' + _vg + ') & ')
+    parts.append(f'{_eta(r_tfc):.4f}')
     parts.append(' \\\\\n  Rigidez terça $EA/L\\geq C_{\\min}$ &\n    ')
     parts.append(_br(r_cv.get('C_terca_kNpm', 0), 0))
     parts.append(' $\\geq$ ')
@@ -1470,14 +1475,48 @@ def gerar_tex(
             '(compressão $N$). Ancoragem do tirante e proteção a impacto '
             'no estacionamento a detalhar em projeto de execução.\n\n'
         )
+        # Hipótese de modelagem + flexibilidade (issue 24)
+        _imp = r_tir.get("impacto_flexibilidade", {})
+        parts.append(
+            '\\textit{Hipótese de modelagem (empuxo $H$):} o empuxo foi obtido '
+            'por \\textbf{Castigliano assumindo apoio horizontal indeslocável} '
+            'nas bases (arco 1$\\times$ hiperestático); a \\textbf{flexibilidade '
+            'axial do tirante} ($\\delta=TL/EA$) \\textbf{não} foi realimentada '
+            'na análise. É conservador para o tirante ($H_{\\mathrm{rígido}}$ é '
+            'o máximo).\n\n'
+        )
+        if _imp:
+            parts.append(
+                '\\textit{Avaliação da flexibilidade (issue 24):} rigidez '
+                f'horizontal do arco ${_br(_imp.get("k_arco_kNmm", 0), 0)}$~kN/mm '
+                f'vs. do tirante ${_br(_imp.get("k_tirante_kNmm", 0), 0)}$~kN/mm '
+                f'($\\delta_{{\\mathrm{{tir}}}}={_br(_imp.get("delta_tirante_mm", 0), 1)}$~mm). '
+                'Um modelo de 2 molas em série (tirante como único apoio) daria '
+                f'$H\\approx{_br(_imp.get("H_flex_2molas_kN", 0), 0)}$~kN, mas '
+                '\\textbf{ignora} a restrição paralela de ancoragem e '
+                'contraventamento das bases; na estrutura real $H$ permanece '
+                'próximo do rígido. \\textbf{Não é necessário acoplar} para o '
+                'dimensionamento do tirante ($T=H$ máximo, conservador); um '
+                'modelo de pórtico acoplado só refinaria a flexão da viga.\n\n'
+            )
 
     parts.append('\n% ── 11. Ligações ──────────────────────────────────────────────\n\\section*{11. Ligações}\n\n\\textit{Critério de projeto (uso público):} $\\eta_{\\mathrm{alvo}}=')
     parts.append(_br(eta_lig_alvo, 2))
     parts.append(
-        f'$ para L1/L1c e L3 (ligações em madeira tendem a falha frágil;\n'
-        f'EC5 exige $\\eta\\leq 1{{,}}0$ -- o alvo '
+        '$ aplica-se aos modos de falha \\textbf{FRÁGEIS} (sem redistribuição '
+        'plástica): ruptura da madeira no grupo de cavilhas (embutimento/$n_{ef}$, '
+        'corte de bloco Anexo~A, fendilhamento \\S8.1.4) e ancoragem frágil no '
+        'concreto (chumbadores sem tirante). EC5 exige $\\eta\\leq 1{,}0$; o alvo '
         f'{eta_lig_alvo:.2f}'.replace('.', '{,}') +
-        ' é margem de projeto).\n'
+        ' é margem de projeto (issue~22).\n\n'
+        '\\textit{Exceções justificadas} (limite normativo $\\eta\\leq 1{,}0$, '
+        'pois \\textbf{não} são ruptura frágil da madeira): compressão localizada '
+        'no \\textbf{concreto} sob a chapa de base (L3/L3c -- esmagamento, EN~1992), '
+        'compressão da \\textbf{madeira} na cumeeira (verificação de SEÇÃO, '
+        '\\S6.1.4/\\S6.1.5/\\S6.4.3 -- sem ligação, peça monolítica) e '
+        'componentes de \\textbf{aço} dúcteis (chapa, furo, solda -- EN~1993). '
+        'Por isso L3/L3c aparecem com $\\eta=1{,}00$ (apoio no concreto) sem '
+        'contrariar o alvo.\n\n'
         '$n_{ef}$ por fileira // fibras: EC5~\\S8.5.1.1\n'
         '($n_{ef}=n^{0,9}(a_1/(13d))^{1/4}\\leq n$).\n\n'
         '\\textit{Escopo das cavilhas (EC5~\\S8.6(2)):} '
@@ -1496,7 +1535,6 @@ def gerar_tex(
         '  \\midrule\n'
     )
     parts.append(eta_row('L1 -- Viga-pilar (base)', 'EC5 \\S8.2+\\S8.5.1.1+\\S8.6', _eta(r_L1), _ok(r_L1)))
-    parts.append(eta_row('L2 -- Cumeeira', 'EC5 \\S6.1.4+\\S6.1.5+\\S8.6', _eta(r_L2), _ok(r_L2)))
     _l3_lab = (
         'L3 -- Sapata (com tirante, $H\\approx 0$)'
         if com_tirante or r_L3.get('com_tirante')
@@ -1504,7 +1542,6 @@ def gerar_tex(
     )
     parts.append(eta_row(_l3_lab, 'EN 1993-1-8+EN 1992-4', _eta(r_L3), _ok(r_L3)))
     parts.append(eta_row('L1c -- Base pilar central', 'EC5 \\S8.2+\\S8.3+\\S8.6', _eta(r_L1c), _ok(r_L1c)))
-    parts.append(eta_row('L2c -- Cumeeira central', 'EC5 \\S6.1.4+\\S6.1.5+\\S8.6', _eta(r_L2c), _ok(r_L2c)))
     parts.append(eta_row('L3c -- Sapata central', 'EN 1993-1-8+EN 1992-4', _eta(r_L3c), _ok(r_L3c)))
     # Tabela de detalhes §11: largura = \textwidth (margens 2,5 cm)
     parts.append(
@@ -1537,12 +1574,6 @@ def gerar_tex(
     parts.append(f'{r_L1.get('F_res_kN', 0):.1f}~kN \\\\\n')
     parts.append('  & & $\\eta$, $\\eta_{alvo}$ & ')
     parts.append(f'{_eta(r_L1):.4f}, {r_L1.get('eta_alvo', 0.75):.2f} \\\\\n')
-    parts.append('  \\midrule\n  L2 -- Cumeeira & Pino passante & $d$, $n$ & ')
-    parts.append(f'{r_L2.get('d_pino_mm', r_L2.get('d_mm', 0)):.0f}~mm, {r_L2.get('n_pino', r_L2.get('n_pinos', 0))} \\\\\n')
-    parts.append('  & Compressão axial & $\\sigma_{c,0,d}$ & ')
-    parts.append(f'{r_L2.get('sigma_c0_MPa', 0):.4f}~MPa \\\\\n')
-    parts.append('  & & $\\eta$ & ')
-    parts.append(f'{_eta(r_L2):.4f} \\\\\n')
     if com_tirante or r_L3.get('com_tirante'):
         parts.append(
             '  \\midrule\n  L3 -- Sapata & Com tirante ($H\\approx 0$) &\n'
@@ -1596,6 +1627,42 @@ def gerar_tex(
     parts.append(
         '  \\bottomrule\n'
         '\\end{tabularx}}\n\n'
+    )
+
+    # ── Esquadro de chapas (issue 23) — dimensões e espessuras ────────────────
+    if r_esq:
+        parts.append(
+            '\\vspace{6pt}\n'
+            '\\subsection*{Esquadro de chapas -- dimensões e espessuras}\n\n'
+            f'\\textit{{Aço {r_esq.get("aco", "S275")}}}. A \\textbf{{espessura não é '
+            'arbitrada}: sai do dimensionamento. Nas chapas embutidas (L1/L1c) '
+            'governa $t\\geq d$ (chapa central rígida, para o pino desenvolver a '
+            'rótula plástica -- base dos modos de Johansen); nas chapas de base '
+            '(L3/L3c), a flexão do balanço (EN~1993-1-8~\\S6.2.5).\n\n'
+            '{\\small\\setlength{\\tabcolsep}{5pt}\n'
+            '\\begin{tabularx}{\\textwidth}{@{}'
+            'l l >{\\raggedright\\arraybackslash}p{2.6cm} '
+            'c c >{\\raggedright\\arraybackslash}X@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Chapa} & \\textbf{Tipo} & \\textbf{Larg.$\\times$Alt. (mm)} '
+            '& $t_{req}$ & $t_{adot}$ & \\textbf{Furação / governa} \\\\\n'
+            '  \\midrule\n'
+        )
+        for k in ("L1", "L1c", "L3", "L3c"):
+            c = r_esq.get(k, {})
+            if not c:
+                continue
+            parts.append(
+                f'  {k} & {c.get("tipo", "")} & '
+                f'{_i(c.get("largura_mm", 0))}$\\times${_i(c.get("altura_mm", 0))} & '
+                f'{_br(c.get("t_req_mm", 0), 1)} & '
+                f'\\textbf{{{_br(c.get("t_adotada_mm", 0), 1)}}} & '
+                f'{_tex_escape(c.get("furacao", ""))} '
+                f'({_tex_escape(c.get("t_governa", ""))}) \\\\\n'
+            )
+        parts.append('  \\bottomrule\n\\end{tabularx}}\n\n')
+
+    parts.append(
         '\\vspace{6pt}\n'
         '\\subsection*{11.1 Fadiga e deslizamento '
         '(EC5 \\S7.1 + \\S8.1.5)}\n\n'
@@ -1614,9 +1681,6 @@ def gerar_tex(
         f'  L1 & {_tex_escape(r_fL1.get("descricao", "Base lateral"))} & '
         f'{r_fL1.get("u_inst_mm", 0):.3f}~mm & {r_fL1.get("u_fin_mm", 0):.3f}~mm & '
         f'{_eta(r_fL1, "eta_slip"):.4f} & {_eta(r_fL1, "eta_alt"):.4f} \\\\\n'
-        f'  L2 & {_tex_escape(r_fL2.get("descricao", "Cumeeira"))} & '
-        f'{r_fL2.get("u_inst_mm", 0):.3f}~mm & {r_fL2.get("u_fin_mm", 0):.3f}~mm & '
-        f'{_eta(r_fL2, "eta_slip"):.4f} & {_eta(r_fL2, "eta_alt"):.4f} \\\\\n'
         f'  L1c & {_tex_escape(r_fL1c.get("descricao", "Base central"))} & '
         f'{r_fL1c.get("u_inst_mm", 0):.3f}~mm & {r_fL1c.get("u_fin_mm", 0):.3f}~mm & '
         f'{_eta(r_fL1c, "eta_slip"):.4f} & {_eta(r_fL1c, "eta_alt"):.4f} \\\\\n'

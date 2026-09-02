@@ -250,6 +250,143 @@ def verifica_terca(
     }
 
 
+# ── Terça-biela: flexão + compressão COMBINADAS (issue 16) ───────────────────
+
+def verifica_terca_flexocompressao(
+    mat:       GlulamMaterial,
+    L_t:       float,
+    s:         float,
+    b:         float,
+    h:         float,
+    alpha_deg: float,
+    g_k_m2:    float,
+    q_k_m2:    float,
+    w_kNm2:    float,
+    N_c_kN:    float,
+    k_m:       float = 0.7,
+    beta_c:    float = 0.10,
+) -> dict:
+    """
+    Interação flexão + compressão axial na TERÇA-BIELA — EC5 §6.3.2 Eq. (6.23)/(6.24).
+
+    Quando a terça atua como **biela de contraventamento** (§9.2.5), à flexão
+    da cobertura soma-se a **compressão axial de estabilização** N_c. Os dois
+    efeitos são CONCOMITANTES — nascem da MESMA combinação ELU de vento+gravidade
+    (ELU_C2: 1,35G+1,5W+1,05Q; a mesma que governa a flexão em `verifica_terca`
+    e a força de estabilização em `forca_compressao_estabilizar`). Por isso a
+    verificação tem de ser **combinada**, não a soma de dois η isolados
+    (correção do apontamento do orientador — issue 16).
+
+        (6.23): σ_c,0,d/(k_c,y·f_c,0,d) + σ_m,y,d/f_m,d + k_m·σ_m,z,d/f_m,d ≤ 1
+        (6.24): σ_c,0,d/(k_c,z·f_c,0,d) + k_m·σ_m,y,d/f_m,d + σ_m,z,d/f_m,d ≤ 1
+
+    IMPORTANTE (forma do termo de compressão): em §6.3.2 o termo de compressão
+    é LINEAR (÷k_c). A forma quadrada (σ_c/(k_c·f_c0d))² pertence a §6.2.4
+    (Eq. 6.19/6.20) e só se aplica a peças curtas (λ_rel,y e λ_rel,z ≤ 0,3),
+    por §6.3.2(2). A terça-biela é esbelta (λ_z ≈ 100 » 0,3) → cai no §6.3.2(3)
+    → Eq. 6.23/6.24 lineares. Confirmado no texto normativo EN 1995-1-1:2004
+    §6.3.2(2)–(3).
+
+    Eixos (terça de pé, h > b):
+        y = eixo forte  → flexão σ_m,y da carga ⊥ à cobertura; i_y = h/√12.
+            Flambagem fora do plano da cobertura (não se reivindica a
+            restrição do telhado → l_ef,y = L_t, conservador).
+        z = eixo fraco  → flexão σ_m,z da componente paralela à inclinação;
+            i_z = b/√12. Flambagem no plano da cobertura entre pórticos
+            (l_ef,z = L_t) — é a que governa (k_c,z « k_c,y).
+
+    Args:
+        mat    : Material GL24h (duração curta — vento dominante)
+        L_t    : Vão/comprimento da terça-biela entre pórticos (m)
+        s      : Espaçamento entre terças (m) — área tributária da flexão
+        b, h   : Seção (m), b largura no plano da cobertura, h altura
+        alpha_deg : Inclinação da cobertura (graus)
+        g_k_m2, q_k_m2, w_kNm2 : Cargas por área (kN/m²) — mesma origem da flexão
+        N_c_kN : Compressão axial de estabilização §9.2.5 (kN), MESMA combinação
+        k_m    : Fator de redistribuição (0,7 para seção retangular, §6.1.6)
+        beta_c : Fator de imperfeição (0,10 para MLC, §6.3.2)
+
+    Returns:
+        dict com termos das Eq. 6.23/6.24, k_c,y, k_c,z e η combinado único.
+    """
+    # ── Flexão da cobertura (mesma combinação ELU_C2 de verifica_terca) ──
+    # Reutiliza a rotina de flexão biaxial → concomitância garantida por
+    # construção (idênticos σ_m,y,d, σ_m,z,d, f_m,d).
+    rf = verifica_terca(
+        mat=mat, L_t=L_t, s=s, b=b, h=h, alpha_deg=alpha_deg,
+        g_k_m2=g_k_m2, q_k_m2=q_k_m2, w_kNm2=w_kNm2, k_m=k_m,
+    )
+    sigma_my = rf["sigma_my_MPa"] * 1e6     # Pa
+    sigma_mz = rf["sigma_mz_MPa"] * 1e6     # Pa
+    f_md     = rf["f_md_MPa"]    * 1e6      # Pa (curta duração)
+
+    # ── Compressão axial ──────────────────────────────────────
+    A       = b * h                         # m²
+    sigma_c = abs(N_c_kN) * 1e3 / A         # Pa
+    mat_curta = GlulamMaterial(mat.classe, mat.classe_servico, "curta")
+    f_c0d = mat_curta.f_c0_d                # Pa
+    f_c0k = mat_curta.f_c0_k               # Pa
+    E005  = mat_curta.E0_05                # Pa
+
+    # ── Fatores de flambagem k_c,y e k_c,z — EC5 §6.3.2 Eq. 6.25–6.28 ──
+    def _k_c(i: float) -> tuple[float, float, float]:
+        lam     = L_t / i if i > 0 else 1e9
+        lam_rel = (lam / math.pi) * math.sqrt(f_c0k / E005)
+        k       = 0.5 * (1 + beta_c * (lam_rel - 0.3) + lam_rel**2)
+        k_c     = min(1.0 / (k + math.sqrt(max(k**2 - lam_rel**2, 0.0))), 1.0)
+        return k_c, lam, lam_rel
+
+    i_y = h / math.sqrt(12.0)               # eixo forte (fora do plano)
+    i_z = b / math.sqrt(12.0)               # eixo fraco  (no plano cobertura)
+    k_c_y, lam_y, lam_rel_y = _k_c(i_y)
+    k_c_z, lam_z, lam_rel_z = _k_c(i_z)
+
+    # ── EC5 §6.3.2 Eq. (6.23) e (6.24) — termos lineares de compressão ──
+    t_c_623 = sigma_c / (k_c_y * f_c0d)
+    t_c_624 = sigma_c / (k_c_z * f_c0d)
+    eta_623 = t_c_623 + sigma_my/f_md + k_m * sigma_mz/f_md
+    eta_624 = t_c_624 + k_m * sigma_my/f_md + sigma_mz/f_md
+
+    eta = max(eta_623, eta_624)
+    verif_gov = "Eq.6.23" if eta_623 >= eta_624 else "Eq.6.24"
+
+    return {
+        # Geometria / seção
+        "L_t_m":        L_t,
+        "b_m":          b,
+        "h_m":          h,
+        "A_m2":         round(A, 6),
+        # Compressão
+        "N_c_kN":       round(abs(N_c_kN), 4),
+        "sigma_c_MPa":  round(sigma_c/1e6, 4),
+        "f_c0d_MPa":    round(f_c0d/1e6, 4),
+        # Flexão (concomitante, ELU_C2)
+        "sigma_my_MPa": rf["sigma_my_MPa"],
+        "sigma_mz_MPa": rf["sigma_mz_MPa"],
+        "f_md_MPa":     rf["f_md_MPa"],
+        "comb":         "ELU_C2 (1,35G+1,5W+1,05Q)",
+        # Flambagem
+        "i_y_m":        round(i_y, 5),
+        "i_z_m":        round(i_z, 5),
+        "lambda_y":     round(lam_y, 1),
+        "lambda_z":     round(lam_z, 1),
+        "lambda_rel_y": round(lam_rel_y, 4),
+        "lambda_rel_z": round(lam_rel_z, 4),
+        "k_c_y":        round(k_c_y, 4),
+        "k_c_z":        round(k_c_z, 4),
+        # Termos das interações
+        "termo_c_623":  round(t_c_623, 4),
+        "termo_c_624":  round(t_c_624, 4),
+        "eta_623":      round(eta_623, 4),
+        "eta_624":      round(eta_624, 4),
+        # Resultado combinado ÚNICO
+        "eta":          round(eta, 4),
+        "verif_gov":    verif_gov,
+        "ok":           eta <= 1.0,
+        "norma":        "EC5 §6.3.2 Eq. 6.23/6.24 (flexo-compressão combinada)",
+    }
+
+
 # ── Varredura paramétrica das terças ─────────────────────────────────────────
 
 def varrer_tercas(

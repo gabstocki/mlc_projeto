@@ -61,24 +61,24 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 ### Terças
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 16 | P1 | [Terça: interação flexão + compressão combinada (Eq. 6.23/6.24)](16-terca-flexo-compressao.md) |
-| 17 | P2 | [Ligação telha-terça sob sucção (ou dado do fabricante)](17-ligacao-telha-terca-succao.md) |
+| 16 | P1 | [Terça: interação flexão + compressão combinada (Eq. 6.23/6.24)](16-terca-flexo-compressao.md) ✅ |
+| 17 | P2 | [Ligação telha-terça sob sucção (ou dado do fabricante)](17-ligacao-telha-terca-succao.md) ✅ |
 
 ### Ligações (EC5 §8 / EN 1993-1-8)
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 18 | P0 | [Cavilhas Ø36 mm > limite EC5 §8.6(2) — L1/L1c fora do escopo](18-cavilhas-diametro-36mm.md) ✅ |
 | 19 | P0 | [Ruptura de bloco na ligação de 64 pinos](19-ruptura-de-bloco.md) ✅ |
-| 20 | P1 | [Fendilhamento — F90,Rd (EC5 §8.1.4)](20-fendilhamento-f90.md) |
-| 21 | P1 | [Chapas de aço, furos e soldas (EN 1993-1-8)](21-chapas-aco-en1993.md) |
-| 22 | P1 | [Critério η-alvo 0,75: ligações com η≈1 — verificar ativação](22-criterio-eta-alvo.md) |
-| 23 | P2 | [Dimensões das chapas não publicadas (incl. base do pilar central)](23-dimensoes-chapas.md) |
-| 24 | P2 | [Tirante: fy 315 MPa e hipótese de apoio horizontal indeslocável](24-tirante-fy315-flexibilidade.md) |
+| 20 | P1 | [Fendilhamento — F90,Rd (EC5 §8.1.4)](20-fendilhamento-f90.md) ✅ |
+| 21 | P1 | [Chapas de aço, furos e soldas (EN 1993-1-8)](21-chapas-aco-en1993.md) ✅ |
+| 22 | P1 | [Critério η-alvo 0,75: ligações com η≈1 — verificar ativação](22-criterio-eta-alvo.md) ✅ |
+| 23 | P2 | [Dimensões das chapas não publicadas (incl. base do pilar central)](23-dimensoes-chapas.md) ✅ |
+| 24 | P2 | [Tirante: fy 315 MPa e hipótese de apoio horizontal indeslocável](24-tirante-fy315-flexibilidade.md) ✅ |
 
 ### Modelo — coerência e situações transitórias
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 25 | P1 | [L2 pino Ø30 na cumeeira: resquício do modelo triarticulado](25-L2-pino-cumeeira-remover.md) |
+| 25 | P1 | [L2 pino Ø30 na cumeeira: resquício do modelo triarticulado](25-L2-pino-cumeeira-remover.md) ✅ |
 | 26 | P1 | [Situação de içamento da viga (combinação de montagem)](26-icamento-viga.md) |
 
 ### Reprodutibilidade do memorial

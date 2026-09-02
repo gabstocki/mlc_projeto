@@ -23,15 +23,38 @@
 - `D_CUM_MM = 30` ([main.py:143](../mlc_projeto/main.py)) ainda é passado.
 
 ## O que precisa ser feito
-- [ ] Decidir: se a peça é monolítica, **remover L2/L2c** como ligação de cumeeira
-      (não há junta); manter apenas a verificação da **seção** na cumeeira
-      (t90/ápice — issue [10](10-apice-parametros.md)) se aplicável.
-- [ ] Se por montagem existir uma emenda real na cumeeira, então **modelar a emenda**
-      corretamente (transferência de M, V, N), não um "pino só à compressão".
-- [ ] Remover L2/L2c das tabelas de fadiga, deslizamento e do relatório se eliminada.
-- [ ] Limpar `D_CUM_MM` e o legado `analisar_3rotulas`
-      ([loads.py:237-288](../mlc_projeto/core/loads.py)) se não usados.
+- [x] Decisão (confirmada pela usuária): peça **monolítica** → **remover L2/L2c**;
+      cumeeira verificada só como **seção** (t90/ápice §6.4.3 — issue 10).
+- [x] Remover L2/L2c das tabelas de fadiga, deslizamento e do relatório.
+- [x] Limpar `D_CUM_MM` e o legado `analisar_3rotulas`.
 
 ## Critério de aceite
-Cumeeira coerente com o modelo monolítico: sem ligação fictícia L2, ou emenda real
-devidamente modelada; relatório/fadiga atualizados.
+Cumeeira coerente com o modelo monolítico: sem ligação fictícia L2; relatório/fadiga
+atualizados.
+
+---
+
+## ✅ Resolução (implementada)
+
+**Decisão confirmada:** a viga de cada pórtico é peça única contínua no ápice (sem
+junta). L2/L2c eram resquício do modelo triarticulado → **removidos**. A cumeeira
+permanece verificada como **SEÇÃO** (t90/ápice §6.4.3, `cumeeira.py`, res "cumeeira").
+
+### Remoções (coerência do modelo)
+- `connections.py`: função `dimensionar_ligacao_cumeeira` **deletada**; L2/L2c
+  saem de `dimensionar_ligacoes` e `dimensionar_ligacoes_central` (só L1/L3, L1c/L3c);
+  `relatorio_ligacoes` sem o ramo L2; parâmetros `d_cum_mm` removidos.
+- `fadiga_ligacoes.py`: bloco de fadiga/deslizamento de L2 **removido** (sem pino,
+  sem junta → sem deslizamento de cumeeira).
+- `main.py`: `D_CUM_MM` removido; L2/L2c fora dos prints, do critério η (issue 22),
+  do pacote de relatório e da fadiga (`fadiga_L2`).
+- `output/report.py`: L2/L2c e `fadiga_L2` fora do catálogo, das tabelas de ligações,
+  da fadiga e do η_máx; nota do critério atualizada (cumeeira = seção, não ligação).
+- `core/loads.py`: `analisar_3rotulas` (legado triarticulado, não usado) **deletado**.
+
+### Verificação
+- Ligações no pipeline agora: L1, L3, L1c, L3c (sem L2/L2c). Cumeeira coberta pela
+  §6.4.3 (t90) e pela flexo-compressão da viga. Status global APROVADO, η_máx=1,00.
+- Testes: `test_diametro_cavilha.py` (removido o caso via cumeeira; a guarda de Ø já
+  é testada via L1) e `test_connections_nef.py` (sem `d_cum_mm`) atualizados.
+  Suíte: 189 testes ✓. PDF/Excel regenerados sem L2, seção da cumeeira preservada.

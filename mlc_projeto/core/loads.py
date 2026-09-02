@@ -325,60 +325,6 @@ def analisar_biarticulada(
     }
 
 
-def analisar_3rotulas(
-    q:     float,
-    L:     float,
-    h0:    float,
-    h_ap:  float,
-    alpha_rad: float,
-    n_pts: int = 200,
-    b:     float | None = None,
-) -> dict:
-    """
-    LEGADO — pórtico triarticulado (rótula fictícia na cumeeira).
-
-    Mantido só para comparação. O pipeline de projeto usa
-    ``analisar_biarticulada``. Se ``b`` for fornecido, ignora-se (API).
-    """
-    f_c = (h_ap - h0) / 2.0
-    if abs(q) < 1e-10:
-        return {
-            "R_v_kN": 0.0, "H_kN": 0.0,
-            "M_max_kNm": 0.0, "M_cumeeira_kNm": 0.0,
-            "x_Mmax_m": 0.0,
-            "N_apoio_kN": 0.0, "V_apoio_kN": 0.0,
-            "f_c_m": f_c, "sistema": "3rotulas_legado",
-            "M_x": np.zeros(n_pts),
-            "x": np.linspace(0, L, n_pts),
-        }
-    if f_c <= 0:
-        raise ValueError(f"h_ap={h_ap:.3f} deve ser > h0={h0:.3f}")
-
-    R_v = q * L / 2
-    H   = (R_v * (L / 2) - q * (L / 2) ** 2 / 2) / f_c
-    x_half = np.linspace(0, L / 2, n_pts // 2)
-    y_c    = x_half * math.tan(alpha_rad) / 2.0
-    M_half = R_v * x_half - H * y_c - q * x_half ** 2 / 2
-    M_x = np.concatenate([M_half, M_half[-2::-1]])
-    x   = np.linspace(0, L, len(M_x))
-    idx_max = int(np.argmax(np.abs(M_x)))
-    theta = math.atan(math.tan(alpha_rad) / 2.0)
-    return {
-        "R_v_kN":         round(R_v, 4),
-        "H_kN":           round(H, 4),
-        "M_max_kNm":      round(float(M_x[idx_max]), 4),
-        "M_cumeeira_kNm": 0.0,
-        "x_Mmax_m":       round(float(x[idx_max]), 4),
-        "N_apoio_kN":     round(H * math.cos(theta) + R_v * math.sin(theta), 4),
-        "V_apoio_kN":     round(R_v * math.cos(theta) - H * math.sin(theta), 4),
-        "f_c_m":          round(f_c, 4),
-        "theta_rad":      round(theta, 6),
-        "sistema":        "3rotulas_legado",
-        "M_x":            M_x,
-        "x":              x,
-    }
-
-
 # ── Classe principal de carregamentos ────────────────────────────────────────
 
 @dataclass

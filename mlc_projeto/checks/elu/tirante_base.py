@@ -35,6 +35,11 @@ GAMMA_M0  = 1.00
 ACO = {
     "S235": {"f_y": 235.0, "f_u": 360.0},
     "S355": {"f_y": 355.0, "f_u": 510.0},
+    # Barra redonda de média resistência, f_y=315 MPa — recomendada pelo
+    # orientador como a mais adequada ao tamanho do tirante (issue 24).
+    # f_u de referência (~aço-carbono SAE 1020/1045 conforme a bitola);
+    # confirmar produto/norma no projeto de execução.
+    "MR315": {"f_y": 315.0, "f_u": 490.0},
 }
 
 # Diâmetros comerciais de barra redonda (mm) — sequência de dimensionamento
@@ -151,15 +156,107 @@ def verificar_tirante_base(
         "n_vaos_por_linha": n_vaos_por_linha,
         "n_linhas":        n_linhas,
         "norma":           "EN 1993-1-1 §6.2.3 | η_alvo projeto",
+        # Hipótese de modelagem (issue 24) — registrar no memorial:
+        "hipotese_H": (
+            "H (empuxo) obtido por Castigliano assumindo APOIO HORIZONTAL "
+            "INDESLOCÁVEL nas bases (arco 1× hiperestático); a flexibilidade "
+            "axial do tirante (δ=T·L/EA) NÃO foi realimentada na análise. "
+            "É conservador para o tirante (H_rígido ≥ H_flexível). O impacto "
+            "da flexibilidade é estimado à parte (impacto_flexibilidade_tirante)."
+        ),
         "nota": (
             f"T_d = H_arco = {T_d_kN:.1f} kN absorvido pelo tirante; "
-            f"H_sapata ≈ 0. Barra ∅{d_mm:.0f} mm {aco}, "
+            f"H_sapata ≈ 0. Barra ∅{d_mm:.0f} mm {aco} (f_y={f_y:.0f} MPa), "
             f"N_t,Rd = {N_t_Rd:.1f} kN, η = {eta:.3f} "
             f"(alvo {eta_alvo:.2f}). "
             f"δ_el ≈ {delta_mm:.1f} mm em L = {L_m:.2f} m. "
             "Ancoragem nas bases e proteção a impacto (estacionamento) "
             "a detalhar em projeto de execução."
         ),
+    }
+
+
+def impacto_flexibilidade_tirante(
+    geo,
+    E_glulam_MPa: float,
+    H_rigid_kN:   float,
+    d_mm:         float,
+    aco:          str = "MR315",
+    n_pts:        int = 2001,
+) -> dict:
+    """
+    Avalia o impacto da FLEXIBILIDADE AXIAL do tirante sobre o empuxo H (issue 24).
+
+    Diagnóstico por rigidezes horizontais (kN/mm):
+        k_arco = 1/f_p,  f_p = ∫ y_c²/(E·I) dx   (mesmo integrando ∫y_c²/I do H)
+        k_tir  = 1/f_t,  f_t = L/(E_s·A)         (rigidez axial do tirante)
+
+    LIMITE DE TRIAGEM (modelo de 2 molas em SÉRIE, tirante como único apoio):
+        H_flex_2molas = H_rígido · k_tir/(k_tir + k_arco)
+
+    IMPORTANTE — este limite IGNORA a restrição horizontal PARALELA das bases
+    (ancoragem/chumbadores nas sapatas + contraventamento vertical/transversal).
+    Na estrutura real essas rigidezes somam-se em paralelo ao tirante, tornando
+    o apoio muito mais rígido → H permanece próximo de H_rígido. Portanto:
+      · H_rígido é CONSERVADOR para o dimensionamento do TIRANTE (T = H máx);
+      · o modelo de 2 molas é apenas um indicador de sensibilidade, NÃO o H real.
+    """
+    import numpy as np
+
+    L = float(geo.L)
+    h0 = float(geo.h0)
+    b = float(geo.b)
+    alpha_rad = float(geo.alpha_rad)
+
+    x = np.linspace(0.0, L, n_pts)
+    x_sim = np.where(x <= L / 2.0, x, L - x)
+    tan_a = math.tan(alpha_rad)
+    y_c = x_sim * tan_a / 2.0
+    h_x = h0 + x_sim * tan_a
+    I_x = np.maximum(b * h_x ** 3 / 12.0, 1e-18)
+
+    den = float(np.trapezoid(y_c ** 2 / I_x, x))    # ∫ y_c²/I dx  [1/m]
+    E_glulam_Pa = E_glulam_MPa * 1e6
+    f_p = den / E_glulam_Pa                          # m/N (compliance do arco)
+
+    A_m2 = math.pi * (d_mm * 1e-3) ** 2 / 4.0
+    f_t = L / (E_ACO_MPA * 1e6 * A_m2)               # m/N (compliance do tirante)
+
+    k_arco_kNmm = (1.0 / f_p) / 1e6 if f_p > 0 else 0.0   # kN/mm
+    k_tir_kNmm = (1.0 / f_t) / 1e6 if f_t > 0 else 0.0    # kN/mm
+
+    # Limite de triagem — tirante como ÚNICO apoio (série)
+    r = f_t / f_p if f_p > 0 else 0.0
+    H_flex_2molas = H_rigid_kN / (1.0 + r)
+    reducao_2molas_pct = r / (1.0 + r) * 100.0
+
+    # δ do tirante sob H_rígido e afastamento livre do arco
+    delta_tir_mm = H_rigid_kN * 1e3 * f_t * 1e3      # T·L/EA
+    delta_arco_livre_mm = H_rigid_kN * 1e3 * f_p * 1e3
+
+    return {
+        "H_rigid_kN":          round(H_rigid_kN, 3),
+        "k_arco_kNmm":         round(k_arco_kNmm, 1),
+        "k_tirante_kNmm":      round(k_tir_kNmm, 1),
+        "razao_ft_fp":         round(r, 4),
+        "H_flex_2molas_kN":    round(H_flex_2molas, 1),
+        "reducao_2molas_pct":  round(reducao_2molas_pct, 2),
+        "delta_tirante_mm":    round(delta_tir_mm, 2),
+        "delta_arco_livre_mm": round(delta_arco_livre_mm, 3),
+        # Restrição paralela (fundação + contraventamento) NÃO está no modelo de
+        # 2 molas → H real fica próximo do rígido; não é necessário acoplar para
+        # o TIRANTE (H_rígido é o máximo, conservador).
+        "acoplar_para_tirante": False,
+        "conclusao": (
+            f"Rigidez horizontal: arco {k_arco_kNmm:.0f} kN/mm vs tirante "
+            f"{k_tir_kNmm:.0f} kN/mm. O limite de 2 molas (tirante como único "
+            f"apoio) daria H≈{H_flex_2molas:.0f} kN (−{reducao_2molas_pct:.0f}%), "
+            "MAS ignora a restrição paralela de ancoragem+contraventamento das "
+            "bases → na estrutura real H fica próximo do rígido. H_rígido é "
+            "CONSERVADOR para o tirante (T=H máx); acoplamento não é necessário "
+            "para o dimensionamento do tirante."
+        ),
+        "norma": "Compatibilidade elástica (diagnóstico de rigidezes)",
     }
 
 

@@ -56,6 +56,71 @@ D_CAVILHA_MIN_MM = 6.0
 D_CAVILHA_MAX_MM = 30.0
 
 
+# ── Critério η-alvo das ligações (issue 22) ──────────────────────────────────
+# O alvo 0,75 é uma MARGEM DE PROJETO (uso público), justificada pela ausência de
+# redistribuição plástica — falha FRÁGIL. Aplica-se aos modos FRÁGEIS:
+#   · ruptura frágil da MADEIRA: embutimento do grupo de cavilhas (Johansen+n_ef),
+#     corte de bloco (Anexo A), fendilhamento (§8.1.4);
+#   · ancoragem FRÁGIL no concreto (cone/arrancamento dos chumbadores, EN 1992-4).
+# NÃO se aplica a modos DÚCTEIS ou de COMPRESSÃO, que usam o limite normativo η≤1,0
+# (exceções justificadas):
+#   · compressão localizada no CONCRETO sob a chapa de base (L3/L3c — esmagamento);
+#   · compressão da MADEIRA na cumeeira (verificação de SEÇÃO §6.1.4/§6.1.5/§6.4.3);
+#   · componentes de AÇO dúcteis (chapa, furo/bearing, solda, pino — EN 1993).
+ETA_ALVO_LIGACAO = 0.75
+
+
+def classificar_criterio_eta(modo_fragil: bool, eta_alvo: float = ETA_ALVO_LIGACAO) -> dict:
+    """
+    Classifica uma verificação de ligação quanto ao critério η (issue 22).
+
+    Args:
+        modo_fragil : True se a falha governante é FRÁGIL (madeira: embutimento/
+                      bloco/fendilhamento; ou ancoragem frágil no concreto) →
+                      aplica-se o alvo. False para modos dúcteis/compressão → η≤1,0.
+        eta_alvo    : margem de projeto para modos frágeis (default 0,75).
+
+    Returns:
+        dict com eta_limite, alvo_aplica e criterio_eta (texto para o memorial).
+    """
+    if modo_fragil:
+        return {
+            "eta_limite":   eta_alvo,
+            "alvo_aplica":  True,
+            "criterio_eta": f"alvo {eta_alvo:.2f} — modo FRÁGIL (sem redistribuição)",
+        }
+    return {
+        "eta_limite":   1.0,
+        "alvo_aplica":  False,
+        "criterio_eta": "η≤1,0 — modo dúctil/compressão (exceção justificada)",
+    }
+
+
+def aplicar_criterio_eta(
+    res: dict,
+    modo_fragil: bool,
+    eta_alvo: float = ETA_ALVO_LIGACAO,
+) -> dict:
+    """
+    Injeta a classificação do critério η numa verificação de ligação e recalcula
+    `ok` de forma CONSISTENTE com o limite aplicável (issue 22).
+
+        ok = (η ≤ η_limite)  [e ok_geometria, se existir]
+
+    Modo frágil → η_limite = eta_alvo (0,75); senão → η_limite = 1,0.
+    Preserva `ok_alvo` (η ≤ 0,75) para transparência mesmo nas exceções.
+    """
+    cls = classificar_criterio_eta(modo_fragil, eta_alvo)
+    res.update(cls)
+    eta = float(res.get("eta", res.get("eta_gov", 0.0)))
+    ok = eta <= cls["eta_limite"] + 1e-9
+    if "ok_geometria" in res:
+        ok = ok and bool(res["ok_geometria"])
+    res["ok"] = ok
+    res["ok_alvo"] = eta <= eta_alvo + 1e-9
+    return res
+
+
 def _validar_diametro_cavilha(d_mm: float) -> None:
     """
     Guarda de escopo EC5 §8.6(2): 6 mm ≤ d ≤ 30 mm para cavilhas (issue 18).
@@ -294,6 +359,114 @@ def ruptura_de_bloco_ligacao(
         t1_m=t1_m, f_t0_k=mat.f_t0_k, f_v_k=mat.f_v_k,
         k_mod=k_mod, gamma_M=gamma_M, F_par_kN=F_par_kN,
     )
+
+
+# ── Fendilhamento (splitting) — EC5 §8.1.4 Eq. (8.4)/(8.5) (issue 20) ─────────
+
+def verificar_fendilhamento(
+    F_90_Ed_kN: float,
+    b_mm:       float,
+    h_mm:       float,
+    h_e_mm:     float,
+    k_mod:      float,
+    gamma_M:    float,
+    w:          float = 1.0,
+) -> dict:
+    """
+    Capacidade ao fendilhamento de uma ligação carregada com componente de
+    força PERPENDICULAR às fibras — EN 1995-1-1 §8.1.4, Eq. (8.4)/(8.5).
+
+        F_90,Rk = 14·b·w·√( h_e / (1 − h_e/h) )         (8.4)   [N; mm]
+        w = 1                para cavilhas/parafusos e todos os conectores
+            (w_pl/100)^0,35  APENAS para chapas metálicas puncionadas   (8.5)
+
+        F_90,Rd = k_mod · F_90,Rk / γ_M
+        Verificação:  F_90,Ed ≤ F_90,Rd
+
+    onde (Fig. 8.1):
+        b    = espessura da peça (mm)
+        h    = altura total da peça na ligação (mm)
+        h_e  = distância da BORDA CARREGADA ao conector mais distante (mm)
+        F_90,Ed = componente da força da ligação ⊥ às fibras
+                  (= max{F_v,Ed,1; F_v,Ed,2} dos cortantes de cada lado; aqui a
+                   ligação está no apoio → o cortante de um lado é o V_d da viga).
+
+    Falha FRÁGIL: sem redistribuição plástica → verificação obrigatória sempre
+    que houver componente ⊥ às fibras (apontamento do orientador, issue 20).
+
+    Args:
+        F_90_Ed_kN : força de cálculo ⊥ às fibras (kN)
+        b_mm, h_mm, h_e_mm : geometria (mm)
+        k_mod, gamma_M     : da combinação / ligação (γ_M=1,30)
+        w          : fator Eq. (8.5) — 1,0 para cavilhas
+
+    Returns:
+        dict com F_90,Rk, F_90,Rd, η e ok.
+    """
+    if not (0.0 < h_e_mm < h_mm):
+        raise ValueError(f"h_e ({h_e_mm}) deve estar em (0, h={h_mm}) mm")
+    if b_mm <= 0:
+        raise ValueError("b deve ser > 0")
+
+    F_90_Rk = 14.0 * b_mm * w * math.sqrt(h_e_mm / (1.0 - h_e_mm / h_mm))  # N
+    F_90_Rd = k_mod * F_90_Rk / gamma_M                                    # N
+    eta = (abs(F_90_Ed_kN) * 1e3) / F_90_Rd if F_90_Rd > 0 else 999.0
+
+    return {
+        "F_90_Ed_kN":  round(abs(F_90_Ed_kN), 3),
+        "b_mm":        round(b_mm, 1),
+        "h_mm":        round(h_mm, 1),
+        "h_e_mm":      round(h_e_mm, 1),
+        "h_e_h":       round(h_e_mm / h_mm, 4),
+        "w":           w,
+        "F_90_Rk_kN":  round(F_90_Rk / 1e3, 3),
+        "F_90_Rd_kN":  round(F_90_Rd / 1e3, 3),
+        "k_mod":       k_mod,
+        "gamma_M":     gamma_M,
+        "eta":         round(eta, 4),
+        "ok":          eta <= 1.0,
+        "norma":       "EN 1995-1-1 §8.1.4 Eq. (8.4)/(8.5)",
+    }
+
+
+def fendilhamento_ligacao(
+    res_lig:  dict,
+    geo:      GeometriaViga,
+    mat:      GlulamMaterial,
+    k_mod:    float | None = None,
+    gamma_M:  float = GAMMA_M_LIGACAO,
+) -> dict:
+    """
+    Aplica o fendilhamento (§8.1.4) a uma ligação de cavilhas já dimensionada
+    (resultado de dimensionar_ligacao_base / _central), lendo o layout real.
+
+    Componente ⊥ às fibras: F_90,Ed = |V_d| (cortante no eixo, componente vertical
+    da resultante inclinada). h_e (borda carregada → fileira mais distante) para o
+    grupo de n_linhas fileiras centrado na altura h0:
+
+        h_e = h0/2 + (n_linhas − 1)·a2 / 2
+
+    γ_M = 1,30 (ligação, EC5 Tab. 2.3); k_mod da combinação.
+    """
+    if k_mod is None:
+        k_mod = mat.k_mod
+
+    n_vert = int(res_lig["n_linhas"])          # fileiras ⊥ fibras (na altura)
+    a2_mm  = float(res_lig["a2_mm"])           # espaçamento ⊥ fibras
+    h_mm   = float(res_lig["h_disp_mm"])       # altura da peça na ligação (h0)
+    b_mm   = float(geo.b) * 1e3                 # espessura da peça
+    F_90_Ed_kN = abs(float(res_lig["V_d_kN"])) # componente ⊥ fibras
+
+    h_e_mm = h_mm / 2.0 + (n_vert - 1) * a2_mm / 2.0
+
+    res = verificar_fendilhamento(
+        F_90_Ed_kN=F_90_Ed_kN, b_mm=b_mm, h_mm=h_mm, h_e_mm=h_e_mm,
+        k_mod=k_mod, gamma_M=gamma_M, w=1.0,
+    )
+    res["ligacao"] = res_lig.get("ligacao", "—")
+    res["n_linhas"] = n_vert
+    res["a2_mm"] = round(a2_mm, 1)
+    return res
 
 
 # ── Número efetivo — EC5 §8.5.1.1 (pernos; pinos via §8.6) ───────────────────
@@ -608,86 +781,6 @@ def dimensionar_ligacao_base(
     }
 
 
-# ── LIGAÇÃO 2 — Cumeeira (rótula) ────────────────────────────────────────────
-
-def dimensionar_ligacao_cumeeira(
-    mat:     GlulamMaterial,
-    load:    Carregamentos,
-    geo:     GeometriaViga,
-    d_mm:    float = 30.0,
-    k_mod:   float | None = None,
-    gamma_M: float = GAMMA_M_LIGACAO,
-) -> dict:
-    """
-    Verifica a zona de cumeeira da peça monolítica (sem rótula).
-
-    Esforços (simetria de carga vertical + empuxo H):
-        M_ap da análise biarticulada (verificação t90 em cumeeira.py)
-        Componentes de compressão na seção (H decomposoto):
-            N_c0  = H · cos(α)  → EC5 §6.1.4
-            N_c90 = H · sin(α)  → EC5 §6.1.5
-
-    Pino passante (se detalhe de montagem): cortante residual por
-    assimetria de vento |w_C1bv − w_C1st| · (L/4).
-    """
-    _validar_diametro_cavilha(d_mm)   # EC5 §8.6(2): 6–30 mm (issue 18)
-    if k_mod is None:
-        k_mod = mat.k_mod
-
-    H     = load.H_ELU()
-    alpha = geo.alpha_rad
-    b     = geo.b
-    h_ap  = geo.h_ap
-
-    N_c0_kN  = H * math.cos(alpha)
-    N_c90_kN = H * math.sin(alpha)
-    A_sec    = b * h_ap
-
-    sig_c0  = N_c0_kN  * 1e3 / A_sec
-    sig_c90 = N_c90_kN * 1e3 / A_sec
-
-    eta_c0  = sig_c0  / mat.f_c0_d
-    eta_c90 = sig_c90 / mat.f_c90_d
-
-    # Cortante residual por assimetria de vento (diferença barlavento/sotavento)
-    dw = abs(load.w_C1bv_k - load.w_C1st_k)
-    V_asim = dw * geo.L / 4.0   # kN — meia viga com Δw
-
-    rho_k = mat.rho_k
-    t_mm  = b * 1000 / 2
-    joh   = johansen_chapa_embutida(rho_k, d_mm, t_mm, F_U_K_PINO)
-    F_Rd  = k_mod * joh["F_v_Rk_N"] * 2 / gamma_M
-    n_pino = max(1, math.ceil(V_asim * 1e3 / F_Rd) if F_Rd > 0 else 1)
-    eta_pino = (V_asim * 1e3 / (n_pino * F_Rd)) if F_Rd > 0 else 0.0
-
-    eta_gov = max(eta_c0, eta_c90, eta_pino)
-    ok      = eta_gov <= 1.0
-
-    return {
-        "ligacao":        "L2 — Cumeeira (continuidade MLC)",
-        "H_kN":           round(H,          3),
-        "alpha_deg":      round(math.degrees(alpha), 2),
-        "N_c0_kN":        round(N_c0_kN,    3),
-        "sigma_c0_MPa":   round(sig_c0/1e6, 4),
-        "f_c0d_MPa":      round(mat.f_c0_d/1e6, 4),
-        "eta_c0":         round(eta_c0,     4),
-        "N_c90_kN":       round(N_c90_kN,   3),
-        "sigma_c90_MPa":  round(sig_c90/1e6,4),
-        "f_c90d_MPa":     round(mat.f_c90_d/1e6, 4),
-        "eta_c90":        round(eta_c90,    4),
-        "V_asim_kN":      round(V_asim,     3),
-        "d_pino_mm":      d_mm,
-        "k_mod":          k_mod,
-        "gamma_M":        gamma_M,
-        "F_Rd_pino_kN":   round(F_Rd/1e3,  3),
-        "n_pino":         n_pino,
-        "eta_pino":       round(eta_pino,   4),
-        "eta":            round(eta_gov,    4),
-        "ok":             ok,
-        "norma":          "EC5 §6.1.4+§6.1.5+§8.6 | γ_M=1,30",
-    }
-
-
 # ── LIGAÇÃO 3 — Sapata na fundação ───────────────────────────────────────────
 
 def dimensionar_sapata(
@@ -814,7 +907,6 @@ def dimensionar_ligacoes(
     load:  Carregamentos,
     geo:   GeometriaViga,
     d_base_mm:    float = 20.0,
-    d_cum_mm:     float = 30.0,
     F_chu_kN:     float = 80.0,
     eta_alvo:     float = 0.75,
     com_tirante:  bool = False,
@@ -822,34 +914,33 @@ def dimensionar_ligacoes(
     h_pilar_m:    float = 0.27,
 ) -> dict:
     """
-    Dimensiona as três ligações do pórtico (biarticulada).
+    Dimensiona as ligações do pórtico (biarticulada): L1 (base) e L3 (sapata).
 
-    eta_alvo: margem de projeto para L1 e L3 (uso público). L2 usa η ≤ 1,0.
+    Não há ligação na CUMEEIRA: a viga é peça única de duplo-bisel, contínua
+    no ápice (sem junta). O antigo L2 (pino passante) era resquício do modelo
+    triarticulado e foi removido (issue 25). A cumeeira é verificada como
+    SEÇÃO (t90/ápice §6.4.3 — checks/elu/cumeeira.py).
+
+    eta_alvo: margem de projeto para L1 e L3 (uso público).
     com_tirante: se True, L3 com H_sapata≈0 (empuxo no tirante de base).
     """
     L1 = dimensionar_ligacao_base(
         mat, load, geo, d_mm=d_base_mm, eta_alvo=eta_alvo,
     )
-    L2 = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
     L3 = dimensionar_sapata(
         load, geo, F_chu_kN=F_chu_kN, eta_alvo=eta_alvo,
         com_tirante=com_tirante,
         b_pilar_m=b_pilar_m, h_pilar_m=h_pilar_m,
     )
 
-    eta_gov = max(L1["eta"], L2["eta"], L3["eta"])
-    lig_gov = (
-        "L1 base"    if L1["eta"] >= L2["eta"] and L1["eta"] >= L3["eta"]
-        else "L2 cumeeira" if L2["eta"] >= L3["eta"]
-        else "L3 sapata"
-    )
+    eta_gov = max(L1["eta"], L3["eta"])
+    lig_gov = "L1 base" if L1["eta"] >= L3["eta"] else "L3 sapata"
 
     return {
         "L1": L1,
-        "L2": L2,
         "L3": L3,
         "eta":     round(eta_gov, 4),
-        "ok":      L1["ok"] and L2["ok"] and L3["ok"],
+        "ok":      L1["ok"] and L3["ok"],
         "lig_gov": lig_gov,
     }
 
@@ -1062,41 +1153,33 @@ def dimensionar_ligacoes_central(
     b_pilar_c: float = 0.26,
     h_pilar_c: float = 0.26,
     d_base_mm: float = 20.0,
-    d_cum_mm:  float = 30.0,
     eta_alvo:  float = 0.75,
 ) -> dict:
     """
-    Dimensiona as ligações do pilar central compartilhado.
+    Dimensiona as ligações do pilar central compartilhado: L1c e L3c.
+
+    Sem ligação na cumeeira (peça monolítica contínua no ápice — issue 25);
+    o antigo L2c (pino) foi removido. Cumeeira verificada como SEÇÃO (t90/ápice).
 
     L1c: viga-pilar — 2 chapas independentes, mesma força que lateral
-    L2c: cumeeira — idêntica à lateral (força igual, geometria igual)
     L3c: sapata — H≈0; η = compressão N no concreto (não eta_H=0)
     """
     L1c = dimensionar_ligacao_base_central(
         mat, load, geo, b_pilar_c, d_base_mm, eta_alvo=eta_alvo,
     )
-    # Cumeeira central: mesma análise EC5 que a lateral (geometria e esforços iguais)
-    L2c = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=d_cum_mm)
-    L2c = {**L2c, "ligacao": "L2c — Cumeeira central (rótula)"}
     L3c = dimensionar_sapata_central(
         load, geo, d_chu_mm=20.0,
         b_pilar_m=b_pilar_c, h_pilar_m=h_pilar_c,
     )
 
-    eta_gov = max(L1c["eta"], L2c["eta"], L3c["eta"])
-    if L1c["eta"] >= L2c["eta"] and L1c["eta"] >= L3c["eta"]:
-        lig_gov = "L1c base"
-    elif L2c["eta"] >= L3c["eta"]:
-        lig_gov = "L2c cumeeira"
-    else:
-        lig_gov = "L3c sapata"
+    eta_gov = max(L1c["eta"], L3c["eta"])
+    lig_gov = "L1c base" if L1c["eta"] >= L3c["eta"] else "L3c sapata"
 
     return {
         "L1c": L1c,
-        "L2c": L2c,
         "L3c": L3c,
         "eta":     round(eta_gov, 4),
-        "ok":      L1c["ok"] and L2c["ok"] and L3c["ok"],
+        "ok":      L1c["ok"] and L3c["ok"],
         "lig_gov": lig_gov,
     }
 
@@ -1110,7 +1193,7 @@ def relatorio_ligacoes(res: dict) -> None:
     print("  EC5 §8.2+§8.3+§8.6 | EC5 §6.1.4+§6.1.5 | EN 1993-1-8")
     print("=" * 70)
 
-    for key in ["L1", "L2", "L3"]:
+    for key in ["L1", "L3"]:
         r = res[key]
         ok = "✓" if r["ok"] else "✗"
         print(f"\n  {ok} {r['ligacao']}")
@@ -1128,17 +1211,6 @@ def relatorio_ligacoes(res: dict) -> None:
                   f"a1={r['a1_mm']:.0f}mm a2={r['a2_mm']:.0f}mm")
             print(f"     η = {r['eta']:.4f}")
 
-        elif key == "L2":
-            print(f"     H={r['H_kN']:.2f} kN @ α={r['alpha_deg']}°")
-            print(f"     σ_c,0={r['sigma_c0_MPa']:.4f} MPa ≤ "
-                  f"{r['f_c0d_MPa']:.4f} MPa | η={r['eta_c0']:.4f}")
-            print(f"     σ_c,90={r['sigma_c90_MPa']:.4f} MPa ≤ "
-                  f"{r['f_c90d_MPa']:.4f} MPa | η={r['eta_c90']:.4f}")
-            print(f"     Pino passante: d={r['d_pino_mm']:.0f}mm | "
-                  f"n={r['n_pino']} | V_asim={r['V_asim_kN']:.2f} kN | "
-                  f"η={r['eta_pino']:.4f}")
-            print(f"     η = {r['eta']:.4f}")
-
         elif key == "L3":
             print(f"     N_d={r['N_d_kN']:.2f} kN | H_d={r['H_d_kN']:.2f} kN")
             print(f"     Chumbadores: d={r['d_chu_mm']:.0f}mm | "
@@ -1152,7 +1224,6 @@ def relatorio_ligacoes(res: dict) -> None:
 
     print(f"\n  ── Resumo ──────────────────────────────────────────────")
     print(f"  η L1 (base)     = {res['L1']['eta']:.4f}")
-    print(f"  η L2 (cumeeira) = {res['L2']['eta']:.4f}")
     print(f"  η L3 (sapata)   = {res['L3']['eta']:.4f}")
     print(f"  η GOVERNANTE    = {res['eta']:.4f}  ({res['lig_gov']})")
     status = "✓ TODAS APROVADAS" if res["ok"] else "✗ VERIFICAR"

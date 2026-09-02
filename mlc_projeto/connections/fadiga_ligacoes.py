@@ -95,7 +95,7 @@ def verificar_fadiga_deslizamento(
         mat       : Material (k_def, rho_mean — EN 14080)
         load      : Carregamentos com combinações ELU/ELS
         geo       : Geometria
-        res_lig   : Resultado de dimensionar_ligacoes (L1, L2, L3)
+        res_lig   : Resultado de dimensionar_ligacoes (L1, L3)
         res_lig_c : Opcional — ligações do pilar central
         H_pilar   : Altura do pilar (m) — limite u = H/1000
         psi_2     : EN 1990 — cobertura inacessível = 0,0
@@ -162,56 +162,8 @@ def verificar_fadiga_deslizamento(
         "fadiga_governa": False,
     }
 
-    # ── L2 cumeeira ───────────────────────────────────────────
-    L2 = res_lig["L2"]
-    d_L2  = L2["d_pino_mm"]
-    n_L2  = L2["n_pino"]
-    np_L2 = 2
-    F_Rd_L2 = L2["F_Rd_pino_kN"] * n_L2
-
-    # Cortante residual de vento (mesmo critério da L2 de dimensionamento)
-    V_S1_asim = abs(load.w_C1bv_k - load.w_C1st_k) * geo.L / 4.0
-    V_ELU_asim = L2["V_asim_kN"]
-
-    Kser_L2     = K_ser_pino(d_L2, rho_m, aco_madeira=True)
-    Kser_fin_L2 = K_ser_fin(Kser_L2, k_def, psi_2)
-
-    u_inst_L2 = deslizamento_ligacao(V_S1_asim, n_L2, Kser_L2, np_L2)
-    u_fin_L2  = deslizamento_ligacao(V_S1_asim, n_L2, Kser_fin_L2, np_L2)
-    u_lim_L2  = geo.L * 1000.0 / 500.0  # ligação interna: L/500 (ordem de grandeza ELS)
-    eta_slip_L2 = max(u_inst_L2, u_fin_L2) / u_lim_L2 if u_lim_L2 > 0 else 0.0
-
-    alt_L2 = {
-        "ligacao": "L2",
-        "F_t_Ed_kN": 0.0,
-        "F_c_Ed_kN": round(abs(load.H_ELU()), 3),
-        "F_comb_t_kN": 0.0,
-        "F_comb_c_kN": round(abs(load.H_ELU()), 3),
-        "F_max_kN": round(abs(load.H_ELU()), 3),
-        "F_Rd_kN": round(F_Rd_L2, 3),
-        "eta_alt": round(V_ELU_asim / F_Rd_L2, 4) if F_Rd_L2 > 0 else 0.0,
-        "ok": (V_ELU_asim / F_Rd_L2 <= 1.0) if F_Rd_L2 > 0 else True,
-        "nota": "Cumeeira isostática: M=0; pino para V residual de vento",
-    }
-
-    resultados["L2"] = {
-        "descricao":     f"Cumeeira — {n_L2} pino(s) d={d_L2:.0f}mm",
-        "d_mm":          d_L2,
-        "n_pinos":       n_L2,
-        "n_planos":      np_L2,
-        "F_ELU_kN":      round(V_ELU_asim, 3),
-        "F_S1_kN":       round(V_S1_asim, 3),
-        "F_S3_kN":       0.0,
-        "K_ser_Nmm":     round(Kser_L2, 2),
-        "K_ser_fin_Nmm": round(Kser_fin_L2, 2),
-        "u_inst_mm":     round(u_inst_L2, 4),
-        "u_fin_mm":      round(u_fin_L2, 4),
-        "u_lim_mm":      u_lim_L2,
-        "eta_slip":      round(eta_slip_L2, 4),
-        "slip_ok":       eta_slip_L2 <= 1.0,
-        "alternada":     alt_L2,
-        "fadiga_governa": False,
-    }
+    # L2 cumeeira REMOVIDO (issue 25): a viga é monolítica/contínua no ápice —
+    # não há junta nem pino, logo não há fadiga/deslizamento de cumeeira.
 
     # ── L1c central (opcional) ────────────────────────────────
     if res_lig_c is not None and "L1c" in res_lig_c:

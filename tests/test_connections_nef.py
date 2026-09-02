@@ -62,7 +62,7 @@ def test_L1_L3_public_margin():
     )
     res = dimensionar_ligacoes(
         mat, load, geo,
-        d_base_mm=24, d_cum_mm=30, F_chu_kN=80.0, eta_alvo=eta_alvo,  # EC5 §8.6(2)
+        d_base_mm=24, F_chu_kN=80.0, eta_alvo=eta_alvo,  # EC5 §8.6(2)
     )
     L1, L3 = res["L1"], res["L3"]
 

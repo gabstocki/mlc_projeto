@@ -8,7 +8,6 @@ from mlc_projeto.core.loads import carregamentos_com_vento, peso_proprio_gk
 from mlc_projeto.connections.connections import (
     _validar_diametro_cavilha,
     dimensionar_ligacao_base,
-    dimensionar_ligacao_cumeeira,
     D_CAVILHA_MIN_MM,
     D_CAVILHA_MAX_MM,
 )
@@ -57,12 +56,3 @@ def test_ligacao_base_24mm_ok_e_flag():
     assert r["ok_geometria"] is True
     assert r["eta"] <= 0.75 + 1e-9
     assert r["n_pinos"] > 0
-
-
-def test_cumeeira_rejeita_fora_do_escopo():
-    geo, mat, load = _load()
-    with pytest.raises(ValueError):
-        dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=36.0)
-    # Ø30 (no limite) é aceito
-    r = dimensionar_ligacao_cumeeira(mat, load, geo, d_mm=30.0)
-    assert r["ok"] in (True, False)   # dimensiona sem lançar
