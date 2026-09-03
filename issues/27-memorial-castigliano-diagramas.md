@@ -21,15 +21,45 @@
   resultados-síntese; falta o **desenvolvimento** e faltam os **diagramas**.
 
 ## O que precisa ser feito
-- [ ] Escrever no memorial (anexo de análise): definição de `y_c(x)` e `I(x)`, o
-      **sistema de eixos** e a **convenção de sinais** (coerente com issue
-      [12](12-sistema-eixos-N-V.md)), e a **integral de Castigliano com seus limites**
-      (0→L), incluindo a hipótese de apoio indeslocável (issue [24](24-tirante-fy315-flexibilidade.md)).
-- [ ] Gerar e incluir os **diagramas M(x), V(x) e N(x)** ao longo da viga (usar os
-      arrays já disponíveis; exportar figura no `report.py`).
-- [ ] Conferir que `V_ELU()` ([loads.py:694-697](../mlc_projeto/core/loads.py)), hoje
-      aproximado, seja substituído/derivado do M(x) real para o diagrama.
+- [x] Anexo de análise no memorial: `y_c(x)`, `I(x)`, sistema de eixos, convenção de
+      sinais (issue 12), integral de Castigliano com limites (0→L) e hipótese de apoio
+      indeslocável (issue 24).
+- [x] Diagramas M(x), V(x), N(x) gerados e incluídos (figura em `report.py`).
+- [x] `V_ELU()` substituído: agora derivado do M(x) real (não mais aproximação).
 
 ## Critério de aceite
 Anexo de análise reprodutível (definições, eixos, sinais, integral com limites) +
 diagramas M/V/N publicados.
+
+---
+
+## ✅ Resolução (implementada)
+
+### 1) Derivação rigorosa de V(x) e N(x) (loads.py)
+Novo método `Carregamentos.diagramas_MVN_ELU()`:
+    M(x) = M₀(x) − H·y_c(x)          (já existente)
+    S(x) = dM₀/dx                     (cortante da viga simples)
+    θ(x) = ±atan(tanα/2)              (inclinação local do eixo; ANALÍTICA)
+    N(x) = H·cosθ + S·senθ            (normal no eixo, compressão +)
+    V(x) = S·cosθ − H·senθ            (cortante ⊥ ao eixo)
+Coincide nos apoios com N_apoio/V_apoio da análise. **`V_ELU()` reescrito** para
+retornar esse V real (antes era `q·(L/2−x)`, aproximação de viga simples). O salto
+de V e N no ápice (mudança de sinal de θ na quina do eixo) é capturado.
+
+### 2) Figura M/V/N (output/figuras.py)
+`plot_diagramas_MVN(load, geo, path)` — 3 painéis (M, V, N) da combinação governante,
+salvos em PDF vetorial; gerado em `gerar_relatorio` e incluído via `\includegraphics`.
+
+### 3) Anexo A no memorial (report.py)
+"Anexo A — Análise estrutural (Castigliano) e diagramas":
+- A.1 sistema de eixos + convenção de sinais (coerente com issue 12);
+- A.2 geometria variável: x_sim, h(x), y_c(x), I(x) (com b, h₀, h_ap, α);
+- A.3 grau de hiperestaticidade + integral de Castigliano **com limites 0→L**
+  (E cancela; projeção horizontal dx) + hipótese de apoio indeslocável (issue 24);
+- A.4 os diagramas M(x), V(x), N(x).
+
+### Verificação
+- Diagrama validado: M_max=−265,5 kN·m (=análise), N_apoio=1105,8 kN (=N_viga),
+  V no ápice ≈ −96 kN (=−H·senθ). Pipeline gera figura + Anexo A no PDF, sem erros.
+- **Testes:** [`tests/test_diagramas_mvn.py`](../tests/test_diagramas_mvn.py) (6 casos:
+  M bate, N/V nos apoios, V≠aproximação, salto no ápice, arrays consistentes).

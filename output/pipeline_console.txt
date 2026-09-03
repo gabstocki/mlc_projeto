@@ -8,6 +8,7 @@
   γ_glulam=4.12 kN/m³ (ρ_mean=420 kg/m³, EN 14080) | telha=0.10+instal.=0.10 kN/m² (declarados)
   Geometria : L=20.25m | h0=1.0m | α=10.0° | b=0.32m | h_ap=2.785m
   Material  : GL24h | CS3 | k_mod=0.70 (curta) | k_def=2.00 (ELS)
+  Durabilidade (issue 30): CS3 → EN 335 UC3.1 | adesivo Tipo I (EN 301) | trat. preservativo EN 351 + detalhamento de proteção
   k_mod vento: duração «curta» adotada (k_mod=0.70; instantânea permitida=0.90 — não usada; critério conservador, EC5 §2.3.1.2)
   ELU gov.  : ELU_C2 | padrao=C1_unif_bv | M=-265.53 kN·m | V=141.09 kN | N=1105.74 kN | H_arco=1097.60 kN → tirante
   Sistema   : Viga biarticulada MLC (contínua na cumeeira) | Área trib.=5.750 m (L_t×1.0)
@@ -66,6 +67,12 @@
   · Frontão ∅16 mm S235 (β=50.6°) | N_diag=42.2 kN | η_N=0.893 | η_δ=0.611
   · Caminho à fundação: H_base=26.8 kN + N_uplift=32.6 kN | l_ef=1H (non-sway) validado
 
+[FASE 2] Corda do diafragma — elemento de beiral (issue 32)...
+  ✓ Corda beiral §6.2.3/§6.3.2     η = 0.0908  █
+  · Terça de beiral = corda do diafragma (MLC GL24h) | N_corda=7.6 kN (±) | seção 0.2×0.58 m
+  · flexo-compr §6.3.2 η=0.090 | flexo-tração §6.2.3 η=0.091 → η=0.0908 (flexo-tração (§6.2.3))
+  · Continuidade: 3 emenda(s) × 7.6 kN (obrigatória p/ o diafragma funcionar)
+
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
   ✓ Estab. global α_cr/P-Δ         η = 0.4486  ████████
   · α_cr=22.3 (mín 10) | H_imp=0.92 kN (0.08% de H_Ed) | w/f_c=0.00116
@@ -77,12 +84,23 @@
   · Gov: lateral F_dx=50kN | η=0.4774
   · Seções resistem às forças de choque de projeto (50/25 kN). Mesmo assim, recomenda-se defen…
 
+[FASE 2] Içamento da viga (montagem — EN 1991-1-6)...
+  ✓ Içamento §EN1991-1-6           η = 0.0420  
+  · 2 pontos a 0.207·L | lingas a 30° da vertical | W=75 kN (γ_G·φ_dyn·g) | R/ponto=38 kN
+  · M⁻=-21 | M⁺=63 kN·m | V=26 kN | N_c(lingas)=22 kN
+  · LTB (sem contravento): l_ef=11.9 m | k_crit=0.797 | η_LTB=0.011
+  · η governante (cisalhamento) = 0.0420
+
 [FASE 2] Verificações ELU — Terças (flexão cobertura)...
   ✓ Terça flexão §6.1.6+§6.1.7     η = 0.1695  ███
   ✓ Terça-biela flexo-comp. §6.3.2 η = 0.2105  ████
   · N_c=47.4 kN (estab. §9.2.5) + M cobertura [ELU_C2 (1,35G+1,5W+1,05Q)] → interação COMBINADA
   · σ_c=0.408 | σ_m,y=2.105 | σ_m,z=0.246 MPa (f_md=13.44)
   · k_c,y=0.967 (λ_y=34) | k_c,z=0.368 (λ_z=100) | η_6.23=0.201 η_6.24=0.210 → η=0.2105 (Eq.6.24)
+  ✓ Terça Q_k conc. §EN1991-1-1    η = 0.0546  █
+  · Q_k=1.0 kN a meio-vão (não concomit. c/ UDL nem vento) | M_d=7.65 kN·m (dur. média, k_mod=0.65)
+  · η_flex=0.0546 | η_cis=0.0484 → η=0.0546 | vs UDL η_flex=0.170 (a mais desfavorável governa)
+  · Telha: M_local,d=0.949 kN·m/m → ficha do fabricante (issue 17)
 
 [FASE 2] Fixação telha→terça (sucção — NBR 6123)...
   ✓ Fixação telha §NBR6123         η = 0.9213  ██████████████████
@@ -178,12 +196,15 @@
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.3217  ✓
   Terça flexão                     EC5 §6.1.6+§6.1.7              0.1695  ✓
   Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24        0.2105  ✓
+  Terça Q_k concentrado            EN 1991-1-1 Tab.6.10           0.0546  ✓
   Fixação telha (sucção)           NBR 6123 §6.2.5+Tab.5          0.9213  ✓
   Contraventamento cobertura       EC5 §9.2.5                     0.5792  ✓
   Contravento vertical             EN 1993-1-1 §5.3+§6.2.3        0.8983  ✓
   Contravento transversal          EN 1993-1-1 §5.3+§6.2.3        0.8932  ✓
+  Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2              0.0908  ✓
   Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3          0.4486  ✓
   Impacto veículo (A_d)            EN 1991-1-7                    0.4774  ✓
+  Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3         0.0420  ✓
   Sucção/uplift (ancoragem)        EN 1990+EN 1992-4              0.8589  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3             0.6932  ✓
   ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.0146  ✓
@@ -206,12 +227,13 @@
   T_tirante    = 1097.60 kN  (∅80.0 mm MR315)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 33  |  todas OK = True
+  N.º verif.   = 36  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
 [FASE 5] Export relatório (Excel + LaTeX/PDF)...
   Excel: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.xlsx
+  Figura: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc_diagrama_MVN.pdf
   LaTeX: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.tex
   PDF  : /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.pdf
 

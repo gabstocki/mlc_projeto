@@ -45,12 +45,15 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
+    ("terca_Qk_conc",       "Terça Q_k concentrado",     "EN 1991-1-1 Tab.6.10"),
     ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §6.2.5+Tab.5"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
     ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
     ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
+    ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
     ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
+    ("icamento",            "Içamento (montagem)",       "EN 1991-1-6+EC5 §6.3.3"),
     ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
     ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
@@ -428,16 +431,19 @@ def gerar_tex(
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
     r_cvv  = _clean_dict(resultados.get("contraventamento_vertical", {}))
     r_cvt  = _clean_dict(resultados.get("contraventamento_transversal", {}))
+    r_cb   = _clean_dict(resultados.get("corda_beiral", {}))
     r_succ = _clean_dict(resultados.get("succao_uplift", {}))
     r_bloco = _clean_dict(resultados.get("ruptura_bloco_L1", {}))
     r_bloco_c = _clean_dict(resultados.get("ruptura_bloco_L1c", {}))
     r_ter  = _clean_dict(resultados.get("terca", {}))
     r_tfc  = _clean_dict(resultados.get("terca_flexocomp", {}))
+    r_qk   = _clean_dict(resultados.get("terca_Qk_conc", {}))
     r_esq  = resultados.get("esquadro_chapas", {})    # esquadro de chapas (issue 23)
     if not isinstance(r_esq, dict):
         r_esq = {}
     r_eg   = _clean_dict(resultados.get("estabilidade_global", {}))
     r_iv   = _clean_dict(resultados.get("impacto_veiculo", {}))
+    r_ic   = _clean_dict(resultados.get("icamento", {}))
     r_tir  = _clean_dict(resultados.get("tirante_base", {}))
     meta   = _clean_dict(resultados.get("meta", {}))
     com_tirante = bool(r_tir.get("ativo") or meta.get("com_tirante"))
@@ -543,7 +549,7 @@ def gerar_tex(
         _eta(r_L1), _eta(r_L3),
         _eta(r_L1c), _eta(r_L3c),
         _eta(r_fL1), _eta(r_fL1c),
-        _eta(r_eg), _eta(r_iv),
+        _eta(r_eg), _eta(r_iv), _eta(r_ic), _eta(r_cb), _eta(r_qk),
         _eta(r_tir) if com_tirante else 0.0,
     ]
     eta_max = max(etas_resumo) if etas_resumo else 0.0
@@ -714,8 +720,22 @@ def gerar_tex(
         '\\textit{Sobrecarga (categoria H):} $q_k=0{,}40$~kN/m$^2$ '
         '(EN~1991-1-1 Tab.~6.10, valor recomendado; issue~2). A norma prevê '
         'também uma carga concentrada $Q_k=1{,}0$~kN de manutenção, para '
-        '\\textbf{verificação local} (terça/telha), não incluída no modelo global '
-        '-- ver issue~34.\n\n'
+        '\\textbf{verificação local} (terça/telha), \\textbf{não concomitante} '
+        'com a UDL nem com o vento (\\S6.3.4.2). '
+        + (
+            'Verificada como combinação alternativa (issue~34): terça a meio-vão '
+            f'$M_d={_br(r_qk.get("M_d_kNm", 0), 2)}$~kN·m (duração média, '
+            f'$k_{{mod}}={_br(r_qk.get("k_mod", 0.65), 2)}$) $\\Rightarrow$ '
+            f'$\\eta={_br(r_qk.get("eta", 0), 3)}$ '
+            f'({_tex_escape(str(r_qk.get("verif_gov", "")))}), abaixo da UDL '
+            f'($\\eta_{{flex}}={_br((r_ter or {}).get("eta_flexao", 0), 3)}$) '
+            '$\\Rightarrow$ a UDL governa. Telha: $M_{local,d}='
+            f'{_br(r_qk.get("M_telha_d_kNm", 0), 3)}$~kN·m/m a confrontar com a '
+            'ficha do fabricante (issue~17).'
+            if r_qk else
+            'Não incluída no modelo global -- ver issue~34.'
+        )
+        + '\n\n'
         '% ── 5. Sistema Estrutural ─────────────────────────────────────\n'
         '\\section*{5. Sistema Estrutural -- Viga Biarticulada (MLC monolítica)}\n\n\\begin{itemize}\n  \\item Peça única de duplo-bisel: extradorso em duas águas, intradorso reto.\n  \\item \\textbf{Sem rótula na cumeeira} (continuidade física da MLC).\n  \\item Rótulas apenas nos apoios (bases).\n  \\item Grau de hiperestaticidade: 1 -- empuxo $H$ por \\textbf{compatibilidade}\n        (Castigliano / força unitária no eixo centroidal $y_c$).\n  \\item Integração em projeção horizontal $\\mathrm{d}x$ (autorizada no projeto).\n  \\item $M$ na cumeeira em geral $\\neq 0$ $\\Rightarrow$ EC5 \\S6.4.3 ativo.\n  \\item Classe de serviço ')
     parts.append(f'{mat.classe_servico}')
@@ -742,7 +762,37 @@ def gerar_tex(
     parts.append(_br(Mcum_gov, 2))
     parts.append('~\\text{kN·m},\\quad\n  N_{apoio} = ')
     parts.append(_br(N_gov, 2))
-    parts.append('~\\text{kN}\n\\]\n\n% ── 6. Geometria da Viga (candidata de projeto) ──────────────\n\\section*{6. Geometria da Viga -- Candidata ')
+    parts.append('~\\text{kN}\n\\]\n\n')
+
+    # ── 5b. Durabilidade — classe de uso / adesivo / tratamento (issue 30) ────
+    _dur = meta.get("durabilidade", {})
+    if _dur:
+        parts.append(
+            '% ── 5b. Durabilidade ──────────────────────────────────────\n'
+            '\\subsection*{Durabilidade -- classe de uso, adesivo e tratamento '
+            '(EN~335 / EN~301 / EN~351)}\n\n'
+            'Coerente com a \\textbf{Classe de Serviço~3} (EC5~\\S2.3.1.3) adotada '
+            '(estrutura coberta mas aberta nas laterais):\n'
+            '\\begin{itemize}\n'
+            f'  \\item \\textbf{{Classe de uso (EN~335):}} '
+            f'UC~{_tex_escape(_dur.get("classe_uso_en335", "3.1"))} -- exterior '
+            'acima do solo, umedecimento limitado (protegida da chuva direta pelo '
+            'telhado; peças plenamente abrigadas poderiam ser UC~2). Mapeia na '
+            'CS3 do EC5.\n'
+            f'  \\item \\textbf{{Adesivo (EN~301):}} '
+            f'{_tex_escape(_dur.get("adesivo_en301", "Tipo I"))} -- exigido para '
+            'CS3 (EN~14080~\\S5.3), apto a exposição exterior/alta umidade '
+            f'(ex.: {_tex_escape(_dur.get("adesivo_exemplos", "MUF ou RF/PRF"))}).\n'
+            f'  \\item \\textbf{{Espécie / durabilidade natural:}} '
+            f'{_tex_escape(_dur.get("especie", "conífera"))}, EN~350 '
+            f'{_tex_escape(_dur.get("durab_natural_en350", "classe 4"))} '
+            '$\\Rightarrow$ requer tratamento e/ou proteção por detalhamento em UC3.\n'
+            f'  \\item \\textbf{{Tratamento preservativo:}} '
+            f'{_tex_escape(_dur.get("tratamento", ""))}\n'
+            '\\end{itemize}\n\n'
+        )
+
+    parts.append('% ── 6. Geometria da Viga (candidata de projeto) ──────────────\n\\section*{6. Geometria da Viga -- Candidata ')
     parts.append(cand)
     parts.append('}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Observação} \\\\\n  \\midrule\n  Vão $L$ & ')
     parts.append(_br(geo.L, 2))
@@ -1178,12 +1228,26 @@ def gerar_tex(
             f'  $N_{{uplift}}$ (arrancamento) & {_br(r_cvt.get("N_uplift_kN", 0), 1)}~kN & ancoragem \\\\\n'
             f'  $\\delta\\leq H/300$ & {_br(r_cvt.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvt.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(r_cvt.get("eta_delta", 0), 3)}$ {_sim_eg(_cvt_okd)} \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
-            '\\textit{Nota:} a força de corda do diafragma soma-se ao '
-            'dimensionamento do elemento de beiral (verificação do membro, à '
-            'parte). Com o diafragma verificado, o dimensionamento dos pilares '
+            'Com o diafragma verificado, o dimensionamento dos pilares '
             '(\\S8) e o modelo $pilar\\_vento\\_90$ (biapoiado, topo travado) '
             'são legítimos nesta direção.\n\n'
         )
+        # Corda do diafragma = elemento de beiral (issue 32)
+        if r_cb:
+            parts.append(
+                '\\textit{Corda do diafragma (elemento de beiral -- issue~32):} '
+                'a \\textbf{terça de beiral} (MLC~GL24h, contínua) atua como banzo '
+                f'do diafragma, com $N_{{corda}}={_br(r_cb.get("N_corda_kN", 0), 1)}$~kN '
+                '($\\pm$, inverte com o sentido do vento). Verificada como '
+                'flexo-axial: flexo-\\textbf{compressão} (EC5~\\S6.3.2, '
+                f'$\\eta={_br(r_cb.get("eta_compressao", 0), 3)}$) e flexo-'
+                f'\\textbf{{tração}} (\\S6.2.3, $\\eta={_br(r_cb.get("eta_tracao", 0), 3)}$) '
+                f'-- $\\eta_{{\\mathrm{{gov}}}}={_br(r_cb.get("eta", 0), 3)}$. '
+                f'\\textbf{{Continuidade obrigatória}}: {_i(r_cb.get("n_emendas", 0))} '
+                f'emenda(s) ao longo de {_br(r_cb.get("L_comp_m", 46), 0)}~m, cada uma '
+                f'transferindo $N_{{corda}}$ (chapa/parafusos, EC5~\\S8) -- sem '
+                'continuidade o diafragma não funciona.\n\n'
+            )
 
     # ── 8c. Impacto de veículo ─────────────────────────────────
     _iv_ok = bool(r_iv) and bool(r_iv.get("ok", False))
@@ -1256,6 +1320,47 @@ def gerar_tex(
         'Confirmar $F_{dx}/F_{dy}$ com AN nacional ou especificação '
         'do cliente se veículos pesados forem admitidos.\n\n'
     )
+
+    # ── Situação transitória de içamento (issue 26) ───────────────────────────
+    if r_ic:
+        _ic_ok = bool(r_ic.get("ok", True))
+        parts.append(
+            '\\vspace{4pt}\n'
+            '\\subsection*{Situação transitória -- Içamento da viga '
+            '(montagem, EN~1991-1-6)}\n\n'
+            'Fase de montagem: a viga maciça é içada em \\textbf{2 pontos} a '
+            f'$0{{,}}207\\,L$ ({_tex_escape(r_ic.get("esquema", ""))}), '
+            'sem contraventamento lateral (terças ainda não montadas). '
+            'Combinação: $w_d=\\gamma_G\\,\\varphi_{dyn}\\,g$ com '
+            f'$\\gamma_G={_br(r_ic.get("gamma_G", 1.35), 2)}$, '
+            f'$\\varphi_{{dyn}}={_br(r_ic.get("phi_dyn", 1.1), 2)}$ '
+            '(amplificação dinâmica do içamento); duração instantânea '
+            f'($k_{{mod}}={_br(r_ic.get("k_mod", 0.9), 2)}$).\n\n'
+            '{\\small\\begin{tabular}{@{}lll@{}}\n  \\toprule\n'
+            '  \\textbf{Efeito} & \\textbf{Valor} & $\\eta$ \\\\\n  \\midrule\n'
+            f'  Peso de cálculo $W$ / reação & '
+            f'{_br(r_ic.get("W_total_kN", 0), 1)}~kN / '
+            f'{_br(r_ic.get("R_ponto_kN", 0), 1)}~kN/ponto & \\\\\n'
+            f'  Flexão ($M^-={_br(r_ic.get("M_neg_kNm", 0), 1)}$, '
+            f'$M^+={_br(r_ic.get("M_pos_kNm", 0), 1)}$~kN·m) & '
+            f'$\\sigma_m={_br(r_ic.get("sigma_m_pos_MPa", 0), 2)}$~MPa & '
+            f'{_br(r_ic.get("eta_flexao", 0), 4)} \\\\\n'
+            f'  Cortante & $\\tau={_br(r_ic.get("tau_MPa", 0), 3)}$~MPa & '
+            f'{_br(r_ic.get("eta_cisalhamento", 0), 4)} \\\\\n'
+            f'  LTB s/ contravento (Eq.~6.35) & '
+            f'$l_{{ef}}={_br(r_ic.get("l_ef_LTB_m", 0), 1)}$~m, '
+            f'$k_{{crit}}={_br(r_ic.get("k_crit", 0), 3)}$ & '
+            f'{_br(r_ic.get("eta_LTB", 0), 4)} \\\\\n'
+            '  \\bottomrule\n\\end{tabular}}\n\n'
+            f'$\\eta_{{\\mathrm{{gov}}}}={_br(r_ic.get("eta", 0), 4)}$ '
+            f'({_tex_escape(str(r_ic.get("eta_gov_key", "")))}) -- '
+            + ('\\textbf{OK}' if _ic_ok else '\\textbf{verificar}')
+            + '. Os momentos de peso próprio na montagem são pequenos face aos '
+            'de serviço; a LTB sem contraventamento reduz a capacidade '
+            '($k_{crit}<1$) mas a solicitação é baixa. \\textit{Confirmar o '
+            'esquema de rigging (pontos, ângulo das lingas) no plano de '
+            'montagem.}\n\n'
+        )
 
     parts.append(
         '% ── 9. Contraventamento / integridade da cobertura ────────────\n'
@@ -1629,6 +1734,69 @@ def gerar_tex(
         '\\end{tabularx}}\n\n'
     )
 
+    # ── Memória da ligação L1 — Johansen (issue 29) ───────────────────────────
+    if r_L1:
+        _modo_lbl = {
+            "modo_I_N": "I -- esmagamento da madeira",
+            "modo_IIIb_N": "IIIb -- 1 rótula plástica no pino",
+            "modo_IV_N": "IV -- 2 rótulas plásticas no pino",
+        }
+        _mg = _modo_lbl.get(str(r_L1.get("modo_gov", "")), str(r_L1.get("modo_gov", "")))
+        parts.append(
+            '\\vspace{6pt}\n'
+            '\\subsection*{Memória da ligação L1 (Johansen -- EC5~\\S8.2/\\S8.5)}\n\n'
+            'Cavilhas de aço em \\textbf{chapa embutida central}; dois planos de '
+            'corte, madeira de espessura $t_1=b/2$ por lado; chapa de aço de '
+            'espessura $t_2$ (grossa, $\\geq d$ -- ver Esquadro). Resistência lateral '
+            'por Johansen (EC5~\\S8.2 Tab.~8.2), reduzida por $n_{ef}$ (\\S8.5.1.1).\n\n'
+            '{\\small\\begin{tabular}{@{}lll@{}}\n  \\toprule\n'
+            '  \\textbf{Parâmetro} & \\textbf{Símbolo} & \\textbf{Valor} \\\\\n'
+            '  \\midrule\n'
+            f'  Diâmetro do pino & $d$ & {_i(r_L1.get("d_mm", 0))}~mm \\\\\n'
+            f'  Espessura da madeira & $t_1=b/2$ & '
+            f'{_br(r_L1.get("t1_madeira_mm", 0), 0)}~mm \\\\\n'
+            f'  Embutimento característico & $f_{{h,0,k}}$ & '
+            f'{_br(r_L1.get("f_h0k_MPa", 0), 2)}~MPa \\\\\n'
+            f'  Momento de plastificação & $M_{{y,Rk}}$ & '
+            f'{_br(r_L1.get("M_y_Rk_Nmm", 0)/1000.0, 1)}~kN·mm \\\\\n'
+            '  \\midrule\n'
+            f'  Modo I (esmagamento) & $F_{{v,Rk}}^{{I}}$ & '
+            f'{_br(r_L1.get("modo_I_kN", 0), 1)}~kN/plano \\\\\n'
+            f'  Modo IIIb (1 rótula) & $F_{{v,Rk}}^{{IIIb}}$ & '
+            f'{_br(r_L1.get("modo_IIIb_kN", 0), 1)}~kN/plano \\\\\n'
+            f'  Modo IV (2 rótulas) & $F_{{v,Rk}}^{{IV}}$ & '
+            f'{_br(r_L1.get("modo_IV_kN", 0), 1)}~kN/plano \\\\\n'
+            f'  \\textbf{{Governante}} & $F_{{v,Rk}}$ & '
+            f'\\textbf{{{_br(r_L1.get("F_v_Rk_plano_kN", 0), 1)}~kN/plano '
+            f'({_tex_escape(_mg)})}} \\\\\n'
+            f'  Cálculo (2 planos) & $F_{{v,Rd}}$ & '
+            f'{_br(r_L1.get("F_v_Rd_kN", 0), 2)}~kN/pino '
+            f'($k_{{mod}}={_br(r_L1.get("k_mod", 0.7), 2)}$, '
+            f'$\\gamma_M={_br(r_L1.get("gamma_M", 1.3), 2)}$) \\\\\n'
+            '  \\midrule\n'
+            f'  Espaçamentos & $a_1$/$a_2$ & '
+            f'{_i(r_L1.get("a1_mm", 0))}/{_i(r_L1.get("a2_mm", 0))}~mm \\\\\n'
+            f'  Distâncias de borda & $a_{{3,t}}$/$a_{{4,t}}$ & '
+            f'{_i(r_L1.get("a3t_mm", 0))}/{_i(r_L1.get("a4t_mm", 0))}~mm \\\\\n'
+            f'  Nº efetivo por fileira & $n_{{ef,row}}$ & '
+            f'{_br(r_L1.get("n_ef_row", 0), 2)} (de {_i(r_L1.get("n_linha", 0))}) \\\\\n'
+            f'  Nº efetivo total & $n_{{ef}}$ & '
+            f'{_br(r_L1.get("n_ef", 0), 1)} (de {_i(r_L1.get("n_pinos", 0))}) \\\\\n'
+            f'  Módulo de deslizamento & $K_{{ser}}$ & '
+            f'{_br(r_L1.get("K_ser_Nmm", 0), 0)}~N/mm (pino$\\cdot$plano) \\\\\n'
+            f'  Resistência do grupo & $R$ & '
+            f'{_br(r_L1.get("R_total_kN", 0), 0)}~kN $\\geq F_{{res}}='
+            f'{_br(r_L1.get("F_res_kN", 0), 0)}$~kN \\\\\n'
+            '  \\bottomrule\n\\end{tabular}}\n\n'
+            f'$f_{{h,0,k}}=0{{,}}082(1-0{{,}}01\\,d)\\rho_k$ (\\S8.5.1.1 Eq.~8.32); '
+            f'$M_{{y,Rk}}=0{{,}}3\\,f_{{u,k}}\\,d^{{2,6}}$ (Eq.~8.30, '
+            f'$f_{{u,k}}={_i(400)}$~MPa); '
+            f'$K_{{ser}}=\\rho_m^{{1,5}}d/23$ (\\S7.1 Tab.~7.1). '
+            'Modos frágeis complementares: ruptura de bloco (\\S11.3) e '
+            'fendilhamento (\\S8.1.4); componente metálico em EN~1993-1-8. '
+            'Diâmetro dentro do escopo \\S8.6(2) (6--30~mm; issue~18).\n\n'
+        )
+
     # ── Esquadro de chapas (issue 23) — dimensões e espessuras ────────────────
     if r_esq:
         parts.append(
@@ -1816,6 +1984,131 @@ def gerar_tex(
     parts.append(
         '  \\bottomrule\n'
         '\\end{tabularx}}\n\n'
+    )
+
+    # ── Anexo A — Análise (Castigliano) + diagramas M/V/N (issue 27) ──────────
+    _fig_MVN = resultados.get("_fig_MVN")
+    _alpha = _br(getattr(geo, "alpha_deg", 10.0), 2)
+    parts.append(
+        '\\clearpage\n'
+        '% ── Anexo A — Análise ─────────────────────────────────────────\n'
+        '\\section*{Anexo A -- Análise estrutural (Castigliano) e diagramas}\n\n'
+        '\\textit{Anexo de reprodutibilidade (issue~27): definições, sistema de '
+        'eixos, convenção de sinais e a integral de Castigliano com seus limites.}\n\n'
+        '\\subsection*{A.1 Sistema de eixos e convenção de sinais (issue~12)}\n'
+        '\\begin{itemize}\n'
+        '  \\item $x$: coordenada \\textbf{horizontal}, $0\\to L$ (apoio~A à '
+        'esquerda, apoio~B à direita); cumeeira em $x=L/2$.\n'
+        '  \\item Eixo da peça inclinado do ângulo local '
+        '$\\theta(x)=\\arctan(\\mathrm{d}y_c/\\mathrm{d}x)$; a inclinação do eixo '
+        'centroidal é $\\pm\\tan\\alpha/2$ (muda de sinal no ápice).\n'
+        '  \\item $N$: força normal \\textbf{ao longo do eixo} da peça, '
+        '\\textbf{compressão positiva}; $V$: cortante \\textbf{perpendicular} ao '
+        'eixo; $M$: positivo tracionando a fibra inferior (intradorso).\n'
+        '\\end{itemize}\n\n'
+        '\\subsection*{A.2 Geometria da seção variável}\n'
+        '\\[\n  x_{sim}=\\min(x,\\,L-x),\\quad\n'
+        '  h(x)=h_0+x_{sim}\\tan\\alpha,\\quad\n'
+        '  y_c(x)=\\tfrac{1}{2}x_{sim}\\tan\\alpha,\\quad\n'
+        '  I(x)=\\frac{b\\,h(x)^3}{12}\n\\]\n'
+        f'com $b={_br(getattr(geo, "b", 0.32), 2)}$~m, '
+        f'$h_0={_br(getattr(geo, "h0", 1.0), 2)}$~m, '
+        f'$h_{{ap}}={_br(getattr(geo, "h_ap", 2.79), 3)}$~m e '
+        f'$\\alpha={_alpha}^\\circ$.\n\n'
+        '\\subsection*{A.3 Grau de hiperestaticidade e Castigliano}\n'
+        'Estrutura primária: viga biapoiada (rótulas só nos apoios); grau~1, com '
+        'a \\textbf{redundante} sendo o empuxo horizontal $H$. Pelo teorema de '
+        'Castigliano (força unitária), $\\partial U/\\partial H=0$ com '
+        '$M(x)=M_0(x)-H\\,y_c(x)$ dá, integrando de $0$ a $L$ (o módulo $E$ '
+        'cancela-se; integração em projeção horizontal $\\mathrm{d}x$):\n'
+        '\\[\n  H=\\frac{\\displaystyle\\int_0^{L} \\frac{M_0(x)\\,y_c(x)}{I(x)}'
+        '\\,\\mathrm{d}x}{\\displaystyle\\int_0^{L} \\frac{y_c(x)^2}{I(x)}'
+        '\\,\\mathrm{d}x}\n\\]\n'
+        'onde $M_0(x)$ é o momento da viga simples sob a carga da combinação '
+        'governante. Obtém-se então:\n'
+        '\\[\n  M(x)=M_0(x)-H\\,y_c(x),\\quad\n'
+        '  S(x)=\\frac{\\mathrm{d}M_0}{\\mathrm{d}x},\\quad\n'
+        '  N(x)=H\\cos\\theta+S\\sin\\theta,\\quad\n'
+        '  V(x)=S\\cos\\theta-H\\sin\\theta\n\\]\n'
+        f'Combinação governante: $M_{{max}}={_br(meta.get("M_max_kNm", 0), 1)}$~kN·m, '
+        f'$H={_br(meta.get("H_arco_kN", meta.get("H_ELU_kN", 0)), 1)}$~kN.\n\n'
+        '\\textit{Hipótese (issue~24):} $H$ obtido com \\textbf{apoio horizontal '
+        'indeslocável} (sem a flexibilidade axial do tirante) -- é o $H$ máximo, '
+        'conservador para o tirante.\n\n'
+    )
+    if _fig_MVN:
+        parts.append(
+            '\\subsection*{A.4 Diagramas de esforços $M(x)$, $V(x)$, $N(x)$}\n\n'
+            '\\begin{center}\n'
+            f'\\includegraphics[width=0.92\\textwidth]{{{_fig_MVN}}}\n'
+            '\\end{center}\n'
+            '\\textit{Nota:} $V(x)$ e $N(x)$ são derivados do $M(x)$ real (não da '
+            'aproximação de viga simples); o \\textbf{salto} em $V$ e $N$ no ápice '
+            'decorre da mudança de sinal de $\\theta$ (quina do eixo centroidal).\n\n'
+        )
+
+    # ── Anexo B — Tabela completa das combinações + Cpe (issue 28) ────────────
+    _tab_comb = []
+    if load is not None and hasattr(load, "tabela_combinacoes"):
+        try:
+            _tab_comb = load.tabela_combinacoes()
+        except Exception:
+            _tab_comb = []
+    if _tab_comb:
+        _pad_lbl = {
+            "asimetrico": "assim.", "assimetrico": "assim.",
+            "assimetrico_reverso": "rev.", "uniforme_barlavento": "unif.bv",
+            "uniforme_sotavento": "unif.st",
+        }
+        parts.append(
+            '\\clearpage\n'
+            '% ── Anexo B — Combinações completas ───────────────────────────\n'
+            '\\section*{Anexo B -- Combinações completas por padrão de vento}\n\n'
+            '\\textit{Reprodutibilidade (issue~28).} As '
+            f'{len(_tab_comb)} combinações ELU (não só o envelope). Cada um dos 8 '
+            'padrões Cpe da Tab.~25 (NBR~6123) -- casos C1/C2 $\\times$ '
+            '\\{assim., rev., unif.bv, unif.st\\} -- gera ELU\\_W ($1{,}35G{+}1{,}5W$) '
+            'e ELU\\_S ($0{,}9G{+}1{,}5W$); mais ELU\\_Q ($1{,}35G{+}1{,}5Q$, sem '
+            'vento). A cat.~H reduziu de 24 para '
+            f'{len(_tab_comb)} (Q e vento não concomitantes -- issue~3). '
+            '$C_{esq}/C_{dir}$ = Cpe em cada meia-água (Cpb/Cps conforme o padrão).\n\n'
+            '{\\scriptsize\\setlength{\\tabcolsep}{3.2pt}\n'
+            '\\begin{tabular}{@{}llcrrrrrl@{}}\n'
+            '  \\toprule\n'
+            '  \\textbf{Padrão} & \\textbf{Comb.} & \\textbf{caso} & '
+            '$C_{esq}$ & $C_{dir}$ & $q_{esq}$ & $q_{dir}$ & '
+            '$M_{max}$ & \\textbf{Gov.} \\\\\n'
+            '   & & & & & \\multicolumn{2}{c}{\\scriptsize kN/m} & '
+            '\\scriptsize kN·m & \\\\\n'
+            '  \\midrule\n'
+        )
+        _caso_atual = None
+        for r in _tab_comb:
+            if r["caso"] != _caso_atual and r["caso"] != "—":
+                _caso_atual = r["caso"]
+                parts.append(f'  \\multicolumn{{9}}{{@{{}}l}}{{\\textit{{Caso '
+                             f'{_caso_atual} da Tab.~25}}}} \\\\\n')
+            _pad = (f'{r["caso"]} {_pad_lbl.get(r["tipo_pad"], r["tipo_pad"])}'
+                    if r["caso"] != "—" else "sem vento")
+            _ce = "--" if r["C_esq"] is None else _br(r["C_esq"], 2)
+            _cd = "--" if r["C_dir"] is None else _br(r["C_dir"], 2)
+            _gov = r["governa"].replace("|", "$|$") if r["governa"] else ""
+            _gov_tex = f'\\textbf{{{_gov}}}' if _gov else ''
+            parts.append(
+                f'  {_tex_escape(_pad)} & {r["grupo"]} & {r["caso"]} & '
+                f'{_ce} & {_cd} & {_br(r["q_esq"], 2)} & {_br(r["q_dir"], 2)} & '
+                f'{_br(r["M_max_kNm"], 1)} & {_gov_tex} \\\\\n'
+            )
+        parts.append(
+            '  \\bottomrule\n\\end{tabular}}\n\n'
+            '\\textit{Governantes:} $|M|$ (flexão/LTB), \\textit{uplift} '
+            '(sucção/ancoragem) e $|H|$ (empuxo/fundação/tirante). '
+            'Todas as combinações de vento têm duração \\textit{curta}; ELU\\_Q, '
+            '\\textit{média}. O empuxo $H$ de cada linha é o da respectiva '
+            'combinação (ver Anexo~A).\n\n'
+        )
+
+    parts.append(
         '\\vspace{1.6em}\n'
         '{\\small\n'
         'Documento gerado por pipeline automatizado em Python '
@@ -1897,6 +2190,16 @@ def gerar_relatorio(
             xlsx_path, index=False
         )
     print(f"  Excel: {xlsx_path}")
+
+    # ── Figura: diagramas M/V/N (anexo de análise — issue 27) ──
+    try:
+        from mlc_projeto.output.figuras import plot_diagramas_MVN
+        _fig = plot_diagramas_MVN(load, geo, OUTPUT_DIR / f"{nome}_diagrama_MVN.pdf")
+        if _fig is not None:
+            resultados = {**resultados, "_fig_MVN": _fig.name}
+            print(f"  Figura: {_fig}")
+    except Exception as _e:                       # figura é opcional (não bloqueia)
+        print(f"  Figura: diagramas M/V/N não gerados ({_e})")
 
     # ── LaTeX ─────────────────────────────────────────────────
     tex_path = gerar_tex(resultados, geo, mat, nome, load=load)

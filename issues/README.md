@@ -24,7 +24,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 04 | P1 | [Coeficiente G favorável: 0,9G (NBR) → EN 1990 Tab. A1.2(B)](04-coef-G-favoravel-C3.md) ✅ |
 | 05 | P2 | [Combinação frequente ψ₁ categoria H = 0](05-psi1-combinacao-frequente.md) ✅ |
 | 33 | P1 | [Sucção/uplift: ancoragem ao arrancamento e tirante frouxo](33-succao-uplift-ancoragem-tirante.md) — desdobramento da 1 ✅ |
-| 34 | P2 | [Carga concentrada Q_k=1,0 kN (cat. H): verificação local terça/telha](34-qk-concentrado-terca-telha.md) — desdobramento da 2 |
+| 34 | P2 | [Carga concentrada Q_k=1,0 kN (cat. H): verificação local terça/telha](34-qk-concentrado-terca-telha.md) — desdobramento da 2 ✅ |
 
 ### ELS / flechas
 | # | Prioridade | Issue |
@@ -56,7 +56,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 14 | P0 | [Contraventamento vertical/frontões ausente — mecanismo lateral; αcr de arco ≠ sway](14-contraventamento-vertical.md) ✅ |
 | 15 | P1 | [Contraventamento do telhado: n=18 vs dois planos de 9; kf/ks e duplicação](15-contraventamento-telhado-n18.md) ✅ |
 | 31 | P0 | [Estabilidade transversal do pórtico (mecanismo sway no plano)](31-estabilidade-transversal-portico.md) — desdobramento da 14 ✅ |
-| 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 |
+| 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 ✅ |
 
 ### Terças
 | # | Prioridade | Issue |
@@ -79,15 +79,15 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 25 | P1 | [L2 pino Ø30 na cumeeira: resquício do modelo triarticulado](25-L2-pino-cumeeira-remover.md) ✅ |
-| 26 | P1 | [Situação de içamento da viga (combinação de montagem)](26-icamento-viga.md) |
+| 26 | P1 | [Situação de içamento da viga (combinação de montagem)](26-icamento-viga.md) ✅ |
 
 ### Reprodutibilidade do memorial
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 27 | P1 | [Derivação de Castigliano + diagramas M/V/N (anexo de análise)](27-memorial-castigliano-diagramas.md) |
-| 28 | P1 | [Tabela das 24 combinações + Cpe dos 8 padrões](28-memorial-24-combinacoes.md) |
-| 29 | P1 | [Memória da ligação L1 (Johansen, fh,0,k, My,Rk, t1/t2, a1–a4, Kser)](29-memorial-ligacao-L1.md) |
-| 30 | P2 | [Declarar classe de uso (EN 335), adesivo (EN 301) e tratamento preservativo](30-memorial-classe-uso-adesivo.md) |
+| 27 | P1 | [Derivação de Castigliano + diagramas M/V/N (anexo de análise)](27-memorial-castigliano-diagramas.md) ✅ |
+| 28 | P1 | [Tabela das 24 combinações + Cpe dos 8 padrões](28-memorial-24-combinacoes.md) ✅ |
+| 29 | P1 | [Memória da ligação L1 (Johansen, fh,0,k, My,Rk, t1/t2, a1–a4, Kser)](29-memorial-ligacao-L1.md) ✅ |
+| 30 | P2 | [Declarar classe de uso (EN 335), adesivo (EN 301) e tratamento preservativo](30-memorial-classe-uso-adesivo.md) ✅ |
 
 ## Rastreabilidade dos apontamentos
 

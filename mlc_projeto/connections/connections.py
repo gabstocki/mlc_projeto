@@ -658,6 +658,9 @@ def dimensionar_ligacao_base(
     F_v_Rk   = joh["F_v_Rk_N"] * 2
     F_v_Rd   = k_mod * F_v_Rk / gamma_M   # N
 
+    # Módulo de deslizamento K_ser — EC5 §7.1 Tab. 7.1 (cavilha): ρ_m^1,5·d/23
+    K_ser_pino = mat.rho_mean ** 1.5 * d_mm / 23.0   # N/mm (por pino, por plano)
+
     dist  = distancias_minimas(d_mm, theta_deg=theta_deg)
     a1_mm = dist["a1_mm"]
     a2_mm = dist["a2_mm"]
@@ -760,6 +763,20 @@ def dimensionar_ligacao_base(
         "eta_alvo":      eta_alvo,
         "F_v_Rd_kN":     round(F_v_Rd/1e3,    3),
         "modo_gov":      joh["modo_gov"],
+        # ── Memória de Johansen (issue 29) ──────────────────────
+        "f_h0k_MPa":     joh["f_hk_MPa"],                # EC5 §8.5.1.1 Eq. 8.32
+        "M_y_Rk_Nmm":    joh["M_y_Nmm"],                 # EC5 §8.5.1.1 Eq. 8.30
+        "modo_I_kN":     round(joh["modo_I_N"]/1e3,   3),  # esmagamento madeira
+        "modo_IIIb_kN":  round(joh["modo_IIIb_N"]/1e3, 3), # 1 rótula plástica
+        "modo_IV_kN":    round(joh["modo_IV_N"]/1e3,  3),  # 2 rótulas plásticas
+        "F_v_Rk_plano_kN": round(joh["F_v_Rk_N"]/1e3, 3),  # min dos modos (1 plano)
+        "n_planos_corte": 2,
+        # Espessuras e distâncias (EC5 §8.3 Tab. 8.4)
+        "t1_madeira_mm": round(t_mm,           1),       # t₁ = b/2 (cada lado)
+        "a3t_mm":        dist["a3t_mm"],                 # extremo carregado
+        "a4t_mm":        dist["a4t_mm"],                 # borda lateral
+        # Módulo de deslizamento (EC5 §7.1 Tab. 7.1)
+        "K_ser_Nmm":     round(K_ser_pino, 1),           # por pino, por plano
         "n_pinos":       n_pinos,
         "n_ef":          round(nef_final,      3),
         "n_ef_row":      round(nef_row,        3),

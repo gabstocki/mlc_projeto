@@ -100,6 +100,34 @@ MAT_LONGA = dict(
     duracao        = "longa",      # ELS / k_def
 )
 
+# --- Durabilidade: classe de uso / adesivo / tratamento (issue 30) ------------
+# Declarações coerentes com a Classe de Serviço 3 (EC5 §2.3.1.3). Valores por
+# norma; confirmar espécie/biocida/retenção no projeto executivo.
+DURABILIDADE = dict(
+    # EN 335 — classe de uso biológica. Estrutura COBERTA mas ABERTA nas laterais:
+    # protegida da chuva direta pelo telhado, porém sujeita a umidade/chuva de
+    # vento → exterior acima do solo, umedecimento LIMITADO ⇒ UC3.1 (coerente
+    # com a CS3 do EC5; peças plenamente abrigadas poderiam ser UC2).
+    classe_uso_en335   = "3.1",
+    classe_servico_ec5 = 3,
+    # EN 301 — adesivo. CS3 exige adesivo Tipo I (EN 14080 §5.3), apto a exposição
+    # exterior/alta umidade (ex.: MUF melamina-ureia-formaldeído ou RF/PRF).
+    adesivo_en301      = "Tipo I",
+    adesivo_exemplos   = "MUF (EN 301) ou resorcina RF/PRF",
+    # Espécie e durabilidade natural (EN 350) — conífera de baixa durabilidade
+    # ⇒ para UC3 requer tratamento e/ou detalhamento de proteção.
+    especie            = "conífera (Picea abies / Pinus spp.)",
+    durab_natural_en350 = "classe 4 (baixa)",
+    # Tratamento preservativo (EN 335/351) + proteção por projeto (detalhamento).
+    tratamento = (
+        "impregnação preservativa das lamelas antes da colagem (EN 351, classe "
+        "de penetração/retenção conforme UC3.1), COMPLEMENTADA por detalhamento "
+        "de proteção — beirais/pingadeiras, drenagem, ventilação, sem acúmulo de "
+        "água nas ligações — e acabamento de superfície. Confirmar biocida e "
+        "retenção com o tratador no projeto executivo."
+    ),
+)
+
 # --- Vento NBR 6123 (H1 alinhado a h_ap−h0 no main) ---------------------------
 VENTO_PARAMS = dict(
     V0           = 45.0,
@@ -143,6 +171,16 @@ H_PILAR_C   = 0.27     # m
 # --- Terças (pré-definidas; verificação no pipeline) --------------------------
 B_TERCA = 0.20
 H_TERCA = 0.58
+
+# --- Içamento da viga (montagem — EN 1991-1-6; issue 26) ----------------------
+# Esquema confirmado: 2 pontos a 0,207·L (|M⁻|=|M⁺|); lingas inclinadas (compressão
+# axial), viga SEM contraventamento (LTB no vão entre pontos). Confirmar no plano de
+# montagem/rigging. γ_G peso próprio, φ_dyn amplificação dinâmica do içamento.
+A_ICAM_REL     = 0.207   # posição dos pontos de içamento (fração de L)
+GAMMA_G_ICAM   = 1.35    # coef. do peso próprio (desfavorável)
+PHI_DYN_ICAM   = 1.10    # amplificação dinâmica do içamento (EN 1991-1-6)
+PSI_LINGA_DEG  = 30.0    # ângulo da linga com a vertical (0 = balancim)
+SPREADER_ICAM  = False   # True = balancim (lingas verticais, sem N_c)
 
 # --- Fixação telha→terça sob sucção (issue 17) --------------------------------
 # Parafuso autoperfurante Ø6,3 mm + arruela EPDM; espaçamento ADOTADO = a cada
@@ -380,6 +418,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  Material  : {mat_elu.classe} | CS{mat_elu.classe_servico} | "
           f"k_mod={mat_elu.k_mod:.2f} ({gov.duracao}) | "
           f"k_def={mat_longa.k_def:.2f} (ELS)")
+    print(f"  Durabilidade (issue 30): CS3 → EN 335 UC{DURABILIDADE['classe_uso_en335']} | "
+          f"adesivo {DURABILIDADE['adesivo_en301']} (EN 301) | "
+          f"trat. preservativo EN 351 + detalhamento de proteção")
     print(f"  k_mod vento: duração «curta» adotada "
           f"(k_mod={mat_elu.com_duracao('curta').k_mod:.2f}; "
           f"instantânea permitida={mat_elu.com_duracao('instantanea').k_mod:.2f} "
@@ -621,6 +662,28 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · Caminho à fundação: H_base={cvt['H_base_kN']:.1f} kN + "
           f"N_uplift={cvt['N_uplift_kN']:.1f} kN | l_ef=1H (non-sway) validado")
 
+    # Corda do diafragma — elemento de beiral verificado como membro (issue 32)
+    print("\n[FASE 2] Corda do diafragma — elemento de beiral (issue 32)...")
+    from mlc_projeto.checks.elu.corda_beiral import verificar_corda_beiral
+    from mlc_projeto.core.wind import calcular_vento as _cv_corda
+    _w_corda = _cv_corda(params_vento).pressoes["C1"]["barlavento_kNm2"]
+    res_elu["corda_beiral"] = verificar_corda_beiral(
+        mat=mat_elu, N_corda_kN=cvt["N_corda_kN"],
+        L_t=L_T, s_eave=S / 2.0, b=B_TERCA, h=H_TERCA,
+        alpha_deg=GEO_PARAMS["alpha_deg"],
+        g_k_m2=g_area_terca, q_k_m2=Q_AREA, w_kNm2=_w_corda,
+        L_comp=L_COMP_GALPAO,
+    )
+    _cb = res_elu["corda_beiral"]
+    _print_eta("Corda beiral §6.2.3/§6.3.2", _cb)
+    print(f"  · {_cb['elemento']} | N_corda={_cb['N_corda_kN']:.1f} kN (±) | "
+          f"seção {_cb['b_m']}×{_cb['h_m']} m")
+    print(f"  · flexo-compr §6.3.2 η={_cb['eta_compressao']:.3f} | "
+          f"flexo-tração §6.2.3 η={_cb['eta_tracao']:.3f} → "
+          f"η={_cb['eta']:.4f} ({_cb['caso_gov']})")
+    print(f"  · Continuidade: {_cb['n_emendas']} emenda(s) × "
+          f"{_cb['F_emenda_kN']:.1f} kN (obrigatória p/ o diafragma funcionar)")
+
     # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
     print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
     res_elu["estabilidade_global"] = verificar_estabilidade_global(
@@ -655,6 +718,24 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"k_mod={iv['k_mod']:.2f} (instantânea)")
     print(f"  · Gov: {iv['gov']} | η={iv['eta']:.4f}")
     print(f"  · {iv['recomendacao'][:90]}…")
+
+    # Situação transitória de IÇAMENTO da viga (montagem — EN 1991-1-6; issue 26)
+    print("\n[FASE 2] Içamento da viga (montagem — EN 1991-1-6)...")
+    from mlc_projeto.checks.elu.icamento import verificar_icamento
+    res_elu["icamento"] = verificar_icamento(
+        geo=geo, mat=mat_elu,
+        a_rel=A_ICAM_REL, gamma_G=GAMMA_G_ICAM, phi_dyn=PHI_DYN_ICAM,
+        psi_sling_deg=PSI_LINGA_DEG, spreader=SPREADER_ICAM,
+    )
+    _ic = res_elu["icamento"]
+    _print_eta("Içamento §EN1991-1-6", _ic)
+    print(f"  · {_ic['esquema']} | W={_ic['W_total_kN']:.0f} kN "
+          f"(γ_G·φ_dyn·g) | R/ponto={_ic['R_ponto_kN']:.0f} kN")
+    print(f"  · M⁻={_ic['M_neg_kNm']:.0f} | M⁺={_ic['M_pos_kNm']:.0f} kN·m | "
+          f"V={_ic['V_max_kN']:.0f} kN | N_c(lingas)={_ic['N_c_kN']:.0f} kN")
+    print(f"  · LTB (sem contravento): l_ef={_ic['l_ef_LTB_m']:.1f} m | "
+          f"k_crit={_ic['k_crit']:.3f} | η_LTB={_ic['eta_LTB']:.3f}")
+    print(f"  · η governante ({_ic['eta_gov_key']}) = {_ic['eta']:.4f}")
 
     print("\n[FASE 2] Verificações ELU — Terças (flexão cobertura)...")
     from mlc_projeto.checks.elu.tercas import verifica_terca
@@ -701,6 +782,22 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"k_c,z={_tfc['k_c_z']:.3f} (λ_z={_tfc['lambda_z']:.0f}) | "
           f"η_6.23={_tfc['eta_623']:.3f} η_6.24={_tfc['eta_624']:.3f} → "
           f"η={_tfc['eta']:.4f} ({_tfc['verif_gov']})")
+
+    # Terça sob carga concentrada Q_k (cat. H — alternativa à UDL; issue 34)
+    from mlc_projeto.checks.elu.tercas import verifica_terca_carga_concentrada
+    res_elu["terca_Qk_conc"] = verifica_terca_carga_concentrada(
+        mat=mat_elu, L_t=L_T, s=S, b=B_TERCA, h=H_TERCA,
+        g_k_m2=g_area_terca, Q_k_kN=QK_CONC_KN,
+    )
+    _qk = res_elu["terca_Qk_conc"]
+    _print_eta("Terça Q_k conc. §EN1991-1-1", _qk)
+    print(f"  · Q_k={_qk['Q_k_kN']:.1f} kN a meio-vão (não concomit. c/ UDL nem vento) | "
+          f"M_d={_qk['M_d_kNm']:.2f} kN·m (dur. média, k_mod={_qk['k_mod']:.2f})")
+    print(f"  · η_flex={_qk['eta_flexao']:.4f} | η_cis={_qk['eta_cisalh']:.4f} → "
+          f"η={_qk['eta']:.4f} | vs UDL η_flex={res_elu['terca']['eta_flexao']:.3f} "
+          f"(a mais desfavorável governa)")
+    print(f"  · Telha: M_local,d={_qk['M_telha_d_kNm']:.3f} kN·m/m → ficha do "
+          f"fabricante (issue 17)")
 
     # Fixação telha→terça sob sucção — NBR 6123 (verificação local, issue 17)
     print("\n[FASE 2] Fixação telha→terça (sucção — NBR 6123)...")
@@ -1031,6 +1128,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
                 "não como instantânea — critério conservador de projeto."
             ),
             "varredura_vento_90": load.varredura_vento_90,
+            "durabilidade": DURABILIDADE,   # issue 30
         },
     }
 

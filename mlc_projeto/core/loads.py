@@ -675,6 +675,75 @@ class Carregamentos:
         return {k: v for k, v in self._combinacoes.items()
                 if v.tipo == "ELS"}
 
+    def tabela_combinacoes(self) -> list[dict]:
+        """
+        Tabela COMPLETA das combinações ELU por padrão de vento (issue 28).
+
+        Para cada um dos 8 padrões Cpe da Tab.25 (C1/C2 × asim/rev/unif.bv/unif.st)
+        há 2 combinações: ELU_W (1,35G+1,5W, pressão) e ELU_S (0,9G+1,5W, sucção);
+        mais ELU_Q (1,35G+1,5Q, sem vento). Total 8×2+1 = 17 (a cat. H reduziu de
+        24 → 17 ao tornar Q e vento não concomitantes — issue 3).
+
+        Cada linha traz: id do padrão, caso Tab.25, Cpb/Cps (C_esq/C_dir),
+        q_esq/q_dir, M_max, H, duração e a marcação da(s) governante(s).
+        """
+        padroes = {p["id"]: p for p in self.padroes_vento}
+        combos = self._combinacoes
+
+        # Governantes (mesmos critérios dos aliases ELU_C2/C3/C4)
+        elu = [v for k, v in combos.items()
+               if k.startswith(("ELU_W_", "ELU_S_")) or k == "ELU_Q"]
+        grav = [x for x in elu if x.q_tot > 0]
+        suc = [x for x in elu if x.nome.startswith("ELU_S_")]
+        gov_M = max(grav, key=lambda x: abs(x.M_max_kNm)).nome if grav else None
+        gov_S = min(suc, key=lambda x: x.q_tot).nome if suc else None
+        gov_H = max(elu, key=lambda x: abs(x.H_kN)).nome if elu else None
+
+        linhas: list[dict] = []
+        for pid, p in padroes.items():
+            for grupo, pref in (("W", "ELU_W_"), ("S", "ELU_S_")):
+                c = combos.get(f"{pref}{pid}")
+                if c is None:
+                    continue
+                gov = []
+                if c.nome == gov_M:
+                    gov.append("|M|")
+                if c.nome == gov_S:
+                    gov.append("uplift")
+                if c.nome == gov_H:
+                    gov.append("|H|")
+                linhas.append({
+                    "nome":     c.nome,
+                    "grupo":    grupo,
+                    "combo":    "1,35G+1,5W" if grupo == "W" else "0,9G+1,5W",
+                    "padrao":   pid,
+                    "caso":     p.get("caso_tab", ""),
+                    "tipo_pad": p.get("tipo", ""),
+                    "C_esq":    round(float(p.get("C_esq", 0.0)), 3),
+                    "C_dir":    round(float(p.get("C_dir", 0.0)), 3),
+                    "q_esq":    round(c.q_esq, 3),
+                    "q_dir":    round(c.q_dir, 3),
+                    "M_max_kNm": round(c.M_max_kNm, 1),
+                    "H_kN":     round(c.H_kN, 1),
+                    "duracao":  c.duracao,
+                    "governa":  "+".join(gov),
+                })
+        # ELU_Q (gravítica, sem vento)
+        cq = combos.get("ELU_Q")
+        if cq is not None:
+            gov = []
+            if cq.nome == gov_M:
+                gov.append("|M|")
+            linhas.append({
+                "nome": cq.nome, "grupo": "Q", "combo": "1,35G+1,5Q",
+                "padrao": "—", "caso": "—", "tipo_pad": "sem vento",
+                "C_esq": None, "C_dir": None,
+                "q_esq": round(cq.q_esq, 3), "q_dir": round(cq.q_dir, 3),
+                "M_max_kNm": round(cq.M_max_kNm, 1), "H_kN": round(cq.H_kN, 1),
+                "duracao": cq.duracao, "governa": "+".join(gov),
+            })
+        return linhas
+
     def combinacao_ELU_governante(self) -> Combinacao:
         """
         Combinação ELU governante: maior |M_max| entre combinações
@@ -743,10 +812,48 @@ class Carregamentos:
         r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
         return r["M_x"]
 
+    def diagramas_MVN_ELU(self) -> dict:
+        """
+        Diagramas M(x), V(x) e N(x) da combinação ELU governante — derivação
+        rigorosa no eixo da peça (issue 27, coerente com a issue 12).
+
+        Da análise biarticulada:
+            M(x)  = M_0(x) − H·y_c(x)            (momento fletor)
+            S(x)  = dM_0/dx                       (cortante vertical da viga simples)
+            θ(x)  = arctan(dy_c/dx)               (inclinação local do eixo centroidal)
+        Projetando o empuxo H (horizontal, constante) e S(x) no eixo local:
+            N(x)  = H·cosθ + S·senθ               (normal no eixo; compressão +)
+            V(x)  = S·cosθ − H·senθ               (cortante ⊥ ao eixo)
+
+        Coincide, nos apoios, com N_apoio/V_apoio de `analisar_biarticulada`.
+        """
+        gov = self.combinacao_ELU_governante()
+        r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
+        x   = np.asarray(r["x"], dtype=float)
+        M   = np.asarray(r["M_x"], dtype=float)
+        M0  = np.asarray(r["M0_x"], dtype=float)
+        H   = float(r["H_kN"])
+
+        S = np.gradient(M0, x)                      # dM_0/dx (cortante viga simples)
+        # Inclinação local do eixo centroidal — ANALÍTICA (y_c = x_sim·tanα/2):
+        # slope = +tanα/2 (x<L/2), −tanα/2 (x>L/2). Kink no ápice → V salta ali.
+        L = float(self.geo.L)
+        slope_mag = math.tan(self.geo.alpha_rad) / 2.0
+        theta = np.where(x < L / 2.0, math.atan(slope_mag), -math.atan(slope_mag))
+        N = H * np.cos(theta) + S * np.sin(theta)  # kN (compressão +)
+        V = S * np.cos(theta) - H * np.sin(theta)  # kN (⊥ eixo)
+        return {
+            "x": x, "M": M, "V": V, "N": N, "S": S,
+            "H_kN": H, "comb": gov.nome,
+            "M_max_kNm": float(M[np.argmax(np.abs(M))]),
+            "V_max_kN":  float(V[np.argmax(np.abs(V))]),
+            "N_max_kN":  float(N[np.argmax(np.abs(N))]),
+        }
+
     def V_ELU(self) -> NDArray:
-        """Diagrama V(x) aproximado (kN) — média das meias-águas."""
-        q = self.combinacao_ELU_governante().q_tot
-        return q * (self.geo.L / 2 - self.geo.x)
+        """Diagrama V(x) (kN) — cortante ⊥ ao eixo, DERIVADO do M(x) real
+        (issue 27; substitui a antiga aproximação q·(L/2−x) de viga simples)."""
+        return self.diagramas_MVN_ELU()["V"]
 
     def M_g(self) -> NDArray:
         return self._analisar(self.g_k)["M_x"]

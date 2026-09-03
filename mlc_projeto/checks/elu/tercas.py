@@ -387,6 +387,101 @@ def verifica_terca_flexocompressao(
     }
 
 
+# ── Terça sob carga concentrada Q_k (categoria H — issue 34) ─────────────────
+
+def verifica_terca_carga_concentrada(
+    mat:      GlulamMaterial,
+    L_t:      float,
+    s:        float,
+    b:        float,
+    h:        float,
+    g_k_m2:   float,
+    Q_k_kN:   float = 1.0,
+    gamma_G:  float = 1.35,
+    gamma_Q:  float = 1.5,
+    k_m:      float = 0.7,
+) -> dict:
+    """
+    Verificação LOCAL da terça sob a carga concentrada Q_k (EN 1991-1-1 cat. H).
+
+    A categoria H (coberturas não acessíveis, EN 1991-1-1 Tab. 6.10) prevê, além
+    da UDL q_k, uma carga concentrada de MANUTENÇÃO Q_k (recomendado 1,0 kN) para
+    verificações locais. Por §6.3.4.2, q_k e Q_k **não** atuam juntas → o Q_k é uma
+    combinação ALTERNATIVA à UDL (a mais desfavorável governa). Cat. H também não é
+    concomitante com vento (issue 3).
+
+    Combinação (Q_k a meio-vão da terça biapoiada):
+        M_d = γ_G·g_lin·L_t²/8 + γ_Q·Q_k·L_t/4
+        V_d = γ_G·g_lin·L_t/2  + γ_Q·Q_k/2
+
+    Duração: MÉDIA (imposta — mesma classe da UDL de cat. H) → k_mod média.
+
+    Args:
+        mat    : Material GL24h
+        L_t    : vão da terça (m)
+        s      : espaçamento entre terças (m) — área tributária do permanente
+        b, h   : seção (m)
+        g_k_m2 : permanente por área (kN/m²)
+        Q_k_kN : carga concentrada de manutenção (kN)
+        gamma_G, gamma_Q, k_m : coeficientes
+
+    Returns:
+        dict com M/V, tensões, η (flexão e cisalhamento) e telha (demanda local).
+    """
+    mat_m = GlulamMaterial(mat.classe, mat.classe_servico, "media")
+    f_md, f_vd = mat_m.f_m_d, mat_m.f_v_d
+
+    g_lin = g_k_m2 * s                                   # kN/m
+    A = b * h
+    W_y = b * h ** 2 / 6.0
+
+    M_g = gamma_G * g_lin * L_t ** 2 / 8.0               # kN·m (permanente)
+    M_Q = gamma_Q * Q_k_kN * L_t / 4.0                   # kN·m (concentrada meio-vão)
+    M_d = M_g + M_Q
+    V_d = gamma_G * g_lin * L_t / 2.0 + gamma_Q * Q_k_kN / 2.0
+
+    sigma_m = M_d * 1e3 / W_y                            # Pa
+    tau = 1.5 * V_d * 1e3 / (mat_m.k_cr * A)             # Pa
+    eta_flex = sigma_m / f_md
+    eta_cis = tau / f_vd
+    eta = max(eta_flex, eta_cis)
+    gov = "flexão" if eta_flex >= eta_cis else "cisalhamento"
+
+    # ── Telha: flexão local do painel entre terças sob Q_k (referência) ──
+    # Painel biapoiado de vão s, Q_k a meio → M_telha,d = γ_Q·Q_k·s/4.
+    M_telha_d = gamma_Q * Q_k_kN * s / 4.0
+
+    return {
+        "verificacao": "Terça sob Q_k concentrado (cat. H, alternativa à UDL)",
+        "Q_k_kN":      Q_k_kN,
+        "duracao":     "media",
+        "k_mod":       mat_m.k_mod,
+        "L_t_m":       L_t, "s_m": s, "b_m": b, "h_m": h,
+        "M_g_kNm":     round(M_g, 4),
+        "M_Q_kNm":     round(M_Q, 4),
+        "M_d_kNm":     round(M_d, 4),
+        "V_d_kN":      round(V_d, 4),
+        "sigma_m_MPa": round(sigma_m / 1e6, 4),
+        "tau_MPa":     round(tau / 1e6, 4),
+        "f_md_MPa":    round(f_md / 1e6, 4),
+        "f_vd_MPa":    round(f_vd / 1e6, 4),
+        "eta_flexao":  round(eta_flex, 4),
+        "eta_cisalh":  round(eta_cis, 4),
+        "eta":         round(eta, 4),
+        "verif_gov":   gov,
+        "ok":          eta <= 1.0,
+        # Telha (verificação/justificativa — issue 17)
+        "M_telha_d_kNm": round(M_telha_d, 4),
+        "nota_telha": (
+            f"Telha: painel de vão s={s:.2f} m sob Q_k a meio → "
+            f"M_telha,d={M_telha_d:.3f} kN·m/m a comparar com a capacidade a "
+            "carga concentrada da FICHA do fabricante (dado proprietário; ver "
+            "issue 17). Fixação a cada nervura já adotada."
+        ),
+        "norma": "EN 1991-1-1 Tab.6.10/§6.3.4.2 | EC5 §6.1.6/§6.1.7",
+    }
+
+
 # ── Varredura paramétrica das terças ─────────────────────────────────────────
 
 def varrer_tercas(
