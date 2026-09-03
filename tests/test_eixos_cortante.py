@@ -69,4 +69,4 @@ def test_shear_menos_conservador_que_reacao_vertical():
     eta_transv = r["eta"]
     eta_Rv = eta_transv * r["R_v_vertical_kN"] / r["V_d_kN"]
     assert eta_transv < eta_Rv
-    assert eta_transv < 0.5      # passa folgado (arco: pouco cortante transversal)
+    assert eta_transv < 0.6      # arco: cortante transversal moderado (H corrigido)

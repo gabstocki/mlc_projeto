@@ -18,8 +18,14 @@ MUDANÇA v4 — Viga biarticulada (peça monolítica de MLC):
     Momento real:
         M(x) = M_0(x) − H · y_c(x)
 
-    Empuxo (Castigliano / força unitária, integração em dx — projeção horizontal):
-        H = ∫ M_0 y_c / I dx  /  ∫ y_c² / I dx     (0 → L)
+    Empuxo (Castigliano / força unitária horizontal no apoio liberado):
+        Estado unitário: m(x) = −y_c(x) (flexão), n(x) = cos θ (normal no eixo).
+        δ11 = ∫ y_c²/(EI) ds + ∫ cos²θ/(EA) ds     (flexão + AXIAL)
+        H   = ∫ M_0 y_c/(EI) ds / δ11              (0 → L; E cancela)
+
+        O termo axial ∫cos²θ/(EA) NÃO pode ser desprezado: para viga ABATIDA
+        (flecha do eixo y_c ≪ altura h) ele domina o denominador. Desprezá-lo
+        (versão até v4) superestimava H em ~3,5× e invertia o sinal de M_cum.
 
     Consequências:
         - M na cumeeira ≠ 0 em geral  → EC5 §6.4.3 ativo
@@ -271,6 +277,7 @@ def analisar_biarticulada(
     h_x   = h0 + x_sim * tan_a
     I_x   = b * h_x ** 3 / 12.0
     I_x = np.maximum(I_x, 1e-18)
+    A_x   = np.maximum(b * h_x, 1e-18)
 
     if abs(q_esq - q_dir) < 1e-12:
         M0 = 0.5 * q_esq * x * (L - x)
@@ -279,10 +286,17 @@ def analisar_biarticulada(
     else:
         M0, R_A, R_B = _M0_carga_assimetrica(x, L, q_esq, q_dir)
 
-    num = float(np.trapezoid(M0 * y_c / I_x, x))
-    den = float(np.trapezoid(y_c ** 2 / I_x, x))
+    # Empuxo H por Castigliano — inclui flexibilidade de FLEXÃO e AXIAL.
+    # Integração ao longo do eixo do centroide: ds = dx / cos θ (θ constante ⇒
+    # ds/dx cancela em H, mas mantido explícito por rigor). Ver docstring.
+    theta   = math.atan(tan_a / 2.0)
+    ds_dx   = 1.0 / math.cos(theta)
+    num      = float(np.trapezoid(M0 * y_c / I_x * ds_dx, x))
+    den_flex = float(np.trapezoid(y_c ** 2 / I_x * ds_dx, x))
+    den_ax   = float(np.trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x))
+    den = den_flex + den_ax
     if den <= 0:
-        raise ValueError("Integral ∫ y_c²/I dx nula — verificar geometria.")
+        raise ValueError("Integral de flexibilidade nula — verificar geometria.")
     H = num / den
 
     M_x = M0 - H * y_c
@@ -297,7 +311,7 @@ def analisar_biarticulada(
     x_Mmax  = float(x[idx_max])
     M_cum   = float(np.interp(L / 2.0, x, M_x))
 
-    theta   = math.atan(tan_a / 2.0)
+    # theta (inclinação do eixo do centroide) já definido acima.
     # Esforços no eixo no apoio A (reação R_A)
     N_apoio = H * math.cos(theta) + R_A * math.sin(theta)
     V_apoio = R_A * math.cos(theta) - H * math.sin(theta)

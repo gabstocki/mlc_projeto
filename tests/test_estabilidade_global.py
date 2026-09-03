@@ -104,7 +104,7 @@ def test_estabilidade_com_contravento_dispensa_2a_ordem():
     assert res["H_imp_over_H"] < 0.01        # nocional << empuxo
     assert res["w_over_f"] < 0.05
     assert res["H_imp_kN"] < 5.0
-    assert res["H_Ed_kN"] > 1000.0
+    assert res["H_Ed_kN"] > 400.0            # empuxo corrigido (~520 kN, c/ termo axial)
     # barra pode ter α_cr < 10 — informativo, coberto por k_c
     assert "k_c" in res["nota_alpha_cr_barra"]
 

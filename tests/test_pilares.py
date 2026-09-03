@@ -66,13 +66,14 @@ def test_governante_nao_e_necessariamente_o_maior_N():
 
 def test_N_pilar_nao_e_N_do_eixo_da_viga():
     """
-    O N do pilar (reação vertical, ~200-420 kN) NÃO é o N do eixo da viga
-    (N_max_ELU ~1,6 MN, que inclui o empuxo H).
+    O N do pilar (reação vertical) NÃO é o N do eixo da viga (N_max_ELU inclui o
+    empuxo H·cosθ). Com o empuxo corrigido (termo axial de Castigliano) o eixo da
+    viga deixa de estar em ordem de MN, mas ainda supera o axial do pilar.
     """
     _, mat, load = _load_R2()
     res = verifica_pilar_governante(mat, load, b=0.32, h=0.27, H=7.0, fator_reacao=2.0)
-    assert res["N_d_kN"] < 0.5 * load.N_max_ELU()   # muito menor que o N da viga
-    assert load.N_max_ELU() > 1000.0                # eixo da viga em ordem de MN
+    assert res["N_d_kN"] < load.N_max_ELU()         # eixo da viga carrega o empuxo
+    assert load.N_max_ELU() > load.V_max_ELU()      # N_eixo > reação vertical (há H)
 
 
 def test_fator_invalido():

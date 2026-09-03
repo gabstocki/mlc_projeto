@@ -80,7 +80,12 @@ def test_diagonal_22mm_passa_e_cobertura_ok():
     assert r["l_1_efetivo_m"] == pytest.approx(2.53, abs=1e-6)  # terças válidas
 
 
-def test_18mm_reprovaria_com_kf3_correto():
-    """Regressão: Ø18 mm reprovaria (η>1) sob o k_f,3=30 correto — justifica Ø22."""
+def test_18mm_passa_com_empuxo_corrigido():
+    """
+    Empuxo corrigido (termo axial de Castigliano) ⇒ menor compressão na viga ⇒
+    menor força de estabilização §9.2.5 ⇒ a Ø18 mm passa (η<1).
+    NOTA DE PROJETO: a justificativa de resistência para Ø22 mm deixa de valer;
+    se Ø22 for mantida, é por outro critério (Ø mínimo/esbeltez), não por η_N.
+    """
     r = _res(d_barra=18.0)
-    assert r["eta_diag_N"] > 1.0
+    assert r["eta_diag_N"] < 1.0

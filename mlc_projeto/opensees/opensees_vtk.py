@@ -78,14 +78,23 @@ OUTPUT_DIR = Path(__file__).parent.parent.parent / "output" / "vtk"
 
 # ── Geometria ─────────────────────────────────────────────────────────────────
 
-def z_intrados(x: float) -> float:
-    xs = x if x <= L/2 else L - x
-    return H_PIL + xs * math.tan(ALPHA)
-
-
 def h_secao(x: float) -> float:
     xs = x if x <= L/2 else L - x
     return h0 + xs * math.tan(ALPHA)
+
+
+def z_centro(x: float) -> float:
+    """Eixo do CENTROIDE — viga bi-chanfrada de intradorso HORIZONTAL."""
+    return H_PIL + h_secao(x) / 2.0
+
+
+def z_extra(x: float) -> float:
+    """Extradorso (topo da viga) — onde apoiam as terças."""
+    return H_PIL + h_secao(x)
+
+
+# Compatibilidade: o eixo usado para posicionar/extrudar é o centroide.
+z_intrados = z_centro
 
 
 def posicoes_tercas() -> list:
@@ -96,21 +105,35 @@ def posicoes_tercas() -> list:
 
 # ── Campos analíticos ─────────────────────────────────────────────────────────
 
-def M_viga(x, Rv, H, q):
+# Inclinação do eixo do centroide (intradorso horizontal): θ = atan(tanα/2).
+THETA = math.atan(math.tan(ALPHA) / 2.0)
+
+
+def y_c(x):
+    """Braço do empuxo — flecha do eixo do centroide sobre a corda."""
     xs = x if x <= L/2 else L - x
-    return Rv*xs - H*xs*math.tan(ALPHA) - q*xs**2/2
+    return xs * math.tan(ALPHA) / 2.0
+
+
+def M_viga(x, Rv, H, q):
+    """Momento biarticulado: M(x) = M_0(x) − H·y_c(x) (M na cumeeira ≠ 0)."""
+    xs = x if x <= L/2 else L - x
+    return 0.5*q*xs*(L - xs) - H*y_c(x)
 
 
 def V_viga(x, Rv, H, q):
-    if x <= L/2:
-        return  Rv - H*math.tan(ALPHA) - q*x
-    else:
-        return -(Rv - H*math.tan(ALPHA) - q*(L-x))
+    """Cortante ⊥ ao eixo: V = S·cosθ − H·senθ, S = cortante da viga simples."""
+    xs = x if x <= L/2 else L - x
+    S  = q*(L/2.0 - xs)                       # cortante isostático (≥ 0)
+    s  = 1.0 if x <= L/2 else -1.0            # antissimétrico
+    return s*(S*math.cos(THETA) - H*math.sin(THETA))
 
 
 def N_viga(x, Rv, H, q):
+    """Normal no eixo (compressão +): N = H·cosθ + S·senθ."""
     xs = x if x <= L/2 else L - x
-    return H*math.cos(ALPHA) + Rv*math.sin(ALPHA) - q*xs*math.sin(ALPHA)
+    S  = q*(L/2.0 - xs)
+    return H*math.cos(THETA) + S*math.sin(THETA)
 
 
 def sigma_viga(x, Rv, H, q):
@@ -128,10 +151,10 @@ def analisar_viga(q: float) -> dict:
 
     xn = [i*(L/2)/N_V for i in range(N_V+1)]
     for i, x in enumerate(xn):
-        ops.node(i+1, x, z_intrados(x))
+        ops.node(i+1, x, z_centro(x))        # eixo no centroide (intr. horizontal)
 
-    ops.fix(1,      1, 1, 0)
-    ops.fix(N_V+1,  1, 0, 0)
+    ops.fix(1,      1, 1, 0)                  # rótula do apoio (Rz livre)
+    ops.fix(N_V+1,  1, 0, 1)                  # SIMETRIA de peça contínua: Rz FIXO
 
     ops.geomTransf('Linear', 1)
     for i in range(N_V):
@@ -297,7 +320,7 @@ def construir_malha(rv: dict, rt: dict, q: float) -> pv.UnstructuredGrid:
         for iy in range(N_PORT-1):
             y0=iy*DIST_MOD
             for xt_loc in x_t:
-                xt=x_off+xt_loc; zt=z_intrados(xt_loc)
+                xt=x_off+xt_loc; zt=z_extra(xt_loc)   # terças sobre o extradorso
                 for i in range(N_T):
                     add_hex([xt,y0+yn[i],  zt],
                             [xt,y0+yn[i+1],zt],
@@ -344,7 +367,8 @@ def gerar_vtk() -> None:
         arq = OUTPUT_DIR / f"portico_{nome}.vtk"
         malha.save(str(arq))
 
-        H_an  = (rv['Ry']*(L/2) - q*(L/2)**2/2) / (h_ap-h0)
+        from mlc_projeto.core.loads import analisar_biarticulada
+        H_an  = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V)["H_kN"]
         err   = abs(rv['H']-H_an) / H_an * 100
         eta_m = float(np.max(np.abs(malha.cell_data['eta_M'])))
 

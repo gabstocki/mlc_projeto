@@ -52,16 +52,20 @@ def test_k_m_alpha_valor_fechado():
 
 
 def test_verifica_misula_ok_e_regime():
-    """Arco abatido: crown em hogging ⇒ topo tracionado governa a face inclinada."""
+    """
+    Empuxo corrigido (termo axial de Castigliano em loads.py): o ápice está em
+    SAGGING (M_cum > 0) ⇒ a face inclinada (extradorso) fica em COMPRESSÃO.
+    (Antes, o H superestimado ~3,5× dava hogging/tração — modelo incorreto.)
+    """
     geo, mat, load = _load()
     r = verifica_misula(geo, mat, load)
     assert r["ok"] is True
     assert 0.0 < r["eta"] < 1.0
-    assert r["regime"] == "tracao"                    # topo em tração no ápice
-    # k_m,α aplicado é o de tração e coincide com o helper
-    assert r["k_m_alpha"] == pytest.approx(r["k_m_alpha_tracao"], abs=1e-4)
-    # seção governante perto do ápice (crown hogging)
-    assert abs(r["x_gov_m"] - geo.L / 2) < 1.5
+    assert r["regime"] == "compressao"                # extradorso comprimido
+    # k_m,α aplicado é o de compressão e coincide com o helper
+    assert r["k_m_alpha"] == pytest.approx(r["k_m_alpha_compressao"], abs=1e-4)
+    # seção governante é uma posição válida da face inclinada (não mais no ápice)
+    assert 0.0 < r["x_gov_m"] < geo.L
     assert r["norma"].startswith("EC5 §6.4.2")
 
 

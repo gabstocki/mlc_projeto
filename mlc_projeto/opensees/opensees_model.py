@@ -1,29 +1,24 @@
 """
-opensees/opensees_model.py — Validação FEM do pórtico de 3 rótulas.
+opensees/opensees_model.py — Validação FEM da viga BIARTICULADA monolítica.
 
-Modelo OpenSeesPy de meia estrutura com condição de simetria.
-Eixo de referência: INTRADOS da viga (linha de pressão).
+Modelo OpenSeesPy de meia viga com condição de SIMETRIA de peça CONTÍNUA.
+Eixo de referência: CENTROIDE da viga (intradorso HORIZONTAL, bi-chanfrada).
 
-FORMULAÇÃO VERIFICADA:
-    z_intrados(x) = H_pilar + x·tan(α)   para 0 ≤ x ≤ L/2
-    
-    Com esta geometria: dz(L/2) = (L/2)·tan(α) = h_ap - h0 = f
-    → Formula analítica H = [Rv·(L/2) - q·(L/2)²/2] / f verificada.
+FORMULAÇÃO (coerente com core/loads.py — Castigliano com termo AXIAL):
+    z_centroide(x) = H_pilar + h(x)/2,  h(x) = h0 + x·tan(α),  0 ≤ x ≤ L/2
+    Flecha do eixo (braço do empuxo): y_c(x) = x·tan(α)/2
+    H por compatibilidade: δ11 = ∫ y_c²/(EI) ds + ∫ cos²θ/(EA) ds  (axial INCLUÍDO)
+    M(x) = M_0(x) − H·y_c(x),  com M na cumeeira ≠ 0 (continuidade, sem rótula).
 
-CONDIÇÕES DE CONTORNO (meia estrutura):
-    Apoio (x=0): fix Ux, Uy; livre Rz  ← rótula da base
-    Cumeeira (x=L/2): fix Ux; livre Uy, Rz  ← simetria + rótula implícita
+CONDIÇÕES DE CONTORNO (meia viga):
+    Apoio (x=0):      fix Ux, Uy; livre Rz          ← rótula do apoio
+    Cumeeira (x=L/2): fix Ux, Rz; livre Uy          ← SIMETRIA de peça contínua
+                                                      (Rz FIXO ⇒ sem rótula no ápice)
 
-RESULTADOS VALIDADOS (n_v=40 elementos):
-    Erro Ry   < 0,001%
-    Erro H    < 0,02%
-    Erro M_max < 0,04%
-
-NOTA SOBRE FLECHA:
-    A flecha FEM é medida no intrados da viga.
-    A flecha do deflection_els.py é calculada por integração de M/(EI)
-    usando o eixo do centroide. As duas referências diferem por h(x)/2.
-    Para deflexão relativa (flecha), os valores são compatíveis.
+NOTA — modelo triarticulado (legado, REMOVIDO):
+    A versão anterior liberava Rz na cumeeira (rótula) e usava o intradorso como
+    linha de pressão (braço f = h_ap−h0). Isso modelava um pórtico de 3 rótulas,
+    incompatível com a peça monolítica de MLC dos cálculos. Corrigido.
 """
 
 from __future__ import annotations
@@ -47,17 +42,18 @@ OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 
 
 def analisar_analitico(q: float, L: float, h0: float, h_ap: float,
-                       alpha_rad: float) -> dict:
-    """Solução analítica — pórtico de 3 rótulas (referência intrados)."""
-    f  = h_ap - h0
-    Rv = q * L / 2
-    H  = (Rv*(L/2) - q*(L/2)**2/2) / f
-    N  = H*math.cos(alpha_rad) + Rv*math.sin(alpha_rad)
-    xm = (Rv - H*math.tan(alpha_rad)) / q
-    xm = min(max(xm, 0), L/2)
-    M  = Rv*xm - H*xm*math.tan(alpha_rad) - q*xm**2/2
-    return dict(Rv=round(Rv,4), H=round(H,4), N=round(N,4),
-                Mmax=round(M,4), xMmax=round(xm,4), f=round(f,4))
+                       alpha_rad: float, b: float) -> dict:
+    """
+    Solução analítica — viga BIARTICULADA monolítica (Castigliano c/ axial).
+
+    Delega para core.loads.analisar_biarticulada (fonte única da verdade), de
+    modo que a validação FEM confira exatamente o modelo de cálculo.
+    """
+    from mlc_projeto.core.loads import analisar_biarticulada
+    r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, b)
+    return dict(Rv=r["R_v_kN"], H=r["H_kN"], N=r["N_apoio_kN"],
+                Mmax=r["M_max_kNm"], xMmax=r["x_Mmax_m"],
+                Mcum=r["M_cumeeira_kNm"], f=round((h_ap - h0) / 2.0, 4))
 
 
 def analisar_fem(q: float, L: float, h0: float, h_ap: float,
@@ -70,24 +66,29 @@ def analisar_fem(q: float, L: float, h0: float, h_ap: float,
     if not OPENSEES_OK:
         return {"erro": "OpenSeesPy não disponível"}
 
+    # Unidades consistentes: forças em kN, comprimentos em m ⇒ E em kN/m².
+    E_kN = E / 1e3
+    tan_a = math.tan(alpha_rad)
+
     ops.wipe()
     ops.model('basic', '-ndm', 2, '-ndf', 3)
 
     xnodes = [i*(L/2)/n_v for i in range(n_v+1)]
-    znodes  = [H_pilar + x*math.tan(alpha_rad) for x in xnodes]
+    # Eixo no CENTROIDE (intradorso horizontal): z = H_pilar + h(x)/2.
+    znodes = [H_pilar + (h0 + x*tan_a)/2.0 for x in xnodes]
 
     for i,(x,z) in enumerate(zip(xnodes, znodes)):
         ops.node(i+1, x, z)
 
-    ops.fix(1,      1,1,0)   # rótula base
-    ops.fix(n_v+1,  1,0,0)   # simetria cumeeira
+    ops.fix(1,      1, 1, 0)   # rótula do apoio (Rz livre)
+    ops.fix(n_v+1,  1, 0, 1)   # SIMETRIA de peça contínua: Rz FIXO (sem rótula)
 
     ops.geomTransf('Linear', 1)
     for i in range(n_v):
         xm = (xnodes[i]+xnodes[i+1])/2
-        hm = h0 + xm*math.tan(alpha_rad)
+        hm = h0 + xm*tan_a
         ops.element('elasticBeamColumn', i+1, i+1, i+2,
-                    b*hm, E, b*hm**3/12, 1)
+                    b*hm, E_kN, b*hm**3/12, 1)
 
     ops.timeSeries('Linear', 1)
     ops.pattern('Plain', 1, 1)
@@ -108,19 +109,20 @@ def analisar_fem(q: float, L: float, h0: float, h_ap: float,
 
     ops.reactions()
     Ry = ops.nodeReaction(1,  2)
-    H  = ops.nodeReaction(1,  1)   # empuxo horizontal na base
+    H  = ops.nodeReaction(1,  1)   # empuxo horizontal no apoio
 
-    # Momento via equilíbrio externo
-    Meq = [Ry*x - H*x*math.tan(alpha_rad) - q*x**2/2 for x in xnodes]
-    Mmax = max(Meq)
+    # Momento biarticulado: M(x) = M_0(x) − H·y_c(x), y_c = x·tan(α)/2.
+    y_c = [x*tan_a/2.0 for x in xnodes]
+    Meq = [0.5*q*x*(L-x) - H*y_c[i] for i,x in enumerate(xnodes)]
+    Mmax = max(Meq, key=abs)
     xMmax = xnodes[Meq.index(Mmax)]
 
-    # Deslocamentos (flecha relativa no intrados)
+    # Deslocamentos verticais (flecha do eixo) em mm
     w_vals = [-ops.nodeDisp(i+1, 2)*1e3 for i in range(n_v+1)]
-    w_max  = max(w_vals)
+    w_max  = max(w_vals, key=abs)
     xwmax  = xnodes[w_vals.index(w_max)]
 
-    # Força axial no elemento do apoio
+    # Força axial no elemento do apoio (kN)
     N_ax = abs(ops.eleForce(1)[0])
 
     ops.wipe()
@@ -149,11 +151,11 @@ def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
     # ── Tabela de comparação ──────────────────────────────────
     print("=" * 72)
     print("  VALIDAÇÃO FEM — OpenSeesPy vs Analítico")
-    print("  Pórtico de 3 Rótulas | Eixo: intrados")
+    print("  Viga Biarticulada monolítica | Eixo: centroide (intradorso horiz.)")
     print("=" * 72)
     rows = []
     for nome, q in combos.items():
-        an  = analisar_analitico(q, L, h0, h_ap, al)
+        an  = analisar_analitico(q, L, h0, h_ap, al, b)
         fem = analisar_fem(q, L, h0, h_ap, al, b, E, H_pilar, n_v)
         if "erro" in fem: continue
 
@@ -174,21 +176,21 @@ def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
 
     # ── Figura ────────────────────────────────────────────────
     q_ELU = combos["ELU_C2"]; q_ELS = combos["ELS_S1"]
-    an_ELU = analisar_analitico(q_ELU, L, h0, h_ap, al)
+    an_ELU = analisar_analitico(q_ELU, L, h0, h_ap, al, b)
     fem_ELU = analisar_fem(q_ELU, L, h0, h_ap, al, b, E, H_pilar, n_v)
     fem_ELS = analisar_fem(q_ELS, L, h0, h_ap, al, b, E, H_pilar, n_v)
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(
-        f"Pórtico de 3 Rótulas — Validação OpenSeesPy\n"
+        f"Viga Biarticulada monolítica — Validação OpenSeesPy\n"
         f"STOCKI Engenharia Estrutural | L={L}m | h0={h0}m | α={geo.alpha_deg}°",
         fontsize=11, fontweight='bold'
     )
 
-    # Diagrama M(x) — ELU_C2
+    # Diagrama M(x) — ELU_C2 (biarticulado: M(x) = M_0 − H·y_c, M_cum ≠ 0)
     ax1 = axes[0]
     xan = np.linspace(0, L/2, 400)
-    Man = (an_ELU["Rv"]*xan - an_ELU["H"]*xan*math.tan(al) - q_ELU*xan**2/2)
+    Man = (0.5*q_ELU*xan*(L-xan) - an_ELU["H"]*xan*math.tan(al)/2.0)
     xfull = list(xan) + [L - x for x in xan[::-1]]
     Mfull = list(Man) + list(Man[::-1])
 
@@ -209,7 +211,8 @@ def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
     # Deformada — ELS_S1
     ax2 = axes[1]
     amp = 200
-    def z_orig(x): xs=x if x<=L/2 else L-x; return H_pilar+xs*math.tan(al)
+    # Eixo original = centroide (intradorso horizontal): z = H_pilar + h(x)/2
+    def z_orig(x): xs=x if x<=L/2 else L-x; return H_pilar+(h0+xs*math.tan(al))/2.0
     xpl = np.linspace(0, L, 200)
     ax2.plot(xpl, [z_orig(x) for x in xpl], 'b-', lw=1.5,
              label='Estrutura original')

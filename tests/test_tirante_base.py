@@ -61,7 +61,7 @@ def test_verificar_tirante_d_fixo():
 def test_L3_com_tirante_H_zero():
     geo, mat, load = _load_R2()
     H_arco = load.H_ELU()
-    assert H_arco > 1000.0  # ordem de grandeza do projeto
+    assert H_arco > 400.0  # empuxo corrigido (~520 kN, Castigliano c/ termo axial)
 
     L3_sem = dimensionar_sapata(load, geo, F_chu_kN=80.0, eta_alvo=0.75,
                                 com_tirante=False)
@@ -69,7 +69,10 @@ def test_L3_com_tirante_H_zero():
                                 com_tirante=True, b_pilar_m=0.32, h_pilar_m=0.27)
 
     assert L3_sem["H_d_kN"] == pytest.approx(H_arco, rel=1e-6)
-    assert L3_sem["n_chumbadores"] >= 20
+    # sem tirante a sapata resiste ao empuxo por atrito/chumbadores → muitos deles
+    # (empuxo corrigido ~520 kN ⇒ ~9; antes, com H inflado, eram ~20)
+    assert L3_sem["n_chumbadores"] > L3_com["n_chumbadores"]
+    assert L3_sem["n_chumbadores"] >= 8
 
     assert L3_com["com_tirante"] is True
     assert L3_com["H_d_kN"] == 0.0
