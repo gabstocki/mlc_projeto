@@ -66,6 +66,7 @@ def verificar_succao_uplift(
     com_tirante:   bool = True,
     gamma_G_inf:   float = GAMMA_G_EQU_estab,   # EQU estabilizante (EN 1990 Tab. A1.2(A))
     g_ms2:         float = G_GRAVIDADE,
+    N_brace_anc_kN: float = 0.0,
 ) -> dict:
     """
     Verifica a combinação de sucção: uplift na ancoragem e empuxo invertido
@@ -80,6 +81,10 @@ def verificar_succao_uplift(
         rho_mean_kgm3 : densidade média do glulam (peso do pilar)
         com_tirante   : se há tirante (tração-apenas → frouxo sob sucção)
         gamma_G_inf   : coeficiente da ação permanente favorável (EN 1990)
+        N_brace_anc_kN: tração de download do contraventamento (Σ V_Ed·tanβ) que
+                        chega à ancoragem do pilar de CANTO (montante de painel),
+                        CONCOMITANTE ao uplift de sucção — mesmo evento de vento
+                        (issue 36). Somada só na base de extremidade/canto.
 
     Returns:
         dict com esforços de sucção, verificação da ancoragem (externa e central),
@@ -122,8 +127,20 @@ def verificar_succao_uplift(
     eta_N_cen = N_uplift_cen / R_anc
     eta_cen = eta_N_cen                                     # V≈0 no central
 
-    eta_gov = max(eta_ext, eta_cen)
-    base_gov = "extremidade" if eta_ext >= eta_cen else "central"
+    # Base de CANTO (montante de contraventamento): soma a tração do download
+    # Σ V_Ed·tanβ, concomitante ao uplift de sucção (mesmo vento) — issue 36.
+    N_brace = max(0.0, float(N_brace_anc_kN))
+    N_uplift_canto = N_uplift_ext + N_brace
+    eta_N_canto = N_uplift_canto / R_anc
+    eta_canto = eta_N_canto + eta_V_ext                    # + cortante do empuxo inv.
+
+    eta_gov = max(eta_ext, eta_cen, eta_canto)
+    if N_brace > 0.0 and eta_canto >= eta_ext and eta_canto >= eta_cen:
+        base_gov = "canto (contraventado)"
+    elif eta_ext >= eta_cen:
+        base_gov = "extremidade"
+    else:
+        base_gov = "central"
     ok = eta_gov <= 1.0
 
     return {
@@ -152,6 +169,11 @@ def verificar_succao_uplift(
         # Ancoragem — apoio central (governa o uplift, V≈0)
         "N_uplift_cen_kN": round(N_uplift_cen, 3),
         "eta_cen":         round(eta_cen, 4),
+        # Ancoragem — base de CANTO (uplift sucção + download contravent., issue 36)
+        "N_brace_anc_kN":     round(N_brace, 3),
+        "N_uplift_canto_kN":  round(N_uplift_canto, 3),
+        "eta_N_canto":        round(eta_N_canto, 4),
+        "eta_canto":          round(eta_canto, 4),
         # Capacidade
         "F_chu_kN":        F_chu_kN,
         "n_chu":           n_chu,
@@ -171,7 +193,9 @@ def verificar_succao_uplift(
             "Interação N–V linear (conservadora); verificação definitiva dos "
             "chumbadores (aço + cone de concreto + arrancamento + interação) por "
             "EN 1992-4 / EN 1993-1-8. Peso da fundação (favorável, EN 1997) não "
-            "incluído."
+            "incluído. Base de CANTO: soma a tração do download do contraventamento "
+            "(Σ V_Ed·tanβ), concomitante ao uplift de sucção (issue 36); Σ dos dois "
+            "painéis é envelope conservador (uma direção de vento atua por vez)."
         ),
     }
 
@@ -195,6 +219,11 @@ def relatorio(res: dict) -> None:
           f"→ η_ext={res['eta_ext']:.3f}")
     print("  ── Apoio CENTRAL (governa uplift, V≈0) ──")
     print(f"    N_uplift={res['N_uplift_cen_kN']:.1f} kN → η_cen={res['eta_cen']:.3f}")
+    if res.get("N_brace_anc_kN", 0.0) > 0.0:
+        print("  ── Base de CANTO (uplift + download contravent., issue 36) ──")
+        print(f"    N={res['N_uplift_ext_kN']:.1f}+{res['N_brace_anc_kN']:.1f}="
+              f"{res['N_uplift_canto_kN']:.1f} kN + V_base={res['V_base_ext_kN']:.1f} kN "
+              f"→ η_canto={res['eta_canto']:.3f}")
     print()
     print(f"  Ancoragem: {res['n_chu']}×{res['F_chu_kN']:.0f} kN = "
           f"{res['R_anc_kN']:.0f} kN")

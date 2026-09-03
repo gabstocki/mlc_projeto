@@ -287,6 +287,119 @@ def verifica_pilar_vento_lateral(
     return res
 
 
+# ── Montante de painel de contraventamento (issue 36) ─────────────────────────
+
+def verifica_pilar_contraventado(
+    mat:              GlulamMaterial,
+    b:                float,
+    h:                float,
+    H_pilar:          float,
+    N_grav_comp_kN:   float,
+    N_grav_uplift_kN: float,
+    downloads_kN:     list[float] | tuple[float, ...],
+    eixo:             str = "min",
+    M_vento_kNm:      float = 0.0,
+) -> dict:
+    """
+    Verifica um pilar que é MONTANTE de painel(éis) de contraventamento (cruz de
+    St. André). A diagonal tracionada aplica no montante a componente vertical
+    ``D = V_Ed·tan β`` — download (compressão) num montante e arrancamento
+    (tração) no oposto. Este esforço EXISTE no pilar de madeira e deve ser somado
+    à reação de gravidade (issue 36); hoje só ia à fundação.
+
+    Verifica o pilar de CANTO de forma COMBINADA — todas as ações concomitantes
+    do mesmo evento de vento (EN 1990 §6.4.3): axial de gravidade + download do
+    contraventamento + momento de vento na face. Dois estados-limite:
+
+      · FLEXO-COMPRESSÃO (EC5 §6.3.2, com instabilidade k_c):
+            N_c = N_grav_comp + Σ D              (gravidade + download do vento)
+            + M_vento na face → σ_c/(k_c·f_c0d) + σ_m/f_md ≤ 1
+        N_grav_comp = reação vertical de gravidade da combinação de compressão
+        (usa-se o máximo, majorante conservador de EN 1990).
+
+      · FLEXO-TRAÇÃO sob uplift (EC5 §6.2.3 Eq. 6.17):
+            N_t = Σ D − N_grav_uplift            (arrancamento − gravidade mínima)
+            σ_t,0,d/f_t,0,d + σ_m,d/f_m,d ≤ 1
+        Pareia o download do vento (Σ D) com a MENOR reação de gravidade
+        (combinação de sucção/uplift, concomitante ao mesmo vento). Se N_t ≤ 0 não
+        há tração líquida. N_t é também a DEMANDA DE ANCORAGEM à fundação
+        (integrar com a verificação de arrancamento — issue 33).
+
+    Args:
+        mat              : material do pilar (k_mod da duração — vento: curta)
+        b, h             : seção (m); h = dimensão no plano do pórtico
+        H_pilar          : comprimento do pilar (m)
+        N_grav_comp_kN   : reação vertical de gravidade p/ o caso de compressão (kN)
+        N_grav_uplift_kN : reação vertical mínima (combinação de uplift) (kN)
+        downloads_kN     : lista de D=V_Ed·tan β dos painéis que o montante integra
+                           (ex.: [long., transv.] para o pilar de canto) (kN)
+        eixo             : "min" | "y" | "z" (ver verifica_pilar)
+
+    Returns:
+        dict com η governante (max entre compressão e tração), detalhamento e a
+        demanda de tração/ancoragem.
+
+    Referência: EN 1995-1-1 §6.1.2 (tração //fibras), §6.3.2 (compressão);
+                EN 1993-1-1 §5.3.3 (forças de contraventamento); EN 1990 §6.4.3.
+    """
+    D = float(sum(downloads_kN))
+    M = abs(float(M_vento_kNm))
+
+    # Compressão: gravidade + download + momento de vento (flexo-compressão §6.3.2)
+    N_c = float(N_grav_comp_kN) + D
+    r_c = verifica_pilar(mat, b, h, H_pilar, N_c, M_d_kNm=M, eixo=eixo)
+    eta_comp = r_c["eta"]
+
+    # Módulo resistente do eixo (mesma convenção de verifica_pilar)
+    A = b * h
+    W_use = h * b ** 2 / 6.0 if eixo == "z" else b * h ** 2 / 6.0
+
+    # Tração líquida sob uplift + vento (flexo-tração EC5 §6.2.3 Eq. 6.17):
+    #     σ_t,0,d/f_t,0,d + σ_m,d/f_m,d ≤ 1
+    N_t = D - float(N_grav_uplift_kN)
+    if N_t > 0.0 and A > 0.0:
+        sigma_t0d = N_t * 1e3 / A                       # Pa
+        sigma_m   = (M * 1e3) / W_use if W_use > 0 else 0.0
+        eta_trac  = sigma_t0d / mat.f_t0_d + sigma_m / mat.f_m_d
+    else:
+        sigma_t0d = 0.0
+        sigma_m   = 0.0
+        eta_trac  = 0.0
+
+    regime = "tracao" if eta_trac >= eta_comp else "compressao"
+    eta    = max(eta_comp, eta_trac)
+
+    return {
+        "b_m":               b,
+        "h_m":               h,
+        "H_m":               H_pilar,
+        "download_total_kN": round(D, 3),
+        "M_vento_kNm":       round(M, 3),
+        "N_comp_kN":         round(N_c, 3),
+        "eta_comp":          round(eta_comp, 4),
+        "k_c":               r_c["k_c"],
+        "lambda":            r_c["lambda"],
+        "N_tracao_liq_kN":   round(max(N_t, 0.0), 3),
+        "sigma_t0d_MPa":     round(sigma_t0d / 1e6, 4),
+        "sigma_m_MPa":       round(sigma_m / 1e6, 4),
+        "f_t0d_MPa":         round(mat.f_t0_d / 1e6, 4),
+        "eta_tracao":        round(eta_trac, 4),
+        "regime":            regime,
+        "eta":               round(eta, 4),
+        "ok":                eta <= 1.0,
+        "N_ancoragem_kN":    round(max(N_t, 0.0), 3),
+        "norma": (
+            "EC5 §6.2.3 (flexo-tração) + §6.3.2 (flexo-compressão) | "
+            "EN 1993-1-1 §5.3.3 | EN 1990"
+        ),
+        "nota": (
+            "Montante de painel de contraventamento: N = R_v ± V_Ed·tanβ "
+            "(download da cruz de St. André). N_tracao_liq = demanda de "
+            "ancoragem à fundação (issue 33/36)."
+        ),
+    }
+
+
 # ── Varredura paramétrica ─────────────────────────────────────────────────────
 
 def varrer_pilares(

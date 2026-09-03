@@ -67,6 +67,13 @@
   · Frontão ∅16 mm S235 (β=50.6°) | N_diag=42.2 kN | η_N=0.893 | η_δ=0.611
   · Caminho à fundação: H_base=26.8 kN + N_uplift=32.6 kN | l_ef=1H (non-sway) validado
 
+[FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...
+  ✓ Pilar canto (grav+brace+vento) §6.2.3/§6.3.2 η = 0.5588  ███████████
+  · Download: long=85.3 + transv=32.6 = 117.9 kN (canto = 2 painéis) | M_vento=3.0 kNm
+  · Flexo-compressão: N=259.0 kN (R_v=141.1+download) + M → η=0.559
+  · Flexo-tração (uplift, R_v,min=4.2): N_t=113.6 kN + M → η=0.180 | ancoragem=113.6 kN (→ sucção/issue 33)
+  · Governa: compressao | η=0.5588 (vs pilar interno ~0.143)
+
 [FASE 2] Corda do diafragma — elemento de beiral (issue 32)...
   ✓ Corda beiral §6.2.3/§6.3.2     η = 0.0908  █
   · Terça de beiral = corda do diafragma (MLC GL24h) | N_corda=7.6 kN (±) | seção 0.2×0.58 m
@@ -173,10 +180,11 @@
   ✓ L1c     η_slip=0.0300  η_alt=0.2517
 
 [FASE 4c] Sucção/uplift — ancoragem e tirante frouxo...
-  ✓ Sucção/uplift (ancoragem)      η = 0.3558  ███████
+  ✓ Sucção/uplift (ancoragem)      η = 0.7242  ██████████████
   · Sucção ELU_C3: R_v=-31.6 kN (uplift) | H=-84.6 kN (invertido → tirante frouxo)
   · Extremidade: N_uplift=29.3 kN + V_base=84.6 kN → η_ext=0.356 (ancoragem 4×80 kN)
-  · Central: N_uplift=60.9 kN → η_cen=0.190 | governa: extremidade
+  · Central: N_uplift=60.9 kN → η_cen=0.190
+  · Canto (uplift+contravent., issue 36): N=29.3+117.9=147.2 kN → η_canto=0.724 | governa: canto (contraventado)
 
 ========================================================================
   RESUMO DE TAXAS DE UTILIZAÇÃO — Viga biarticulada MLC
@@ -194,6 +202,7 @@
   Pilar central (N)                EC5 §6.3.2                     0.2980  ✓
   Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2            0.2527  ✓
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.3217  ✓
+  Pilar canto (grav+brace+vento)   EC5 §6.2.3+§6.3.2              0.5588  ✓
   Terça flexão                     EC5 §6.1.6+§6.1.7              0.1695  ✓
   Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24        0.1805  ✓
   Terça Q_k concentrado            EN 1991-1-1 Tab.6.10           0.0546  ✓
@@ -205,7 +214,7 @@
   Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3          0.1976  ✓
   Impacto veículo (A_d)            EN 1991-1-7                    0.4774  ✓
   Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3         0.0420  ✓
-  Sucção/uplift (ancoragem)        EN 1990+EN 1992-4              0.3558  ✓
+  Sucção/uplift (ancoragem)        EN 1990+EN 1992-4              0.7242  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3             0.6631  ✓
   ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.1429  ✓
   Ruptura de bloco L1              EC5 Anexo A                    0.1308  ✓
@@ -227,7 +236,7 @@
   T_tirante    = 377.97 kN  (∅48.0 mm MR315)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 36  |  todas OK = True
+  N.º verif.   = 37  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 

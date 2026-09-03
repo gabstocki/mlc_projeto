@@ -43,6 +43,7 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("pilar_central",       "Pilar central (N)",         "EC5 §6.3.2"),
     ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
+    ("pilar_contraventado", "Pilar canto (grav+brace+vento)","EC5 §6.2.3+§6.3.2"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
     ("terca_Qk_conc",       "Terça Q_k concentrado",     "EN 1991-1-1 Tab.6.10"),

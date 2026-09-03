@@ -57,6 +57,8 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 15 | P1 | [Contraventamento do telhado: n=18 vs dois planos de 9; kf/ks e duplicação](15-contraventamento-telhado-n18.md) ✅ |
 | 31 | P0 | [Estabilidade transversal do pórtico (mecanismo sway no plano)](31-estabilidade-transversal-portico.md) — desdobramento da 14 ✅ |
 | 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 ✅ |
+| 35 | P1 | [Empuxo de gravidade não se desenvolve (beiral flexível): incoerência viga×pilar×tirante; revisa a 24](35-empuxo-pilar-caminho-carga.md) |
+| 36 | P1 | [Download do contraventamento (±V_Ed·tanβ) não entra na verificação dos pilares dos painéis; tração sob uplift](36-download-contraventamento-pilares.md) ✅ (resta refino P2: concomitância por direção de vento) |
 
 ### Terças
 | # | Prioridade | Issue |

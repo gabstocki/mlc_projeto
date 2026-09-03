@@ -662,6 +662,38 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · Caminho à fundação: H_base={cvt['H_base_kN']:.1f} kN + "
           f"N_uplift={cvt['N_uplift_kN']:.1f} kN | l_ef=1H (non-sway) validado")
 
+    # Montante de contraventamento — download ±V_Ed·tanβ no pilar (issue 36)
+    print("\n[FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...")
+    from mlc_projeto.checks.elu.pilares import verifica_pilar_contraventado
+    # Pilar de CANTO: montante do painel LONGITUDINAL e do FRONTÃO transversal
+    # (integra os dois downloads). N_uplift_kN de cada módulo = V_Ed·tanβ por painel.
+    _D_long   = float(cvv["N_uplift_kN"])
+    _D_transv = float(cvt["N_uplift_kN"])
+    _Rv_comp  = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU().values())
+    _Rv_min   = min(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU().values())
+    # Momento de vento na face (concomitante) — o maior entre θ=0° e θ=90°.
+    _M_vento  = max(
+        float(res_elu.get("pilar_vento_0", {}).get("M_d_kNm", 0.0)),
+        float(res_elu.get("pilar_vento_90", {}).get("M_d_kNm", 0.0)),
+    )
+    res_elu["pilar_contraventado"] = verifica_pilar_contraventado(
+        mat=mat_elu, b=B_PILAR, h=H_PILAR, H_pilar=H_PILAR_ALT,
+        N_grav_comp_kN=_Rv_comp, N_grav_uplift_kN=_Rv_min,
+        downloads_kN=[_D_long, _D_transv], eixo="min", M_vento_kNm=_M_vento,
+    )
+    _pcv = res_elu["pilar_contraventado"]
+    _print_eta("Pilar canto (grav+brace+vento) §6.2.3/§6.3.2", _pcv)
+    print(f"  · Download: long={_D_long:.1f} + transv={_D_transv:.1f} = "
+          f"{_pcv['download_total_kN']:.1f} kN (canto = 2 painéis) | "
+          f"M_vento={_pcv['M_vento_kNm']:.1f} kNm")
+    print(f"  · Flexo-compressão: N={_pcv['N_comp_kN']:.1f} kN "
+          f"(R_v={_Rv_comp:.1f}+download) + M → η={_pcv['eta_comp']:.3f}")
+    print(f"  · Flexo-tração (uplift, R_v,min={_Rv_min:.1f}): "
+          f"N_t={_pcv['N_tracao_liq_kN']:.1f} kN + M → η={_pcv['eta_tracao']:.3f} "
+          f"| ancoragem={_pcv['N_ancoragem_kN']:.1f} kN (→ sucção/issue 33)")
+    print(f"  · Governa: {_pcv['regime']} | η={_pcv['eta']:.4f} "
+          f"(vs pilar interno ~{res_elu['flexo_comp'].get('eta', 0):.3f})")
+
     # Corda do diafragma — elemento de beiral verificado como membro (issue 32)
     print("\n[FASE 2] Corda do diafragma — elemento de beiral (issue 32)...")
     from mlc_projeto.checks.elu.corda_beiral import verificar_corda_beiral
@@ -1044,12 +1076,19 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     # ── Fase 4c: Combinação de sucção — uplift + empuxo invertido (issue 33) ───
     print("\n[FASE 4c] Sucção/uplift — ancoragem e tirante frouxo...")
+    # Tração de contraventamento concomitante na base de canto (issue 36):
+    # envelope conservador Σ dos dois painéis (long. + transv.).
+    _N_brace_anc = float(
+        res_elu.get("contraventamento_vertical", {}).get("N_uplift_kN", 0.0)
+        + res_elu.get("contraventamento_transversal", {}).get("N_uplift_kN", 0.0)
+    )
     res_succao = verificar_succao_uplift(
         load=load, geo=geo,
         F_chu_kN=F_CHU_KN, n_chu=int(res_lig["L3"]["n_chumbadores"]),
         b_pilar=B_PILAR, h_pilar=H_PILAR, H_pilar_m=H_PILAR_ALT,
         rho_mean_kgm3=mat_longa.rho_mean,
         com_tirante=TIRANTE_BASE,
+        N_brace_anc_kN=_N_brace_anc,
     )
     res_elu["succao_uplift"] = res_succao
     _print_eta("Sucção/uplift (ancoragem)", res_succao)
@@ -1060,7 +1099,11 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"V_base={res_succao['V_base_ext_kN']:.1f} kN → η_ext={res_succao['eta_ext']:.3f} "
           f"(ancoragem {res_succao['n_chu']}×{res_succao['F_chu_kN']:.0f} kN)")
     print(f"  · Central: N_uplift={res_succao['N_uplift_cen_kN']:.1f} kN → "
-          f"η_cen={res_succao['eta_cen']:.3f} | governa: {res_succao['base_gov']}")
+          f"η_cen={res_succao['eta_cen']:.3f}")
+    print(f"  · Canto (uplift+contravent., issue 36): "
+          f"N={res_succao['N_uplift_ext_kN']:.1f}+{res_succao['N_brace_anc_kN']:.1f}="
+          f"{res_succao['N_uplift_canto_kN']:.1f} kN → η_canto={res_succao['eta_canto']:.3f} "
+          f"| governa: {res_succao['base_gov']}")
 
     # ── Pacote de resultados (terminal / Excel / memorial) ─────────────────────
     todos_para_relatorio = {

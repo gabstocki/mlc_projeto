@@ -66,6 +66,25 @@ def test_interacao_linear_governada_pela_extremidade():
     assert r["eta"] == pytest.approx(r["eta_ext"], rel=1e-9)
 
 
+def test_download_contravento_soma_na_ancoragem_do_canto():
+    """
+    issue 36: a tração de download do contraventamento (Σ V_Ed·tanβ) é concomitante
+    ao uplift de sucção e soma na ancoragem da base de CANTO.
+    """
+    geo, mat, load = _load_gk_correto()
+    r0 = _verificar(load, geo, mat)                       # sem download
+    r1 = _verificar(load, geo, mat, N_brace_anc_kN=117.9) # com download
+    # sem download: canto == extremidade (nada somado) e não governa
+    assert r0["N_brace_anc_kN"] == 0.0
+    assert r0["base_gov"] == "extremidade"
+    # com download: N do canto = uplift_ext + download
+    assert r1["N_uplift_canto_kN"] == pytest.approx(
+        r1["N_uplift_ext_kN"] + 117.9, abs=1e-2)
+    assert r1["eta_canto"] > r1["eta_ext"]               # a soma agrava
+    assert r1["base_gov"] == "canto (contraventado)"
+    assert r1["eta"] == pytest.approx(r1["eta_canto"], rel=1e-9)
+
+
 def test_sem_tirante_nao_ha_frouxo():
     """Sem tirante, o empuxo já iria à sapata; não se marca 'tirante frouxo'."""
     geo, mat, load = _load_gk_correto()
