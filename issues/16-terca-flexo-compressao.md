@@ -70,9 +70,16 @@ garantida por construção, não por hipótese.
 - **Testes:** [`tests/test_terca_flexocompressao.py`](../tests/test_terca_flexocompressao.py)
   (7 casos: fórmula linear vs. quadrática, concomitância, η único, Eq.6.24 governa).
 
-### Nota / follow-up
+### Nota / follow-up ✅ RESOLVIDO
 A viga principal ([`checks/elu/flexao.py`](../mlc_projeto/checks/elu/flexao.py))
-escreve as Eq. 6.23/6.24 com o termo de compressão **ao quadrado** — que é a
-forma de §6.2.4, não de §6.3.2. Para a viga esbelta o correto seria a forma
-**linear** (mais conservadora). Fica registado como possível refinamento
-separado (não é o escopo desta issue, que trata da terça).
+escrevia as Eq. 6.23/6.24 com o termo de compressão **ao quadrado** — forma de
+§6.2.4 (peças curtas, λ_rel≤0,3), não de §6.3.2. **Corrigido** para a forma
+**linear** (÷k_c), coerente com §6.3.2(3) (viga esbelta, l_ef,y=L → λ_rel»0,3).
+Também a Eq. 6.35 (§6.3.3) estava invertida — corrigida para **flexão ao quadrado
++ compressão linear**, `(σ_m/(k_crit·f_m,d))² + σ_c/(k_c,z·f_c0d) ≤ 1`, conforme
+o texto normativo EN 1995-1-1:2004.
+
+- Impacto: η da viga 0,057 → **0,141** (Eq. 6.23 governa); segue folgado, agora
+  correto. `report.py` §Detalhes-Flexo-compressão viga com a fórmula linear + nota.
+- Testes: [`tests/test_flexao_viga_linear.py`](../tests/test_flexao_viga_linear.py)
+  (4 casos: 6.23/6.24 linear, ≠ quadrática, 6.35 flexão², viga aprova).

@@ -37,10 +37,10 @@
   → l_1 LTB = 2.530 m | terças válidas como restrição lateral (cobertura OK)
   → η_diag=0.579 | η_δ=0.048 | η_terça=0.083 | F_diag=51.7 kN | peso aço≈300 kg
   ✓ Flambagem §6.3.3               η = 0.0477  
-  ✓ Flexo-comp. §6.3.2+6.35        η = 0.0565  █
+  ✓ Flexo-comp. §6.3.2+6.35        η = 0.1412  ██
   ✓ Cisalhamento §6.1.7            η = 0.1821  ███
   ✓ Apoio §6.1.5+§6.2.2            η = 0.3499  ██████
-  ✓ Pilar 0.32×0.27m §6.3.2        η = 0.0745  █
+  ✓ Pilar 0.32×0.27m §6.3.2        η = 0.1412  ██
 
 [FASE 2] Verificações ELU — Pilar central...
   ✓ Pilar central 0.32×0.27m §6.3.2 η = 0.2980  █████
@@ -187,10 +187,10 @@
   Cumeeira t90                     EC5 §6.4.3                     0.1724  ✓
   Mísula face incl. σm,α           EC5 §6.4.2                     0.1124  ✓
   Flambagem lateral                EC5 §6.3.3                     0.0477  ✓
-  Flexo-comp. viga                 EC5 §6.3.2+§6.3.3              0.0565  ✓
+  Flexo-comp. viga                 EC5 §6.3.2+§6.3.3              0.1412  ✓
   Cisalhamento                     EC5 §6.1.7                     0.1821  ✓
   Apoio                            EC5 §6.1.5+§6.2.2              0.3499  ✓
-  Pilar lateral (N)                EC5 §6.3.2                     0.0745  ✓
+  Pilar lateral (N)                EC5 §6.3.2                     0.1412  ✓
   Pilar central (N)                EC5 §6.3.2                     0.2980  ✓
   Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2            0.2527  ✓
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2            0.3217  ✓

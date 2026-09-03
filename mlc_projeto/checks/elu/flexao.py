@@ -43,9 +43,16 @@ def verifica_flexao(
     """
     Verifica flexo-compressão da viga na seção de M_max.
 
-    Eq. (6.23): (σ_c,0,d/(k_c,y·f_c,0,d))² + σ_m,y,d/f_m,d ≤ 1
-    Eq. (6.24): (σ_c,0,d/(k_c,z·f_c,0,d))² + k_m·σ_m,y,d/f_m,d ≤ 1
-    Eq. (6.35): σ_m,d/(k_crit·f_m,d) + (σ_c,d/(k_c,z·f_c,0,d))² ≤ 1
+    Eq. (6.23): σ_c,0,d/(k_c,y·f_c,0,d) + σ_m,y,d/f_m,d ≤ 1
+    Eq. (6.24): σ_c,0,d/(k_c,z·f_c,0,d) + k_m·σ_m,y,d/f_m,d ≤ 1
+    Eq. (6.35): (σ_m,d/(k_crit·f_m,d))² + σ_c,0,d/(k_c,z·f_c,0,d) ≤ 1
+
+    FORMA NORMATIVA (issue 16): em §6.3.2 (colunas, instabilidade) o termo de
+    COMPRESSÃO é LINEAR (÷k_c) — a forma quadrática (σ_c/(k_c·f_c0d))² é a de
+    §6.2.4 (Eq. 6.19/6.20), aplicável só a peças curtas (λ_rel,y e λ_rel,z ≤ 0,3,
+    por §6.3.2(2)). A viga é esbelta (l_ef,y = L → λ_rel,y » 0,3) ⇒ §6.3.2(3) ⇒
+    forma linear. Em §6.3.3 (6.35) é o termo de FLEXÃO que é ao quadrado e a
+    compressão LINEAR. Confirmado no texto EN 1995-1-1:2004 §6.3.2/§6.3.3.
 
     Args:
         geo  : Geometria da viga
@@ -93,20 +100,20 @@ def verifica_flexao(
     sigma_c = N_d_N / A_sec
     sigma_m = M_max_Nm / W_y
 
-    # ── EC5 §6.3.2 Eq. (6.23) e (6.24) ────────────────────────
-    # Flexão uniaxial My: σ_m,z = 0
-    eta_623 = (sigma_c / (k_c_y * mat.f_c0_d)) ** 2 + sigma_m / mat.f_m_d
-    eta_624 = (sigma_c / (k_c_z * mat.f_c0_d)) ** 2 + K_M * sigma_m / mat.f_m_d
+    # ── EC5 §6.3.2 Eq. (6.23) e (6.24) — compressão LINEAR (÷k_c) ──
+    # Flexão uniaxial My: σ_m,z = 0. Viga esbelta (λ_rel » 0,3) → §6.3.2(3).
+    eta_623 = sigma_c / (k_c_y * mat.f_c0_d) + sigma_m / mat.f_m_d
+    eta_624 = sigma_c / (k_c_z * mat.f_c0_d) + K_M * sigma_m / mat.f_m_d
 
     # ── EC5 §6.3.3 — k_crit na mesma seção ───────────────────
     sigma_crit = calcular_sigma_m_crit(mat.E0_05, b, h_x, l_ef_z)
     lam_rel_m  = calcular_lambda_rel_m(mat.f_m_k, sigma_crit)
     k_crit     = calcular_k_crit(lam_rel_m)
 
-    # ── EC5 §6.3.3 Eq. (6.35) ─────────────────────────────────
+    # ── EC5 §6.3.3 Eq. (6.35) — FLEXÃO ao quadrado, compressão LINEAR ──
     eta_635 = (
-        sigma_m / (k_crit * mat.f_m_d)
-        + (sigma_c / (k_c_z * mat.f_c0_d)) ** 2
+        (sigma_m / (k_crit * mat.f_m_d)) ** 2
+        + sigma_c / (k_c_z * mat.f_c0_d)
     )
 
     eta_gov = max(eta_623, eta_624, eta_635)

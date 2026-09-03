@@ -854,7 +854,7 @@ def gerar_tex(
             'horizontal do intradorso $\\Rightarrow$ usa-se a reação vertical $R_v$ '
             '(plano distinto). Não é incoerência: são planos diferentes.\n'
             '\\end{itemize}\n\n'
-            '\\vspace{2pt}\n\\subsection*{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23)}\n\n\\[\n  \\left(\\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\\right)^2\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\begin{tabular}{@{}lllll@{}}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
+            '\\vspace{2pt}\n\\subsection*{Detalhes -- Flexo-compressão viga (EC5~\\S6.3.2 Eq.~6.23)}\n\n\\[\n  \\frac{\\sigma_{c,0,d}}{k_c \\cdot f_{c,0,d}}\n  + \\frac{\\sigma_{m,d}}{f_{m,d}} \\leq 1{,}0\n\\]\n\n\\textit{Termo de compressão \\textbf{linear} ($\\div k_c$): \\S6.3.2 (peça esbelta, \\S6.3.2(3)); a forma quadrática seria a de \\S6.2.4, só para $\\lambda_{rel}\\leq0{,}3$ (issue~16).}\n\n\\begin{tabular}{@{}lllll@{}}\n  \\toprule\n  $M_d$ (kN·m) & $N_d$ (kN) & $\\sigma_{c,0,d}$ (MPa) & $\\sigma_{m,d}$ (MPa) & $k_c$ \\\\\n  \\midrule\n')
     parts.append(f'  {r_viga.get('M_max_kNm', 0):.2f} & ')
     parts.append(f'{r_viga.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_viga.get('sigma_c_MPa', 0):.4f} & ')
