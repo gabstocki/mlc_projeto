@@ -95,6 +95,7 @@ def verificar_succao_uplift(
     r = analisar_biarticulada(
         q=q_med, L=geo.L, h0=geo.h0, h_ap=geo.h_ap,
         alpha_rad=geo.alpha_rad, b=geo.b, q_esq=c.q_esq, q_dir=c.q_dir,
+        desenvolve_empuxo=load.empuxo_desenvolve,
     )
     R_A = float(r["R_A_kN"])
     R_B = float(r["R_B_kN"])
@@ -115,9 +116,13 @@ def verificar_succao_uplift(
     N_uplift_ext = max(0.0, uplift_ext - W_pilar_fav)       # tração líquida ancoragem
     N_uplift_cen = max(0.0, uplift_cen - W_pilar_fav)
 
-    # Empuxo invertido: tirante frouxo → cortante na base de EXTREMIDADE.
+    # Cortante na base de EXTREMIDADE pelo empuxo de sucção:
+    #   · SEM tirante: o empuxo SEMPRE vai à base (|H|), invertido ou não;
+    #   · COM tirante: só quando invertido (tirante frouxo, sem alívio por atrito
+    #     — base tracionada); com tirante ativo (H>0) o empuxo é absorvido pela
+    #     barra e V_base ≈ 0.
     # No apoio central, os empuxos dos dois vãos cancelam (V_base ≈ 0).
-    V_base_ext = abs(H_suc) if (com_tirante and empuxo_invertido) else 0.0
+    V_base_ext = abs(H_suc) if (not com_tirante or empuxo_invertido) else 0.0
 
     # Capacidade de ancoragem (lumped) e interação N–V (linear, conservadora)
     R_anc = max(1e-9, n_chu * F_chu_kN)
@@ -187,7 +192,12 @@ def verificar_succao_uplift(
             "fica frouxa; o empuxo invertido |H| vai à fundação como cortante na "
             "base de extremidade (sem atrito — base tracionada)."
             if (com_tirante and empuxo_invertido)
-            else "Sem inversão de empuxo relevante nesta combinação."
+            else (
+                "Sem tirante: o empuxo de sucção |H| vai à fundação como cortante "
+                "na base de extremidade, concomitante ao uplift (interação N–V)."
+                if not com_tirante
+                else "Sem inversão de empuxo relevante nesta combinação."
+            )
         ),
         "nota_anc": (
             "Interação N–V linear (conservadora); verificação definitiva dos "

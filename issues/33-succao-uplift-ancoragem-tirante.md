@@ -79,3 +79,15 @@ H=−245,5 kN (invertido → tirante frouxo).
 Combinação de sucção verificada quanto ao arrancamento (ancoragem) e ao empuxo
 invertido (tirante frouxo → fundação) **✓**, com o caminho de carga completo e
 registro no memorial (§11.2) **✓**.
+
+---
+
+## ⚠ Reconciliação (issue 38 — auditoria)
+
+O valor **`H = −245,5 kN`** citado nesta issue está **DEFASADO** (anterior à correção
+do termo axial do Castigliano, `loads.py` v4, que reduziu `H` ~3,5×). O empuxo de
+sucção **vigente** é **`H = −84,6 kN`** (ELU_C3, `q=−3,12 kN/m`, `R_v=−31,6 kN`) —
+confirmado por reprodução direta ([pipeline_console.txt:184](../output/pipeline_console.txt)
+e cálculo da issue 38). O caminho de carga (tirante frouxo → empuxo invertido à
+fundação; interação N–V na base de extremidade) **permanece válido**; muda apenas a
+magnitude de `V_base` (menor, portanto **menos** desfavorável que o registrado).

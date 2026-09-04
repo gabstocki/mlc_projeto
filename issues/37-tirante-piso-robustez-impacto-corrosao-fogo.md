@@ -6,6 +6,13 @@
 - **Arquivos:** `mlc_projeto/checks/elu/tirante_base.py:173` (punt para "execução"); `mlc_projeto/checks/elu/impacto_veiculo.py` (já existe p/ pilares, F_dx=50 kN / F_dy=25 kN); `mlc_projeto/visualization/viz_3d.py:301` (`z_tir=0.08 m`); `mlc_projeto/main.py` (Fase 2 impacto; Fase 4a tirante)
 - **Relaciona:** [24](24-tirante-fy315-flexibilidade.md), [33](33-succao-uplift-ancoragem-tirante.md), [35](35-empuxo-pilar-caminho-carga.md), [38](38-caminho-horizontal-transversal-coerencia.md), [30](30-memorial-classe-uso-adesivo.md).
 
+> **⚠ Superada pela Opção B (issue 35 implementada):** ao assumir que o empuxo não se
+> desenvolve, o **tirante de base foi REMOVIDO** (não fecha empuxo inexistente nem resiste
+> ao uplift vertical). Sem tirante no piso, esta issue (impacto/corrosão/fogo/tropeço do
+> tirante) **deixa de se aplicar**. O módulo `tirante_piso_robustez.py` e a verificação
+> ficam disponíveis caso a Opção A volte a ser considerada (`EMPUXO_DESENVOLVE=True` +
+> `TIRANTE_BASE=True`). Mantido como referência.
+
 ## Origem
 Apontamento do orientador (revisão do "caminhamento horizontal transversal"):
 o tirante que fecha o empuxo está modelado **ao nível do piso** (`z_tir ≈ 0,08 m`,

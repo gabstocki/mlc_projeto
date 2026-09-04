@@ -86,11 +86,13 @@ def test_download_contravento_soma_na_ancoragem_do_canto():
 
 
 def test_sem_tirante_nao_ha_frouxo():
-    """Sem tirante, o empuxo já iria à sapata; não se marca 'tirante frouxo'."""
+    """Sem tirante não há 'tirante frouxo', mas o empuxo de sucção |H| vai à
+    base como cortante (sempre — não depende da inversão)."""
     geo, mat, load = _load_gk_correto()
     r = _verificar(load, geo, mat, com_tirante=False)
     assert r["tirante_frouxo"] is False
-    assert r["V_base_ext_kN"] == 0.0               # não roteia por 'tirante frouxo'
+    # sem tirante o empuxo sempre carrega a base (|H|), concomitante ao uplift
+    assert r["V_base_ext_kN"] == pytest.approx(abs(r["H_suc_kN"]), abs=1e-2)
 
 
 def test_ancoragem_insuficiente_reprova():

@@ -59,16 +59,33 @@ ser revista.
   ~35 mm** (ULS) / ~20 mm (ELS) não verificada. **Provável ponto real de atenção.**
 
 ## O que precisa ser feito (decisão de coerência do modelo)
-- [ ] **Opção A — realizar o empuxo:** tirante/escora **no nível do beiral** (não no piso).
-      Aí H≈483 se desenvolve, `M_viga=533` fica válido, pilares seguem axiais e o tirante
-      (agora no beiral) carrega os ~483 kN. Custo: tirante a 7 m de altura, ~40,5 m.
-- [ ] **Opção B — assumir sem empuxo:** redimensionar/verificar a viga para `M0≈913`
-      (η≈0,24, provavelmente OK), **remover o tirante** como fecho de empuxo (ou mantê-lo só
-      para uplift), e **verificar a flecha real** (biapoiada + abertura do beiral).
-- [ ] Rever a **[issue 24](24-tirante-fy315-flexibilidade.md)**: incluir a flexão do pilar
-      (em série) na rigidez do apoio; a hipótese "indeslocável" não se sustenta como está.
-- [ ] Coerência dos textos: `pilares.py:4,22` ainda dizem "Pórtico de 3 rótulas / H=621 kN"
-      (legado); atualizar.
+
+> **DECISÃO TOMADA (issue 38): Opção B — assumir sem empuxo.** A auditoria reproduzível
+> ([`empuxo_acoplado.py`](../mlc_projeto/checks/elu/empuxo_acoplado.py)) confirmou que o empuxo
+> não se desenvolve (`H_dev≈0`; `k_arco=208 462` vs `k_pilar≈0` kN/m) e que a viga tende a
+> biapoiada (`M: 417→714 kN·m`, +71%). Os números aqui (H≈483/M≈913) são de uma configuração
+> anterior; os vigentes estão na [issue 38](38-caminho-horizontal-transversal-coerencia.md).
+
+- [x] ~~Opção A — realizar o empuxo (tirante/escora no beiral)~~ — **descartada**: a viga já é
+      folgada em `M0`, não compensa o custo de um elemento a 7 m por pórtico.
+- [x] **Opção B (adotada) — IMPLEMENTADA:** `EMPUXO_DESENVOLVE=False` em `main.py`;
+      `analisar_biarticulada(desenvolve_empuxo=...)` zera o empuxo efetivo → viga
+      **biapoiada** (`M=M0≈714 kN·m`). O `H_rígido` (Castigliano) fica no retorno para a
+      auditoria (`H_rigido_kN`). Resultado: flexo-comp. viga `η=0,13`; cumeeira `0,46`.
+- [x] **Flecha real (Opção B):** ELS reavaliado com `M0` (o `deflection_els` herda o
+      flag) → `η_ELS=0,22` (folga ampla; a seção é muito alta).
+- [x] **Tirante REMOVIDO** (não fecha empuxo inexistente nem resiste ao uplift vertical);
+      sapata sem tirante com **piso construtivo de 4 chumbadores** (ancoragem ao uplift,
+      `succao_uplift` η=0,46). A [issue 37](37-tirante-piso-robustez-impacto-corrosao-fogo.md)
+      (robustez do tirante no piso) deixa de se aplicar.
+- [x] Rever a **[issue 24](24-tirante-fy315-flexibilidade.md)** — **feito** (via issue 38).
+- [x] Coerência dos textos: `pilares.py` — **corrigido** (38).
+
+### Consequência exposta (déficit real da Opção A que estava mascarado)
+Sem o empuxo, o **cortante do beiral sobe 107→141 kN** e a ligação **L1/L1c falha ao
+fendilhamento** (§8.1.4, `η=1,16>1`). Resolvido com **reforço ⊥ às fibras** (parafusos
+autoatarraxantes, EC5 §8.7.2): `11×∅10 mm, l_ef=400 mm → η=0,71`. **Pipeline APROVADO,
+η_max=1,00.**
 
 ## Critério de aceite
 Modelo coerente sobre o empuxo: ou o beiral é efetivamente indeslocável (restrição real no

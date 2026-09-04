@@ -188,7 +188,9 @@ def impacto_flexibilidade_tirante(
     Avalia o impacto da FLEXIBILIDADE AXIAL do tirante sobre o empuxo H (issue 24).
 
     Diagnóstico por rigidezes horizontais (kN/mm):
-        k_arco = 1/f_p,  f_p = ∫ y_c²/(E·I) dx   (mesmo integrando ∫y_c²/I do H)
+        k_arco = 1/f_p,  f_p = ∫ y_c²/(E·I) ds + ∫ cos²θ/(E·A) ds
+                 (flexão + AXIAL — a MESMA flexibilidade do denominador do H;
+                  no arco raso o termo axial DOMINA, não pode ser omitido)
         k_tir  = 1/f_t,  f_t = L/(E_s·A)         (rigidez axial do tirante)
 
     LIMITE DE TRIAGEM (modelo de 2 molas em SÉRIE, tirante como único apoio):
@@ -214,10 +216,16 @@ def impacto_flexibilidade_tirante(
     y_c = x_sim * tan_a / 2.0
     h_x = h0 + x_sim * tan_a
     I_x = np.maximum(b * h_x ** 3 / 12.0, 1e-18)
+    A_x = np.maximum(b * h_x, 1e-18)
+    theta = math.atan(tan_a / 2.0)
+    ds_dx = 1.0 / math.cos(theta)
 
-    den = float(np.trapezoid(y_c ** 2 / I_x, x))    # ∫ y_c²/I dx  [1/m]
     E_glulam_Pa = E_glulam_MPa * 1e6
-    f_p = den / E_glulam_Pa                          # m/N (compliance do arco)
+    # Compliance horizontal do arco = FLEXÃO + AXIAL (coerente com o H de loads.py;
+    # no arco raso o termo axial domina). [m/N]
+    f_flex = float(np.trapezoid(y_c ** 2 / I_x * ds_dx, x)) / E_glulam_Pa
+    f_ax = float(np.trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x)) / E_glulam_Pa
+    f_p = f_flex + f_ax                              # m/N (compliance do arco)
 
     A_m2 = math.pi * (d_mm * 1e-3) ** 2 / 4.0
     f_t = L / (E_ACO_MPA * 1e6 * A_m2)               # m/N (compliance do tirante)

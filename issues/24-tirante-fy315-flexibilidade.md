@@ -67,3 +67,22 @@ Diagnóstico por rigidezes horizontais:
 - **Testes:** [`tests/test_tirante_flexibilidade.py`](../tests/test_tirante_flexibilidade.py)
   (7 casos: MR315 disponível/adotado, hipótese registrada, rigidezes e 2 molas,
   δ=TL/EA, conclusão conservadora, sensibilidade ao diâmetro).
+
+---
+
+## ⚠ Reconciliação (issue 38 — auditoria)
+
+**Números desta issue estão DEFASADOS** (anteriores à correção do termo axial do
+Castigliano, `loads.py` v4, que reduziu `H` ~3,5×):
+- Aqui: `k_tir=52 kN/mm`, `δ=21,1 mm`, **∅80 mm**, `H_real=1097,6 kN`.
+- Vigente: `H=377 kN` (gravidade) ⇒ **∅48 mm**, `k_tir=19 kN/mm`, `δ=20,1 mm`
+  (o `k_tir=52` correspondia ao ∅80; o `δ=21,1` usava o `T` inflado ≈1097 kN).
+
+**Conclusão "H fica próximo do rígido" foi SUPERADA pela [issue 35](35-empuxo-pilar-caminho-carga.md)/[38](38-caminho-horizontal-transversal-coerencia.md):**
+o diagnóstico de 2 molas comparou `k_arco` com o `k_tirante` (base), mas o tirante
+está na **base** — entre o **springing** (topo, onde o empuxo atua) e a base há a
+**flexão do pilar** (em série, ~10³× mais mole), que governa. Como o pilar
+biarticulado é um mecanismo lateral (`k_pilar≈0`), o empuxo **não se desenvolve**
+(`H_dev≈0`, [`empuxo_acoplado.py`](../mlc_projeto/checks/elu/empuxo_acoplado.py)).
+O tirante permanece **conservador** (T=H rígido é o máximo), mas a justificativa da
+restrição paralela **não** se aplica ao springing.

@@ -49,27 +49,66 @@ apontado (colapso do pilar) está incorreto** — o modo real é viga+ELS. A aç
 **decisão A/B** já formulada na 35, que continua **por fazer**.
 
 ## O que precisa ser feito (verificação e fecho — implementação na issue 35)
-- [ ] **Registrar esta auditoria** e refutar quantitativamente o "M≈1300 kNm/colapso" com o
-      FEM acoplado (figura `output/issue35_empuxo_vs_rigidez.png`) no memorial.
-- [ ] **Forçar a decisão da [issue 35](35-empuxo-pilar-caminho-carga.md):** Opção A (tirante/
-      escora **no nível do beiral** → H=483 se desenvolve, `M_viga=533` válido, pilares
-      axiais) **ou** Opção B (sem empuxo → viga biapoiada `M≈913`, tirante só para uplift).
-      Marcar a opção adotada aqui e na 35.
-- [ ] **Propagar a coerência textual** (hoje inconsistente): [pilares.py:4,22-25](../mlc_projeto/checks/elu/pilares.py)
-      ainda dizem "Pórtico de 3 rótulas / H=621 kN" (legado); memorial reporta `M_viga` e
-      tirante com `H` que o modelo atual não sustenta.
-- [ ] **Verificar a divergência de `H` sob sucção:** console mostra `H=−84,6 kN`
-      ([pipeline_console.txt:184](../output/pipeline_console.txt)) enquanto a
-      [issue 33](33-succao-uplift-ancoragem-tirante.md) cita `H=−245,5 kN`. Reconciliar qual
-      é o vigente e propagar à ancoragem (tirante frouxo → fundação).
-- [ ] **Coerência dos diagnósticos de rigidez:** a [issue 24](24-tirante-fy315-flexibilidade.md)
-      cita `k_tir=52 kN/mm`, `δ=21,1 mm`, `∅80`; o console atual mostra `k_tir=19 kN/mm`,
-      `δ=20,1 mm`, `∅48` ([pipeline_console.txt:124,126](../output/pipeline_console.txt)) —
-      confirmar o dimensionamento vigente e alinhar o texto da 24.
+- [x] **Registrar esta auditoria** e refutar quantitativamente o "M≈1300 kNm/colapso" com o
+      modelo acoplado (agora **código reproduzível e testado**, não só a figura).
+- [x] **Forçar a decisão da [issue 35](35-empuxo-pilar-caminho-carga.md):** **Opção B adotada**
+      (assumir sem empuxo → viga biapoiada; tirante só para uplift). Registrada aqui, na 35 e
+      no memorial (§8b.3).
+- [x] **Propagar a coerência textual:** [pilares.py](../mlc_projeto/checks/elu/pilares.py)
+      corrigido ("3 rótulas / H=621 kN" → biarticulado + nota do mecanismo lateral e do
+      empuxo que não se desenvolve). Memorial (§8b.3) registra que `M_viga`/tirante ainda
+      refletem o modelo rígido — **recomputo é da issue 35**.
+- [x] **Divergência de `H` sob sucção reconciliada:** vigente `H=−84,6 kN` (ELU_C3);
+      `−245,5 kN` da [issue 33](33-succao-uplift-ancoragem-tirante.md) é defasado
+      (pré-correção do termo axial). Nota adicionada na 33.
+- [x] **Diagnósticos de rigidez reconciliados:** [issue 24](24-tirante-fy315-flexibilidade.md)
+      (`k_tir=52`, `δ=21,1`, `∅80`) é pré-correção; vigente `k_tir=19`, `δ=20,1`, `∅48`.
+      Nota adicionada na 24.
 
 ## Critério de aceite
 A afirmação do orientador está auditada e registrada (incoerência confirmada; mecanismo de
-"colapso do pilar" refutado com o FEM acoplado); a decisão de modelo da
-[issue 35](35-empuxo-pilar-caminho-carga.md) está **tomada e propagada** (textos de
-`pilares.py`, tirante e memorial coerentes com a opção adotada); as divergências numéricas
-de `H` (sucção) e das rigidezes/diâmetro do tirante estão reconciliadas.
+"colapso do pilar" refutado com o modelo acoplado); a decisão de modelo da
+[issue 35](35-empuxo-pilar-caminho-carga.md) está **tomada** (Opção B) e propagada nos textos
+de `pilares.py`/memorial; as divergências numéricas de `H` (sucção) e das rigidezes/diâmetro
+do tirante estão reconciliadas.
+
+---
+
+## ✅ Resolução (auditoria fechada; implementação do modelo na issue 35)
+
+### Auditoria reproduzível
+- **Novo módulo** [`checks/elu/empuxo_acoplado.py`](../mlc_projeto/checks/elu/empuxo_acoplado.py):
+  substitui o script pontual da figura `issue35_empuxo_vs_rigidez.png` por código testado.
+  `rigidez_horizontal_arco` (`f11=∫y_c²/EI+∫cos²θ/EA`), `rigidez_lateral_pilar`
+  (rótula=0 | engastada=`3EI/H³`), `empuxo_desenvolvido` (`H_dev=H_rig·k/(k+k_arco)`) e o
+  orquestrador `analisar_empuxo_acoplado`.
+- **`main.py`** (Fase 4a): imprime a auditoria como diagnóstico de coerência.
+- **`report.py`**: memorial **§8b.3** com o achado e a caixa de decisão (Opção B).
+- **Testes:** [`tests/test_empuxo_acoplado.py`](../tests/test_empuxo_acoplado.py) (10 casos).
+  Suíte: **271 ✓**. Pipeline: **APROVADO, η_max=1,00** (auditoria é diagnóstico, não check).
+
+### Números (config vigente: L=20,25 m, h0=1,0 m, α=10°, b=0,32; pilar 0,32×0,27×7 m; GL24h)
+| Grandeza | Valor |
+|---|---|
+| `k_arco` (arco raso, muito rígido) | **208 462 kN/m** |
+| `k_pilar` biarticulado (mecanismo) / engastado (limite) | **0** / 53 kN/m (~3 949× mais mole) |
+| `H_dev` (limite generoso engastado) | **≈0,1 kN de 377** (0,0%) |
+| `M_viga` modelo (empuxo rígido) → biapoiada | **417 → 714 kN·m (+71%)** |
+
+**Refutação do "colapso":** o pilar biarticulado não pode receber empuxo horizontal
+(`ΣM_base=H·H_col ⇒ H_top=0`); como `k_arco ≫ k_pilar`, o empuxo **não se desenvolve** e o
+pilar fica com esforço horizontal ≈ 0. O "M≈1300 kN·m / flexo-compressão" **não ocorre**.
+
+### Decisão: **Opção B** (assumir sem empuxo)
+Justificativa: a viga já é folgada em `M0≈714` (η sobe ~0,14→0,24, sem falha), então **não
+compensa** forçar o empuxo com tirante/escora a 7 m (Opção A). A física real é a biapoiada.
+
+### Handoff para a [issue 35](35-empuxo-pilar-caminho-carga.md) — ✅ IMPLEMENTADO
+- [x] Viga reverificada **biapoiada** (`M0≈714 kN·m`): flexo-comp. `η=0,13`, cumeeira `0,46`.
+- [x] **Flecha real** (biapoiada, `deflection_els` herda o flag): `η_ELS=0,22`.
+- [x] **Tirante removido**; sapata sem tirante com piso construtivo de 4 chumbadores;
+      ancoragem ao uplift `η=0,46`.
+- [x] Memorial atualizado (§8b.3: decisão IMPLEMENTADA; valores refletem o modelo sem empuxo).
+- [x] **Déficit exposto e resolvido:** ligação do beiral L1/L1c falhava ao fendilhamento
+      (`η=1,16`, cortante 107→141 kN); **reforço ⊥ às fibras** (parafusos §8.7.2,
+      `11×∅10 mm` → `η=0,71`). **Pipeline APROVADO, η_max=1,00.**

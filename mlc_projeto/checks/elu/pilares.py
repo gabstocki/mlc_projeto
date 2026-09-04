@@ -1,15 +1,17 @@
 """
 checks/elu/pilares.py — Dimensionamento dos pilares. v2
 
-ATUALIZAÇÃO v2 — Pórtico de 3 rótulas:
+Sistema — pilar biarticulado (viga biarticulada + pilares rotulados):
     Rótulas em ambas as extremidades do pilar:
     - Base: rótula na sapata
     - Topo: rótula na ligação com a viga
+    (Não há rótula na cumeeira — a viga é peça monolítica 1× hiperestática;
+     o "pino de cumeeira" do modelo triarticulado foi removido — issue 25.)
 
     Esforços no pilar:
     - N_d = R_v = q·L/2  (compressão — reação vertical da viga)
     - M_d = 0            (rótulas em ambas as extremidades)
-    - V_d = 0            (empuxo H vai para a sapata, não para o pilar)
+    - V_d = 0            (o pilar não recebe empuxo horizontal — ver nota abaixo)
 
     Verificação: compressão simples com instabilidade
     EC5 §6.3.2 Eq. 6.23 simplificada (sem momento):
@@ -18,11 +20,17 @@ ATUALIZAÇÃO v2 — Pórtico de 3 rótulas:
     Comprimento efetivo — pilar com duas rótulas:
         l_ef = 1,0 · H  (EC5 §6.3.2 — articulado-articulado)
 
-    Nota sobre o empuxo horizontal H:
-        H = 621 kN vai direto para a sapata via chumbadores.
-        O pilar NÃO resiste ao empuxo — ele é transferido pelo
-        mecanismo de apoio articulado (pino na base).
-        A sapata e os chumbadores resistem a H.
+    Nota sobre o empuxo horizontal H (coerência — issues 35/38):
+        No plano do pórtico o pilar biarticulado é um MECANISMO lateral: uma
+        força horizontal no topo não pode ser equilibrada com rótulas nas duas
+        extremidades (ΣM_base = H·H_col ⇒ H_top = 0). Logo M_d = V_d = 0 — o
+        pilar NÃO transmite empuxo. Consequência (auditoria da issue 38,
+        empuxo_acoplado.py): como o apoio horizontal do springing é
+        ~nulo/mole (k_pilar ≈ 0 vs k_arco ~2·10⁵ kN/m), o empuxo de gravidade
+        PRATICAMENTE NÃO SE DESENVOLVE (H_dev ≈ 0) e a viga tende a biapoiada.
+        A reação vertical R_v (e portanto N_d do pilar) NÃO depende disso.
+        A decisão de modelo A/B (fecho do empuxo no beiral × sem empuxo) está
+        na issue 38; não altera o dimensionamento do pilar (compressão por R_v).
 
 Referência: EC5 §6.3.2 Eq. 6.23
 """

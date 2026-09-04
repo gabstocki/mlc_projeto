@@ -1251,6 +1251,51 @@ def gerar_tex(
                 'continuidade o diafragma não funciona.\n\n'
             )
 
+    # ── 8b.3 Auditoria do empuxo acoplado (issue 38) ───────────
+    r_emp = _clean_dict(resultados.get("empuxo_acoplado", {}))
+    if r_emp:
+        parts.append(
+            '% ── 8b.3 Empuxo acoplado (issue 38) ────────────────────\n'
+            '\\subsection*{8b.3 Auditoria do Empuxo Acoplado -- Coerência do '
+            'Modelo (issue~38)}\n\n'
+            'O empuxo $H$ do modelo é obtido por Castigliano assumindo '
+            '\\textbf{apoio horizontal indeslocável} no springing (topo do '
+            'pilar). Auditou-se quanto desse empuxo \\emph{realmente} se '
+            'desenvolve dada a rigidez horizontal real do apoio '
+            '(\\texttt{empuxo\\_acoplado.py}).\n\n'
+        )
+        parts.append(
+            'A rigidez horizontal do arco no springing é '
+            f'$k_{{arco}}={_br(r_emp.get("k_arco_kNm", 0), 0)}$~kN/m; o pilar '
+            '\\textbf{biarticulado} é um mecanismo lateral no plano '
+            f'($k_{{pilar}}=0$; mesmo engastado $k\\approx{_br(r_emp.get("k_pilar_eng_kNm", 0), 0)}$~kN/m, '
+            f'${_br(r_emp.get("razao_k_arco_pilar", 0), 0)}\\times$ mais mole). '
+            'Por duas molas em série $H_{dev}=H_{rig}\\,k/(k+k_{arco})$, só se '
+            f'desenvolve $H_{{dev}}\\approx{_br(r_emp.get("H_dev_engastada_kN", 0), 1)}$~kN de '
+            f'${_br(r_emp.get("H_rigido_kN", 0), 0)}$~kN '
+            f'(${_br(r_emp.get("frac_desenvolvida", 0) * 100, 1)}\\%$) -- o empuxo '
+            '\\textbf{praticamente não se desenvolve}.\n\n'
+        )
+        parts.append(
+            '\\textbf{Consequências:} a viga tende a \\textbf{biapoiada} -- $M$ '
+            f'passa de ${_br(r_emp.get("M_modelo_kNm", 0), 0)}$ (modelo, empuxo '
+            f'rígido) para ${_br(r_emp.get("M0_biapoiada_kNm", 0), 0)}$~kN·m '
+            f'($+{_br(r_emp.get("delta_M_pct", 0), 0)}\\%$). O pilar recebe '
+            'esforço horizontal $\\approx 0$: o cenário de \\emph{colapso do pilar} '
+            '($M\\sim1300$~kN·m) \\textbf{não ocorre} (o pilar não atrai o empuxo).\n\n'
+        )
+        parts.append(
+            '\\registonota{Decisão de modelo (issue~38/35 -- IMPLEMENTADA)}{'
+            '\\textbf{Opção B adotada e implementada} -- a viga é dimensionada '
+            f'\\textbf{{BIAPOIADA}} ($M=M_0\\approx{_br(r_emp.get("M0_biapoiada_kNm", 0), 0)}$~kN·m, '
+            'sem o alívio do empuxo). O \\textbf{tirante de base foi removido} (não '
+            'fecha empuxo que não se desenvolve, não resiste ao \\emph{uplift} '
+            'vertical). A ancoragem responde ao \\emph{uplift} (chumbadores, mín. '
+            'construtivo 4). Sem o empuxo o cortante do beiral sobe e a ligação '
+            'L1/L1c exige \\textbf{reforço $\\perp$ às fibras} (parafusos, §8.7.2). '
+            'A flecha é a da viga biapoiada (ELS reavaliado).}\n\n'
+        )
+
     # ── 8c. Impacto de veículo ─────────────────────────────────
     _iv_ok = bool(r_iv) and bool(r_iv.get("ok", False))
     _iv_f = r_iv.get("forcas", {}) if isinstance(r_iv.get("forcas"), dict) else {}

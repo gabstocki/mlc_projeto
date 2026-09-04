@@ -124,3 +124,30 @@ def test_nao_ha_combo_com_Q_e_vento_juntos():
             assert c.q_esq == pytest.approx(q_puro, rel=1e-6), nome
         # combinações com vento (padrao≠"") não contêm o termo 1,05Q:
         # a checagem direta de valores está em test_combo_vento_dominante_sem_Q
+
+
+def test_ELU_C2_herda_duracao_do_governante():
+    """
+    Regressão (revisão da base): o alias ELU_C2 deve herdar a duração REAL do
+    combinação que governa o |M|. Antes era fixado em 'curta' — se a sobrecarga Q
+    (duração 'media') governasse, o k_mod ficava errado (0,70 vs 0,65 em CS3),
+    a favor da resistência (contra a segurança).
+    """
+    geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
+    mat = GlulamMaterial("GL24h", 3, "curta")
+
+    # (a) vento governa → ELU_C2 deve ser 'curta'
+    pv_forte = ParametrosVento(V0=45, S1=1, categoria="IV", classe="B", S3=1,
+                               L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+    load_w = carregamentos_com_vento(geo, mat, 0.82, 0.40, 5.75, pv_forte)
+    gov_w = load_w.combinacao_ELU_governante()
+    assert load_w.combinacoes["ELU_C2"].duracao == gov_w.duracao
+
+    # (b) sobrecarga Q governa (vento mínimo, q alta) → ELU_C2 deve ser 'media'
+    pv_fraco = ParametrosVento(V0=1.0, S1=1, categoria="IV", classe="B", S3=1,
+                               L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+    load_q = carregamentos_com_vento(geo, mat, 0.82, 5.0, 5.75, pv_fraco)
+    gov_q = load_q.combinacao_ELU_governante()
+    assert "1,5Q" in gov_q.descricao or "ELU_Q" in gov_q.descricao
+    assert gov_q.duracao == "media"
+    assert load_q.combinacoes["ELU_C2"].duracao == "media"

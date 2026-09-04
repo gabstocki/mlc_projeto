@@ -55,6 +55,9 @@ from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
 from mlc_projeto.checks.elu.tirante_piso_robustez import (
     verificar_robustez_tirante_piso, relatorio_robustez_tirante,
 )
+from mlc_projeto.checks.elu.empuxo_acoplado import (
+    analisar_empuxo_acoplado, relatorio_empuxo_acoplado,
+)
 from mlc_projeto.checks.elu.tirante_base import (
     verificar_tirante_base, relatorio_tirante, impacto_flexibilidade_tirante,
 )
@@ -237,18 +240,24 @@ A_SOLDA_MM    = 6.0      # mm — garganta da solda de filete chapa↔base
 # --- Tirante de base (fecho do empuxo ao nível do piso) ------------------------
 # Solução usual: barra de aço ligando as bases de cada vão → H_sapata ≈ 0.
 # T_d = H_arco (Castigliano ELU). Diâmetro None = escolha automática η≤eta_alvo.
-# Aço MR315 (barra redonda f_y=315 MPa) — recomendado pelo orientador como o
-# mais adequado ao tamanho do tirante (issue 24). H obtido sob apoio rígido.
-TIRANTE_BASE     = True
+# ── DECISÃO DE MODELO — empuxo transversal (issue 35/38) ──────────────────────
+# EMPUXO_DESENVOLVE = False → Opção B (adotada): o pilar biarticulado é um
+# mecanismo lateral e o empuxo NÃO se desenvolve (H_dev≈0, ver empuxo_acoplado.py).
+# A viga trabalha BIAPOIADA (M=M0). Consequências: sem tirante de fecho de empuxo;
+# a fundação não recebe empuxo de gravidade; a ancoragem responde ao uplift.
+# True reativaria o modelo de apoio rígido (Opção A).
+EMPUXO_DESENVOLVE = False
+
+# Tirante de base — SÓ existe na Opção A (fecho do empuxo). Na Opção B o empuxo
+# não se desenvolve ⇒ tirante horizontal na base não tem função (não fecha empuxo,
+# não resiste ao uplift vertical, não limita a abertura do beiral) ⇒ removido.
+TIRANTE_BASE     = EMPUXO_DESENVOLVE
 ACO_TIRANTE      = "MR315"
 D_TIRANTE_MM     = None    # None → auto (comercial, η ≤ ETA_LIG_ALVO)
 ETA_TIRANTE_ALVO = 0.75
-# Robustez do tirante no piso (issue 37): estacionamento coberto.
-# PROTECAO_TIRANTE = "embutido" (canaleta no contrapiso) — decisão de projeto:
-# a laje intercepta o impacto (EN 1991-1-7), resolve tropeço e protege corrosão/fogo.
-# TIRANTE_PRIMARIO=True (fecho de empuxo) — conservador enquanto a issue 38 não fecha.
+# Robustez do tirante no piso (issue 37) — só se aplica se houver tirante (Opção A).
 PROTECAO_TIRANTE = "embutido"
-TIRANTE_PRIMARIO = True
+TIRANTE_PRIMARIO = EMPUXO_DESENVOLVE
 
 
 # ── Orquestrador ──────────────────────────────────────────────────────────────
@@ -416,6 +425,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         n_linhas_portico=3,
         L_cob_m=L_COMP,
         B_cob_m=2 * geo.L,   # dois vãos lado a lado
+        empuxo_desenvolve=EMPUXO_DESENVOLVE,   # Opção B (issue 35/38)
     )
 
     gov = load.combinacao_ELU_governante()
@@ -872,6 +882,19 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # ── Fase 4a: Tirante de base (opcional — fecho do empuxo) ─────────────────
     H_arco = float(load.H_ELU())
     n_linhas_port = int(round(L_COMP_GALPAO / L_T)) + 1  # eixos Y (pórticos)
+
+    # Auditoria do empuxo acoplado (issue 38): quanto de H realmente se desenvolve
+    # dada a rigidez horizontal real do apoio (pilar biarticulado = mecanismo).
+    print("\n[FASE 4a] Auditoria do empuxo acoplado (issue 38 — coerência do modelo)...")
+    _gov_grav = load.combinacao_ELU_governante()   # max |M| (gravidade)
+    res_empuxo = analisar_empuxo_acoplado(
+        geo=geo, E_Pa=mat_longa.E0_mean,
+        H_rigido_kN=abs(float(_gov_grav.H_rigido_kN)),  # empuxo RÍGIDO (auditoria)
+        q_gov_kNpm=abs(float(_gov_grav.q_tot)),
+        b_pilar=B_PILAR, h_pilar=H_PILAR, H_pilar=H_PILAR_ALT,
+    )
+    res_elu["empuxo_acoplado"] = res_empuxo
+    relatorio_empuxo_acoplado(res_empuxo)
     res_tirante: dict = {"ativo": False, "ok": True, "eta": 0.0}
     if TIRANTE_BASE:
         print(f"\n[FASE 4a] Tirante de base (H_arco → tirante, H_sapata≈0)...")
@@ -1006,16 +1029,25 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # ── Fendilhamento (EC5 §8.1.4) — componente ⊥ fibras em L1/L1c (issue 20) ──
     print("\n[FASE 4] Fendilhamento (EC5 §8.1.4) — L1/L1c...")
     from mlc_projeto.connections.connections import fendilhamento_ligacao
-    res_fend_L1 = fendilhamento_ligacao(res_lig["L1"], geo, mat_elu)
-    res_fend_L1c = fendilhamento_ligacao(res_lig_c["L1c"], geo, mat_elu)
+    # reforcar=True: se o fendilhamento (frágil) passar do alvo, dimensiona
+    # reforço ⊥ às fibras (parafusos §8.7.2) — decisão de projeto (issue 35/38,
+    # Opção B: sem empuxo o cortante do beiral sobe e a ligação exige reforço).
+    res_fend_L1 = fendilhamento_ligacao(res_lig["L1"], geo, mat_elu,
+                                        reforcar=True, eta_reforco_alvo=ETA_LIG_ALVO)
+    res_fend_L1c = fendilhamento_ligacao(res_lig_c["L1c"], geo, mat_elu,
+                                         reforcar=True, eta_reforco_alvo=ETA_LIG_ALVO)
     res_elu["fendilhamento_L1"] = res_fend_L1
     res_elu["fendilhamento_L1c"] = res_fend_L1c
     for lbl, rf in [("L1", res_fend_L1), ("L1c", res_fend_L1c)]:
         _print_eta(f"Fendilhamento {lbl} §8.1.4", rf)
         print(f"  · {lbl}: F_90,Ed=|V_d|={rf['F_90_Ed_kN']:.0f} kN | "
               f"h_e={rf['h_e_mm']:.0f} mm (h_e/h={rf['h_e_h']:.2f}) | "
-              f"F_90,Rk={rf['F_90_Rk_kN']:.0f} kN → F_90,Rd={rf['F_90_Rd_kN']:.0f} kN | "
-              f"η={rf['eta']:.3f}")
+              f"F_90,Rd={rf['F_90_Rd_kN']:.0f} kN | η_nu={rf.get('eta_fendilhamento_nu', rf['eta']):.3f}")
+        if rf.get("reforcado"):
+            rr = rf["reforco"]
+            print(f"    ↳ REFORÇADO (§8.7.2): {rr['n_parafusos']}×∅{rr['d_mm']:.0f} mm "
+                  f"l_ef={rr['l_ef_mm']:.0f} mm → η_reforço={rr['eta']:.3f} "
+                  f"(arranc.={rr['eta_arrancamento']:.2f}, aço={rr['eta_aco']:.2f})")
 
     # ── Componente metálico (EN 1993-1-8) — chapa, furos, soldas (issue 21) ────
     print("\n[FASE 4] Chapas de aço / furos / soldas (EN 1993-1-8) — L1/L1c...")

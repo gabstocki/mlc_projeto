@@ -170,12 +170,13 @@ class Combinacao:
     V_max_kN:        float    # kN   — reação vertical governante no apoio
     N_viga_kN:       float    # kN   — força normal no eixo da viga (apoio)
     V_viga_kN:       float    # kN   — cortante no eixo da viga (apoio)
-    H_kN:            float    # kN   — empuxo horizontal na fundação
+    H_kN:            float    # kN   — empuxo horizontal EFETIVO (0 se não desenvolve)
     x_Mmax_m:        float    # m    — posição do momento máximo
     duracao:         str
     q_esq:           float = 0.0   # kN/m — meia-água esquerda
     q_dir:           float = 0.0   # kN/m — meia-água direita
     padrao_vento:    str = ""      # id do padrão Tab.25 (se aplicável)
+    H_rigido_kN:     float = 0.0   # kN   — empuxo Castigliano (apoio rígido; auditoria)
 
 
 # ── Análise estrutural — viga biarticulada (MLC monolítica) ───────────────────
@@ -222,6 +223,7 @@ def analisar_biarticulada(
     n_pts:     int = 401,
     q_esq:     float | None = None,
     q_dir:     float | None = None,
+    desenvolve_empuxo: bool = True,
 ) -> dict:
     """
     Viga de seção variável biarticulada (rótulas só nos apoios).
@@ -251,6 +253,7 @@ def analisar_biarticulada(
     if abs(q_esq) < 1e-12 and abs(q_dir) < 1e-12:
         return {
             "R_v_kN": 0.0, "R_A_kN": 0.0, "R_B_kN": 0.0, "H_kN": 0.0,
+            "H_rigido_kN": 0.0,
             "M_max_kNm": 0.0, "M_cumeeira_kNm": 0.0,
             "x_Mmax_m": 0.0,
             "N_apoio_kN": 0.0, "V_apoio_kN": 0.0,
@@ -297,7 +300,14 @@ def analisar_biarticulada(
     den = den_flex + den_ax
     if den <= 0:
         raise ValueError("Integral de flexibilidade nula — verificar geometria.")
-    H = num / den
+    H_rigido = num / den                        # Castigliano (apoio rígido)
+
+    # Empuxo EFETIVO — issue 35/38 (Opção B):
+    #   desenvolve_empuxo=True  → apoio horizontal rígido: H = H_rígido.
+    #   desenvolve_empuxo=False → pilar biarticulado é MECANISMO lateral, o empuxo
+    #     NÃO se desenvolve (H_dev≈0, ver empuxo_acoplado.py) → viga BIAPOIADA,
+    #     H=0, M=M0 (isostático). O H_rígido fica no retorno para a auditoria.
+    H = H_rigido if desenvolve_empuxo else 0.0
 
     M_x = M0 - H * y_c
 
@@ -322,6 +332,7 @@ def analisar_biarticulada(
         "R_B_kN":          round(R_B, 4),
         "R_v_gov_kN":      round(R_v_gov, 4),
         "H_kN":            round(H, 4),
+        "H_rigido_kN":     round(H_rigido, 4),
         "M_max_kNm":       round(M_max, 4),
         "M_cumeeira_kNm":  round(M_cum, 4),
         "x_Mmax_m":        round(x_Mmax, 4),
@@ -379,6 +390,9 @@ class Carregamentos:
     w_C2st_m2:  float = 0.0
     padroes_vento: list = field(default_factory=list)
     vento_0:    dict | None = None
+    # Opção B (issue 35/38): empuxo NÃO se desenvolve (viga biapoiada). Default
+    # True mantém o modelo de apoio rígido (retrocompatível).
+    empuxo_desenvolve: bool = True
 
     _combinacoes: dict = field(default_factory=dict, init=False, repr=False)
     _area_trib:   float = field(init=False, repr=False)
@@ -449,6 +463,7 @@ class Carregamentos:
             b         = self.geo.b,
             q_esq     = q_esq,
             q_dir     = q_dir,
+            desenvolve_empuxo = self.empuxo_desenvolve,
         )
 
     # ── Montagem das combinações ──────────────────────────────
@@ -476,6 +491,7 @@ class Carregamentos:
                 N_viga_kN       = r["N_apoio_kN"],
                 V_viga_kN       = r["V_apoio_kN"],
                 H_kN            = r["H_kN"],
+                H_rigido_kN     = r.get("H_rigido_kN", r["H_kN"]),
                 x_Mmax_m        = r["x_Mmax_m"],
                 duracao         = duracao,
             )
@@ -576,9 +592,12 @@ class Carregamentos:
             GAMMA_G_sup * g + GAMMA_Q * q,
             "media",
         )
-        # ELU_C2 = alias do governante por |M| (W dominante Tab.25)
+        # ELU_C2 = alias (chave estável) do governante por |M| — Tab.25 (vento,
+        # duração "curta") OU sobrecarga Q (duração "media"). Herda a duração REAL
+        # do governante: o k_mod downstream (flexão/pilar/cisalhamento) depende
+        # disso — antes era fixado em "curta", subestimando f_d quando Q governava.
         c["ELU_C2"] = Combinacao(
-            nome=gov_m.nome if gov_m.nome.startswith("ELU_W_") else "ELU_C2",
+            nome="ELU_C2",
             tipo="ELU",
             descricao=f"GOVERNA |M| ← {gov_m.descricao}",
             q_tot=gov_m.q_tot, q_esq=gov_m.q_esq, q_dir=gov_m.q_dir,
@@ -586,21 +605,9 @@ class Carregamentos:
             M_max_kNm=gov_m.M_max_kNm, M_cumeeira_kNm=gov_m.M_cumeeira_kNm,
             V_max_kN=gov_m.V_max_kN, N_viga_kN=gov_m.N_viga_kN,
             V_viga_kN=gov_m.V_viga_kN, H_kN=gov_m.H_kN,
+            H_rigido_kN=gov_m.H_rigido_kN,
             x_Mmax_m=gov_m.x_Mmax_m, duracao=gov_m.duracao,
         )
-        # Guardar também com chave estável ELU_C2 se o nome for outro
-        if gov_m.nome != "ELU_C2":
-            c["ELU_C2"] = Combinacao(
-                nome="ELU_C2",
-                tipo="ELU",
-                descricao=f"GOVERNA |M| ← {gov_m.descricao}",
-                q_tot=gov_m.q_tot, q_esq=gov_m.q_esq, q_dir=gov_m.q_dir,
-                padrao_vento=gov_m.padrao_vento,
-                M_max_kNm=gov_m.M_max_kNm, M_cumeeira_kNm=gov_m.M_cumeeira_kNm,
-                V_max_kN=gov_m.V_max_kN, N_viga_kN=gov_m.N_viga_kN,
-                V_viga_kN=gov_m.V_viga_kN, H_kN=gov_m.H_kN,
-                x_Mmax_m=gov_m.x_Mmax_m, duracao="curta",
-            )
         c["ELU_C3"] = Combinacao(
             nome="ELU_C3", tipo="ELU",
             descricao=f"Sucção governante ← {gov_s.descricao}",
@@ -609,6 +616,7 @@ class Carregamentos:
             M_max_kNm=gov_s.M_max_kNm, M_cumeeira_kNm=gov_s.M_cumeeira_kNm,
             V_max_kN=gov_s.V_max_kN, N_viga_kN=gov_s.N_viga_kN,
             V_viga_kN=gov_s.V_viga_kN, H_kN=gov_s.H_kN,
+            H_rigido_kN=gov_s.H_rigido_kN,
             x_Mmax_m=gov_s.x_Mmax_m, duracao="curta",
         )
         c["ELU_C4"] = Combinacao(
@@ -619,6 +627,7 @@ class Carregamentos:
             M_max_kNm=gov_h.M_max_kNm, M_cumeeira_kNm=gov_h.M_cumeeira_kNm,
             V_max_kN=gov_h.V_max_kN, N_viga_kN=gov_h.N_viga_kN,
             V_viga_kN=gov_h.V_viga_kN, H_kN=gov_h.H_kN,
+            H_rigido_kN=gov_h.H_rigido_kN,
             x_Mmax_m=gov_h.x_Mmax_m, duracao="curta",
         )
 
@@ -817,8 +826,13 @@ class Carregamentos:
         return abs(self.combinacao_ELU_Vtransversal().V_viga_kN)
 
     def H_ELU(self) -> float:
-        """Empuxo horizontal na fundação — combinação ELU governante."""
+        """Empuxo horizontal EFETIVO na fundação — ELU governante (0 na Opção B)."""
         return self.combinacao_ELU_governante().H_kN
+
+    def H_rigido_ELU(self) -> float:
+        """Empuxo Castigliano de apoio RÍGIDO — ELU governante (auditoria issue 38;
+        independe de o empuxo se desenvolver ou não)."""
+        return self.combinacao_ELU_governante().H_rigido_kN
 
     def M_ELU(self) -> NDArray:
         """Diagrama M(x) da combinação ELU governante (kN·m)."""
@@ -954,6 +968,7 @@ def carregamentos_com_vento(
     n_linhas_portico: int = 3,
     L_cob_m:      float = 46.0,
     B_cob_m:      float | None = None,
+    empuxo_desenvolve: bool = True,
 ) -> Carregamentos:
     """
     Cria Carregamentos com varredura completa Tab.25 (θ=90°) e θ=0°.
@@ -994,6 +1009,7 @@ def carregamentos_com_vento(
         w_C2st_m2 = res.pressoes["C2"]["sotavento_kNm2"],
         padroes_vento=padroes,
         vento_0=vento_0,
+        empuxo_desenvolve=empuxo_desenvolve,
     )
 
 

@@ -435,6 +435,10 @@ def fendilhamento_ligacao(
     mat:      GlulamMaterial,
     k_mod:    float | None = None,
     gamma_M:  float = GAMMA_M_LIGACAO,
+    reforcar: bool = False,
+    eta_reforco_alvo: float = 0.75,
+    d_reforco_mm: float = 10.0,
+    l_ef_reforco_mm: float = 400.0,
 ) -> dict:
     """
     Aplica o fendilhamento (§8.1.4) a uma ligação de cavilhas já dimensionada
@@ -466,7 +470,127 @@ def fendilhamento_ligacao(
     res["ligacao"] = res_lig.get("ligacao", "—")
     res["n_linhas"] = n_vert
     res["a2_mm"] = round(a2_mm, 1)
+    res["reforcado"] = False
+
+    # Reforço ⊥ às fibras (EC5 §8.1.4 + §8.7.2): quando o fendilhamento (modo
+    # FRÁGIL) ultrapassa o alvo, parafusos autoatarraxantes absorvem F_90,Ed e o
+    # modo deixa de governar. O η reportado passa a ser o do reforço (arrancamento).
+    if reforcar and res["eta"] > eta_reforco_alvo:
+        reforco = dimensionar_reforco_fendilhamento(
+            F_90_Ed_kN=F_90_Ed_kN, rho_k=mat.rho_k, k_mod=k_mod,
+            d_mm=d_reforco_mm, l_ef_mm=l_ef_reforco_mm, gamma_M=gamma_M,
+            eta_alvo=eta_reforco_alvo,
+        )
+        res["reforcado"] = True
+        res["eta_fendilhamento_nu"] = res["eta"]
+        res["ok_fendilhamento_nu"] = res["eta"] <= 1.0
+        res["reforco"] = reforco
+        res["eta"] = reforco["eta"]              # η governante = reforço
+        res["ok"] = reforco["ok"]
+        res["norma"] = (
+            "EN 1995-1-1 §8.1.4 (reforçado por parafusos ⊥ fibras §8.7.2)"
+        )
     return res
+
+
+# ── Reforço ao fendilhamento — parafusos autoatarraxantes ⊥ às fibras ─────────
+# EC5 §8.1.4 (força ⊥ às fibras) resolvido por reforço AXIAL (§8.7.2): parafusos
+# totalmente rosqueados, inseridos ⊥ às fibras cruzando o plano de fendilhamento,
+# absorvem a tração F_90,Ed. O modo FRÁGIL de fendilhamento deixa de governar.
+
+def arrancamento_parafuso_perp(
+    d_mm:    float,
+    l_ef_mm: float,
+    rho_k:   float,
+    k_mod:   float,
+    gamma_M: float = GAMMA_M_LIGACAO,
+) -> dict:
+    """
+    Arrancamento de UM parafuso autoatarraxante inserido ⊥ às fibras (α=90°) —
+    EN 1995-1-1 §8.7.2 Eq. (8.38)/(8.39):
+
+        f_ax,k  = 0,52·d^-0,5·l_ef^-0,1·ρ_k^0,8    (N/mm²; válida 6 ≤ d ≤ 12 mm)
+        F_ax,Rk = f_ax,k·d·l_ef·k_d                 (α=90° ⇒ denom.=1; k_d=min(d/8,1))
+        F_ax,Rd = k_mod·F_ax,Rk/γ_M
+    """
+    if not (6.0 <= d_mm <= 12.0):
+        raise ValueError("Eq. (8.39) válida para 6 ≤ d ≤ 12 mm")
+    if l_ef_mm <= 0 or rho_k <= 0:
+        raise ValueError("l_ef e ρ_k devem ser > 0")
+    k_d = min(d_mm / 8.0, 1.0)
+    f_ax_k = 0.52 * d_mm ** -0.5 * l_ef_mm ** -0.1 * rho_k ** 0.8   # N/mm²
+    F_ax_Rk = f_ax_k * d_mm * l_ef_mm * k_d                          # N
+    F_ax_Rd = k_mod * F_ax_Rk / gamma_M                             # N
+    return {
+        "d_mm":        d_mm,
+        "l_ef_mm":     l_ef_mm,
+        "k_d":         round(k_d, 3),
+        "f_ax_k_MPa":  round(f_ax_k, 3),
+        "F_ax_Rk_kN":  round(F_ax_Rk / 1e3, 3),
+        "F_ax_Rd_kN":  round(F_ax_Rd / 1e3, 3),
+    }
+
+
+def dimensionar_reforco_fendilhamento(
+    F_90_Ed_kN: float,
+    rho_k:      float,
+    k_mod:      float,
+    d_mm:       float = 10.0,
+    l_ef_mm:    float = 400.0,
+    gamma_M:    float = GAMMA_M_LIGACAO,
+    eta_alvo:   float = 0.75,
+    f_u_MPa:    float = 800.0,
+    gamma_M2:   float = 1.25,
+    n_max:      int = 80,
+) -> dict:
+    """
+    Dimensiona o nº de parafusos ⊥ às fibras para absorver F_90,Ed:
+      · arrancamento em GRUPO: n_ef = n^0,9 (EC5 §8.7.2(8));
+      · tração do AÇO do fuste (raiz ≈ 0,7·d; f_u, γ_M2=1,25 — EN 1993-1-8).
+    Escolhe o menor n com η = max(η_arrancamento, η_aço) ≤ eta_alvo.
+    """
+    single = arrancamento_parafuso_perp(d_mm, l_ef_mm, rho_k, k_mod, gamma_M)
+    F_ax_Rd1 = single["F_ax_Rd_kN"]
+    A_s = math.pi * (0.7 * d_mm) ** 2 / 4.0                # mm² (área do fuste)
+    F_t_Rd1 = f_u_MPa * A_s / gamma_M2 / 1e3               # kN (tração do aço)
+    F = abs(float(F_90_Ed_kN))
+
+    n_sel = n_max
+    for n in range(2, n_max + 1):
+        F_ax_grp = n ** 0.9 * F_ax_Rd1
+        F_t_grp = n * F_t_Rd1
+        if max(F / F_ax_grp, F / F_t_grp) <= eta_alvo:
+            n_sel = n
+            break
+
+    F_ax_grp = n_sel ** 0.9 * F_ax_Rd1
+    F_t_grp = n_sel * F_t_Rd1
+    eta_ax = F / F_ax_grp if F_ax_grp > 0 else 999.0
+    eta_st = F / F_t_grp if F_t_grp > 0 else 999.0
+    eta = max(eta_ax, eta_st)
+    return {
+        "sistema":          "Reforço ao fendilhamento — parafusos ⊥ às fibras",
+        "F_90_Ed_kN":       round(F, 3),
+        "d_mm":             d_mm,
+        "l_ef_mm":          l_ef_mm,
+        "n_parafusos":      n_sel,
+        "f_ax_k_MPa":       single["f_ax_k_MPa"],
+        "F_ax_Rd_unit_kN":  round(F_ax_Rd1, 3),
+        "F_ax_Rd_grupo_kN": round(F_ax_grp, 3),
+        "F_t_Rd_unit_kN":   round(F_t_Rd1, 3),
+        "F_t_Rd_grupo_kN":  round(F_t_grp, 3),
+        "eta_arrancamento": round(eta_ax, 4),
+        "eta_aco":          round(eta_st, 4),
+        "eta":              round(eta, 4),
+        "eta_alvo":         eta_alvo,
+        "ok":               eta <= 1.0 + 1e-9,
+        "norma":            "EN 1995-1-1 §8.1.4 (reforço) + §8.7.2 Eq.(8.38)/(8.39)",
+        "nota": (
+            f"F_90,Ed={F:.0f} kN absorvido por {n_sel}×∅{d_mm:.0f} mm "
+            f"(l_ef={l_ef_mm:.0f} mm): arrancamento η={eta_ax:.2f}, aço η={eta_st:.2f}. "
+            "Confirmar f_ax e f_u,parafuso com a ETA do produto."
+        ),
+    }
 
 
 # ── Número efetivo — EC5 §8.5.1.1 (pernos; pinos via §8.6) ───────────────────
@@ -874,19 +998,24 @@ def dimensionar_sapata(
         )
         ligacao = "L3 — Sapata (com tirante de base, H≈0)"
     else:
-        n_chu = max(1, math.ceil(H_d / (F_chu_kN * eta_alvo)))
+        # Mínimo construtivo de 4 chumbadores (um por canto da chapa de base) —
+        # garante a ancoragem ao UPLIFT mesmo quando H_d≈0 (Opção B: sem empuxo).
+        # Sem esse piso, H_d=0 daria n=1 e a verificação de sucção (que consome
+        # este n_chu) ficaria sem ancoragem (issue 35/38).
+        n_chu = max(4, math.ceil(H_d / (F_chu_kN * eta_alvo))) if F_chu_kN > 0 else 4
         n_chu_eta1 = max(1, math.ceil(H_d / F_chu_kN)) if F_chu_kN > 0 else 1
         R_chu_kN = n_chu * F_chu_kN
-        eta_H = H_d / R_chu_kN if R_chu_kN > 0 else 999.0
+        eta_H = H_d / R_chu_kN if R_chu_kN > 0 else 0.0
         n_chu_x4 = n_chu if n_chu % 4 == 0 else n_chu + (4 - n_chu % 4)
-        eta_H_x4 = H_d / (n_chu_x4 * F_chu_kN) if F_chu_kN > 0 else 999.0
+        eta_H_x4 = H_d / (n_chu_x4 * F_chu_kN) if F_chu_kN > 0 else 0.0
         eta = eta_H
         ok_norma = eta_H <= 1.0
         ok_alvo = eta_H <= eta_alvo + 1e-9
         nota = (
             f"Sem tirante: H_sapata=H_arco={H_d:.1f} kN. "
-            f"Chumbadores n={n_chu} (mín η≤1: {n_chu_eta1}; "
-            f"grade ×4: {n_chu_x4}). Verificação final EN 1992-4."
+            f"Chumbadores n={n_chu} (mín. construtivo 4; mín η≤1: {n_chu_eta1}; "
+            f"grade ×4: {n_chu_x4}). Ancoragem ao uplift verificada à parte "
+            f"(sucção/issue 33). Verificação final EN 1992-4."
         )
         ligacao = "L3 — Sapata na fundação"
 

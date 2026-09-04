@@ -147,6 +147,7 @@ def verificar_ELS(
             q=0.5 * (q_esq + (q_dir if q_dir is not None else q_esq)),
             L=L, h0=h0, h_ap=h_ap, alpha_rad=alpha_rad, b=geo.b,
             q_esq=q_esq, q_dir=(q_dir if q_dir is not None else q_esq),
+            desenvolve_empuxo=load.empuxo_desenvolve,
         )
         M_x = np.interp(geo.x, r["x"], r["M_x"]) * 1e3   # N·m
         _, w_x, w_b_x, w_s_x = flecha_numerica(geo, mat, M_x, geo.x)
