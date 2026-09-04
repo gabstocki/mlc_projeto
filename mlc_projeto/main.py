@@ -52,6 +52,9 @@ from mlc_projeto.checks.elu.estabilidade_global import (
 )
 from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
 from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
+from mlc_projeto.checks.elu.tirante_piso_robustez import (
+    verificar_robustez_tirante_piso, relatorio_robustez_tirante,
+)
 from mlc_projeto.checks.elu.tirante_base import (
     verificar_tirante_base, relatorio_tirante, impacto_flexibilidade_tirante,
 )
@@ -240,6 +243,12 @@ TIRANTE_BASE     = True
 ACO_TIRANTE      = "MR315"
 D_TIRANTE_MM     = None    # None → auto (comercial, η ≤ ETA_LIG_ALVO)
 ETA_TIRANTE_ALVO = 0.75
+# Robustez do tirante no piso (issue 37): estacionamento coberto.
+# PROTECAO_TIRANTE = "embutido" (canaleta no contrapiso) — decisão de projeto:
+# a laje intercepta o impacto (EN 1991-1-7), resolve tropeço e protege corrosão/fogo.
+# TIRANTE_PRIMARIO=True (fecho de empuxo) — conservador enquanto a issue 38 não fecha.
+PROTECAO_TIRANTE = "embutido"
+TIRANTE_PRIMARIO = True
 
 
 # ── Orquestrador ──────────────────────────────────────────────────────────────
@@ -889,6 +898,17 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"δ_tirante={_imp_tir['delta_tirante_mm']:.1f} mm")
         print(f"  · H_rígido é conservador p/ o tirante (T=H máx); a restrição "
               f"paralela (ancoragem+contravento) mantém H≈rígido → sem acoplar.")
+        # Robustez do tirante no piso — impacto/corrosão/fogo/tropeço (issue 37)
+        _rob_tir = verificar_robustez_tirante_piso(
+            d_mm=res_tirante["d_mm"], aco=ACO_TIRANTE,
+            T_d_kN=res_tirante["T_d_kN"], L_m=geo.L,
+            eta_alvo=ETA_TIRANTE_ALVO,
+            protecao=PROTECAO_TIRANTE, primario=TIRANTE_PRIMARIO,
+        )
+        res_tirante["robustez_piso"] = _rob_tir
+        res_elu["tirante_piso_robustez"] = _rob_tir
+        print(f"  [issue 37] Robustez no piso (estacionamento):")
+        relatorio_robustez_tirante(_rob_tir)
     else:
         print("\n[FASE 4a] Tirante de base: inativo (empuxo → sapata)")
 

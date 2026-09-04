@@ -125,6 +125,12 @@
   · Hipótese: H por Castigliano com APOIO HORIZONTAL RÍGIDO (flexibilidade axial do tirante não realimentada).
   · Rigidez horizontal: arco=608 kN/mm | tirante=19 kN/mm | δ_tirante=20.1 mm
   · H_rígido é conservador p/ o tirante (T=H máx); a restrição paralela (ancoragem+contravento) mantém H≈rígido → sem acoplar.
+  [issue 37] Robustez no piso (estacionamento):
+  ✓ Robustez tirante piso (proteção: embutido)  η=0.7220 (governa corrosao)
+  · Impacto EN1991-1-7: barra nua η=44 (M_Ed=253 vs M_pl,Rd=5.8 kNm) → interceptado pela proteção (η=0)
+  · Corrosão UC3 (EN 335) / C3 (EN ISO 12944): d 48→46 mm (−8% N_t,Rd) → η_tração=0.722
+  · Incêndio: Cobrimento da canaleta (argamassa/graute) provê proteção passiva ao fo
+  · Tropeço: Barra sob o piso acabado (embutida) — sem obstáculo de circulação.
 
 [FASE 4] Ligações (η_alvo = 0.75 — uso público)...
   ✓ L1 base (d=24mm, 3×9)          η = 0.7413  ██████████████
@@ -216,6 +222,7 @@
   Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3         0.0420  ✓
   Sucção/uplift (ancoragem)        EN 1990+EN 1992-4              0.7242  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3             0.6631  ✓
+  Robustez tirante piso            EN 1991-1-7+335+1993-1-2       0.7220  ✓
   ELS flechas                      EC5 §2.3.2.2+Tab.7.2           0.1429  ✓
   Ruptura de bloco L1              EC5 Anexo A                    0.1308  ✓
   Ruptura de bloco L1c             EC5 Anexo A                    0.1308  ✓
@@ -236,7 +243,7 @@
   T_tirante    = 377.97 kN  (∅48.0 mm MR315)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 37  |  todas OK = True
+  N.º verif.   = 38  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
@@ -249,4 +256,4 @@
 Pipeline concluído. Relatório gerado em output/
   Status global = APROVADO | η_max = 1.0000
 
-[FASE 6] Visualização 3D omitida (abrir_viz=False)
+[FASE 6] Abrindo visualização 3D interativa...

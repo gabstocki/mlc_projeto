@@ -57,6 +57,7 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("icamento",            "Içamento (montagem)",       "EN 1991-1-6+EC5 §6.3.3"),
     ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
+    ("tirante_piso_robustez","Robustez tirante piso",    "EN 1991-1-7+335+1993-1-2"),
     ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
     ("ruptura_bloco_L1",    "Ruptura de bloco L1",       "EC5 Anexo A"),
     ("ruptura_bloco_L1c",   "Ruptura de bloco L1c",      "EC5 Anexo A"),
@@ -1604,6 +1605,64 @@ def gerar_tex(
                 'próximo do rígido. \\textbf{Não é necessário acoplar} para o '
                 'dimensionamento do tirante ($T=H$ máximo, conservador); um '
                 'modelo de pórtico acoplado só refinaria a flexão da viga.\n\n'
+            )
+
+        # ── 10c. Robustez do tirante no piso (issue 37) ──────────
+        r_rob = r_tir.get("robustez_piso", {})
+        if r_rob:
+            r_imp = r_rob.get("impacto", {})
+            r_cor = r_rob.get("corrosao", {})
+            r_fog = r_rob.get("incendio", {})
+            r_tro = r_rob.get("tropeco", {})
+            parts.append(
+                '\n% ── 10c. Robustez do tirante no piso ─────────────────────\n'
+                '\\subsection*{10c. Robustez do tirante ao nível do piso '
+                '(estacionamento -- issue~37)}\n\n'
+            )
+            parts.append(
+                'O tirante está ao nível do piso ($z\\approx 0{,}08$~m) atravessando '
+                'estacionamento coberto. Além da tração (\\S10b), verifica-se a '
+                '\\textbf{exposição física} do elemento -- antes delegada a '
+                '\\emph{"detalhar em execução"}. \\textbf{Proteção adotada:} '
+                + _tex_escape(str(r_rob.get("protecao", "embutido"))) +
+                ' (canaleta no contrapiso); o tirante é tratado como '
+                '\\textbf{primário} (fecho de empuxo), postura conservadora enquanto '
+                'a coerência do caminho de carga (issue~38) não é fechada.\n\n'
+            )
+            parts.append('\\begin{itemize}\n')
+            parts.append(
+                '  \\item \\textbf{Impacto de veículo (EN~1991-1-7):} força de '
+                f'projeto $F_d={_br(r_imp.get("F_gov_kN", 0), 0)}$~kN. Uma barra nua '
+                f'$d={_br(r_imp.get("d_mm", 0), 0)}$~mm no vão livre '
+                f'($L={_br(r_imp.get("L_livre_m", 0), 2)}$~m) teria '
+                f'$M_{{Ed}}={_br(r_imp.get("M_Ed_kNm", 0), 1)}$~kN·m contra '
+                f'$M_{{pl,Rd}}={_br(r_imp.get("M_pl_Rd_kNm", 0), 1)}$~kN·m '
+                f'($\\eta={_br(r_imp.get("eta_barra_nua", 0), 0)}$ -- \\textbf{{não '
+                'resiste}). Com o tirante \\textbf{embutido}, a laje '
+                '\\textbf{intercepta} o choque ($\\eta=0$): a proteção é o elemento '
+                'verificado, não a barra.\n'
+            )
+            parts.append(
+                '  \\item \\textbf{Corrosão (EN~335 UC3 / EN~ISO~12944 C3):} '
+                f'sobreespessura de sacrifício $\\Delta r={_br(r_cor.get("delta_corr_mm", 0), 1)}$~mm '
+                f'reduz $d={_br(r_cor.get("d_mm", 0), 0)}\\to{_br(r_cor.get("d_ef_mm", 0), 0)}$~mm '
+                f'($-{_br(r_cor.get("perda_pct", 0), 0)}$\\% de $N_{{t,Rd}}$); a '
+                'tração reverificada na seção efetiva dá '
+                f'$\\eta={_br(r_cor.get("eta", 0), 3)}$ \\textbf{{(governa a robustez)}}.\n'
+            )
+            parts.append(
+                '  \\item \\textbf{Incêndio (EN~1993-1-2):} '
+                + _tex_escape(str(r_fog.get("verdito", ""))) + '\n'
+            )
+            parts.append(
+                '  \\item \\textbf{Tropeço/serventia:} '
+                + _tex_escape(str(r_tro.get("verdito", ""))) + '\n'
+            )
+            parts.append('\\end{itemize}\n\n')
+            parts.append(
+                '\\registonota{Requisitos de projeto -- tirante no piso (issue~37)}{'
+                + _tex_escape("; ".join(str(x) for x in r_rob.get("requisitos", [])))
+                + '}\n\n'
             )
 
     parts.append('\n% ── 11. Ligações ──────────────────────────────────────────────\n\\section*{11. Ligações}\n\n\\textit{Critério de projeto (uso público):} $\\eta_{\\mathrm{alvo}}=')

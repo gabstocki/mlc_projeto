@@ -59,6 +59,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 32 | P2 | [Elemento de beiral como corda do diafragma de cobertura](32-corda-diafragma-beiral.md) — desdobramento da 31 ✅ |
 | 35 | P1 | [Empuxo de gravidade não se desenvolve (beiral flexível): incoerência viga×pilar×tirante; revisa a 24](35-empuxo-pilar-caminho-carga.md) |
 | 36 | P1 | [Download do contraventamento (±V_Ed·tanβ) não entra na verificação dos pilares dos painéis; tração sob uplift](36-download-contraventamento-pilares.md) ✅ (resta refino P2: concomitância por direção de vento) |
+| 38 | P1 | [Caminho horizontal transversal do empuxo: auditar o "colapso do pilar" e fechar a decisão da 35](38-caminho-horizontal-transversal-coerencia.md) — auditoria da crítica do orientador; implementação na 35 |
 
 ### Terças
 | # | Prioridade | Issue |
@@ -76,6 +77,7 @@ trabalhada caso a caso. Referências normativas: **EN 1995-1-1 (EC5)**, **EN 199
 | 22 | P1 | [Critério η-alvo 0,75: ligações com η≈1 — verificar ativação](22-criterio-eta-alvo.md) ✅ |
 | 23 | P2 | [Dimensões das chapas não publicadas (incl. base do pilar central)](23-dimensoes-chapas.md) ✅ |
 | 24 | P2 | [Tirante: fy 315 MPa e hipótese de apoio horizontal indeslocável](24-tirante-fy315-flexibilidade.md) ✅ |
+| 37 | P1 | [Tirante ao nível do piso em estacionamento: impacto veicular, corrosão, fogo e tropeço](37-tirante-piso-robustez-impacto-corrosao-fogo.md) — desdobramento do caminho transversal ✅ |
 
 ### Modelo — coerência e situações transitórias
 | # | Prioridade | Issue |

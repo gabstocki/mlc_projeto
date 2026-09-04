@@ -4,7 +4,7 @@
 - **Prioridade:** P1 (não é colapso — a viga tem folga; mas invalida esforços do memorial: M da viga, tirante e flecha)
 - **Normas:** EN 1995-1-1 §5.4, §6.4; EN 1993-1-1 §5.2.1
 - **Arquivos:** `mlc_projeto/core/loads.py:209-325` (hipótese indeslocável); `checks/elu/pilares.py:10-27`; `checks/elu/tirante_base.py`; `checks/elu/estabilidade_global.py:13-14`; `checks/els/deflection_els.py`; `main.py:234-242`
-- **Relaciona:** revisa a conclusão da [24](24-tirante-fy315-flexibilidade.md); complementa [31](31-estabilidade-transversal-portico.md), [13](13-pilares-esforcos-central.md), [33](33-succao-uplift-ancoragem-tirante.md).
+- **Relaciona:** revisa a conclusão da [24](24-tirante-fy315-flexibilidade.md); complementa [31](31-estabilidade-transversal-portico.md), [13](13-pilares-esforcos-central.md), [33](33-succao-uplift-ancoragem-tirante.md). **Auditoria/fecho da decisão A/B → [38](38-caminho-horizontal-transversal-coerencia.md)**; robustez do tirante no piso → [37](37-tirante-piso-robustez-impacto-corrosao-fogo.md).
 
 ## Origem
 Observação da usuária: **"os pilares me parecem pouco solicitados"**. Aprofundado com um
