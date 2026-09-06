@@ -754,6 +754,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         m_colunas=2,
         contravento_vertical_ok=cvv["lateral_estavel_long"],
         contravento_transversal_ok=cvt["lateral_estavel_transv"],
+        # AUD-006/AUD-008: a força nocional (EN 1993-1-1 §5.3.2) entra como caso
+        # de carga explícito na demanda do contraventamento transversal
+        # (H_tr = arrasto θ=90° no topo + H_imp) e é ali verificada. Só se
+        # declara o caminho lateral quando essa verificação passou.
+        nocional_no_contraventamento=bool(
+            cvt.get("ok") and cvt.get("H_imp_kN", 0.0) > 0.0
+        ),
     )
     eg = res_elu["estabilidade_global"]
     _print_eta("Estab. global α_cr/P-Δ", eg)
@@ -889,6 +896,35 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     res_els = {}
     res_els["ELS"] = verificar_ELS(geo, mat_longa, load)
     _print_eta("ELS §2.3.2.2+Tab.7.2", res_els["ELS"])
+
+    # AUD-006 (resíduo A): contrapartida do modelo H=0 — os springings ABREM.
+    # O afastamento simétrico é grau de liberdade distinto do sway: o diafragma
+    # trava a translação (legitimando l_ef=1,0·H) mas não o afastamento.
+    from mlc_projeto.checks.elu.empuxo_acoplado import (
+        empuxo_no_frontao, verificar_abertura_springings,
+    )
+    res_els["abertura_springings"] = verificar_abertura_springings(
+        geo, E_Pa=mat_longa.E0_mean,
+        H_rigido_kN=load.H_rigido_ELU(),
+        k_apoio_kNpm=0.0,          # Opção B: springing horizontalmente livre
+    )
+    _ab = res_els["abertura_springings"]
+    _print_eta("Abertura springings (ELS)", _ab)
+    print(f"  · δ por springing={_ab['delta_springing_mm']:.2f} mm | "
+          f"total={_ab['delta_total_mm']:.2f} mm ≤ {_ab['lim_mm']:.1f} mm "
+          f"({_ab['lim_rel']}) | k_arco={_ab['k_arco_kNpm']:,.0f} kN/m")
+
+    # AUD-006 (resíduo B): a cruz do frontão liga os dois topos de pilar, logo
+    # AQUELE pórtico atrai empuxo — demanda adicional no painel e na fundação
+    # do frontão que o modelo H=0 dos pórticos internos não entrega.
+    res_els["empuxo_frontao"] = empuxo_no_frontao(
+        geo, E_Pa=mat_elu.E0_mean, H_rigido_kN=load.H_rigido_ELU(),
+        b_baia_m=geo.L, H_col_m=H_PILAR_ALT, d_diag_mm=D_BARRA_CV_MM,
+    )
+    _ef = res_els["empuxo_frontao"]
+    print(f"  · Frontão atrai H={_ef['H_dev_kN']:.2f} kN "
+          f"({100*_ef['fracao_do_rigido']:.1f}% do rígido {_ef['H_rigido_kN']:.1f} kN) | "
+          f"k_cruz={_ef['k_cruz_kNpm']:,.0f} vs k_arco={_ef['k_arco_kNpm']:,.0f} kN/m")
 
     # ── Fase 4a: Tirante de base (opcional — fecho do empuxo) ─────────────────
     H_arco = float(load.H_ELU())

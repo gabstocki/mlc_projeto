@@ -1,6 +1,26 @@
 """
 predim/predim.py — Varredura paramétrica v3 — Pórtico de 3 rótulas.
 
+╔══════════════════════════════════════════════════════════════════════════╗
+║ FORA DA ROTA DE DECISÃO DE PROJETO — AUD-010 (auditoria 2026-09-04)      ║
+║                                                                          ║
+║ Este módulo NÃO é equivalente ao pipeline principal e não deve ser usado ║
+║ para selecionar seção. Divergências conhecidas:                          ║
+║   · modelo: declara "3 rótulas" e analisa com apoio horizontal RÍGIDO,   ║
+║     enquanto o pipeline roda com H = 0 (Opção B, issues 35/38);          ║
+║   · combinações: usa 1,35G + 1,50W + 1,05Q hard-coded, em vez do gerador ║
+║     EN 1990 de core/loads.py;                                            ║
+║   · ELS: consome o integrador de checks/els/creep.py, não o de           ║
+║     deflection_els.py que inclui a parcela de cisalhamento.              ║
+║                                                                          ║
+║ Os CSV/MD em output/varredura_* resultam de OUTRO problema mecânico e    ║
+║ não são evidência de dimensionamento. A convergência com a API           ║
+║ consolidada continua pendente.                                           ║
+║                                                                          ║
+║ Corrigido na Onda 3: a interação de estabilidade passou a ser LINEAR em  ║
+║ k_c (EN 1995-1-1 §6.3.2(3)), alinhada a pilares.py e flexao.py.          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
 MUDANÇAS v3:
     - M_max calculado pela análise estrutural correta de 3 rótulas
     - Verificação de flexo-compressão na viga (EC5 §6.3.2) — M + N axial
@@ -57,7 +77,7 @@ def eta_flexo_compressao_viga(
 
     Para a viga do pórtico de 3 rótulas, a força normal N é compressão.
     A verificação combina:
-        (σ_c,0,d / (k_c · f_c,0,d))² + σ_m,d / f_m,d ≤ 1,0
+        σ_c,0,d / (k_c · f_c,0,d) + σ_m,d / f_m,d ≤ 1,0   (§6.3.2(3), LINEAR)
 
     Comprimento efetivo para flambagem da viga:
         No plano do pórtico: l_ef = distância entre rótulas = L/2
@@ -91,7 +111,12 @@ def eta_flexo_compressao_viga(
     sigma_c = N_d_N / A
     sigma_m = M_d_Nm / W_y
 
-    eta = (sigma_c / (k_c_y * mat.f_c0_d))**2 + sigma_m / mat.f_m_d
+    # AUD-010: EN 1995-1-1:2004 §6.3.2(3) — quando k_c é aplicado, o termo de
+    # compressão é LINEAR. A forma quadrática pertence a §6.2.4 (Eqs. 6.19/6.20)
+    # e só vale para λ_rel ≤ 0,3, isto é, quando NÃO há redução por
+    # instabilidade. Aplicá-la com k_c subestima a utilização — o mesmo defeito
+    # já corrigido em checks/elu/pilares.py e flexao.py na Onda 1.
+    eta = sigma_c / (k_c_y * mat.f_c0_d) + sigma_m / mat.f_m_d
     return eta
 
 

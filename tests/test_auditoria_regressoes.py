@@ -222,7 +222,6 @@ def test_aud_008_integracao_els_reproduz_viga_biapoiada_com_udl():
     assert obtido == pytest.approx(esperado, rel=1e-3)
 
 
-@AUDIT_XFAIL
 def test_aud_009_predimensionamento_usa_interacao_linear_de_estabilidade():
     """EC5 6.3.2: termo axial é linear quando k_c é aplicado."""
     mat = GlulamMaterial("GL24h", 3, "curta")
@@ -334,7 +333,6 @@ def test_aud_014_viga_variavel_procura_maximo_de_tensao_nao_de_momento():
     assert atual["sigma_m_MPa"] == pytest.approx(sigma_max / 1e6, rel=5e-4)
 
 
-@AUDIT_XFAIL
 def test_aud_015_parametros_ndp_possuem_identificacao_do_national_annex():
     """Fatores configuráveis devem registrar a origem EN/NA, sem escolha implícita."""
     _, _, _, load = _modelo(empuxo=False)
@@ -349,16 +347,44 @@ def test_aud_016_relatorio_nao_declara_versao_obsoleta_do_vento():
     assert "NBR 6123:1988" not in source
 
 
-@AUDIT_XFAIL
 def test_aud_017_sapata_expoe_verificacao_completa_de_ancoragem():
-    """A aprovação não pode omitir modos de falha dos chumbadores/concreto."""
+    """A aprovação não pode omitir modos de falha dos chumbadores/concreto.
+
+    CORREÇÃO DO TESTE DA AUDITORIA (Onda 3) — terceira e última.
+    O teste original exigia `en_1992_4_verificado is True` numa chamada SEM
+    qualquer dado de ancoragem, o que contradiz o próprio relatório: o achado
+    AUD-017 diz "Expected result: **bloqueio por dados insuficientes**" e
+    recomenda "exigir dados certificados e propagar NOT VALIDATED ao resultado
+    global". Marcar como verificado sem embutimento, borda, grupo, classe de
+    concreto nem ETA seria exatamente a falsa aprovação que o achado denuncia.
+
+    O teste passa a verificar o contrato nos dois sentidos.
+    """
     geo, _, _, load = _modelo(empuxo=False)
+
+    # Sem dados: bloqueio explícito, e a pré-seleção não vale como aprovação.
     r = dimensionar_sapata(load, geo)
-    assert r["en_1992_4_verificado"] is True
-    assert r["produto_chumbador_verificado"] is True
+    assert r["en_1992_4_verificado"] is False
+    assert r["produto_chumbador_verificado"] is False
+    assert r["status_ancoragem"] == "NOT VALIDATED"
+    assert r["ok"] is False
+    assert r["modos_en_1992_4_pendentes"], "os modos de rotura devem ser listados"
+
+    # Com o conjunto completo de dados certificados: contrato cumprido.
+    completo = dimensionar_sapata(load, geo, dados_ancoragem={
+        "eta_produto": "ETA-XX/XXXX",
+        "h_ef_mm": 200.0,
+        "c_borda_mm": 150.0,
+        "s_grupo_mm": 200.0,
+        "classe_concreto": "C25/30",
+        "concreto_fissurado": True,
+        "verificacao_en1992_4": "memoria externa rev.0",
+    })
+    assert completo["en_1992_4_verificado"] is True
+    assert completo["produto_chumbador_verificado"] is True
+    assert completo["status_ancoragem"] == "VERIFICADO"
 
 
-@AUDIT_XFAIL
 def test_aud_018_fem_reproduz_a_condicao_de_contorno_selecionada():
     """O benchmark FEM deve aceitar o mesmo modelo com ou sem desenvolvimento de H."""
     module_path = (

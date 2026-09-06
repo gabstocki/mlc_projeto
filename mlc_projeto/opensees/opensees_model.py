@@ -42,7 +42,8 @@ OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 
 
 def analisar_analitico(q: float, L: float, h0: float, h_ap: float,
-                       alpha_rad: float, b: float) -> dict:
+                       alpha_rad: float, b: float,
+                       desenvolve_empuxo: bool = True) -> dict:
     """
     Solução analítica — viga BIARTICULADA monolítica (Castigliano c/ axial).
 
@@ -50,11 +51,13 @@ def analisar_analitico(q: float, L: float, h0: float, h_ap: float,
     modo que a validação FEM confira exatamente o modelo de cálculo.
     """
     from mlc_projeto.core.loads import analisar_biarticulada
-    # AUD-018: este harness só reproduz a condição de apoio RÍGIDA. O
-    # parâmetro é declarado explicitamente para que a limitação fique
-    # registrada no código, e não implícita num default.
+    # AUD-018: a condição de contorno acompanha a do FEM com que se compara.
+    # NOTA de método: esta função DELEGA ao solver de produção, portanto a
+    # comparação FEM×analítico é uma verificação de consistência interna, NÃO
+    # uma validação independente. Um benchmark independente exige formulação e
+    # implementação próprias — continua pendente (AUD-018, parte 3).
     r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, b,
-                              desenvolve_empuxo=True)
+                              desenvolve_empuxo=desenvolve_empuxo)
     return dict(Rv=r["R_v_kN"], H=r["H_kN"], N=r["N_apoio_kN"],
                 Mmax=r["M_max_kNm"], xMmax=r["x_Mmax_m"],
                 Mcum=r["M_cumeeira_kNm"], f=round((h_ap - h0) / 2.0, 4))
@@ -62,10 +65,27 @@ def analisar_analitico(q: float, L: float, h0: float, h_ap: float,
 
 def analisar_fem(q: float, L: float, h0: float, h_ap: float,
                  alpha_rad: float, b: float, E: float,
+                 desenvolve_empuxo: bool,
                  H_pilar: float = 7.0, n_v: int = 40) -> dict:
     """
-    Modelo FEM de meia estrutura — pórtico de 3 rótulas.
-    Eixo no intrados: z(x) = H_pilar + x·tan(α).
+    Modelo FEM de meia estrutura, com a condição de apoio EXPLÍCITA.
+
+    Eixo no intradorso: z(x) = H_pilar + x·tan(α).
+
+    AUD-018: o harness só sabia reproduzir o apoio horizontal RÍGIDO, enquanto
+    o pipeline principal roda com H = 0 (Opção B). Comparar o FEM rígido com o
+    resultado do modelo liberado não é validação — é comparar duas estruturas
+    diferentes. O parâmetro passou a ser OBRIGATÓRIO, pelo mesmo motivo que em
+    `core.loads.analisar_biarticulada`: nenhum caminho pode analisar outra
+    condição de contorno por omissão.
+
+        desenvolve_empuxo=True  → springing travado em x  (H = H_rígido)
+        desenvolve_empuxo=False → springing livre em x    (H = 0, viga biapoiada)
+
+    DOMÍNIO — este modelo é de MEIA estrutura, com simetria imposta no nó de
+    cumeeira. Por construção ele NÃO representa carregamento assimétrico (os
+    padrões da NBR 6123 com águas distintas). Um benchmark de assimetria exige
+    modelo de vão completo e continua pendente (AUD-018, parte 2).
     """
     if not OPENSEES_OK:
         return {"erro": "OpenSeesPy não disponível"}
@@ -84,7 +104,9 @@ def analisar_fem(q: float, L: float, h0: float, h_ap: float,
     for i,(x,z) in enumerate(zip(xnodes, znodes)):
         ops.node(i+1, x, z)
 
-    ops.fix(1,      1, 1, 0)   # rótula do apoio (Rz livre)
+    # Condição de contorno horizontal no springing — AUD-018.
+    fix_x = 1 if desenvolve_empuxo else 0
+    ops.fix(1,      fix_x, 1, 0)   # rótula do apoio (Rz livre); x conforme o modelo
     ops.fix(n_v+1,  1, 0, 1)   # SIMETRIA de peça contínua: Rz FIXO (sem rótula)
 
     ops.geomTransf('Linear', 1)
@@ -141,10 +163,14 @@ def analisar_fem(q: float, L: float, h0: float, h_ap: float,
 def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
                       salvar="opensees_resultados.png"):
     """
-    Compara FEM vs analítico e gera figura com diagrama M(x) e deformada.
+    Compara FEM vs analítico na condição de contorno EFETIVAMENTE selecionada.
+
+    AUD-018: antes, comparava-se sempre o modelo rígido, mesmo com o pipeline
+    a rodar em H = 0. A condição vem agora de `load.empuxo_desenvolve`.
     """
     L=geo.L; h0=geo.h0; h_ap=geo.h_ap; al=geo.alpha_rad; b=geo.b
     E=mat.E0_mean
+    desenvolve_empuxo = bool(load.empuxo_desenvolve)
 
     combos = {
         "ELU_C2": load.combinacoes["ELU_C2"].q_tot,
@@ -159,8 +185,8 @@ def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
     print("=" * 72)
     rows = []
     for nome, q in combos.items():
-        an  = analisar_analitico(q, L, h0, h_ap, al, b)
-        fem = analisar_fem(q, L, h0, h_ap, al, b, E, H_pilar, n_v)
+        an  = analisar_analitico(q, L, h0, h_ap, al, b, desenvolve_empuxo)
+        fem = analisar_fem(q, L, h0, h_ap, al, b, E, desenvolve_empuxo, H_pilar, n_v)
         if "erro" in fem: continue
 
         print(f"\n  {nome}  (q={q:.4f} kN/m)")
@@ -181,8 +207,8 @@ def comparar_e_plotar(geo, mat, load, H_pilar=7.0, n_v=40,
     # ── Figura ────────────────────────────────────────────────
     q_ELU = combos["ELU_C2"]; q_ELS = combos["ELS_S1"]
     an_ELU = analisar_analitico(q_ELU, L, h0, h_ap, al, b)
-    fem_ELU = analisar_fem(q_ELU, L, h0, h_ap, al, b, E, H_pilar, n_v)
-    fem_ELS = analisar_fem(q_ELS, L, h0, h_ap, al, b, E, H_pilar, n_v)
+    fem_ELU = analisar_fem(q_ELU, L, h0, h_ap, al, b, E, desenvolve_empuxo, H_pilar, n_v)
+    fem_ELS = analisar_fem(q_ELS, L, h0, h_ap, al, b, E, desenvolve_empuxo, H_pilar, n_v)
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(

@@ -52,6 +52,7 @@ from scipy.integrate import trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
+from mlc_projeto.core.normativo import CONFIG_NORMATIVA, ConfiguracaoNormativa
 
 
 # ── Coeficientes EN 1990 ─────────────────────────────────────────────────────
@@ -395,6 +396,30 @@ class Carregamentos:
     # Opção B (issue 35/38): empuxo NÃO se desenvolve (viga biapoiada). Default
     # True mantém o modelo de apoio rígido (retrocompatível).
     empuxo_desenvolve: bool = True
+
+    # ── Base normativa declarada — AUD-015 ───────────────────────────────
+    # Sem isto, γG/γQ/ψ/γM/k_cr e limites eram constantes de módulo sem edição,
+    # sem cláusula de origem e sem distinção entre "valor recomendado do EN" e
+    # "parâmetro determinado nacionalmente".
+    config_normativa: ConfiguracaoNormativa = field(
+        default_factory=lambda: CONFIG_NORMATIVA
+    )
+
+    @property
+    def eurocode_base(self) -> str:
+        return self.config_normativa.eurocode_base
+
+    @property
+    def national_annex(self) -> str:
+        return self.config_normativa.national_annex
+
+    @property
+    def ndp_source(self):
+        return self.config_normativa.ndp_source
+
+    @property
+    def aviso_ndp(self) -> str:
+        return self.config_normativa.aviso()
 
     _combinacoes: dict = field(default_factory=dict, init=False, repr=False)
     _area_trib:   float = field(init=False, repr=False)

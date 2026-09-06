@@ -81,4 +81,8 @@ def test_L3_com_tirante_H_zero():
     assert L3_com["H_arco_kN"] == pytest.approx(H_arco, rel=1e-6)
     assert L3_com["n_chumbadores"] == 4
     assert L3_com["eta"] == pytest.approx(L3_com["eta_N"], rel=1e-6)
-    assert L3_com["ok"]
+    # AUD-017: `ok` da sapata só é True com os dados de ancoragem
+    # (EN 1992-4 + ETA). Sem eles o resultado é NOT VALIDATED por
+    # desenho. O que este teste verifica é a PRÉ-SELEÇÃO de quantidade.
+    assert L3_com["ok_pre_selecao"]
+    assert L3_com["status_ancoragem"] == "NOT VALIDATED"

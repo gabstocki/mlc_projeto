@@ -924,6 +924,60 @@ def dimensionar_ligacao_base(
 
 # ── LIGAÇÃO 3 — Sapata na fundação ───────────────────────────────────────────
 
+# ── Contrato de verificação de ancoragem — AUD-017 ───────────────────────────
+
+CAMPOS_ANCORAGEM_OBRIGATORIOS = (
+    "eta_produto",           # referência do ETA / laudo do chumbador
+    "h_ef_mm",               # profundidade efetiva de embutimento
+    "c_borda_mm",            # menor distância à borda
+    "s_grupo_mm",            # menor espaçamento do grupo
+    "classe_concreto",       # p.ex. "C25/30"
+    "concreto_fissurado",    # bool — governa k_cr em EN 1992-4
+    "verificacao_en1992_4",  # referência do cálculo/relatório que a cumpriu
+)
+
+
+def _ancoragem_completa(dados: dict | None) -> bool:
+    """True só quando TODOS os dados exigidos por EN 1992-4/ETA foram dados."""
+    if not dados:
+        return False
+    return all(
+        campo in dados and dados[campo] not in (None, "")
+        for campo in CAMPOS_ANCORAGEM_OBRIGATORIOS
+    )
+
+
+def _estado_ancoragem(dados: dict | None) -> dict:
+    """
+    Campos de rastreabilidade da ancoragem.
+
+    A soma linear de capacidades isoladas de chumbador NÃO é a capacidade do
+    grupo: cone, pull-out, pry-out, borda, grupo, interação e fissuração do
+    concreto governam (EN 1992-4). Sem os dados, o estado é NOT VALIDATED e
+    nenhuma aprovação pode ser emitida a partir daqui.
+    """
+    completo = _ancoragem_completa(dados)
+    faltando = [] if completo else [
+        c for c in CAMPOS_ANCORAGEM_OBRIGATORIOS
+        if not dados or c not in dados or dados[c] in (None, "")
+    ]
+    return {
+        "en_1992_4_verificado":         completo,
+        "produto_chumbador_verificado": completo,
+        "status_ancoragem":             "VERIFICADO" if completo else "NOT VALIDATED",
+        "dados_ancoragem_faltando":     faltando,
+        "modos_en_1992_4_pendentes": [] if completo else [
+            "cone de arrancamento (concrete cone)",
+            "pull-out do chumbador",
+            "pry-out sob corte",
+            "rotura de borda sob corte (edge breakage)",
+            "efeito de grupo e espaçamentos",
+            "interação tração-corte",
+            "concreto fissurado / não fissurado",
+        ],
+    }
+
+
 def dimensionar_sapata(
     load:     Carregamentos,
     geo:      GeometriaViga,
@@ -934,9 +988,33 @@ def dimensionar_sapata(
     b_pilar_m: float = 0.32,
     h_pilar_m: float = 0.27,
     f_c_conc_MPa: float = 1.5,
+    dados_ancoragem: dict | None = None,
 ) -> dict:
     """
-    Dimensiona a sapata articulada na base do pilar.
+    PRÉ-SELECIONA a quantidade de chumbadores da sapata articulada.
+
+    AUD-017 — ESTA FUNÇÃO NÃO VERIFICA A ANCORAGEM. Ela escolhe uma quantidade
+    por `n = ceil(H_d / (F_chu · η_alvo))`, tratando a capacidade como a soma
+    linear de capacidades isoladas. A capacidade real de uma ancoragem no
+    concreto NÃO é essa soma: é governada por modos de rotura que dependem de
+    geometria e substrato — cone de arrancamento, pull-out, pry-out, efeito de
+    grupo, distância às bordas, interação tração/corte e fissuração do concreto
+    (EN 1992-4), além dos dados certificados do produto (ETA).
+
+    Enquanto `dados_ancoragem` não for fornecido, o resultado sai com
+    `en_1992_4_verificado=False`, `produto_chumbador_verificado=False` e
+    `status="NOT VALIDATED"`, e `ok` é forçado a False — a pré-seleção não pode
+    valer como aprovação. Para declarar a verificação cumprida, forneça:
+
+        dados_ancoragem = {
+            "eta_produto": "<referência do ETA/laudo do chumbador>",
+            "h_ef_mm": ..., "c_borda_mm": ..., "s_grupo_mm": ...,
+            "classe_concreto": "C25/30", "concreto_fissurado": True/False,
+            "verificacao_en1992_4": "<referência do cálculo/relatório externo>",
+        }
+
+    Todos esses campos são obrigatórios: faltando qualquer um, o estado
+    permanece NOT VALIDATED.
 
     Esforços (biarticulada):
         N_d = V_max_ELU  (compressão vertical do pilar)
@@ -1040,8 +1118,12 @@ def dimensionar_sapata(
         "lado_chapa_cm":  round(lado_chapa,   1),
         "eta":            round(eta,           4),
         "ok_alvo":        ok_alvo,
-        "ok":             ok_norma and ok_alvo,
-        "norma":          "EN 1993-1-8 + EN 1992-4 | η_alvo projeto",
+        # ── Contrato de ancoragem — AUD-017 ──────────────────────────────
+        **_estado_ancoragem(dados_ancoragem),
+        "ok":             (ok_norma and ok_alvo
+                           and _ancoragem_completa(dados_ancoragem)),
+        "ok_pre_selecao": ok_norma and ok_alvo,
+        "norma":          "EN 1993-1-8 | pré-seleção; verificação por EN 1992-4",
         "nota":           nota,
     }
 

@@ -281,3 +281,142 @@ def relatorio_empuxo_acoplado(res: dict) -> None:
     print(f"    {'k_apoio[kN/m]':>14} {'H_dev[kN]':>10} {'M_viga[kN·m]':>13}")
     for s in res["sweep"]:
         print(f"    {str(s['k_support_kNm']):>14} {s['H_dev_kN']:>10.2f} {s['M_viga_kNm']:>13.1f}")
+
+
+# ── ELS — abertura horizontal dos springings (AUD-006) ───────────────────────
+
+# Limite de serviço adotado para a abertura TOTAL entre springings, como fração
+# do vão. Não é um NDP do EC5 — a norma não fixa limite para este efeito; é uma
+# especificação de projeto, declarada aqui para ser auditável e alterável.
+# L/500 é folgado face aos limites de flecha (L/300 instantânea, L/250 final) e
+# reflete que a abertura solicita ligações e alvenaria/acabamentos de bordo.
+ABERTURA_SPRINGING_LIM = 1.0 / 500.0
+
+
+def verificar_abertura_springings(
+    geo: GeometriaViga,
+    E_Pa: float,
+    H_rigido_kN: float,
+    k_apoio_kNpm: float = 0.0,
+    lim_rel: float = ABERTURA_SPRINGING_LIM,
+) -> dict:
+    """
+    Abertura horizontal dos springings em ELS — verificação que faltava.
+
+    Contexto (AUD-006). O modelo adotado (Opção B) impõe `H = 0`, o que é
+    mecanicamente defensável: o afastamento simétrico dos springings é um grau
+    de liberdade DISTINTO da translação lateral (sway). O diafragma de cobertura
+    e os frontões travam a translação — e é isso que legitima `l_ef = 1,0·H` nos
+    pilares — mas não restringem o afastamento, porque um afastamento simétrico
+    não tem força transversal líquida contra a qual o diafragma possa reagir.
+    O único elemento transversal no plano da cobertura é a própria viga que se
+    afasta.
+
+    A contrapartida de `H = 0` é que os apoios ABREM, e essa abertura nunca foi
+    verificada. Com o apoio de rigidez `k` em série com o arco:
+
+        H_dev = H_rígido · k / (k + k_arco)
+        δ_um_springing = (H_rígido − H_dev) / k_arco
+        δ_total = 2 · δ_um_springing
+
+    Com `k = 0` (Opção B pura) recupera-se δ = H_rígido / k_arco por apoio.
+
+    Args:
+        geo          : geometria da viga
+        E_Pa         : módulo de elasticidade para ELS (E_0,mean — EC5 §2.2.3)
+        H_rigido_kN  : empuxo do modelo de apoio indeslocável, na combinação ELS
+        k_apoio_kNpm : rigidez horizontal do apoio (0 = springing livre)
+        lim_rel      : limite de serviço como fração do vão
+
+    Returns:
+        dict com δ por springing, δ total, limite, η e ok.
+    """
+    k_arco = rigidez_horizontal_arco(geo, E_Pa=E_Pa)["k_arco_kNm"]
+    k = max(float(k_apoio_kNpm), 0.0)
+
+    H_dev = H_rigido_kN * k / (k + k_arco) if (k + k_arco) > 0 else 0.0
+    delta_um = (H_rigido_kN - H_dev) / k_arco          # m
+    delta_tot = 2.0 * delta_um
+    lim = lim_rel * geo.L
+    eta = delta_tot / lim if lim > 0 else 999.0
+
+    return {
+        "verificacao":      "Abertura horizontal dos springings (ELS)",
+        "L_m":              geo.L,
+        "k_arco_kNpm":      round(k_arco, 1),
+        "k_apoio_kNpm":     round(k, 3),
+        "H_rigido_kN":      round(H_rigido_kN, 3),
+        "H_dev_kN":         round(H_dev, 3),
+        "delta_springing_mm": round(delta_um * 1e3, 3),
+        "delta_total_mm":   round(delta_tot * 1e3, 3),
+        "lim_mm":           round(lim * 1e3, 2),
+        "lim_rel":          f"L/{1.0 / lim_rel:.0f}",
+        "eta":              round(eta, 4),
+        "ok":               eta <= 1.0,
+        "norma": (
+            "EN 1995-1-1 §7.2 (ELS, deformações) — limite de ABERTURA não "
+            "normalizado: especificação de projeto declarada"
+        ),
+        "nota": (
+            "Contrapartida do modelo H=0 (Opção B). O afastamento dos "
+            "springings é grau de liberdade distinto do sway: o diafragma trava "
+            "a translação (l_ef=1,0·H legítimo) mas não o afastamento simétrico."
+        ),
+    }
+
+
+# ── Empuxo atraído pelo pórtico de FRONTÃO (AUD-006, resíduo B) ──────────────
+
+def empuxo_no_frontao(
+    geo: GeometriaViga,
+    E_Pa: float,
+    H_rigido_kN: float,
+    b_baia_m: float,
+    H_col_m: float,
+    d_diag_mm: float,
+    E_aco_Pa: float = 210e9,
+) -> dict:
+    """
+    Empuxo que o pórtico de frontão desenvolve, por a cruz ligar os topos.
+
+    Nos pórticos INTERNOS o afastamento dos springings é livre (`H = 0`): o
+    pilar birotulado é mecanismo e o diafragma não restringe esse modo. No
+    FRONTÃO, porém, a cruz de Santo André liga os dois topos de pilar — logo o
+    afastamento tracion a diagonal e parte do empuxo desenvolve-se.
+
+    Rigidez horizontal da cruz (só a diagonal tracionada é ativa):
+
+        L_d = √(b² + H²) ;  cos α = b / L_d
+        k_cruz = (E_aço·A / L_d) · cos²α
+
+    e o empuxo segue as duas molas em série, como no resto do módulo:
+
+        H_dev = H_rígido · k_cruz / (k_cruz + k_arco)
+
+    Como o arco é uma ordem de grandeza mais rígido que a cruz, H_dev resulta
+    pequeno — mas NÃO é zero, e é uma demanda adicional no painel do frontão e
+    na sua fundação que o modelo `H = 0` não entrega.
+    """
+    A_diag = math.pi * (d_diag_mm * 1e-3) ** 2 / 4.0
+    L_d = math.hypot(b_baia_m, H_col_m)
+    cos_a = b_baia_m / L_d
+    k_cruz = (E_aco_Pa * A_diag / L_d) * cos_a ** 2 / 1e3      # kN/m
+
+    k_arco = rigidez_horizontal_arco(geo, E_Pa=E_Pa)["k_arco_kNm"]
+    H_dev = H_rigido_kN * k_cruz / (k_cruz + k_arco)
+
+    return {
+        "verificacao":   "Empuxo desenvolvido no pórtico de frontão",
+        "d_diag_mm":     d_diag_mm,
+        "L_diag_m":      round(L_d, 3),
+        "k_cruz_kNpm":   round(k_cruz, 1),
+        "k_arco_kNpm":   round(k_arco, 1),
+        "H_rigido_kN":   round(H_rigido_kN, 3),
+        "H_dev_kN":      round(H_dev, 3),
+        "fracao_do_rigido": round(H_dev / H_rigido_kN, 5) if H_rigido_kN else 0.0,
+        "nota": (
+            "Demanda ADICIONAL no painel do frontão e na sua fundação. Os "
+            "pórticos internos permanecem com H=0 (afastamento livre); o "
+            "frontão não, porque a cruz liga os dois topos de pilar."
+        ),
+    }

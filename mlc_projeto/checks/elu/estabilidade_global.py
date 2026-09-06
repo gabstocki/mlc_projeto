@@ -158,6 +158,7 @@ def verificar_estabilidade_global(
     alpha_cr_min: float = ALPHA_CR_MIN,
     contravento_vertical_ok: bool | None = None,
     contravento_transversal_ok: bool | None = None,
+    nocional_no_contraventamento: bool = False,
 ) -> dict:
     """
     Verificação completa de estabilidade global do pórtico biarticulado.
@@ -189,20 +190,30 @@ def verificar_estabilidade_global(
     # ── 1) Forças nocionais ───────────────────────────────────
     noc = forca_nocional(V_portal, H_pilar_m, m_colunas=m_colunas)
     H_imp = noc["H_imp_kN"]
-    # AUD-008: com H_Ed = 0 a razão H_imp/H_Ed é indefinida, NÃO nula. O
-    # fallback anterior (`else 0.0`) convertia a pior condição possível — uma
-    # imperfeição horizontal sem qualquer força horizontal de referência que a
-    # equilibre — em aprovação automática, justamente no modelo hoje adotado
-    # (Opção B, H = 0). O critério de dispensa H_imp ≪ H_Ed pressupõe um H_Ed
-    # não nulo; sem ele, a força nocional tem de ser verificada como caso de
-    # carga explícito no sistema de contraventamento lateral.
+    # AUD-008 / AUD-006: com H_Ed = 0 a razão H_imp/H_Ed é indefinida, NÃO nula.
+    # O fallback original (`else 0.0`) convertia a pior condição possível em
+    # aprovação automática.
+    #
+    # Mas a razão nunca foi o critério certo: ela é apenas um teste de DISPENSA
+    # ("a nocional é coberta pelo empuxo de 1.ª ordem"). O critério correto,
+    # que a própria auditoria pede em AUD-008, é verificar a força nocional
+    # como CASO DE CARGA EXPLÍCITO no sistema resistente lateral — que é o que
+    # checks/elu/contraventamento_transversal.py faz (arrasto θ=90° + H_imp).
+    #
+    # `nocional_no_contraventamento` declara que a nocional entrou, verificada,
+    # no caminho lateral. O default é False para preservar a proteção de
+    # AUD-008 quando o chamador não o declara.
     if H_Ed > 1e-9:
         ratio_imp = H_imp / H_Ed
     elif H_imp > 1e-9:
         ratio_imp = math.inf
     else:
         ratio_imp = 0.0          # nenhuma imperfeição a equilibrar
-    ok_imp = ratio_imp <= H_IMP_OVER_H_MAX
+
+    ok_imp = (
+        ratio_imp <= H_IMP_OVER_H_MAX          # dispensa pelo empuxo de 1.ª ordem
+        or bool(nocional_no_contraventamento)  # ou caminho lateral verificado
+    )
     # H de projeto a reter (empuxo 1.ª ordem já >> nocional)
     H_gov = max(H_Ed, H_imp)
 
@@ -333,8 +344,8 @@ def verificar_estabilidade_global(
                 motivos.append(f"w/f_c={w_over_f:.4f}")
             if not ok_imp:
                 motivos.append(
-                    "H_Ed=0 com H_imp>0: razão indefinida, força nocional "
-                    "não verificada no caminho lateral (AUD-008)"
+                    "H_Ed=0 com H_imp>0 e a força nocional NÃO foi declarada "
+                    "verificada no caminho lateral (AUD-008)"
                     if math.isinf(ratio_imp)
                     else f"H_imp/H={ratio_imp:.3f}"
                 )
@@ -348,7 +359,14 @@ def verificar_estabilidade_global(
     # η do critério de dispensa (não confundir com η de seção)
     eta_acr = alpha_cr_min / alpha_cr if alpha_cr > 0 else 999.0
     eta_geom = w_over_f / W_OVER_F_MAX if W_OVER_F_MAX > 0 else 999.0
-    eta_imp = ratio_imp / H_IMP_OVER_H_MAX if H_IMP_OVER_H_MAX > 0 else 999.0
+    if nocional_no_contraventamento:
+        # A nocional é resistida no contraventamento; a razão face a H_Ed deixa
+        # de ser um critério de reprovação (η do contraventamento é que manda).
+        eta_imp = 0.0
+    elif H_IMP_OVER_H_MAX > 0:
+        eta_imp = ratio_imp / H_IMP_OVER_H_MAX
+    else:
+        eta_imp = 999.0
     eta_gov = max(eta_acr, eta_geom, eta_imp)
 
     return {
@@ -373,6 +391,12 @@ def verificar_estabilidade_global(
         "H_imp_kN":      H_imp,
         "H_imp_over_H":  round(ratio_imp, 5),
         "ok_nocional":   ok_imp,
+        "nocional_no_contraventamento": bool(nocional_no_contraventamento),
+        "criterio_nocional": (
+            "caso de carga explícito no contraventamento lateral"
+            if nocional_no_contraventamento and not (ratio_imp <= H_IMP_OVER_H_MAX)
+            else "dispensa por H_imp/H_Ed ≤ %.2f" % H_IMP_OVER_H_MAX
+        ),
         "lim_H_imp":     H_IMP_OVER_H_MAX,
         # Classificação (sway / non-sway) — issues 14 (long.) e 31 (transv.)
         "sistema_non_sway": sistema_non_sway,

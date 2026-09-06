@@ -69,7 +69,11 @@ def test_L1_L3_public_margin():
     # Margem de projeto
     assert L1["eta"] <= eta_alvo + 1e-6
     assert L3["eta"] <= eta_alvo + 1e-6
-    assert L1["ok"] and L3["ok"]
+    # AUD-017: `ok` da sapata só é True com os dados de ancoragem
+    # (EN 1992-4 + ETA). Sem eles o resultado é NOT VALIDATED por
+    # desenho. O que este teste verifica é a PRÉ-SELEÇÃO de quantidade.
+    assert L1["ok"] and L3["ok_pre_selecao"]
+    assert L3["status_ancoragem"] == "NOT VALIDATED"
 
     # n_ef aplicado: R = n_linhas · n_ef,row · F_Rd  (não n · F_Rd)
     R_com_nef = L1["n_ef"] * L1["F_v_Rd_kN"]
