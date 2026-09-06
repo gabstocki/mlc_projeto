@@ -48,6 +48,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.integrate import trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
@@ -130,7 +131,7 @@ def peso_proprio_gk(
     gamma = mat.rho_mean * g_ms2 / 1000.0                 # kN/m³
 
     x = np.linspace(0.0, geo.L, 2001)
-    V_viga = float(np.trapezoid(geo.A(x), x))            # m³ por viga
+    V_viga = float(trapezoid(geo.A(x), x))            # m³ por viga
     q_viga_lin = V_viga * gamma / geo.L                  # kN/m (horizontal)
     g_mlc = q_viga_lin / L_t                             # kN/m²
 
@@ -294,9 +295,9 @@ def analisar_biarticulada(
     # ds/dx cancela em H, mas mantido explícito por rigor). Ver docstring.
     theta   = math.atan(tan_a / 2.0)
     ds_dx   = 1.0 / math.cos(theta)
-    num      = float(np.trapezoid(M0 * y_c / I_x * ds_dx, x))
-    den_flex = float(np.trapezoid(y_c ** 2 / I_x * ds_dx, x))
-    den_ax   = float(np.trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x))
+    num      = float(trapezoid(M0 * y_c / I_x * ds_dx, x))
+    den_flex = float(trapezoid(y_c ** 2 / I_x * ds_dx, x))
+    den_ax   = float(trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x))
     den = den_flex + den_ax
     if den <= 0:
         raise ValueError("Integral de flexibilidade nula — verificar geometria.")

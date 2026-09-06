@@ -55,6 +55,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 from mlc_projeto.core.geometry import GeometriaViga
 
@@ -85,8 +86,8 @@ def rigidez_horizontal_arco(
     theta = math.atan(tan_a / 2.0)
     ds_dx = 1.0 / math.cos(theta)
 
-    f_flex = float(np.trapezoid(y_c ** 2 / I_x * ds_dx, x)) / E_Pa       # m/N
-    f_ax = float(np.trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x)) / E_Pa
+    f_flex = float(trapezoid(y_c ** 2 / I_x * ds_dx, x)) / E_Pa       # m/N
+    f_ax = float(trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x)) / E_Pa
     f11 = f_flex + f_ax
     k_arco_Npm = 1.0 / f11 if f11 > 0 else math.inf
     return {

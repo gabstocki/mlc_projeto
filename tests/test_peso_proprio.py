@@ -1,5 +1,6 @@
 """Testes — peso próprio g_k discriminado (issue 1)."""
 import numpy as np
+from scipy.integrate import trapezoid
 import pytest
 
 from mlc_projeto.core.geometry import GeometriaViga
@@ -32,7 +33,7 @@ def test_g_mlc_confere_com_integracao_manual():
     L_t = 5.75
     gamma = mat.rho_mean * G_GRAVIDADE / 1000.0
     x = np.linspace(0, geo.L, 2001)
-    V = float(np.trapezoid(geo.A(x), x))
+    V = float(trapezoid(geo.A(x), x))
     g_mlc_manual = (V * gamma / geo.L) / L_t
     pp = peso_proprio_gk(geo, mat, L_t=L_t, b_terca=0.20, h_terca=0.58,
                          s_terca=2.53, g_telha_kNm2=0.10, g_instalacoes_kNm2=0.10)

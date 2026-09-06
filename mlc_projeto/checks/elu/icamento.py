@@ -31,7 +31,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import cumulative_trapezoid, trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
@@ -91,7 +91,7 @@ def verificar_icamento(
     # ── Estática do içamento em 2 pontos (a·L e (1−a)·L) ──────
     x1 = a_rel * L
     x2 = (1.0 - a_rel) * L
-    W_tot = float(np.trapezoid(w_d, x))             # kN
+    W_tot = float(trapezoid(w_d, x))             # kN
     R = W_tot / 2.0                                 # reação por ponto (kN)
 
     # Cortante e momento por integração (extremos livres → M(0)=M(L)=0)

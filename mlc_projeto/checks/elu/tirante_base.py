@@ -204,6 +204,7 @@ def impacto_flexibilidade_tirante(
       · o modelo de 2 molas é apenas um indicador de sensibilidade, NÃO o H real.
     """
     import numpy as np
+    from scipy.integrate import trapezoid
 
     L = float(geo.L)
     h0 = float(geo.h0)
@@ -223,8 +224,8 @@ def impacto_flexibilidade_tirante(
     E_glulam_Pa = E_glulam_MPa * 1e6
     # Compliance horizontal do arco = FLEXÃO + AXIAL (coerente com o H de loads.py;
     # no arco raso o termo axial domina). [m/N]
-    f_flex = float(np.trapezoid(y_c ** 2 / I_x * ds_dx, x)) / E_glulam_Pa
-    f_ax = float(np.trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x)) / E_glulam_Pa
+    f_flex = float(trapezoid(y_c ** 2 / I_x * ds_dx, x)) / E_glulam_Pa
+    f_ax = float(trapezoid(math.cos(theta) ** 2 / A_x * ds_dx, x)) / E_glulam_Pa
     f_p = f_flex + f_ax                              # m/N (compliance do arco)
 
     A_m2 = math.pi * (d_mm * 1e-3) ** 2 / 4.0
