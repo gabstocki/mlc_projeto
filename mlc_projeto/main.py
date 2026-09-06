@@ -24,6 +24,7 @@ STOCKI Engenharia Estrutural | Gabriel Stocki CREA-PR 195315/D
 EC5 + EN 1990 + NBR 6123
 """
 
+from dataclasses import replace
 from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
 from mlc_projeto.core.wind       import ParametrosVento
@@ -145,6 +146,15 @@ VENTO_PARAMS = dict(
     H1           = 1.785,   # (L/2)·tan(10°) — sobrescrito por geo no main
     h            = 7.0,
     dist_portico = 5.75,
+    # Geometria da cobertura para a seleção da rota do §7.2 (Onda 2):
+    #   ℓ2 = profundidade TOTAL ⊥ à cumeeira = 2 vãos de 20,25 m;
+    #   n_tramos = 2 águas duplas lado a lado (calha central) → telhado
+    #   múltiplo, fora do escopo das Tabelas 24/25;
+    #   obstruções = veículos sob a cobertura (estacionamento), que por si só
+    #   acionam a rota de edificação fechada de §7.2.1.
+    l2                       = 40.5,
+    n_tramos                 = 2,
+    obstrucoes_sob_cobertura = True,
 )
 
 # --- Cargas de área e malha estrutural ----------------------------------------
@@ -853,8 +863,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # Fixação telha→terça sob sucção — NBR 6123 (verificação local, issue 17)
     print("\n[FASE 2] Fixação telha→terça (sucção — NBR 6123)...")
     from mlc_projeto.checks.elu.fixacao_telha import verificar_fixacao_telha_succao
+    # AUD-005: elementos de vedação e suas fixações são Classe A (§5.3.2 a)),
+    # com S2 do topo da edificação (§5.3.3). O vento GLOBAL da estrutura
+    # (classe B) não serve para a verificação local.
+    params_vento_local = replace(params_vento, classe="A")
     res_elu["fixacao_telha"] = verificar_fixacao_telha_succao(
-        params_vento = params_vento,
+        params_vento = params_vento_local,
         s_terca      = S,
         g_telha_kNm2 = G_TELHA_KNM2,
         e_fix_m      = E_FIX_TELHA_M,
@@ -862,14 +876,11 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     )
     _fx = res_elu["fixacao_telha"]
     _print_eta("Fixação telha §NBR6123", _fx)
-    print(f"  · q={_fx['q_kNm2']:.3f} kN/m² | C_pi=+{_fx['Cpi']:.1f} (galpão aberto) | "
+    print(f"  · q={_fx['q_kNm2']:.3f} kN/m² (classe {_fx['classe_vento']}, "
+          f"z={_fx['z_ref_m']:.2f} m) | c_p=±{_fx['cp_vedacao']:.1f} (§7.2.6) | "
           f"R_fix,d={_fx['R_fix_d_kN']:.2f} kN (R_k={_fx['R_fix_k_kN']:.1f} típico)")
     print(f"  · e_fix={_fx['e_fix_m']:.2f} m (a cada nervura) | "
-          f"canto: η={_fx['zonas']['canto']['eta']:.3f} | "
-          f"borda: η={_fx['zonas']['borda']['eta']:.3f} | "
-          f"campo: η={_fx['zonas']['campo']['eta']:.3f}")
-    print(f"  · e_fix máx p/ η≤1: campo={_fx['e_fix_req_campo_m']:.2f} | "
-          f"borda={_fx['e_fix_req_borda_m']:.2f} | canto={_fx['e_fix_req_canto_m']:.2f} m")
+          f"η={_fx['eta']:.3f} | e_fix máx p/ η≤1: {_fx['e_fix_req_m']:.2f} m")
     print(f"  ⚠ {_fx['caveat']}")
 
     # ── Fase 3: Verificações ELS ──────────────────────────────────────────────

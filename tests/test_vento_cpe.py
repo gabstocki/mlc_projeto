@@ -19,15 +19,22 @@ from mlc_projeto.core.loads import (
 
 
 def test_padroes_tabela25_completos():
-    """8 padrões: C1/C2 × (asim, rev, unif_bv, unif_st)."""
+    """4 padrões: C1/C2 × (asim, rev) — só os pares simultâneos da Tabela 25.
+
+    Revisto na Onda 2 (AUD-004). A versão anterior exigia 8 padrões, incluindo
+    `unif_bv` e `unif_st` (Cpb ou Cps nas DUAS águas). Esses não são
+    carregamentos da Tabela 25: a tabela dá, por carregamento, um par
+    simultâneo (Cpb no barlavento, Cps no sotavento), e §7.2.1 manda considerar
+    "as duas situações respectivas de forças [...] independentemente" — não
+    recombinar extremos de faces distintas.
+    """
     p = padroes_cpe_tabela25(0.176)
     ids = {x["id"] for x in p}
-    assert len(p) == 8
+    assert len(p) == 4
     for caso in ("C1", "C2"):
         assert f"{caso}_asim" in ids
         assert f"{caso}_rev" in ids
-        assert f"{caso}_unif_bv" in ids
-        assert f"{caso}_unif_st" in ids
+    assert not any("unif" in i for i in ids)
 
 
 def test_assimetrico_tem_Cpb_e_Cps():
@@ -59,6 +66,7 @@ def test_varredura_load_completa():
     pv = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=1.785, h=7.0, dist_portico=5.75,
+        l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True,   # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
     )
     load = carregamentos_com_vento(
         geo=geo, mat=mat, g_area=1.5, q_area=0.25, L_t=5.75,
@@ -76,7 +84,9 @@ def test_varredura_load_completa():
     assert load.vento_0 is not None
     assert load.vento_0["F_total_kN"] > 0
     gov = load.combinacao_ELU_governante()
-    assert gov.padrao_vento  # não vazio
+    # Onda 2: o vento passou a ser exclusivamente de sucção (Tab.10 + c_pi),
+    # logo o momento governante vem da combinação gravítica, sem padrão de
+    # vento associado. O que se exige é um governante bem definido.
     assert abs(gov.M_max_kNm) > 0
 
 
@@ -84,6 +94,7 @@ def test_vento_0_e_90_pilar():
     pv = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=1.785, h=7.0, dist_portico=5.75,
+        l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True,   # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
     )
     f0 = forca_vento_paralelo_cumeeira(
         pv, b_pilar=0.22, h_pilar=0.26,

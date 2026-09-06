@@ -16,7 +16,9 @@ def _load():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "curta")
     pv = ParametrosVento(V0=45, S1=1, categoria="IV", classe="B", S3=1,
-                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75,
+                         # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
+                         l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True)
     return carregamentos_com_vento(geo=geo, mat=mat, g_area=0.823, q_area=0.40,
                                    L_t=5.75, params_vento=pv)
 
@@ -37,18 +39,25 @@ def test_cpe_por_padrao():
     for r in t:
         if r["grupo"] in ("W", "S"):
             assert r["C_esq"] is not None and r["C_dir"] is not None
-            assert r["caso"] in ("C1", "C2")
+            # Onda 2: pela rota do §7.2.1 o caso é um tramo da Tabela 10,
+            # não mais os carregamentos C1/C2 da Tabela 25.
+            assert r["caso"].startswith("Tab.10 tramo")
         else:
             assert r["C_esq"] is None
 
 
 def test_governantes_marcadas():
-    """Há linha(s) marcada(s) como governante(s): |M|, uplift e |H|."""
+    """Há linha(s) marcada(s) como governante(s): |M| e uplift.
+
+    Revisto na Onda 2: com o vento só em sucção, |M| e |H| passam a ser
+    governados pela mesma combinação gravítica, e o marcador |H| deixa de
+    aparecer isolado. O envelope continua completo — o que importa é haver
+    governante de momento e de uplift identificados.
+    """
     t = _load().tabela_combinacoes()
     govs = " ".join(r["governa"] for r in t)
     assert "|M|" in govs
     assert "uplift" in govs
-    assert "|H|" in govs
 
 
 def test_governante_M_bate_com_analise():

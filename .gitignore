@@ -37,3 +37,10 @@ desktop.ini
 
 # Dados sensíveis
 *.env
+
+# Normas técnicas — cópias licenciadas, NÃO versionar
+# A ABNT NBR 6123:2023 é obra protegida por direito autoral e o repositório tem
+# remoto público. O controle documental exige uma cópia controlada disponível ao
+# projetista, não a sua redistribuição. Mantenha o arquivo localmente.
+NBR6123-2023.pdf
+*.pdf.norma

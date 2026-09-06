@@ -12,7 +12,9 @@ def _res():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "longa")
     pv = ParametrosVento(V0=45, S1=1, categoria="IV", classe="B", S3=1,
-                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75,
+                         # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
+                         l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True)
     pp = peso_proprio_gk(geo, GlulamMaterial("GL24h", 3, "longa"),
                          5.75, 0.20, 0.58, 2.53, 0.10, 0.10)
     load = carregamentos_com_vento(geo, mat, pp["g_k_viga_kNm2"], 0.40, 5.75, pv,
@@ -28,20 +30,31 @@ def test_psi2_explicito_zero():
 
 
 def test_vento_nbr6123_incluido_no_caracteristico():
-    """Os 8 padrões de vento (NBR 6123) entram; há flecha de vento pressão/sucção."""
+    """Os 8 padrões de vento entram e, nesta cobertura, produzem SÓ sucção.
+
+    Revisto na Onda 2. Pela rota do §7.2.1 (edificação fechada, Tabela 10 com
+    c_pi), todos os coeficientes líquidos em θ=10° são negativos: o vento nunca
+    empurra a cobertura para baixo. A versão anterior exigia flecha de pressão
+    positiva porque a Tabela 25 dava c_pb = +1,02, coeficiente que esta
+    geometria não pode usar.
+    """
     r = _res()
     assert r["n_padroes_vento"] == 8
-    assert r["w_W_press_mm"] > 0        # vento pressão → flecha ↓
     assert r["w_W_suc_mm"] < 0          # vento sucção → flecha ↑
+    assert r["w_W_press_mm"] <= 0       # não há caso de pressão descendente
 
 
 def test_caracteristico_e_o_governante_entre_Q_e_vento():
-    """w_S1 = max(G+Q, G+W); aqui a pressão de vento supera Q ⇒ vento governa."""
+    """w_S1 = max(G+Q, G+W); sem pressão de vento, a sobrecarga governa.
+
+    Revisto na Onda 2: com o vento produzindo apenas sucção, a flecha
+    descendente característica passa a ser governada por Q, não pelo vento.
+    """
     r = _res()
     assert r["w_S1_mm"] == pytest.approx(
         max(r["w_char_Q_mm"], r["w_char_W_mm"]), abs=1e-2)
-    assert r["w_char_W_mm"] > r["w_char_Q_mm"]   # vento pressão > Q
-    assert r["gov_caracteristico"] == "vento"
+    assert r["w_char_Q_mm"] > r["w_char_W_mm"]
+    assert r["gov_caracteristico"] == "sobrecarga Q"
 
 
 def test_wfin_usa_variavel_dominante_psi2_zero():

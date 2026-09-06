@@ -8,6 +8,9 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind import ParametrosVento
 from mlc_projeto.core.loads import carregamentos_com_vento
 from mlc_projeto.checks.elu.contraventamento_vertical import (
+
+
+
     geometria_painel,
     forca_nocional,
     escolher_diametro,
@@ -18,12 +21,27 @@ from mlc_projeto.checks.elu.contraventamento_vertical import (
 )
 
 
+# Onda 2 da auditoria — o contraventamento foi dimensionado para a ação
+# longitudinal ANTIGA (Cf=0,04 ⇒ 125,8 kN). Com §7.2.2 (Ft=0,5·q·a·b) a ação
+# passa a 837,3 kN, 6,7×. Os casos abaixo deixam de passar não por defeito de
+# código, mas porque o SISTEMA está subdimensionado. Ficam como xfail estrito
+# para que o redimensionamento os promova de volta — nunca relaxar o critério.
+REDIMENSIONAR_ONDA2 = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "contraventamento subdimensionado para a acao longitudinal normativa "
+        "(NBR 6123:2023 7.2.2, 6,7x a anterior); redimensionamento pendente"
+    ),
+)
+
+
 def _load_R2():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "curta")
     pv = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=geo.h_ap - geo.h0, h=7.0, dist_portico=5.75,
+        l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True,   # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
     )
     load = carregamentos_com_vento(
         geo, mat, 1.5, 0.25, 5.75, pv,
@@ -87,6 +105,7 @@ def test_forca_nocional_intervalo():
 
 # ── Verificação completa ─────────────────────────────────────────────────────
 
+@REDIMENSIONAR_ONDA2
 def test_verificacao_completa_inclui_vento_e_nocional():
     geo, mat, load = _load_R2()
     res = verificar_contraventamento_vertical(

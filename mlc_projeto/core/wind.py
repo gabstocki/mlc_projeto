@@ -19,6 +19,37 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import math
 
+from mlc_projeto.core.validacao import (
+    DominioInvalidoError,
+    exigir_inteiro_minimo,
+    exigir_positivo,
+)
+
+
+# ── Tabelas normativas — NBR 6123:2023 §5.3 ──────────────────────────────────
+#
+# Tabela 1 — Parâmetros meteorológicos: (b_m, p, z_g) por categoria e classe.
+# z_g (m) é o contorno superior da camada limite atmosférica, comum às classes.
+PARAM_METEOROLOGICOS: dict[str, dict[str, tuple[float, float, float]]] = {
+    "I":   {"A": (1.10, 0.060, 250.0), "B": (1.11, 0.065, 250.0), "C": (1.12, 0.070, 250.0)},
+    "II":  {"A": (1.00, 0.085, 300.0), "B": (1.00, 0.090, 300.0), "C": (1.00, 0.100, 300.0)},
+    "III": {"A": (0.94, 0.100, 350.0), "B": (0.94, 0.105, 350.0), "C": (0.93, 0.115, 350.0)},
+    "IV":  {"A": (0.86, 0.120, 420.0), "B": (0.85, 0.125, 420.0), "C": (0.84, 0.135, 420.0)},
+    "V":   {"A": (0.74, 0.150, 500.0), "B": (0.73, 0.160, 500.0), "C": (0.71, 0.175, 500.0)},
+}
+
+# Tabela 2 — Fator de rajada F_r, por classe (sempre referido à Categoria II).
+FATOR_RAJADA: dict[str, float] = {"A": 1.00, "B": 0.98, "C": 0.95}
+
+# §4.2 c) — q = ½·ρ·Vk², com ρ = 1,226 kg/m³ (ar a 15 °C, 1 atm) ⇒ q = 0,613·Vk²
+# em N/m². O fator 1e-3 leva a kN/m², unidade interna do projeto.
+COEF_PRESSAO_DINAMICA = 0.613e-3
+
+
+def q_de_Vk(Vk: float) -> float:
+    """Pressão dinâmica q (kN/m²) a partir de Vk (m/s) — NBR 6123:2023 §4.2 c)."""
+    return COEF_PRESSAO_DINAMICA * Vk ** 2
+
 
 # ── Parâmetros ────────────────────────────────────────────────────────────────
 
@@ -47,36 +78,101 @@ class ParametrosVento:
     H1:           float = 1.0
     h:            float = 7.0
     dist_portico: float = 5.75
-
-    _S2_TABLE: dict = field(default=None, repr=False)
+    # Profundidade ℓ2 da cobertura (m) — dimensão horizontal PERPENDICULAR à
+    # cumeeira, medida na direção do vento de θ=90° (ver figura da Tabela 25).
+    # None → adota-se ℓ2 = L (um vão). Com vãos múltiplos lado a lado, ℓ2 deve
+    # ser informado explicitamente, pois é a profundidade TOTAL da cobertura.
+    l2:           float | None = None
+    # Número de tramos (águas duplas) lado a lado ao longo de ℓ2. n=1 é a
+    # cobertura isolada a duas águas da Tabela 25; n≥2 é telhado múltiplo.
+    n_tramos:     int = 1
+    # §7.2.1: obstruções que possam ser colocadas SOB ou junto à cobertura
+    # (p.ex. veículos num estacionamento coberto) acionam, por si só, a rota
+    # de edificação fechada — independentemente de a altura h ser suficiente.
+    obstrucoes_sob_cobertura: bool = False
 
     def __post_init__(self):
-        self._S2_TABLE = {
-            ("I",   "A"): 1.10, ("I",   "B"): 1.11, ("I",   "C"): 1.12,
-            ("II",  "A"): 1.00, ("II",  "B"): 1.00, ("II",  "C"): 1.00,
-            ("III", "A"): 0.94, ("III", "B"): 0.94, ("III", "C"): 0.93,
-            ("IV",  "A"): 0.86, ("IV",  "B"): 0.83, ("IV",  "C"): 0.82,
-            ("V",   "A"): 0.74, ("V",   "B"): 0.70, ("V",   "C"): 0.68,
-        }
+        if self.categoria not in PARAM_METEOROLOGICOS:
+            raise ValueError(
+                f"categoria='{self.categoria}' inválida. Categorias: I–V "
+                f"(NBR 6123:2023 §5.3.1)."
+            )
+        if self.classe not in FATOR_RAJADA:
+            raise ValueError(
+                f"classe='{self.classe}' inválida. Classes: A, B, C "
+                f"(NBR 6123:2023 §5.3.2)."
+            )
+
+    # ── Fator S2 — NBR 6123:2023 §5.3.3 ──────────────────────────────────────
+
+    @property
+    def l2_efetivo(self) -> float:
+        """Profundidade ℓ2 adotada (m)."""
+        return float(self.L if self.l2 is None else self.l2)
+
+    def S2_em(self, z: float) -> float:
+        """
+        Fator S2 na altura z acima do nível geral do terreno — §5.3.3:
+
+            S2 = b_m · F_r · (z/10)^p
+
+        b_m e p vêm da Tabela 1 (por categoria e classe); F_r da Tabela 2
+        (por classe, sempre referido à Categoria II). Válido até z = z_g,
+        contorno superior da camada limite atmosférica.
+
+        AUD-001: a versão anterior devolvia uma constante por
+        (categoria, classe), que equivale a congelar S2 em z = 10 m — os
+        valores tabelados batiam exatamente com a linha z=10 da Tabela 3.
+        O efeito da altura sobre a pressão dinâmica estava suprimido.
+        """
+        z = exigir_positivo("z", z, unidade="m")
+        b_m, p, z_g = PARAM_METEOROLOGICOS[self.categoria][self.classe]
+        F_r = FATOR_RAJADA[self.classe]
+
+        if z > z_g:
+            raise DominioInvalidoError(
+                f"z = {z:.3f} m acima de z_g = {z_g:.0f} m (categoria "
+                f"{self.categoria}). A expressão de §5.3.3 só é aplicável "
+                f"dentro da camada limite atmosférica."
+            )
+        # §5.3.3: "o fator S2 é considerado constante até 10 m de altura na
+        # categoria V" — coerente com a Tabela 3, cujas linhas z<5 e z=10
+        # coincidem apenas nessa categoria.
+        z_ef = max(z, 10.0) if self.categoria == "V" else z
+        return b_m * F_r * (z_ef / 10.0) ** p
+
+    @property
+    def z_ref(self) -> float:
+        """
+        Altura de referência da estrutura (m) — topo da cobertura.
+
+        §5.3.3 recomenda o S2 do topo da edificação para o estudo dos
+        elementos de vedação; adota-se a mesma cota como referência global
+        das forças da cobertura, por ser a mais desfavorável do perfil.
+        """
+        return self.H_max
 
     @property
     def S2(self) -> float:
-        key = (self.categoria, self.classe)
-        if key not in self._S2_TABLE:
-            raise ValueError(
-                f"Combinação categoria='{self.categoria}' classe='{self.classe}' "
-                f"não encontrada. Categorias: I–V. Classes: A, B, C."
-            )
-        return self._S2_TABLE[key]
+        """S2 na altura de referência da estrutura (topo da cobertura)."""
+        return self.S2_em(self.z_ref)
 
     @property
     def Vk(self) -> float:
         return self.V0 * self.S1 * self.S2 * self.S3
 
+    def Vk_em(self, z: float) -> float:
+        """Velocidade característica na altura z — §4.2 b)."""
+        return self.V0 * self.S1 * self.S2_em(z) * self.S3
+
     @property
     def q(self) -> float:
-        """Pressão dinâmica q (kN/m²) — NBR 6123 §6.2."""
-        return 0.613e-3 * self.Vk ** 2
+        """Pressão dinâmica q (kN/m²) na altura de referência — §4.2 c)."""
+        return q_de_Vk(self.Vk)
+
+    def q_em(self, z: float) -> float:
+        """Pressão dinâmica q (kN/m²) na altura z — §4.2 c)."""
+        return q_de_Vk(self.Vk_em(z))
 
     @property
     def tg_beta(self) -> float:
@@ -89,6 +185,207 @@ class ParametrosVento:
     @property
     def H_max(self) -> float:
         return self.h + self.H1
+
+    # ── Seleção da rota normativa — §7.2 ─────────────────────────────────────
+
+    @property
+    def a_linha(self) -> float:
+        """Largura a' de cada tramo (m) = ℓ2 / n_tramos."""
+        return self.l2_efetivo / self.n_tramos
+
+    @property
+    def rota_normativa(self) -> str:
+        """
+        Qual disposição do §7.2 governa os coeficientes de pressão.
+
+        "tabela25"            — cobertura isolada a duas águas, dentro do
+                                domínio geométrico e sem obstruções previstas.
+        "edificacao_fechada"  — rota do último parágrafo de §7.2.1: h < 0,5·ℓ2,
+                                OU obstruções sob/junto à cobertura, OU telhado
+                                múltiplo (que as Tabelas 24/25 não cobrem).
+        """
+        if self.obstrucoes_sob_cobertura:
+            return "edificacao_fechada"
+        if self.n_tramos > 1:
+            return "edificacao_fechada"
+        if self.h < 0.5 * self.l2_efetivo:
+            return "edificacao_fechada"
+        return "tabela25"
+
+
+# ── Rota alternativa do §7.2.1 — edificação fechada de mesma cobertura ───────
+#
+# Quando h < 0,5·ℓ2, OU quando obstruções possam ser colocadas sob ou junto à
+# cobertura, §7.2.1 determina: "esta deve resistir à ação do vento, na zona de
+# obstrução, calculada para uma edificação fechada e de mesma cobertura, com
+# cpi = +0,8, para obstruções na borda de sotavento, e com cpi = −0,3, para
+# obstruções na borda de barlavento."
+CPI_OBSTRUCAO_SOTAVENTO  = +0.8
+CPI_OBSTRUCAO_BARLAVENTO = -0.3
+
+# Tabela 10 — Coeficientes de pressão e de forma, externos, para telhados
+# múltiplos, simétricos, de tramos iguais, com h ≤ a'. Vento α = 0°
+# (perpendicular às cumeeiras). Zonas ao longo da profundidade, do barlavento
+# para o sotavento: (a*,b*) 1.º tramo, (c*,d*) 2.º, (m*,n*) intermédios,
+# (x*,z*) último. Em cada par, o primeiro rótulo é a água de BARLAVENTO.
+#
+# NOTA da tabela: "para α = 0°, as forças horizontais de atrito já estão
+# consideradas nos valores da Tabela 10".
+TABELA_10_THETA = (5.0, 10.0, 20.0, 30.0, 45.0)
+TABELA_10_CE: dict[str, tuple[float, ...]] = {
+    #        θ =   5°     10°     20°     30°     45°
+    "a": (-0.9, -1.1, -0.7, -0.2, +0.3),
+    "b": (-0.6, -0.6, -0.6, -0.6, -0.6),
+    "c": (-0.4, -0.4, -0.4, -0.4, -0.6),
+    "d": (-0.3, -0.3, -0.3, -0.3, -0.4),
+    "m": (-0.3, -0.3, -0.3, -0.2, -0.2),
+    "n": (-0.3, -0.3, -0.3, -0.3, -0.4),
+    "x": (-0.3, -0.3, -0.3, -0.2, -0.2),
+    "z": (-0.3, -0.4, -0.5, -0.5, -0.5),
+}
+
+
+def coeficientes_tabela10(theta_deg: float) -> dict[str, float]:
+    """
+    Coeficientes externos Ce da Tabela 10 (α = 0°), interpolados em θ.
+
+    A tabela é discreta em θ = 5°, 10°, 20°, 30° e 45°; adota-se interpolação
+    linear entre linhas, prática corrente para as tabelas da NBR 6123. Fora
+    desse intervalo não há extrapolação: a tabela é recusada.
+    """
+    theta_deg = exigir_positivo("theta_deg", theta_deg, unidade="graus")
+    lo, hi = TABELA_10_THETA[0], TABELA_10_THETA[-1]
+    if not (lo <= theta_deg <= hi):
+        raise ValueError(
+            f"θ = {theta_deg:.3f}° fora do intervalo tabelado da Tabela 10 "
+            f"({lo:.0f}° a {hi:.0f}°). A norma não autoriza extrapolação."
+        )
+    xs = TABELA_10_THETA
+    i = next(k for k in range(len(xs) - 1) if xs[k] <= theta_deg <= xs[k + 1])
+    t = (theta_deg - xs[i]) / (xs[i + 1] - xs[i])
+    return {
+        zona: vals[i] + t * (vals[i + 1] - vals[i])
+        for zona, vals in TABELA_10_CE.items()
+    }
+
+
+def zonas_por_tramo(n_tramos: int) -> list[tuple[str, str]]:
+    """
+    Rótulos (barlavento, sotavento) de cada tramo, do barlavento ao sotavento.
+
+    1.º tramo → (a*, b*); 2.º → (c*, d*); intermédios → (m*, n*);
+    último → (x*, z*).
+
+    Com exatamente DOIS tramos o segundo é simultaneamente "2.º" e "último".
+    Adota-se (c*, d*) — decisão de projeto registrada, por ser a atribuição
+    posicional direta da tabela.
+    """
+    n = exigir_inteiro_minimo("n_tramos", n_tramos, minimo=1)
+    if n == 1:
+        return [("a", "b")]
+    if n == 2:
+        return [("a", "b"), ("c", "d")]
+    return [("a", "b"), ("c", "d")] + [("m", "n")] * (n - 3) + [("x", "z")]
+
+
+def padroes_cpe_edificacao_fechada(theta_deg: float, n_tramos: int) -> list[dict]:
+    """
+    Padrões de coeficiente LÍQUIDO para um pórtico, pela rota do §7.2.1.
+
+        c_net = c_pe (Tabela 10) − c_pi (+0,8 ou −0,3)
+
+    Um mesmo pórtico é dimensionado para qualquer posição que ocupe na
+    cobertura e para o vento incidindo por qualquer dos dois lados; as
+    obstruções (veículos) podem estar tanto na borda de barlavento como na de
+    sotavento. Varrem-se, portanto, todas as combinações
+    tramo × sentido do vento × posição da obstrução.
+    """
+    ce = coeficientes_tabela10(theta_deg)
+    zonas = zonas_por_tramo(n_tramos)
+    padroes: list[dict] = []
+
+    for t, (zb, zs) in enumerate(zonas, start=1):
+        ce_bar, ce_sot = ce[zb], ce[zs]
+        for sentido, (c_esq_pe, c_dir_pe) in (
+            ("esq",  (ce_bar, ce_sot)),   # vento incidindo pela esquerda
+            ("dir",  (ce_sot, ce_bar)),   # vento incidindo pela direita
+        ):
+            for rotulo_cpi, cpi in (
+                ("cpi+0.8", CPI_OBSTRUCAO_SOTAVENTO),
+                ("cpi-0.3", CPI_OBSTRUCAO_BARLAVENTO),
+            ):
+                padroes.append({
+                    "id": f"T10_t{t}_{sentido}_{rotulo_cpi}",
+                    "caso_tab": f"Tab.10 tramo {t} ({zb}*/{zs}*)",
+                    "tipo": "edificacao_fechada_com_cpi",
+                    "C_esq": c_esq_pe - cpi,
+                    "C_dir": c_dir_pe - cpi,
+                    "c_pe_esq": c_esq_pe,
+                    "c_pe_dir": c_dir_pe,
+                    "c_pi": cpi,
+                    "descricao": (
+                        f"§7.2.1 rota de edificação fechada — Tab.10 tramo {t}, "
+                        f"vento pela {'esquerda' if sentido == 'esq' else 'direita'}, "
+                        f"c_pi={cpi:+.1f}"
+                    ),
+                })
+    return padroes
+
+
+# ── Domínio de validade das Tabelas 24/25 — §7.2.1 ───────────────────────────
+
+def validar_dominio_cobertura_isolada(params: ParametrosVento) -> None:
+    """
+    Verifica as condições de aplicabilidade da Tabela 25 — NBR 6123:2023 §7.2.1.
+
+    A norma é explícita: "Os coeficientes das Tabelas 24 e 25 se aplicam somente
+    quando forem satisfeitas as seguintes condições: Coberturas a duas águas
+    (ver a Tabela 25): 0,07 ≤ tg θ ≤ 0,6 **e h ≥ 0,5 ℓ2**", onde
+
+        h  é a altura livre entre o piso e o nível da aresta horizontal mais
+           baixa da cobertura (beiral);
+        ℓ2 é a profundidade da cobertura — dimensão horizontal medida
+           PERPENDICULARMENTE à cumeeira (direção do vento de θ=90°).
+
+    A condição `h ≥ 0,5·ℓ2` garante que a cobertura está sobre "suportes de
+    reduzidas dimensões" e não constitui obstáculo significativo ao escoamento,
+    de modo que o vento atue livremente sobre as faces superior E inferior.
+
+    Fora desse domínio a norma NÃO permite extrapolar a tabela: §7.2.1 prescreve
+    outra rota — "Para os casos em que a altura h for inferior aos limites de
+    7.2.1, ou em que obstruções possam ser colocadas sob ou junto à cobertura,
+    esta deve resistir à ação do vento, na zona de obstrução, calculada para uma
+    edificação fechada e de mesma cobertura, com cpi = +0,8, para obstruções na
+    borda de sotavento, e com cpi = −0,3, para obstruções na borda de
+    barlavento."
+
+    Essa rota alternativa exige coeficientes de forma de edificação fechada
+    (§6.1) e não está implementada neste módulo — daí a recusa explícita em vez
+    de um resultado silenciosamente inválido (AUD-002).
+
+    Raises:
+        ValueError: geometria fora do domínio declarado da Tabela 25.
+    """
+    h  = params.h
+    l2 = params.l2_efetivo
+    h_min = 0.5 * l2
+
+    if h < h_min:
+        raise ValueError(
+            f"Fora do domínio da Tabela 25 (NBR 6123:2023 §7.2.1): exige-se "
+            f"h ≥ 0,5·ℓ2, ou seja h ≥ {h_min:.3f} m para ℓ2 = {l2:.3f} m, mas "
+            f"h = {h:.3f} m.\n"
+            f"h é a altura livre até a aresta horizontal mais baixa da cobertura "
+            f"e ℓ2 é a profundidade da cobertura medida ⊥ à cumeeira.\n"
+            f"A norma não autoriza extrapolar a tabela. Nesse caso §7.2.1 "
+            f"prescreve calcular a cobertura, na zona de obstrução, como "
+            f"EDIFICAÇÃO FECHADA de mesma cobertura, com cpi = +0,8 (obstruções "
+            f"na borda de sotavento) ou cpi = −0,3 (borda de barlavento). "
+            f"Essa rota não está implementada.\n"
+            f"Se a profundidade adotada estiver errada, informe "
+            f"ParametrosVento(l2=...) — o default é ℓ2 = L (um vão), e uma "
+            f"cobertura de vãos múltiplos tem ℓ2 igual à profundidade TOTAL."
+        )
 
 
 # ── Tabela 25 — θ = 90° (perpendicular à cumeeira) ───────────────────────────
@@ -138,14 +435,26 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
     """
     Todos os padrões de Cpe da Tab. 25 a varrer no pórtico (θ = 90°).
 
-    Para cada carregamento normativo (C1, C2) geram-se:
-      • assimétrico: meia-água esq. = Cpb, dir. = Cps
-      • reverso:     esq. = Cps, dir. = Cpb  (vento do outro lado)
-      • uniforme bv: ambas as águas = Cpb  (envelope conservador)
-      • uniforme st: ambas as águas = Cps  (envelope / sucção geral)
+    A Tabela 25 fornece, para cada carregamento (1 e 2), um PAR simultâneo
+    (Cpb, Cps): Cpb atua na água de barlavento e Cps na de sotavento, ao mesmo
+    tempo, como mostra a figura "sentidos positivos" da tabela. §7.2.1: "Nos
+    casos em que são indicados dois carregamentos, as duas situações
+    respectivas de forças devem ser consideradas independentemente."
 
-    Isto cobre barlavento, sotavento, sucção geral **e** a combinação
-    simultânea Cpb+Cps exigida pela tabela — não só extremos uniformes.
+    Geram-se, portanto, apenas:
+      • assimétrico: meia-água esq. = Cpb, dir. = Cps  (vento pela esquerda)
+      • reverso:     esq. = Cps, dir. = Cpb            (vento pela direita)
+
+    O reverso é o espelhamento geométrico do mesmo caso normativo — a cobertura
+    é simétrica e o vento de θ=90° pode incidir por qualquer dos dois lados.
+
+    AUD-004: a versão anterior acrescentava padrões UNIFORMES (Cpb em ambas as
+    águas, Cps em ambas), rotulados "envelope conservador". Não são
+    carregamentos da Tabela 25: recombinam extremos de faces distintas e
+    destroem a correlação espacial que o caso de carga define. O caso que
+    governava a flexão no projeto (`C1_unif_bv`) era um desses padrões
+    fabricados. Um envelope só pode ser formado por campos de pressão que a
+    norma admite existirem simultaneamente.
     """
     coef = coeficientes_tabela25(tg_beta)
     padroes: list[dict] = []
@@ -160,7 +469,7 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
                 "tipo": "assimetrico",
                 "C_esq": Cpb,
                 "C_dir": Cps,
-                "descricao": f"Tab.25 {caso} assimétrico (esq=Cpb, dir=Cps)",
+                "descricao": f"Tab.25 {caso}: Cpb barlavento (esq) + Cps sotavento (dir)",
             },
             {
                 "id": f"{caso}_rev",
@@ -168,23 +477,7 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
                 "tipo": "assimetrico_reverso",
                 "C_esq": Cps,
                 "C_dir": Cpb,
-                "descricao": f"Tab.25 {caso} reverso (esq=Cps, dir=Cpb)",
-            },
-            {
-                "id": f"{caso}_unif_bv",
-                "caso_tab": caso,
-                "tipo": "uniforme_barlavento",
-                "C_esq": Cpb,
-                "C_dir": Cpb,
-                "descricao": f"Tab.25 {caso} uniforme Cpb (envelope)",
-            },
-            {
-                "id": f"{caso}_unif_st",
-                "caso_tab": caso,
-                "tipo": "uniforme_sotavento",
-                "C_esq": Cps,
-                "C_dir": Cps,
-                "descricao": f"Tab.25 {caso} uniforme Cps (sucção/pressão geral)",
+                "descricao": f"Tab.25 {caso} espelhado: vento incidindo pela direita",
             },
         ])
     return padroes
@@ -196,9 +489,11 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
 # Valor conservador para seção retangular (pilares MLC): Ca = 1,2
 CA_PILAR_RET = 1.2
 
-# Fricção no extradorso (vento paralelo) — ordem de grandeza NBR Cf ≈ 0,02–0,04
-# Usa-se 0,04 (superfície «rugosa» / terças) sobre a área em planta da cobertura.
-CF_COBERTURA = 0.04
+# NBR 6123:2023 §7.2.2 — Forças de atrito na cobertura isolada, para vento
+# paralelo à geratriz: Ft = 0,5·q·a·b, com a e b as dimensões EM PLANTA da
+# cobertura. "Estas forças englobam a ação do vento sobre as duas faces da
+# cobertura" — não é um coeficiente de atrito superficial aplicado a uma face.
+COEF_ATRITO_COBERTURA_ISOLADA = 0.5
 
 
 def forca_vento_paralelo_cumeeira(
@@ -217,7 +512,8 @@ def forca_vento_paralelo_cumeeira(
     Modelo de projeto:
       1) Arrasto nos pilares (elementos livres): F = q · Ca · A_proj
          A_proj = b_pilar × H  (face perpendicular ao vento longitudinal)
-      2) Fricção na cobertura: F_f = q · Cf · A_planta
+      2) Atrito na cobertura isolada (§7.2.2): Ft = 0,5 · q · a · b
+         — equação específica, já englobando as duas faces da cobertura
 
     A força total alimenta:
       • contraventamento longitudinal (cruzes + terças-biela)
@@ -248,8 +544,15 @@ def forca_vento_paralelo_cumeeira(
         L_cob_m = (n_pilares_linha - 1) * params.dist_portico
     if B_cob_m is None:
         B_cob_m = params.L                       # um vão; main pode passar 2·L
-    A_planta = max(L_cob_m, 0.0) * max(B_cob_m, 0.0)
-    F_fric_kN = q * CF_COBERTURA * A_planta
+    # ── §7.2.2 — Ft = 0,5·q·a·b (AUD-003) ────────────────────────────────
+    # A versão anterior usava F = q·Cf·A_planta com Cf=0,04, um coeficiente de
+    # atrito superficial genérico cujo próprio comentário admitia ser "ordem de
+    # grandeza". A norma prescreve equação específica para cobertura isolada,
+    # já integrando as DUAS faces: o resultado era 12,5× menor que o normativo.
+    a_m = max(L_cob_m, 0.0)
+    b_m = max(B_cob_m, 0.0)
+    A_planta = a_m * b_m
+    F_fric_kN = COEF_ATRITO_COBERTURA_ISOLADA * q * a_m * b_m
 
     F_total_kN = F_pilares_kN + F_fric_kN
 
@@ -262,7 +565,7 @@ def forca_vento_paralelo_cumeeira(
         "direcao":          "paralelo à cumeeira (longitudinal)",
         "q_kNm2":           round(q, 4),
         "Ca_pilar":         CA_PILAR_RET,
-        "Cf_cobertura":     CF_COBERTURA,
+        "coef_atrito_7_2_2": COEF_ATRITO_COBERTURA_ISOLADA,
         "A_pilar_m2":       round(A_pil, 4),
         "F_pilar_kN":       round(F_pil_kN, 3),
         "n_pilares":        n_total,
@@ -272,10 +575,13 @@ def forca_vento_paralelo_cumeeira(
         "F_total_kN":       round(F_total_kN, 3),
         "w_long_kNpm":      round(w_long_kNpm, 4),
         "L_trib_m":         round(L_trib, 3),
-        "norma":            "NBR 6123 §6.3 (Ca) + Cf cobertura | estrutura aberta",
+        "norma":            (
+            "NBR 6123:2023 §6.3 (Ca dos pilares) + §7.2.2 (Ft = 0,5·q·a·b)"
+        ),
         "nota":             (
-            "Tab.25 não se aplica a θ=0°. Arrasto em pilares livres + "
-            "fricção no extradorso. Força → contraventamento e pilares."
+            "Tab.25 não se aplica a θ=0°. Arrasto em pilares livres + força de "
+            "atrito da cobertura isolada por §7.2.2, que engloba as duas faces. "
+            "Força → contraventamento longitudinal, frontões e pilares."
         ),
     }
 
@@ -335,32 +641,49 @@ def calcular_vento(params: ParametrosVento) -> ResultadoVento:
         Positivo → empurra para baixo (mesma direção do peso próprio)
         Negativo → puxa para cima (sucção)
     """
-    tg_b = params.tg_beta
-    q    = params.q
-    d    = params.dist_portico
+    rota = params.rota_normativa
 
-    coef = coeficientes_tabela25(tg_b)
-    padroes = padroes_cpe_tabela25(tg_b)
+    if rota == "tabela25":
+        # Cobertura isolada a duas águas dentro do domínio declarado (§7.2.1).
+        validar_dominio_cobertura_isolada(params)
+        tg_b    = params.tg_beta
+        coef    = coeficientes_tabela25(tg_b)
+        padroes = padroes_cpe_tabela25(tg_b)
+    else:
+        # Rota do último parágrafo de §7.2.1 — edificação fechada de mesma
+        # cobertura, com c_pi de obstrução. Ver `rota_normativa` para os
+        # gatilhos. A Tabela 10 exige h ≤ a'.
+        if params.h > params.a_linha:
+            raise ValueError(
+                f"Tabela 10 exige h ≤ a' (largura do tramo): h = {params.h:.3f} m "
+                f"contra a' = {params.a_linha:.3f} m. Fora do domínio tabelado."
+            )
+        coef    = coeficientes_tabela10(params.beta_deg)
+        padroes = padroes_cpe_edificacao_fechada(params.beta_deg, params.n_tramos)
+
+    q = params.q
+    d = params.dist_portico
+
+    # Campos legados C1/C2: na rota da Tabela 25 são os dois carregamentos
+    # normativos. Na rota de edificação fechada não existe essa dupla — usa-se
+    # o envelope dos padrões (C1 = menos severo, C2 = sucção governante) apenas
+    # para preservar o contrato de dados a jusante.
+    if rota == "tabela25":
+        _c1 = (coef["C1"]["Cpb"], coef["C1"]["Cps"])
+        _c2 = (coef["C2"]["Cpb"], coef["C2"]["Cps"])
+    else:
+        _menos = min(padroes, key=lambda p: abs(min(p["C_esq"], p["C_dir"])))
+        _mais  = min(padroes, key=lambda p: min(p["C_esq"], p["C_dir"]))
+        _c1 = (_menos["C_esq"], _menos["C_dir"])
+        _c2 = (_mais["C_esq"],  _mais["C_dir"])
 
     pressoes = {
-        "C1": {
-            "barlavento_kNm2": coef["C1"]["Cpb"] * q,
-            "sotavento_kNm2":  coef["C1"]["Cps"] * q,
-        },
-        "C2": {
-            "barlavento_kNm2": coef["C2"]["Cpb"] * q,
-            "sotavento_kNm2":  coef["C2"]["Cps"] * q,
-        },
+        "C1": {"barlavento_kNm2": _c1[0] * q, "sotavento_kNm2": _c1[1] * q},
+        "C2": {"barlavento_kNm2": _c2[0] * q, "sotavento_kNm2": _c2[1] * q},
     }
     cargas = {
-        "C1": {
-            "barlavento_kNm": coef["C1"]["Cpb"] * q * d,
-            "sotavento_kNm":  coef["C1"]["Cps"] * q * d,
-        },
-        "C2": {
-            "barlavento_kNm": coef["C2"]["Cpb"] * q * d,
-            "sotavento_kNm":  coef["C2"]["Cps"] * q * d,
-        },
+        "C1": {"barlavento_kNm": _c1[0] * q * d, "sotavento_kNm": _c1[1] * q * d},
+        "C2": {"barlavento_kNm": _c2[0] * q * d, "sotavento_kNm": _c2[1] * q * d},
     }
 
     pressoes_padrao = {}

@@ -40,6 +40,7 @@ def _load_R2():
     pv = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=1.785, h=7.0, dist_portico=5.75,
+        l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True,   # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
     )
     load = carregamentos_com_vento(
         geo, mat, 1.5, 0.25, 5.75, pv,
@@ -104,7 +105,9 @@ def test_estabilidade_com_contravento_dispensa_2a_ordem():
     assert res["H_imp_over_H"] < 0.01        # nocional << empuxo
     assert res["w_over_f"] < 0.05
     assert res["H_imp_kN"] < 5.0
-    assert res["H_Ed_kN"] > 400.0            # empuxo corrigido (~520 kN, c/ termo axial)
+    # Onda 2: sem o caso de pressão descendente da Tab.25, a combinação que
+    # maximiza a reação vertical passa a ser gravítica e H cai (~374 kN).
+    assert res["H_Ed_kN"] > 300.0
     # barra pode ter α_cr < 10 — informativo, coberto por k_c
     assert "k_c" in res["nota_alpha_cr_barra"]
 

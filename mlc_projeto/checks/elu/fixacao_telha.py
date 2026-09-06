@@ -67,10 +67,17 @@ from mlc_projeto.core.wind import ParametrosVento
 
 # ── Coeficientes e fatores default (NBR 6123 + EN 1990/EN 1995) ───────────────
 
-CPE_CAMPO = -1.0    # C_pe local — campo geral da cobertura (Tab. 5)
-CPE_BORDA = -1.5    # C_pe local — faixa de borda
-CPE_CANTO = -2.0    # C_pe local — canto / beiral (sucção máxima)
-CPI_ABERTO = 0.8    # C_pi — galpão aberto/abertura dominante (§6.2.5)
+# NBR 6123:2023 §7.2.6 — Elementos de vedação em coberturas isoladas:
+# "Cada elemento de vedação deve ser calculado com cp = ±2,0."
+# Coeficiente LÍQUIDO, já englobando as duas faces da cobertura isolada. Não se
+# soma C_pi: pressão interna é conceito de edificação FECHADA (§6.3), que não
+# se aplica a uma cobertura sobre suportes de reduzidas dimensões.
+CP_VEDACAO_ISOLADA = 2.0
+
+# Classe exigida para o vento local — §5.3.2 a): a Classe A abrange "unidades e
+# sistemas de vedação e seus elementos de fixação". §5.3.3 recomenda ainda o S2
+# do TOPO da edificação para o estudo dos elementos de vedação.
+CLASSE_VEDACAO = "A"
 
 GAMMA_Q_VENTO = 1.5   # EN 1990 (coerência com as combinações do modelo)
 GAMMA_G_FAV   = 0.9   # permanente favorável (alívio no uplift; EN 1990)
@@ -99,10 +106,7 @@ def verificar_fixacao_telha_succao(
     s_terca:      float,
     g_telha_kNm2: float = 0.10,
     e_fix_m:      float = 0.33,
-    Cpe_campo:    float = CPE_CAMPO,
-    Cpe_borda:    float = CPE_BORDA,
-    Cpe_canto:    float = CPE_CANTO,
-    Cpi:          float = CPI_ABERTO,
+    cp_vedacao:   float = CP_VEDACAO_ISOLADA,
     gamma_Q:      float = GAMMA_Q_VENTO,
     gamma_G_fav:  float = GAMMA_G_FAV,
     R_fix_k_kN:   float = R_FIX_K_KN_TIPICO,
@@ -116,25 +120,41 @@ def verificar_fixacao_telha_succao(
         s_terca      : espaçamento entre terças (m) = largura tributária ⊥
         g_telha_kNm2 : peso próprio da telha (kN/m²) — alívio favorável
         e_fix_m      : espaçamento dos fixadores ao longo da terça (m)
-        Cpe_*        : C_pe local por zona (NBR 6123 Tab. 5)
-        Cpi          : pressão interna (§6.2.5) — positivo soma ao uplift
+        cp_vedacao   : |cp| do elemento de vedação — §7.2.6 exige 2,0
         gamma_Q      : coef. de ação variável (vento)
         gamma_G_fav  : coef. de permanente favorável (uplift)
         R_fix_k_kN   : resistência característica do fixador (ficha do fabricante)
         gamma_M_fix  : coef. de resistência do fixador
 
     Returns:
-        dict com q, R_fix,d, zonas (campo/borda/canto), η governante e caveat.
+        dict com q, R_fix,d, o caso normativo de vedação, η e caveat.
+
+    Raises:
+        ValueError: se params_vento não for de Classe A (AUD-005).
     """
     if s_terca <= 0 or e_fix_m <= 0:
         raise ValueError("s_terca e e_fix_m devem ser > 0")
 
-    q = params_vento.q                       # kN/m²
+    # ── AUD-005 — vento LOCAL exige classe A ──────────────────────────────
+    # O vento global da estrutura (classe B, dimensão frontal > 20 m) tem
+    # intervalo de rajada de 5 s; elementos de vedação e suas fixações são
+    # governados por rajadas de 3 s sobre área tributária pequena, e a norma
+    # os classifica explicitamente na Classe A. Usar o q global subestima a
+    # sucção local.
+    if params_vento.classe != CLASSE_VEDACAO:
+        raise ValueError(
+            f"params_vento.classe='{params_vento.classe}': elementos de vedação "
+            f"e seus elementos de fixação exigem a classe A "
+            f"(NBR 6123:2023 §5.3.2 a)). O vento global da estrutura não serve "
+            f"para a verificação local — construa um ParametrosVento com "
+            f"classe='A' e a mesma altura de referência."
+        )
+
+    q = params_vento.q                       # kN/m² — S2 no topo (§5.3.3)
     R_fix_d = R_fix_k_kN / gamma_M_fix       # kN
     A_trib = s_terca * e_fix_m               # m² por fixador
 
-    def _zona(nome: str, Cpe: float) -> ZonaFixacao:
-        C_net   = Cpe - Cpi                              # < 0 (uplift)
+    def _zona(nome: str, C_net: float) -> ZonaFixacao:
         w_suc_d = gamma_Q * abs(C_net) * q               # kN/m²
         w_up_d  = w_suc_d - gamma_G_fav * g_telha_kNm2   # kN/m² (peso alivia)
         w_up_d  = max(w_up_d, 0.0)
@@ -143,17 +163,17 @@ def verificar_fixacao_telha_succao(
         # espaçamento máximo do fixador para η = 1 (mantendo s_terça)
         e_req   = (R_fix_d / (w_up_d * s_terca)) if w_up_d * s_terca > 0 else 1e9
         return ZonaFixacao(
-            nome=nome, Cpe=Cpe, C_net=round(C_net, 3),
+            nome=nome, Cpe=C_net, C_net=round(C_net, 3),
             w_suc_d=round(w_suc_d, 4), w_up_d=round(w_up_d, 4),
             A_trib_m2=round(A_trib, 4), F_fix_d_kN=round(F_fix, 4),
             eta=round(eta, 4), ok=eta <= 1.0, e_fix_req_m=round(e_req, 3),
         )
 
-    zonas = {
-        "campo": _zona("campo",  Cpe_campo),
-        "borda": _zona("borda",  Cpe_borda),
-        "canto": _zona("canto",  Cpe_canto),
-    }
+    # §7.2.6: um único caso normativo — cada elemento com cp = ±2,0. A sucção
+    # (−) governa o arrancamento do fixador. As antigas zonas campo/borda/canto
+    # vinham da Tab. 5 de edificação fechada e não pertencem ao domínio de
+    # cobertura isolada (AUD-005).
+    zonas = {"vedacao": _zona("vedacao", -abs(cp_vedacao))}
 
     z_gov = max(zonas.values(), key=lambda z: z.eta)
     eta_gov = z_gov.eta
@@ -162,7 +182,9 @@ def verificar_fixacao_telha_succao(
         # Entrada / vento
         "q_kNm2":        round(q, 4),
         "Vk_ms":         round(params_vento.Vk, 3),
-        "Cpi":           Cpi,
+        "classe_vento":  params_vento.classe,
+        "z_ref_m":       round(params_vento.z_ref, 3),
+        "cp_vedacao":    cp_vedacao,
         "s_terca_m":     s_terca,
         "e_fix_m":       e_fix_m,
         "g_telha_kNm2":  g_telha_kNm2,
@@ -186,16 +208,18 @@ def verificar_fixacao_telha_succao(
         "F_fix_d_kN":    z_gov.F_fix_d_kN,
         "eta":           round(eta_gov, 4),
         "ok":            eta_gov <= 1.0,
-        # Recomendação de espaçamento por zona (η ≤ 1)
-        "e_fix_req_campo_m": zonas["campo"].e_fix_req_m,
-        "e_fix_req_borda_m": zonas["borda"].e_fix_req_m,
-        "e_fix_req_canto_m": zonas["canto"].e_fix_req_m,
+        # Recomendação de espaçamento (η ≤ 1)
+        "e_fix_req_m":   zonas["vedacao"].e_fix_req_m,
         # Rastreabilidade
         "caveat": (
             "R_fix,k TÍPICO (2,5 kN) — confirmar na ficha técnica da telha; "
             "governa pull-over da chapa fina, não pull-out na madeira."
         ),
-        "norma": "NBR 6123 §6.2.5 + Tab.5 (local) | EN 1995 §8.7.2/ETA (γ_M=1,3)",
+        "norma": (
+            "NBR 6123:2023 §7.2.6 (cp=±2,0 por elemento de vedação) + "
+            "§5.3.2 a)/§5.3.3 (classe A, S2 no topo) | "
+            "EN 1995 §8.7.2/ETA do fixador (γ_M=1,3)"
+        ),
     }
 
 

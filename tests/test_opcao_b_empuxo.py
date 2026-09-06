@@ -20,7 +20,9 @@ def _loads():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "curta")
     pv = ParametrosVento(V0=45, S1=1, categoria="IV", classe="B", S3=1,
-                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75,
+                         # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
+                         l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True)
     kw = dict(geo=geo, mat=mat, g_area=0.82, q_area=0.40, L_t=5.75, params_vento=pv)
     load_A = carregamentos_com_vento(**kw, empuxo_desenvolve=True)
     load_B = carregamentos_com_vento(**kw, empuxo_desenvolve=False)
@@ -31,11 +33,12 @@ def _loads():
 
 def test_empuxo_efetivo_zero_na_opcao_B():
     _, _, load_A, load_B = _loads()
-    assert load_A.H_ELU() > 300.0                 # apoio rígido: empuxo desenvolve
+    # Onda 2: limiar recalibrado ao carregamento normativo (~266 kN).
+    assert load_A.H_ELU() > 200.0                 # apoio rígido: empuxo desenvolve
     assert load_B.H_ELU() == 0.0                  # Opção B: não desenvolve
     # o H rígido (Castigliano) é preservado para a auditoria
     assert load_B.H_rigido_ELU() == pytest.approx(load_A.H_ELU(), rel=1e-6)
-    assert load_B.H_rigido_ELU() > 300.0
+    assert load_B.H_rigido_ELU() > 200.0
 
 
 def test_M_maior_na_opcao_B():

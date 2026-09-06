@@ -9,9 +9,26 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind import ParametrosVento
 from mlc_projeto.core.loads import carregamentos_com_vento
 from mlc_projeto.checks.elu.contraventamento import (
+
+
+
     verificar_contraventamento,
     verifica_sistema_vigas,
     K_S, K_F1, K_F2, K_F3,
+)
+
+
+# Onda 2 da auditoria — o contraventamento foi dimensionado para a ação
+# longitudinal ANTIGA (Cf=0,04 ⇒ 125,8 kN). Com §7.2.2 (Ft=0,5·q·a·b) a ação
+# passa a 837,3 kN, 6,7×. Os casos abaixo deixam de passar não por defeito de
+# código, mas porque o SISTEMA está subdimensionado. Ficam como xfail estrito
+# para que o redimensionamento os promova de volta — nunca relaxar o critério.
+REDIMENSIONAR_ONDA2 = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "contraventamento subdimensionado para a acao longitudinal normativa "
+        "(NBR 6123:2023 7.2.2, 6,7x a anterior); redimensionamento pendente"
+    ),
 )
 
 
@@ -19,7 +36,9 @@ def _res(d_barra=22.0):
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "curta")
     pv = ParametrosVento(V0=45, S1=1, categoria="IV", classe="B", S3=1,
-                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75)
+                         L=20.25, H1=geo.h_ap - geo.h0, h=7, dist_portico=5.75,
+                         # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
+                         l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True)
     load = carregamentos_com_vento(geo, mat, 1.5, 0.40, 5.75, pv,
                                    L_cob_m=46.0, B_cob_m=2 * geo.L)
     r = verificar_contraventamento(
@@ -72,6 +91,7 @@ def test_sem_duplicacao_forca():
         assert r["F_diag_kN"] == pytest.approx(F_diag_esperado, rel=1e-3)
 
 
+@REDIMENSIONAR_ONDA2
 def test_diagonal_22mm_passa_e_cobertura_ok():
     """Com k_f,3=30 (correto) a Ø22 mm passa e a cobertura valida a LTB."""
     r = _res(d_barra=22.0)
@@ -80,6 +100,7 @@ def test_diagonal_22mm_passa_e_cobertura_ok():
     assert r["l_1_efetivo_m"] == pytest.approx(2.53, abs=1e-6)  # terças válidas
 
 
+@REDIMENSIONAR_ONDA2
 def test_18mm_passa_com_empuxo_corrigido():
     """
     Empuxo corrigido (termo axial de Castigliano) ⇒ menor compressão na viga ⇒

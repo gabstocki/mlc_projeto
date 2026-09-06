@@ -32,6 +32,7 @@ from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.wind import (
     ParametrosVento,
     calcular_vento,
+    validar_dominio_cobertura_isolada,
     coeficientes_tabela25,
     forca_vento_paralelo_cumeeira,
     padroes_cpe_tabela25,
@@ -71,7 +72,6 @@ def _modelo(*, empuxo: bool = False):
     return geo, mat, vento, load
 
 
-@AUDIT_XFAIL
 def test_aud_001_s2_depende_da_altura_de_referencia():
     """NBR 6123:2023: S2=b_m*F_r*(z/10)^p, não uma tabela sem z."""
     # Categoria IV, classe B: b_m=0,85; F_r=0,98; p=0,125.
@@ -80,15 +80,33 @@ def test_aud_001_s2_depende_da_altura_de_referencia():
     assert p.S2 == pytest.approx(esperado, rel=1e-12)
 
 
-@AUDIT_XFAIL
 def test_aud_002_tabela25_rejeita_geometria_fora_do_dominio():
-    """Cobertura a duas águas: h deve ser pelo menos 0,5*l2."""
+    """Cobertura a duas águas: h deve ser pelo menos 0,5·ℓ2.
+
+    O relatório da auditoria admite DUAS saídas para este achado: "erro de
+    domínio **ou** rota normativa alternativa documentada". A Onda 2
+    implementou a segunda, que é a que a norma de facto prescreve — §7.2.1,
+    último parágrafo: fora do domínio, a cobertura é calculada como edificação
+    fechada de mesma cobertura, com c_pi = +0,8 ou −0,3. O teste passou a
+    verificar essa saída, mais forte que a simples recusa.
+
+    O contrato essencial permanece: com h < 0,5·ℓ2 os coeficientes da Tabela 25
+    NÃO podem ser usados.
+    """
     p = ParametrosVento(L=20.25, H1=1.785, h=7.0)
+    assert p.h < 0.5 * p.l2_efetivo                    # fora do domínio
+    assert p.rota_normativa == "edificacao_fechada"    # Tab.25 não se aplica
+
+    res = calcular_vento(p)
+    assert res.padroes_90, "a rota alternativa deve produzir padrões de carga"
+    assert all(pad["tipo"] == "edificacao_fechada_com_cpi" for pad in res.padroes_90)
+    assert all(pad["c_pi"] in (0.8, -0.3) for pad in res.padroes_90)
+
+    # Forçar a rota da Tabela 25 fora do domínio continua sendo erro explícito.
     with pytest.raises(ValueError, match="h.*0,5"):
-        calcular_vento(p)
+        validar_dominio_cobertura_isolada(p)
 
 
-@AUDIT_XFAIL
 def test_aud_003_atrito_longitudinal_usa_equacao_especifica_da_cobertura_isolada():
     """NBR 6123:2023 7.2.2: Ft=0,5*q*a*b, englobando as duas faces."""
     p = ParametrosVento()
@@ -106,7 +124,6 @@ def test_aud_003_atrito_longitudinal_usa_equacao_especifica_da_cobertura_isolada
     assert r["F_friccao_kN"] == pytest.approx(esperado, rel=1e-4)
 
 
-@AUDIT_XFAIL
 def test_aud_004_tabela25_gera_somente_pares_simultaneos_normativos():
     """Cada Cpb deve atuar simultaneamente com o Cps do mesmo carregamento."""
     tg = math.tan(math.radians(10.0))
@@ -122,7 +139,6 @@ def test_aud_004_tabela25_gera_somente_pares_simultaneos_normativos():
     assert obtidos == esperados
 
 
-@AUDIT_XFAIL
 def test_aud_005_fixacao_local_exige_s2_classe_a():
     """Elementos de vedação e suas fixações usam a classe A do fator S2."""
     p_global = ParametrosVento(categoria="IV", classe="B")

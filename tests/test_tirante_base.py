@@ -18,6 +18,7 @@ def _load_R2():
     pv = ParametrosVento(
         V0=45.0, S1=1.0, categoria="IV", classe="B", S3=1.0,
         L=20.25, H1=geo.h_ap - geo.h0, h=7.0, dist_portico=5.75,
+        l2=40.5, n_tramos=2, obstrucoes_sob_cobertura=True,   # cobertura real: 2 tramos + veículos sob a cobertura (Onda 2)
     )
     load = carregamentos_com_vento(
         geo=geo, mat=mat, g_area=1.50, q_area=0.25,
@@ -61,7 +62,8 @@ def test_verificar_tirante_d_fixo():
 def test_L3_com_tirante_H_zero():
     geo, mat, load = _load_R2()
     H_arco = load.H_ELU()
-    assert H_arco > 400.0  # empuxo corrigido (~520 kN, Castigliano c/ termo axial)
+    # Onda 2: vento só em sucção ⇒ H governado pela combinação gravítica (~374 kN).
+    assert H_arco > 300.0
 
     L3_sem = dimensionar_sapata(load, geo, F_chu_kN=80.0, eta_alvo=0.75,
                                 com_tirante=False)
@@ -69,10 +71,10 @@ def test_L3_com_tirante_H_zero():
                                 com_tirante=True, b_pilar_m=0.32, h_pilar_m=0.27)
 
     assert L3_sem["H_d_kN"] == pytest.approx(H_arco, rel=1e-6)
-    # sem tirante a sapata resiste ao empuxo por atrito/chumbadores → muitos deles
-    # (empuxo corrigido ~520 kN ⇒ ~9; antes, com H inflado, eram ~20)
+    # sem tirante a sapata resiste ao empuxo por atrito/chumbadores → muitos deles.
+    # Onda 2: H caiu para ~374 kN (vento só em sucção) ⇒ 7 chumbadores.
     assert L3_sem["n_chumbadores"] > L3_com["n_chumbadores"]
-    assert L3_sem["n_chumbadores"] >= 8
+    assert L3_sem["n_chumbadores"] >= 7
 
     assert L3_com["com_tirante"] is True
     assert L3_com["H_d_kN"] == 0.0
