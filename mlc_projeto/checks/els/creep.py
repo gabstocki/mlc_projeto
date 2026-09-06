@@ -56,12 +56,24 @@ def calcular_flecha_inst(
     I_x   = geo.I(x)                       # m⁴
     kappa = M_x / (E * I_x)               # curvatura (1/m)
 
-    # Integração dupla com ajuste de condição de contorno
+    # ── Integração dupla — AUD-009 ────────────────────────────────────────
+    # E·I·w'' = M admite DUAS constantes de integração, e a viga biapoiada
+    # fixa-as apenas por w(0) = w(L) = 0. A versão anterior impunha também
+    # θ(L) = 0 (`theta -= theta[-1]*x/L`), condição de engaste que a viga
+    # biapoiada não possui: ela removia ~80% da flecha (2,123 mm contra os
+    # 10,615 mm analíticos no benchmark UDL). Ver AUD-009.
+    #
+    #   θ(x) = ∫₀ˣ κ ds + C₁
+    #   w(x) = ∫₀ˣ θ ds + C₂
+    #   w(0) = 0  ⇒  C₂ = 0
+    #   w(L) = 0  ⇒  C₁ = −w̃(L)/L,  com w̃ obtido para C₁ = 0
+    #
+    # A correção linear aplicada a w já materializa exatamente esse C₁, de modo
+    # que nenhuma correção sobre θ é admissível.
     theta = cumulative_trapezoid(kappa, x, initial=0.0)
-    theta -= theta[-1] * x / geo.L        # garante w(L) = 0
 
     w = cumulative_trapezoid(theta, x, initial=0.0)
-    w -= w[-1] * x / geo.L               # garante w(L) = 0
+    w -= w[-1] * x / geo.L               # impõe w(L) = 0 (w(0) = 0 já vale)
 
     return float(np.max(np.abs(w))), w
 

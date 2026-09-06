@@ -8,6 +8,12 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 
+from mlc_projeto.core.validacao import (
+    exigir_inteiro_minimo,
+    exigir_no_intervalo,
+    exigir_positivo,
+)
+
 
 @dataclass
 class GeometriaViga:
@@ -33,9 +39,29 @@ class GeometriaViga:
     x:         NDArray = field(init=False)
 
     def __post_init__(self) -> None:
+        # ── Pré-condições de domínio (AUD-013) ────────────────────────────
+        # Anteriores a qualquer verificação normativa: uma geometria com vão,
+        # altura ou largura nula/negativa, ou com ângulo não finito, não
+        # descreve uma estrutura e não pode gerar utilização nem aprovação.
+        self.L  = exigir_positivo("L", self.L, unidade="m")
+        self.h0 = exigir_positivo("h0", self.h0, unidade="m")
+        self.b  = exigir_positivo("b", self.b, unidade="m")
+        # tan(α) diverge em 90°; α<0 inverteria o bisel (h decrescente do apoio
+        # para a cumeeira), fora da tipologia representada por esta classe.
+        self.alpha_deg = exigir_no_intervalo(
+            "alpha_deg", self.alpha_deg,
+            minimo=0.0, maximo=90.0, incluir_maximo=False, unidade="graus",
+        )
+        # n_pts < 2 impede np.linspace de definir um intervalo e torna espúria
+        # qualquer integração/varredura ao longo do vão.
+        self.n_pts = exigir_inteiro_minimo("n_pts", self.n_pts, minimo=2)
+
         self.alpha_rad = np.radians(self.alpha_deg)
         self.h_ap = self.h0 + (self.L / 2) * np.tan(self.alpha_rad)
         self.x = np.linspace(0, self.L, self.n_pts)
+
+        # Coerência do resultado derivado.
+        exigir_positivo("h_ap (derivado de h0, L e alpha_deg)", self.h_ap, unidade="m")
 
     def h(self, x: float | NDArray) -> float | NDArray:
         """

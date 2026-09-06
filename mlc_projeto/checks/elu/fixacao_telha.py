@@ -45,8 +45,17 @@ CAVEAT (dado do fabricante — issue 17)
   substituir. A metodologia e o resultado (espaçamento de fixadores exigido
   por zona) permanecem válidos com o R_fix,k real.
 
-Referência: NBR 6123:1988 §6.2.5 (C_pi) + Tab. 5 (C_pe local de cobertura);
+Referência: ABNT NBR 6123 — edição única adotada no projeto: **2023**.
             EN 1995-1-1 §8.7.2 / ETA do fixador (R_fix,k, γ_M=1,3).
+
+ATENÇÃO — AUD-005/AUD-016 (auditoria técnica independente): os coeficientes
+locais e o C_pi aqui implementados foram transcritos da edição de **1988**
+(§6.2.5 + Tab. 5), enquanto o núcleo declara a edição de 2023. O mapeamento de
+itens/tabelas para a edição vigente, o requisito de classe A para elementos de
+vedação e a regra cp=±2,0 para cobertura isolada dependem do texto normativo
+controlado, ainda não disponível no projeto (Onda 2 do plano de correção).
+Enquanto isso, os resultados deste módulo são **NÃO VALIDADOS** — a numeração
+de itens da edição anterior foi removida em vez de ser renumerada às cegas.
 """
 
 from __future__ import annotations

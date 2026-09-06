@@ -1,7 +1,8 @@
 """
 checks/elu/flexao.py — Flexo-compressão da viga — EC5 §6.3.2 + §6.3.3.
 
-Viga biarticulada monolítica: M + N na seção de M_max.
+Viga biarticulada monolítica: M + N com ENVELOPE ponto a ponto ao longo do vão.
+Em seção variável a seção de max|M| não é a de max|M/W(x)| — ver AUD-014.
 
 Verificações:
     EC5 §6.3.2 Eq. (6.23) — instabilidade no plano (k_c,y)
@@ -20,9 +21,11 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
-from mlc_projeto.core.loads     import Carregamentos
+from mlc_projeto.core.loads     import Carregamentos, analisar_biarticulada
 from mlc_projeto.checks.elu.flambagem_lateral import (
     calcular_l_ef,
     calcular_sigma_m_crit,
@@ -41,7 +44,7 @@ def verifica_flexao(
     s:    float = 1.00,
 ) -> dict:
     """
-    Verifica flexo-compressão da viga na seção de M_max.
+    Verifica flexo-compressão da viga varrendo TODAS as seções do vão.
 
     Eq. (6.23): σ_c,0,d/(k_c,y·f_c,0,d) + σ_m,y,d/f_m,d ≤ 1
     Eq. (6.24): σ_c,0,d/(k_c,z·f_c,0,d) + k_m·σ_m,y,d/f_m,d ≤ 1
@@ -65,58 +68,99 @@ def verifica_flexao(
     """
     gov = load.combinacao_ELU_governante()
 
-    M_max_Nm = abs(gov.M_max_kNm) * 1e3
     N_d_N    = abs(gov.N_viga_kN) * 1e3   # compressão no eixo
     x_Mmax   = gov.x_Mmax_m
+    b        = geo.b
 
-    h_x = float(geo.h(x_Mmax))
-    b   = geo.b
+    # ── Diagrama M(x) da combinação governante — AUD-014 ──────────────────
+    # A verificação passa a varrer TODAS as seções discretizadas. Em viga de
+    # altura variável, max|M| e max|M/W(x)| não coincidem: W(x)=b·h(x)²/6 cai
+    # com o quadrado da altura e, longe da cumeeira, essa queda domina a do
+    # momento. Avaliar só a seção de M_max subestimava σ_m em ~70% no caso do
+    # projeto (1,704 MPa contra 2,893 MPa).
+    # O modelo de apoio vem do gerador de combinações (AUD-007), nunca de um
+    # default: M(x) = M0(x) − H·y_c(x) depende dele.
+    r_gov = analisar_biarticulada(
+        q=0.5 * (gov.q_esq + gov.q_dir),
+        L=geo.L, h0=geo.h0, h_ap=geo.h_ap, alpha_rad=geo.alpha_rad, b=b,
+        q_esq=gov.q_esq, q_dir=gov.q_dir,
+        desenvolve_empuxo=load.empuxo_desenvolve,
+    )
+    x   = geo.x
+    M_x = np.interp(x, r_gov["x"], r_gov["M_x"]) * 1e3     # N·m
+    h_v = geo.h(x)
 
-    A_sec = b * h_x
-    W_y   = b * h_x ** 2 / 6
-    I_y   = b * h_x ** 3 / 12
-    i_y   = math.sqrt(I_y / A_sec)
+    A_v = b * h_v
+    W_v = b * h_v ** 2 / 6.0
+    i_y_v = np.sqrt((b * h_v ** 3 / 12.0) / A_v)
+    i_z_v = np.sqrt((h_v * b ** 3 / 12.0) / A_v)
 
     beta_c = 0.1  # glulam — EC5 §6.3.2
 
+    def _kc(lam_rel):
+        k = 0.5 * (1 + beta_c * (lam_rel - 0.3) + lam_rel ** 2)
+        return np.minimum(
+            1.0 / (k + np.sqrt(np.maximum(k ** 2 - lam_rel ** 2, 0.0))), 1.0
+        )
+
     # ── Flambagem no plano (eixo y) ───────────────────────────
-    # Biarticulada: rótulas apenas nos apoios → l_ef,y = L
-    l_ef_y    = geo.L
-    lam_y     = l_ef_y / i_y
-    lam_rel_y = (lam_y / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
-    k_y       = 0.5 * (1 + beta_c * (lam_rel_y - 0.3) + lam_rel_y ** 2)
-    k_c_y     = min(1.0 / (k_y + math.sqrt(max(k_y ** 2 - lam_rel_y ** 2, 0.0))), 1.0)
+    # Biarticulada: rótulas apenas nos apoios → l_ef,y = L.
+    # DOMÍNIO: EN 1995-1-1 §6.3.2 não formaliza k_c para peça de seção
+    # variável. Adota-se a seção LOCAL, escolha explicitamente conservadora
+    # (h menor → i_y menor → k_c menor → η maior) — a carga crítica real de
+    # uma peça afilada não é governada pela seção mínima. A formalização do
+    # domínio de viga de altura variável é item pendente da auditoria (seção O).
+    l_ef_y      = geo.L
+    lam_y_v     = l_ef_y / i_y_v
+    lam_rel_y_v = (lam_y_v / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+    k_c_y_v     = _kc(lam_rel_y_v)
 
     # ── Flambagem fora do plano (eixo z) ──────────────────────
-    I_z       = h_x * b ** 3 / 12
-    i_z       = math.sqrt(I_z / A_sec)
-    l_ef_z    = calcular_l_ef(s, restricao="continua_topo", tipo_carga="distribuida")
-    lam_z     = l_ef_z / i_z
-    lam_rel_z = (lam_z / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
-    k_z       = 0.5 * (1 + beta_c * (lam_rel_z - 0.3) + lam_rel_z ** 2)
-    k_c_z     = min(1.0 / (k_z + math.sqrt(max(k_z ** 2 - lam_rel_z ** 2, 0.0))), 1.0)
+    # l_ef,z = 0,9·s (entre terças): comprimento CURTO, para o qual a seção
+    # local é a representativa — a varredura aqui é mecanicamente própria.
+    l_ef_z      = calcular_l_ef(s, restricao="continua_topo", tipo_carga="distribuida")
+    lam_z_v     = l_ef_z / i_z_v
+    lam_rel_z_v = (lam_z_v / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+    k_c_z_v     = _kc(lam_rel_z_v)
 
-    # ── Tensões (valores absolutos para taxa de utilização) ───
-    sigma_c = N_d_N / A_sec
-    sigma_m = M_max_Nm / W_y
+    # ── Tensões ponto a ponto ─────────────────────────────────
+    sigma_c_v = N_d_N / A_v
+    sigma_m_v = np.abs(M_x) / W_v
 
     # ── EC5 §6.3.2 Eq. (6.23) e (6.24) — compressão LINEAR (÷k_c) ──
     # Flexão uniaxial My: σ_m,z = 0. Viga esbelta (λ_rel » 0,3) → §6.3.2(3).
-    eta_623 = sigma_c / (k_c_y * mat.f_c0_d) + sigma_m / mat.f_m_d
-    eta_624 = sigma_c / (k_c_z * mat.f_c0_d) + K_M * sigma_m / mat.f_m_d
+    eta_623_v = sigma_c_v / (k_c_y_v * mat.f_c0_d) + sigma_m_v / mat.f_m_d
+    eta_624_v = sigma_c_v / (k_c_z_v * mat.f_c0_d) + K_M * sigma_m_v / mat.f_m_d
 
-    # ── EC5 §6.3.3 — k_crit na mesma seção ───────────────────
-    sigma_crit = calcular_sigma_m_crit(mat.E0_05, b, h_x, l_ef_z)
-    lam_rel_m  = calcular_lambda_rel_m(mat.f_m_k, sigma_crit)
-    k_crit     = calcular_k_crit(lam_rel_m)
+    # ── EC5 §6.3.3 — k_crit na seção local ───────────────────
+    sigma_crit_v = np.array(
+        [calcular_sigma_m_crit(mat.E0_05, b, float(hh), l_ef_z) for hh in h_v]
+    )
+    lam_rel_m_v = np.array(
+        [calcular_lambda_rel_m(mat.f_m_k, float(sc)) for sc in sigma_crit_v]
+    )
+    k_crit_v = np.array([calcular_k_crit(float(lr)) for lr in lam_rel_m_v])
 
     # ── EC5 §6.3.3 Eq. (6.35) — FLEXÃO ao quadrado, compressão LINEAR ──
-    eta_635 = (
-        (sigma_m / (k_crit * mat.f_m_d)) ** 2
-        + sigma_c / (k_c_z * mat.f_c0_d)
+    eta_635_v = (
+        (sigma_m_v / (k_crit_v * mat.f_m_d)) ** 2
+        + sigma_c_v / (k_c_z_v * mat.f_c0_d)
     )
 
-    eta_gov = max(eta_623, eta_624, eta_635)
+    # ── Envelope e seção governante ───────────────────────────────────────
+    # RASTREABILIDADE: a seção governante é ÚNICA — aquela que maximiza o
+    # envelope η(x) = max(6.23, 6.24, 6.35). Todos os escalares devolvidos
+    # (tensões, k_c, k_crit, λ_rel, η por equação) referem-se a ESSA seção, de
+    # modo que o memorial possa reconstruir cada η a partir dos valores
+    # publicados. Reportar quantidades colhidas em seções diferentes tornaria
+    # o resultado não reconstruível — o oposto do que a auditoria exige.
+    eta_env = np.maximum.reduce([eta_623_v, eta_624_v, eta_635_v])
+    i_gov   = int(np.argmax(eta_env))
+    eta_gov = float(eta_env[i_gov])
+
+    eta_623 = float(eta_623_v[i_gov])
+    eta_624 = float(eta_624_v[i_gov])
+    eta_635 = float(eta_635_v[i_gov])
     if eta_gov == eta_635:
         verif_gov = "Eq.6.35"
     elif eta_gov == eta_623:
@@ -124,8 +168,32 @@ def verifica_flexao(
     else:
         verif_gov = "Eq.6.24"
 
+    i_sm    = int(np.argmax(sigma_m_v))
+    x_gov   = float(x[i_gov])
+    h_x     = float(h_v[i_gov])
+    A_sec   = float(A_v[i_gov])
+    sigma_c = float(sigma_c_v[i_gov])
+    sigma_m = float(sigma_m_v[i_gov])
+    lam_y, lam_rel_y, k_c_y = (
+        float(lam_y_v[i_gov]), float(lam_rel_y_v[i_gov]), float(k_c_y_v[i_gov])
+    )
+    lam_z, lam_rel_z, k_c_z = (
+        float(lam_z_v[i_gov]), float(lam_rel_z_v[i_gov]), float(k_c_z_v[i_gov])
+    )
+    lam_rel_m, k_crit = float(lam_rel_m_v[i_gov]), float(k_crit_v[i_gov])
+
     return {
         "x_Mmax_m":       round(x_Mmax, 3),
+        "x_gov_m":        round(x_gov, 3),
+        "x_sigma_m_max_m": round(float(x[i_sm]), 3),
+        "h_gov_m":        round(h_x, 4),
+        "n_secoes_varridas": int(x.size),
+        # Envelope de σ_m ao longo do vão e a tensão que a seção de M_max
+        # produziria — o par que evidencia o achado AUD-014 no memorial.
+        "sigma_m_max_MPa": round(float(sigma_m_v[i_sm]) / 1e6, 4),
+        "sigma_m_x_Mmax_MPa": round(
+            float(np.interp(x_Mmax, x, sigma_m_v)) / 1e6, 4
+        ),
         "h_x_m":          round(h_x, 4),
         "b_m":            b,
         "A_m2":           round(A_sec, 6),

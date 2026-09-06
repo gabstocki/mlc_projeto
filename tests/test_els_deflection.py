@@ -87,7 +87,8 @@ def test_cisalhamento_aumenta_a_flecha():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
     mat = GlulamMaterial("GL24h", 3, "longa")
     r = analisar_biarticulada(q=5.0, L=geo.L, h0=geo.h0, h_ap=geo.h_ap,
-                              alpha_rad=geo.alpha_rad, b=geo.b)
+                              alpha_rad=geo.alpha_rad, b=geo.b,
+                              desenvolve_empuxo=True)
     M_x = np.interp(geo.x, r["x"], r["M_x"]) * 1e3
     w_tot, _, w_b, w_s = flecha_numerica(geo, mat, M_x, geo.x)
     w_flex, _, _, _ = flecha_numerica(geo, mat, M_x, geo.x,

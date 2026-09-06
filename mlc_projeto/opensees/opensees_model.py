@@ -50,7 +50,11 @@ def analisar_analitico(q: float, L: float, h0: float, h_ap: float,
     modo que a validação FEM confira exatamente o modelo de cálculo.
     """
     from mlc_projeto.core.loads import analisar_biarticulada
-    r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, b)
+    # AUD-018: este harness só reproduz a condição de apoio RÍGIDA. O
+    # parâmetro é declarado explicitamente para que a limitação fique
+    # registrada no código, e não implícita num default.
+    r = analisar_biarticulada(q, L, h0, h_ap, alpha_rad, b,
+                              desenvolve_empuxo=True)
     return dict(Rv=r["R_v_kN"], H=r["H_kN"], N=r["N_apoio_kN"],
                 Mmax=r["M_max_kNm"], xMmax=r["x_Mmax_m"],
                 Mcum=r["M_cumeeira_kNm"], f=round((h_ap - h0) / 2.0, 4))

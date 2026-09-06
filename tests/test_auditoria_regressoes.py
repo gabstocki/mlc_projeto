@@ -145,7 +145,6 @@ def _m0_biapoiada(x: np.ndarray, L: float, qe: float, qd: float) -> np.ndarray:
     return np.where(x <= L / 2.0, left, right)
 
 
-@AUDIT_XFAIL
 def test_aud_006_misula_respeita_o_modelo_sem_empuxo():
     """A verificação local deve usar o mesmo desenvolve_empuxo do gerador."""
     geo, mat, _, load = _modelo(empuxo=False)
@@ -177,7 +176,6 @@ def test_aud_006_misula_respeita_o_modelo_sem_empuxo():
     assert atual["eta"] == pytest.approx(esperado, rel=5e-4)
 
 
-@AUDIT_XFAIL
 def test_aud_007_forca_nocional_nao_passa_quando_h_de_referencia_e_zero():
     """Himp/Hed com Hed=0 é indefinido/infinito, nunca zero."""
     geo, mat, _, load = _modelo(empuxo=False)
@@ -196,7 +194,6 @@ def test_aud_007_forca_nocional_nao_passa_quando_h_de_referencia_e_zero():
     assert r["ok"] is False
 
 
-@AUDIT_XFAIL
 def test_aud_008_integracao_els_reproduz_viga_biapoiada_com_udl():
     """Benchmark: wmax=5*q*L^4/(384*E*I), erro numérico menor que 0,1%."""
     L, b, h, q = 10.0, 0.20, 0.40, 1000.0
@@ -230,7 +227,6 @@ def test_aud_009_predimensionamento_usa_interacao_linear_de_estabilidade():
     assert obtido == pytest.approx(esperado, rel=1e-12)
 
 
-@AUDIT_XFAIL
 def test_aud_010_icamento_aplica_expoentes_da_equacao_635():
     """EC5 6.35: (sigma_m/(kcrit*fmd))^2 + sigma_c/(kc*fc0d)."""
     geo, mat, _, _ = _modelo(empuxo=False)
@@ -241,9 +237,26 @@ def test_aud_010_icamento_aplica_expoentes_da_equacao_635():
     assert r["eta_LTB"] == pytest.approx(esperado, rel=2e-2, abs=2e-4)
 
 
-@AUDIT_XFAIL
 def test_aud_011_pilar_verifica_as_duas_interacoes_623_624():
-    """Flexão em z ainda requer a equação conjugada governada por kc,y."""
+    """Flexão em z ainda requer a equação conjugada governada por kc,y.
+
+    CORREÇÃO DO VALOR ESPERADO DA AUDITORIA (Onda 1) — único caso em toda a
+    suíte em que o esperado foi alterado, e não para acompanhar o código.
+
+    A auditoria codificou k_m no termo de flexão da Eq. (6.24) e omitiu-o na
+    (6.23). EN 1995-1-1:2004 §6.3.2(3) faz o oposto: em cada equação, k_m
+    reduz o termo de flexão do eixo SECUNDÁRIO — o mesmo padrão de (6.19)/
+    (6.20) em §6.2.4:
+
+        (6.23)  σc/(kc,y·fc0d) + σm,y/fm,d + km·σm,z/fm,d ≤ 1
+        (6.24)  σc/(kc,z·fc0d) + km·σm,y/fm,d + σm,z/fm,d ≤ 1
+
+    Com σm,y = 0 e σm,z ≠ 0 (este caso), a (6.23) recebe km·σm,z e a (6.24)
+    recebe σm,z pleno. O esperado da auditoria dava η = 0,594640; a aplicação
+    correta da norma dá η = 0,580026 — ambas governadas pela (6.23), diferença
+    de 2,52%. O esperado continua vindo da fonte normativa e não da função sob
+    teste, que é o que a regra "não alterar o esperado" protege.
+    """
     mat = GlulamMaterial("GL24h", 3, "curta")
     b, h, length, normal, moment = 0.32, 0.27, 7.0, 282.172, 3.017
     r = verifica_pilar(mat, b, h, length, normal, M_d_kNm=moment, eixo="z")
@@ -259,12 +272,15 @@ def test_aud_011_pilar_verifica_as_duas_interacoes_623_624():
 
     sigma_c = normal * 1e3 / area
     sigma_mz = moment * 1e3 / (h * b**2 / 6.0)
-    eta_623 = sigma_c / (kc(iy) * mat.f_c0_d) + sigma_mz / mat.f_m_d
-    eta_624 = sigma_c / (kc(iz) * mat.f_c0_d) + 0.7 * sigma_mz / mat.f_m_d
+    k_m = 0.7  # seção retangular — EN 1995-1-1:2004 §6.1.6(2)
+    eta_623 = sigma_c / (kc(iy) * mat.f_c0_d) + k_m * sigma_mz / mat.f_m_d
+    eta_624 = sigma_c / (kc(iz) * mat.f_c0_d) + sigma_mz / mat.f_m_d
     assert r["eta"] == pytest.approx(max(eta_623, eta_624), rel=5e-4)
+    # O achado original permanece verificado: uma única equação não basta.
+    assert r["eta_6_23"] == pytest.approx(eta_623, rel=5e-4)
+    assert r["eta_6_24"] == pytest.approx(eta_624, rel=5e-4)
 
 
-@AUDIT_XFAIL
 def test_aud_011b_pilar_compressao_pura_usa_utilizacao_linear():
     """Compressão com flambagem: eta=sigma_c/(k_c*f_c0d), sem quadrado."""
     mat = GlulamMaterial("GL24h", 3, "curta")
@@ -273,7 +289,6 @@ def test_aud_011b_pilar_compressao_pura_usa_utilizacao_linear():
     assert r["eta"] == pytest.approx(esperado, rel=5e-4)
 
 
-@AUDIT_XFAIL
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -287,14 +302,12 @@ def test_aud_012_geometria_invalida_e_rejeitada(kwargs):
         GeometriaViga(**kwargs)
 
 
-@AUDIT_XFAIL
 def test_aud_013_secao_nula_nunca_e_aprovada():
     mat = GlulamMaterial("GL24h", 3, "curta")
     with pytest.raises(ValueError):
         verifica_pilar(mat, b=0.0, h=0.30, H=7.0, N_d=100.0)
 
 
-@AUDIT_XFAIL
 def test_aud_014_viga_variavel_procura_maximo_de_tensao_nao_de_momento():
     """Em seção variável, max|M| e max|M/W(x)| não são equivalentes."""
     geo, mat, _, load = _modelo(empuxo=False)
@@ -313,7 +326,6 @@ def test_aud_015_parametros_ndp_possuem_identificacao_do_national_annex():
     assert load.ndp_source
 
 
-@AUDIT_XFAIL
 def test_aud_016_relatorio_nao_declara_versao_obsoleta_do_vento():
     """O relatório deve declarar uma única edição controlada da NBR 6123."""
     report_path = Path(__file__).parents[1] / "mlc_projeto" / "output" / "report.py"

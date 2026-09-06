@@ -224,7 +224,8 @@ def analisar_biarticulada(
     n_pts:     int = 401,
     q_esq:     float | None = None,
     q_dir:     float | None = None,
-    desenvolve_empuxo: bool = True,
+    *,
+    desenvolve_empuxo: bool,
 ) -> dict:
     """
     Viga de seção variável biarticulada (rótulas só nos apoios).

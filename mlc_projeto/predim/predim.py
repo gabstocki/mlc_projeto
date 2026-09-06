@@ -175,9 +175,14 @@ def pre_dimensionar(
                     continue
 
                 # ── Análise biarticulada (continuidade cumeeira)
+                # AUD-007/AUD-010: modelo rígido explícito (legado do predim).
+                # O parâmetro passou a ser obrigatório para que nenhum caminho
+                # analise outra estrutura por omissão; a convergência com o
+                # pipeline principal (H=0) é item da Onda 3 da auditoria.
                 r_C2 = analisar_biarticulada(
                     q=q_C2, L=L_v, h0=h0_f, h_ap=h_ap,
                     alpha_rad=al_r, b=b_f,
+                    desenvolve_empuxo=True,
                 )
 
                 M_max_Nm = r_C2["M_max_kNm"] * 1e3   # N·m
@@ -222,9 +227,11 @@ def pre_dimensionar(
 
                     # ── 4. ELS — FLECHA ───────────────────────
                     r_g  = analisar_biarticulada(
-                        g_k, L_v, h0_f, h_ap, al_r, b_f)
+                        g_k, L_v, h0_f, h_ap, al_r, b_f,
+                        desenvolve_empuxo=True)   # legado — ver nota acima
                     r_q  = analisar_biarticulada(
-                        q_k, L_v, h0_f, h_ap, al_r, b_f)
+                        q_k, L_v, h0_f, h_ap, al_r, b_f,
+                        desenvolve_empuxo=True)   # legado — ver nota acima
 
                     x_pts = geo.x
                     M_g_Nm = np.interp(x_pts, r_g["x"], r_g["M_x"]) * 1e3

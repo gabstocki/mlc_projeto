@@ -46,7 +46,7 @@ def test_analise_assimetrica_reaccoes():
     L, q1, q2 = 20.0, 10.0, 5.0
     r = analisar_biarticulada(
         q=0.0, L=L, h0=1.0, h_ap=2.0, alpha_rad=math.radians(10),
-        b=0.30, q_esq=q1, q_dir=q2,
+        b=0.30, q_esq=q1, q_dir=q2, desenvolve_empuxo=True,
     )
     W = q1 * L / 2 + q2 * L / 2
     assert r["R_A_kN"] + r["R_B_kN"] == pytest.approx(W, rel=1e-6)

@@ -13,9 +13,11 @@ Sistema — pilar biarticulado (viga biarticulada + pilares rotulados):
     - M_d = 0            (rótulas em ambas as extremidades)
     - V_d = 0            (o pilar não recebe empuxo horizontal — ver nota abaixo)
 
-    Verificação: compressão simples com instabilidade
-    EC5 §6.3.2 Eq. 6.23 simplificada (sem momento):
-        (σ_c,0,d / (k_c · f_c,0,d))² ≤ 1,0
+    Verificação: compressão com instabilidade — EN 1995-1-1:2004 §6.3.2(3):
+        σ_c,0,d / (k_c · f_c,0,d) ≤ 1,0        (LINEAR em k_c)
+    A forma quadrática pertence a §6.2.4 (Eqs. 6.19/6.20) e só vale para
+    λ_rel ≤ 0,3, quando NÃO há redução por instabilidade. Aplicá-la com k_c
+    subestima a utilização (AUD-012) — corrigido na Onda 1 da auditoria.
 
     Comprimento efetivo — pilar com duas rótulas:
         l_ef = 1,0 · H  (EC5 §6.3.2 — articulado-articulado)
@@ -32,7 +34,7 @@ Sistema — pilar biarticulado (viga biarticulada + pilares rotulados):
         A decisão de modelo A/B (fecho do empuxo no beiral × sem empuxo) está
         na issue 38; não altera o dimensionamento do pilar (compressão por R_v).
 
-Referência: EC5 §6.3.2 Eq. 6.23
+Referência: EN 1995-1-1:2004 §6.3.2 Eqs. (6.23) e (6.24); §6.1.6(2) para k_m.
 """
 
 from __future__ import annotations
@@ -44,6 +46,12 @@ import pandas as pd
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
+from mlc_projeto.core.validacao import (
+    DominioInvalidoError,
+    exigir_finito,
+    exigir_nao_negativo,
+    exigir_positivo,
+)
 
 
 # ── Verificação pontual ───────────────────────────────────────────────────────
@@ -69,10 +77,12 @@ def verifica_pilar(
     Pilar com rótulas em ambas as extremidades:
         l_ef = 1,0 · H
 
-    Sem momento:
-        (σ_c,0,d / (k_c · f_c,0,d))² ≤ 1,0
-    Com momento (vento lateral no fuste):
-        σ_c/(k_c·f_c0d) + σ_m/f_md ≤ 1   (Eq. 6.23 simplificada, um eixo)
+    Avalia SEMPRE as duas equações conjugadas e devolve a governante
+    (EN 1995-1-1:2004 §6.3.2(3)):
+        (6.23)  σc/(k_c,y·f_c0d) + σm,y/f_md + k_m·σm,z/f_md ≤ 1
+        (6.24)  σc/(k_c,z·f_c0d) + k_m·σm,y/f_md + σm,z/f_md ≤ 1
+    Sem momento ambas degeneram em σc/(k_c·f_c0d) ≤ 1, com k_c do eixo mais
+    esbelto — utilização LINEAR, não quadrática.
 
     Args:
         mat     : Material do pilar
@@ -81,70 +91,118 @@ def verifica_pilar(
         H       : Comprimento do pilar (m)
         N_d     : Força normal de cálculo (kN) — compressão
         M_d_kNm : Momento de cálculo no fuste (kN·m) — ex. vento no fuste
-        eixo    : "min" | "y" (plano pórtico, I~h) | "z" (// cumeeira, I~b)
+        eixo    : eixo em torno do qual atua M_d_kNm —
+                  "y" (plano do pórtico) | "z" (// cumeeira) | "min" (eixo de
+                  menor inércia; comportamento histórico)
 
     Returns:
-        dict com k_c, λ_rel, η e ok
-    """
-    # ── Propriedades da seção ─────────────────────────────────
-    A = b * h
-    I_y = b * h ** 3 / 12.0   # plano do pórtico
-    I_z = h * b ** 3 / 12.0   # fora do plano (// cumeeira)
-    if eixo == "y":
-        I_use = I_y
-        W_use = b * h ** 2 / 6.0
-    elif eixo == "z":
-        I_use = I_z
-        W_use = h * b ** 2 / 6.0
-    else:
-        I_use = min(I_y, I_z)
-        W_use = b * h ** 2 / 6.0 if I_y <= I_z else h * b ** 2 / 6.0
+        dict com k_c/λ_rel por eixo, η_6.23, η_6.24, η governante, eixo
+        governante e ok.
 
-    i_use = math.sqrt(I_use / A) if A > 0 else 1e-9
+    Raises:
+        DominioInvalidoError: dimensões não positivas/não finitas, N_d negativo
+            ou eixo inválido (AUD-013).
+    """
+    # ── Pré-condições de domínio (AUD-013) ────────────────────
+    # Sem isto, A<=0 caía num fallback (i:=1e-9, σc:=0) que devolvia η=0 e
+    # ok=True para uma seção inexistente sob carga não nula.
+    b = exigir_positivo("b", b, unidade="m")
+    h = exigir_positivo("h", h, unidade="m")
+    H = exigir_positivo("H", H, unidade="m")
+    M_d_kNm = exigir_finito("M_d_kNm", M_d_kNm)
+    N_d = exigir_nao_negativo("N_d", N_d, unidade="kN")
+    if eixo not in ("y", "z", "min"):
+        raise DominioInvalidoError(
+            f"eixo = {eixo!r} inválido; use 'y' (plano do pórtico), "
+            f"'z' (// cumeeira) ou 'min'."
+        )
+
+    # ── Propriedades da seção ─────────────────────────────────
+    A   = b * h
+    I_y = b * h ** 3 / 12.0   # flexão/flambagem no plano do pórtico
+    I_z = h * b ** 3 / 12.0   # fora do plano (// cumeeira)
+    W_y = b * h ** 2 / 6.0
+    W_z = h * b ** 2 / 6.0
+
+    i_y = math.sqrt(I_y / A)
+    i_z = math.sqrt(I_z / A)
 
     # ── Comprimento efetivo ───────────────────────────────────
     l_ef = 1.0 * H
 
-    # ── Esbeltez ─────────────────────────────────────────────
-    lam     = l_ef / i_use
-    lam_rel = (lam / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
-    k_c     = _kc_ec5(lam_rel)
+    # ── Esbeltez e k_c nos DOIS eixos ─────────────────────────
+    # AUD-012: avaliar um único eixo não preserva a interação espacial — a
+    # flambagem pode governar num eixo enquanto a flexão atua no outro.
+    lam_y     = l_ef / i_y
+    lam_z     = l_ef / i_z
+    lam_rel_y = (lam_y / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+    lam_rel_z = (lam_z / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
+    k_c_y     = _kc_ec5(lam_rel_y)
+    k_c_z     = _kc_ec5(lam_rel_z)
 
     # ── Tensões ───────────────────────────────────────────────
-    sigma_c = N_d * 1e3 / A if A > 0 else 0.0          # Pa
-    sigma_m = (abs(M_d_kNm) * 1e3) / W_use if W_use > 0 else 0.0  # N/m / m² = Pa? 
-    # M in kN·m = 1e3 N·m; W in m³ → σ = M/W in N/m² = Pa. Yes: M*1e3/W
+    # `eixo` designa em torno de qual eixo atua M_d_kNm. "min" mantém o
+    # comportamento histórico: o momento é atribuído ao eixo de menor inércia.
+    eixo_M = eixo if eixo in ("y", "z") else ("y" if I_y <= I_z else "z")
+    sigma_c  = N_d * 1e3 / A                                   # Pa
+    sigma_my = abs(M_d_kNm) * 1e3 / W_y if eixo_M == "y" else 0.0
+    sigma_mz = abs(M_d_kNm) * 1e3 / W_z if eixo_M == "z" else 0.0
 
     # ── Verificação EC5 §6.3.2 ────────────────────────────────
-    if abs(M_d_kNm) < 1e-9:
-        eta = (sigma_c / (k_c * mat.f_c0_d)) ** 2
-    else:
-        # Eq. 6.23 (um eixo): σc/(kc fc0d) + σm/fmd ≤ 1
-        eta = (
-            sigma_c / (k_c * mat.f_c0_d)
-            + sigma_m / mat.f_m_d
-        )
+    # EN 1995-1-1:2004 Eqs. (6.23) e (6.24) — k_m reduz o termo de flexão do
+    # eixo SECUNDÁRIO de cada equação (mesmo padrão de (6.19)/(6.20)):
+    #   (6.23)  σc/(kc,y·fc0d) + σm,y/fm,d + km·σm,z/fm,d ≤ 1
+    #   (6.24)  σc/(kc,z·fc0d) + km·σm,y/fm,d + σm,z/fm,d ≤ 1
+    # O termo de compressão estabilizada é LINEAR (§6.3.2(3)); a forma
+    # quadrática pertence a §6.2.4, válida só para λ_rel ≤ 0,3 (AUD-012).
+    k_m = 0.7  # seção retangular — EC5 §6.1.6(2)
+    r_c_y = sigma_c / (k_c_y * mat.f_c0_d)
+    r_c_z = sigma_c / (k_c_z * mat.f_c0_d)
+    eta_623 = r_c_y + sigma_my / mat.f_m_d + k_m * sigma_mz / mat.f_m_d
+    eta_624 = r_c_z + k_m * sigma_my / mat.f_m_d + sigma_mz / mat.f_m_d
 
+    if eta_623 >= eta_624:
+        eta, eixo_gov = eta_623, "y"
+        k_c, lam, lam_rel = k_c_y, lam_y, lam_rel_y
+    else:
+        eta, eixo_gov = eta_624, "z"
+        k_c, lam, lam_rel = k_c_z, lam_z, lam_rel_z
+
+    tem_M = abs(M_d_kNm) > 1e-9
     return {
-        "b_m":          b,
-        "h_m":          h,
-        "H_m":          H,
-        "l_ef_m":       round(l_ef,          3),
-        "lambda":       round(lam,           2),
-        "eixo":         eixo,
-        "M_d_kNm":      round(M_d_kNm,       3),
-        "sigma_m_MPa":  round(sigma_m / 1e6, 4),
-        "lambda_rel":   round(lam_rel,       4),
-        "k_c":          round(k_c,           4),
-        "N_d_kN":       round(N_d,           3),
-        "sigma_c_MPa":  round(sigma_c/1e6,   4),
-        "f_c0d_MPa":    round(mat.f_c0_d/1e6,4),
-        "eta":          round(eta,            4),
-        "ok":           eta <= 1.0,
-        "norma":        (
-            "EC5 §6.3.2 Eq. 6.23 (flexo-compressão)"
-            if abs(M_d_kNm) > 1e-9
-            else "EC5 §6.3.2 Eq. 6.23 (compressão pura)"
+        "b_m":            b,
+        "h_m":            h,
+        "H_m":            H,
+        "l_ef_m":         round(l_ef,            3),
+        "lambda":         round(lam,             2),
+        "eixo":           eixo,
+        "eixo_M":         eixo_M,
+        "eixo_governante": eixo_gov,
+        "M_d_kNm":        round(M_d_kNm,         3),
+        "sigma_m_MPa":    round(max(sigma_my, sigma_mz) / 1e6, 4),
+        "sigma_m_y_MPa":  round(sigma_my / 1e6,  4),
+        "sigma_m_z_MPa":  round(sigma_mz / 1e6,  4),
+        "lambda_rel":     round(lam_rel,         4),
+        "lambda_rel_y":   round(lam_rel_y,       4),
+        "lambda_rel_z":   round(lam_rel_z,       4),
+        "k_c":            round(k_c,             4),
+        "k_c_y":          round(k_c_y,           4),
+        "k_c_z":          round(k_c_z,           4),
+        "k_m":            k_m,
+        "N_d_kN":         round(N_d,             3),
+        "sigma_c_MPa":    round(sigma_c / 1e6,   4),
+        "f_c0_d_MPa":     round(mat.f_c0_d / 1e6, 4),
+        "f_m_d_MPa":      round(mat.f_m_d / 1e6,  4),
+        "eta":            round(eta,             4),
+        "eta_6_23":       round(eta_623,         4),
+        "eta_6_24":       round(eta_624,         4),
+        "ok":             eta <= 1.0,
+        "norma":          (
+            "EN 1995-1-1:2004 §6.3.2 Eqs. (6.23)/(6.24) — flexo-compressão, "
+            "governante entre os dois eixos"
+            if tem_M
+            else "EN 1995-1-1:2004 §6.3.2(3) — compressão com instabilidade "
+                 "(utilização linear em k_c)"
         ),
     }
 
@@ -461,7 +519,7 @@ def varrer_pilares(
                     "k_c":         res["k_c"],
                     "N_d_kN":      res["N_d_kN"],
                     "sigma_c_MPa": res["sigma_c_MPa"],
-                    "f_c0d_MPa":   res["f_c0d_MPa"],
+                    "f_c0_d_MPa":  res["f_c0_d_MPa"],
                     "eta":         res["eta"],
                     "V_pilar_m3":  round(V_pilar,       4),
                 })
@@ -526,7 +584,7 @@ def relatorio_pilares(
     print(f"  λ_rel        : {m['lambda_rel']:.4f}")
     print(f"  k_c          : {m['k_c']:.4f}")
     print(f"  σ_c,0,d      : {m['sigma_c_MPa']:.4f} MPa")
-    print(f"  f_c,0,d      : {m['f_c0d_MPa']:.4f} MPa")
+    print(f"  f_c,0,d      : {m['f_c0_d_MPa']:.4f} MPa")
     print(f"  η            : {m['eta']:.4f}")
     print(f"  Volume pilar : {m['V_pilar_m3']:.4f} m³")
     print(f"  ─────────────────────────────────────────────────────────")

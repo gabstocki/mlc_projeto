@@ -189,7 +189,19 @@ def verificar_estabilidade_global(
     # ── 1) Forças nocionais ───────────────────────────────────
     noc = forca_nocional(V_portal, H_pilar_m, m_colunas=m_colunas)
     H_imp = noc["H_imp_kN"]
-    ratio_imp = H_imp / H_Ed if H_Ed > 1e-9 else 0.0
+    # AUD-008: com H_Ed = 0 a razão H_imp/H_Ed é indefinida, NÃO nula. O
+    # fallback anterior (`else 0.0`) convertia a pior condição possível — uma
+    # imperfeição horizontal sem qualquer força horizontal de referência que a
+    # equilibre — em aprovação automática, justamente no modelo hoje adotado
+    # (Opção B, H = 0). O critério de dispensa H_imp ≪ H_Ed pressupõe um H_Ed
+    # não nulo; sem ele, a força nocional tem de ser verificada como caso de
+    # carga explícito no sistema de contraventamento lateral.
+    if H_Ed > 1e-9:
+        ratio_imp = H_imp / H_Ed
+    elif H_imp > 1e-9:
+        ratio_imp = math.inf
+    else:
+        ratio_imp = 0.0          # nenhuma imperfeição a equilibrar
     ok_imp = ratio_imp <= H_IMP_OVER_H_MAX
     # H de projeto a reter (empuxo 1.ª ordem já >> nocional)
     H_gov = max(H_Ed, H_imp)
@@ -320,7 +332,12 @@ def verificar_estabilidade_global(
             if not ok_geom:
                 motivos.append(f"w/f_c={w_over_f:.4f}")
             if not ok_imp:
-                motivos.append(f"H_imp/H={ratio_imp:.3f}")
+                motivos.append(
+                    "H_Ed=0 com H_imp>0: razão indefinida, força nocional "
+                    "não verificada no caminho lateral (AUD-008)"
+                    if math.isinf(ratio_imp)
+                    else f"H_imp/H={ratio_imp:.3f}"
+                )
             conclusao = (
                 "Efeitos de 2.ª ordem NÃO dispensáveis ("
                 + "; ".join(motivos)

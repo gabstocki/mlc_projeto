@@ -138,8 +138,12 @@ def verificar_icamento(
     k_z = 0.5 * (1 + beta_c * (lam_rel_z - 0.3) + lam_rel_z ** 2)
     k_c_z = min(1.0 / (k_z + math.sqrt(max(k_z ** 2 - lam_rel_z ** 2, 0.0))), 1.0)
 
-    # EC5 §6.3.3 Eq. (6.35): σ_m/(k_crit·f_m_d) + (σ_c/(k_c,z·f_c0d))² ≤ 1
-    eta_ltb = sig_m_pos / (k_crit * f_m_d) + (sig_c / (k_c_z * f_c0d)) ** 2
+    # EN 1995-1-1:2004 §6.3.3 Eq. (6.35):
+    #     [σ_m,d/(k_crit·f_m,d)]² + σ_c,0,d/(k_c,z·f_c,0,d) ≤ 1
+    # AUD-011: os expoentes estavam aplicados aos termos opostos. É o termo de
+    # FLEXÃO (instabilidade lateral por k_crit) que entra ao quadrado; o de
+    # compressão estabilizada por k_c,z é LINEAR — mesma lógica de §6.3.2(3).
+    eta_ltb = (sig_m_pos / (k_crit * f_m_d)) ** 2 + sig_c / (k_c_z * f_c0d)
 
     etas = {"flexao": eta_flex, "cisalhamento": eta_cis, "LTB_6.35": eta_ltb}
     gov = max(etas, key=etas.get)

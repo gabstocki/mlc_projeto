@@ -591,7 +591,7 @@ def gerar_tex(
         '  EN 14592:2008        & Fixadores de aço para estruturas de madeira \\\\\n'
         '  EN 1993-1-8:2005     & Eurocode 3 -- Ligações \\\\\n'
         '  EN 1991-1-7:2006     & Ações acidentais -- Impacto \\\\\n'
-        '  ABNT NBR 6123:1988   & Forças devidas ao vento em edificações \\\\\n'
+        '  ABNT NBR 6123:2023   & Forças devidas ao vento em edificações \\\\\n  \\multicolumn{2}{@{}l@{}}{\\footnotesize\\textit{Edição única adotada. O capítulo de vento possui achados de auditoria em aberto}} \\\\\n  \\multicolumn{2}{@{}l@{}}{\\footnotesize\\textit{(AUD-001 a AUD-005): $S_2$ sem dependência de $z$, domínio da Tab.~25 não validado e força}} \\\\\n  \\multicolumn{2}{@{}l@{}}{\\footnotesize\\textit{longitudinal de cobertura isolada sob revisão. Resultados de vento: \\textbf{NÃO VALIDADOS}.}} \\\\\n'
         '  \\bottomrule\n'
         '\\end{tabular}\n\n'
         '% ── 2. Dados Gerais ───────────────────────────────────────\n'

@@ -93,10 +93,16 @@ def verifica_misula(
         k_tra = k_m_alpha_tracao(matc, alpha_rad)
         f_md  = matc.f_m_d
 
+        # AUD-007: o default `desenvolve_empuxo=True` fazia esta verificação
+        # local analisar OUTRA estrutura (apoio horizontal rígido) enquanto o
+        # pipeline roda com H=0. Como M(x) = M0(x) − H·y_c(x), o diagrama e a
+        # tensão na mísula ficavam subestimados. O modelo de apoio tem de vir
+        # sempre do gerador de combinações, nunca de um default de função.
         r = analisar_biarticulada(
             q=0.5 * (comb.q_esq + comb.q_dir),
             L=geo.L, h0=geo.h0, h_ap=geo.h_ap, alpha_rad=alpha_rad, b=b,
             q_esq=comb.q_esq, q_dir=comb.q_dir,
+            desenvolve_empuxo=load.empuxo_desenvolve,
         )
         M_x = np.interp(x, r["x"], r["M_x"]) * 1e3       # N·m (sagging > 0)
 

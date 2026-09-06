@@ -368,7 +368,8 @@ def gerar_vtk() -> None:
         malha.save(str(arq))
 
         from mlc_projeto.core.loads import analisar_biarticulada
-        H_an  = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V)["H_kN"]
+        H_an  = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V,
+                                      desenvolve_empuxo=True)["H_kN"]  # AUD-018
         err   = abs(rv['H']-H_an) / H_an * 100
         eta_m = float(np.max(np.abs(malha.cell_data['eta_M'])))
 
