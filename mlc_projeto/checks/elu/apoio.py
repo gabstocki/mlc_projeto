@@ -66,33 +66,45 @@ def verifica_apoio(
     l_ap: float = 0.40,
 ) -> dict:
     """
-    Verifica compressão perpendicular e Hankinson no apoio.
+    Compressão perpendicular (EC5 §6.1.5) e Hankinson (§6.2.2) no apoio.
+
+    Varre TODAS as combinações ELU físicas, cada uma com o k_mod da SUA duração
+    (achado F-06): a combinação que maximiza |M_max| não é necessariamente a que
+    maximiza a REAÇÃO `R_v`, e uma reação menor com k_mod menor pode governar.
 
     Args:
-        geo  : Geometria da viga
-        mat  : Material
-        load : Carregamentos
-        l_ap : Comprimento da placa de apoio (m)
+        geo, mat, load : modelo de projeto
+        l_ap           : comprimento da placa de apoio (m)
 
     Returns:
-        dict com resultados de ambas as verificações, η e ok
+        dict com ambas as verificações, a combinação governante, η e ok.
     """
-    b         = geo.b
-    h0        = geo.h0
-    alpha_deg = geo.alpha_deg
-    R_d_N     = load.V_max_ELU() * 1e3   # N
+    b, h0, alpha_deg = geo.b, geo.h0, geo.alpha_deg
 
-    # ── 1. Compressão perpendicular (EC5 §6.1.5) ─────────────
-    sigma_c90 = R_d_N / (b * l_ap)
-    eta_c90   = sigma_c90 / mat.f_c90_d
+    melhor = None
+    for comb in load.combinacoes_ELU_fisicas().values():
+        matc  = mat.com_duracao(comb.duracao)
+        R_d_N = abs(float(comb.V_max_kN)) * 1e3          # N
 
-    # ── 2. Hankinson (EC5 §6.2.2) ────────────────────────────
-    f_ca    = f_c_alpha_d(mat, alpha_deg)
-    sigma_ca= R_d_N / (b * h0)
-    eta_ca  = sigma_ca / f_ca
+        sigma_c90 = R_d_N / (b * l_ap)
+        eta_c90   = sigma_c90 / matc.f_c90_d
 
-    eta_gov   = max(eta_c90, eta_ca)
-    verif_gov = "perp." if eta_c90 >= eta_ca else "Hankinson"
+        f_ca     = f_c_alpha_d(matc, alpha_deg)
+        sigma_ca = R_d_N / (b * h0)
+        eta_ca   = sigma_ca / f_ca
+
+        eta = max(eta_c90, eta_ca)
+        if melhor is None or eta > melhor["eta"]:
+            melhor = dict(eta=eta, eta_c90=eta_c90, eta_ca=eta_ca, comb=comb,
+                          mat=matc, R_d_N=R_d_N, sigma_c90=sigma_c90,
+                          sigma_ca=sigma_ca, f_ca=f_ca)
+
+    if melhor is None:
+        raise ValueError("Não há combinações ELU para verificar o apoio.")
+
+    comb, matc = melhor["comb"], melhor["mat"]
+    eta_gov   = melhor["eta"]
+    verif_gov = "perp." if melhor["eta_c90"] >= melhor["eta_ca"] else "Hankinson"
 
     return {
         "L_m":             geo.L,
@@ -100,16 +112,21 @@ def verifica_apoio(
         "b_m":             b,
         "alpha_deg":       alpha_deg,
         "l_ap_m":          l_ap,
-        "R_d_kN":          round(R_d_N / 1e3,      3),
-        "sigma_c90d_MPa":  round(sigma_c90 / 1e6,  4),
-        "f_c90d_MPa":      round(mat.f_c90_d / 1e6,4),
-        "eta_c90":         round(eta_c90,           4),
-        "ok_c90":          eta_c90 <= 1.0,
-        "sigma_cad_MPa":   round(sigma_ca / 1e6,   4),
-        "f_cad_MPa":       round(f_ca / 1e6,       4),
-        "eta_ca":          round(eta_ca,            4),
-        "ok_ca":           eta_ca <= 1.0,
-        "eta":             round(eta_gov,           4),
+        # Combinação governante DESTA verificação (F-06)
+        "comb_gov":        comb.nome,
+        "duracao":         comb.duracao,
+        "k_mod":           matc.k_mod,
+        "n_combinacoes_varridas": len(load.combinacoes_ELU_fisicas()),
+        "R_d_kN":          round(melhor["R_d_N"] / 1e3, 3),
+        "sigma_c90d_MPa":  round(melhor["sigma_c90"] / 1e6, 4),
+        "f_c90d_MPa":      round(matc.f_c90_d / 1e6, 4),
+        "eta_c90":         round(melhor["eta_c90"], 4),
+        "ok_c90":          melhor["eta_c90"] <= 1.0,
+        "sigma_cad_MPa":   round(melhor["sigma_ca"] / 1e6, 4),
+        "f_cad_MPa":       round(melhor["f_ca"] / 1e6, 4),
+        "eta_ca":          round(melhor["eta_ca"], 4),
+        "ok_ca":           melhor["eta_ca"] <= 1.0,
+        "eta":             round(eta_gov, 4),
         "ok":              eta_gov <= 1.0,
         "verif_gov":       verif_gov,
         "referencial":     ("R_d = reação VERTICAL R_v (compressão ⊥ às fibras na "
@@ -153,7 +170,6 @@ def varrer_acumulado(
         calcular_lambda_rel_m, calcular_k_crit,
     )
 
-    l_ef       = calcular_l_ef(l_1, restricao="continua_topo")
     h0_vals    = np.arange(*h0_range)
     alpha_vals = np.arange(*alpha_range)
     b_vals     = np.arange(*b_range)
@@ -189,6 +205,12 @@ def varrer_acumulado(
                 eta_cum = sig_t90 / (K_DIS * k_vol * mat.f_t90_d)
 
                 # ── 2. FLAMBAGEM LATERAL §6.3.3 ──────────────
+                # F-07: +2h da nota da EC5 Tab. 6.1 — depende de h, logo entra
+                # no laço (antes era içado para fora da varredura).
+                l_ef = calcular_l_ef(
+                    l_1, restricao="continua_topo",
+                    posicao_carga="borda_comprimida", h_m=h_ap,
+                )
                 sig_crit = calcular_sigma_m_crit(
                     mat.E0_05, b_f, h_ap, l_ef
                 )

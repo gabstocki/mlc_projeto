@@ -34,6 +34,9 @@ Classificação usada em `origem`
     "PROJETO"       — especificação do projeto (não normalizada); a norma não
                       fixa valor e a escolha é do projetista.
     "ABNT"          — valor da norma brasileira aplicável (ações de vento).
+    "ABNT-A-CONFIRMAR" — atribuído a uma cláusula da ABNT que NÃO foi
+                      reproduzida nem verificada (achado F-13). Não é um valor
+                      normativo enquanto a cláusula não for anexada ao memorial.
 """
 
 from __future__ import annotations
@@ -134,6 +137,15 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
     "V0":  _p(45.0, "NBR 6123:2023 §5.1", "ABNT", "isopleta do local — m/s"),
     "S1":  _p(1.0,  "NBR 6123:2023 §5.2", "ABNT", "terreno plano"),
     "S3":  _p(1.0,  "NBR 6123:2023 §5.4", "ABNT", "grupo 2"),
+    # Governa toda a estrutura metálica de contraventamento (achado F-13,
+    # ENCERRADO: cláusula transcrita em core/wind.py e confirmada em 0,50).
+    "coef_atrito_cobertura_isolada": _p(
+        0.50, "NBR 6123:2023 §7.2.2", "ABNT",
+        "Ft = 0,5·q·a·b (θ=0°), a e b as dimensões EM PLANTA da cobertura. "
+        "«Estas forças englobam a ação do vento sobre as duas faces da "
+        "cobertura» — é uma ação ENVOLVENTE, não uma estimativa de atrito "
+        "superficial: vale 2,35× o arrasto de bloqueio da silhueta deste "
+        "galpão. Texto integral transcrito em core/wind.py."),
 
     # ── Limiares de estabilidade (analogia EN 1993) ──────────────────────
     "alpha_cr_min":     _p(10.0, "EN 1993-1-1 §5.2.1(3)", "EN-recomendado",
@@ -155,6 +167,17 @@ def parametros_ndp() -> dict[str, ParametroNormativo]:
 def parametros_de_projeto() -> dict[str, ParametroNormativo]:
     """Só as escolhas de projeto — não normalizadas, responsabilidade do autor."""
     return {k: v for k, v in NDP_SOURCE.items() if v.origem == "PROJETO"}
+
+
+def parametros_a_confirmar() -> dict[str, ParametroNormativo]:
+    """
+    Parâmetros cuja cláusula de origem NÃO foi verificada — achado F-13.
+
+    Bloqueiam a emissão do memorial: um valor sem fonte não é um valor
+    normativo, mesmo quando está do lado conservador.
+    """
+    return {k: v for k, v in NDP_SOURCE.items()
+            if v.origem.endswith("A-CONFIRMAR")}
 
 
 @dataclass(frozen=True)

@@ -56,6 +56,10 @@ PHI_0 = 1.0 / 200.0
 
 # Limiares de projeto
 ALPHA_CR_MIN = 10.0     # EN 1993-1-1 §5.2.1(3) — análise elástica
+# EN 1993-1-1 §5.2.2(5)B — o método da amplificação de sway (k_II) só é
+# admissível para α_cr ≥ 3,0; abaixo disso exige-se análise de 2.ª ordem
+# rigorosa (GNL), fora do escopo deste pipeline.
+ALPHA_CR_AMPLIF_MIN = 3.0
 W_OVER_F_MAX = 0.05     # abaixamento relativo do freche
 H_IMP_OVER_H_MAX = 0.10 # nocional face ao empuxo de cálculo
 
@@ -117,10 +121,14 @@ def alpha_cr_membro(
     """
     I = b * h ** 3 / 12.0
     E = mat.E0_05  # Pa
+    # F-02: NÃO devolver 1e99 ("infinitamente estável"). Com N_Ed = 0 a razão
+    # F_cr/F_Ed é INDETERMINADA, não infinita-favorável; o chamador tem de saber
+    # distinguir os dois casos e nunca converter isto em aprovação.
     if L_ef_m <= 0 or N_Ed_kN == 0:
         return {
-            "N_cr_kN": 1e99, "alpha_cr": 1e99, "I_m4": I,
+            "N_cr_kN": math.inf, "alpha_cr": math.inf, "I_m4": I,
             "L_ef_m": L_ef_m, "N_Ed_kN": N_Ed_kN,
+            "indeterminado": True,
         }
     N_cr_N = (math.pi ** 2) * E * I / (L_ef_m ** 2)
     N_cr_kN = N_cr_N / 1e3
@@ -132,6 +140,83 @@ def alpha_cr_membro(
         "L_ef_m":   L_ef_m,
         "N_Ed_kN":  round(N_Ed_kN, 3),
         "E0_05_MPa": round(E / 1e6, 0),
+        "indeterminado": False,
+    }
+
+
+def alpha_cr_sistema(
+    K_lat_kNpm: float,
+    h_m: float,
+    V_Ed_kN: float,
+) -> dict:
+    """
+    Fator de carga crítica do SISTEMA numa direção — EN 1993-1-1 §5.2.1(4)B.
+
+    Achado F-02 da auditoria adversarial v2
+    ---------------------------------------
+    O α_cr que era comparado com o limiar 10 era a carga de Euler de UMA BARRA
+    (L_ef = L/2, seção h0) dividida pelo esforço normal da VIGA — normal que o
+    modelo adotado (Opção B, H = 0) força a ~zero. A métrica crescia quando a
+    hipótese que devia testar era adotada, e passava sempre.
+
+    O α_cr que a norma define é o do modo de DESLOCAMENTO LATERAL do sistema:
+
+        Eq. (5.2):   α_cr = (H_Ed / V_Ed) · (h / δ_H,Ed)
+
+    Num sistema elástico de rigidez lateral K (δ_H,Ed = H_Ed / K), o quociente
+    H_Ed/δ_H,Ed é a própria rigidez, e a expressão reduz-se a
+
+        α_cr = K · h / V_Ed
+
+    independente do nível de carga horizontal — como tem de ser.
+
+    Aqui K é a soma das rigidezes horizontais dos painéis de contraventamento
+    ATIVOS na direção considerada (`verifica_painel_vertical → C_h_kNpm`), h o
+    pé-direito e V_Ed a carga vertical de cálculo TOTAL suportada pelos pilares
+    estabilizados por esses painéis.
+
+    Regimes (EN 1993-1-1 §5.2.1(3) e §5.2.2(5)B):
+        α_cr ≥ 10          → "1a_ordem"          (2.ª ordem dispensável)
+        3 ≤ α_cr < 10      → "amplificar"        (k_II = 1/(1 − 1/α_cr))
+        0 < α_cr < 3       → "2a_ordem_rigorosa" (amplificação não admissível)
+        K ≤ 0              → "mecanismo"         (α_cr = 0, k_II = ∞)
+
+    Args:
+        K_lat_kNpm : rigidez lateral total da direção (kN/m)
+        h_m        : altura sobre a qual o deslocamento se desenvolve (m)
+        V_Ed_kN    : carga vertical de cálculo total estabilizada (kN)
+
+    Returns:
+        dict com α_cr, k_II, regime e os dados de entrada.
+    """
+    if h_m <= 0:
+        raise ValueError("h_m deve ser > 0")
+    if V_Ed_kN <= 0:
+        raise ValueError("V_Ed_kN deve ser > 0 (não há sway sem carga vertical)")
+    K = float(K_lat_kNpm)
+    if K <= 0.0:
+        return {
+            "alpha_cr": 0.0, "k_II": math.inf, "regime": "mecanismo",
+            "K_lat_kNpm": K, "h_m": h_m, "V_Ed_kN": V_Ed_kN,
+            "norma": "EN 1993-1-1 §5.2.1(4)B Eq. (5.2)",
+        }
+
+    alpha = K * h_m / abs(V_Ed_kN)
+    if alpha >= ALPHA_CR_MIN:
+        regime = "1a_ordem"
+    elif alpha >= ALPHA_CR_AMPLIF_MIN:
+        regime = "amplificar"
+    else:
+        regime = "2a_ordem_rigorosa"
+
+    return {
+        "alpha_cr":   alpha,
+        "k_II":       amplificacao_segunda_ordem(alpha),
+        "regime":     regime,
+        "K_lat_kNpm": round(K, 1),
+        "h_m":        h_m,
+        "V_Ed_kN":    round(abs(V_Ed_kN), 1),
+        "norma":      "EN 1993-1-1 §5.2.1(4)B Eq. (5.2) | §5.2.2(5)B (k_II)",
     }
 
 
@@ -159,6 +244,10 @@ def verificar_estabilidade_global(
     contravento_vertical_ok: bool | None = None,
     contravento_transversal_ok: bool | None = None,
     nocional_no_contraventamento: bool = False,
+    K_lat_long_kNpm: float | None = None,
+    K_lat_transv_kNpm: float | None = None,
+    V_Ed_total_kN: float | None = None,
+    amplificacao_aplicada: bool = False,
 ) -> dict:
     """
     Verificação completa de estabilidade global do pórtico biarticulado.
@@ -275,15 +364,48 @@ def verificar_estabilidade_global(
         acr_pilar["alpha_cr"],
     )
 
-    # ── 4) α_cr de sistema (arco / meia-água) ──────────────────
-    # Meia-água com continuidade na cumeeira: L_ef ≈ L/2 (ordem de
-    # grandeza para modo de arco biarticulado no plano).
+    # ── 4a) α_cr do modo de ARCO (snap-through) — INFORMATIVO ──
+    # NÃO é o modo de deslocamento lateral e, com H = 0 (Opção B), o seu
+    # denominador N_viga tende a zero — F-02: nunca pode ser o critério de
+    # dispensa de 2.ª ordem.
     L_ef_arco = geo.L / 2.0
-    # N no arco ≈ N_viga; seção de referência h0 (conservador)
     acr_arco = alpha_cr_membro(mat, geo.b, h0, L_ef_arco, N_viga)
-    alpha_cr = acr_arco["alpha_cr"]
-    ok_acr = alpha_cr >= alpha_cr_min
-    k_II = amplificacao_segunda_ordem(alpha_cr)
+    alpha_cr_arco = acr_arco["alpha_cr"]
+
+    # ── 4b) α_cr de SISTEMA por direção — EN 1993-1-1 Eq. (5.2) ─
+    V_Ed_sist = float(V_Ed_total_kN) if V_Ed_total_kN is not None else None
+    acr_long = acr_transv = None
+    if V_Ed_sist is not None and V_Ed_sist > 0:
+        if K_lat_long_kNpm is not None:
+            acr_long = alpha_cr_sistema(K_lat_long_kNpm, H_pilar_m, V_Ed_sist)
+        if K_lat_transv_kNpm is not None:
+            acr_transv = alpha_cr_sistema(K_lat_transv_kNpm, H_pilar_m, V_Ed_sist)
+
+    if acr_long is not None and acr_transv is not None:
+        if acr_long["alpha_cr"] <= acr_transv["alpha_cr"]:
+            acr_gov, direcao_critica = acr_long, "longitudinal"
+        else:
+            acr_gov, direcao_critica = acr_transv, "transversal"
+    elif acr_long is not None:
+        acr_gov, direcao_critica = acr_long, "longitudinal"
+    elif acr_transv is not None:
+        acr_gov, direcao_critica = acr_transv, "transversal"
+    else:
+        acr_gov, direcao_critica = None, None
+
+    if acr_gov is None:
+        # Dado ausente NÃO é aprovação (F-02).
+        alpha_cr_sist = None
+        alpha_cr = 0.0
+        regime_acr = "nao_determinado"
+        ok_acr = False
+        k_II = float("inf")
+    else:
+        alpha_cr_sist = acr_gov["alpha_cr"]
+        alpha_cr = alpha_cr_sist
+        regime_acr = acr_gov["regime"]
+        ok_acr = alpha_cr >= alpha_cr_min
+        k_II = acr_gov["k_II"]
 
     # ── 5) Geometria do arco — abaixamento do freche ──────────
     f_c = (geo.h_ap - geo.h0) / 2.0  # m — freche do eixo centroidal
@@ -325,21 +447,56 @@ def verificar_estabilidade_global(
             "dispensar a 2.ª ordem."
         )
         metodo = "instavel_lateralmente"
+    elif regime_acr == "nao_determinado":
+        # F-02: sem rigidez lateral declarada não há α_cr de sistema; a ausência
+        # de dado nunca é aprovação.
+        ok = False
+        conclusao = (
+            "α_cr de SISTEMA não determinado: a rigidez lateral dos painéis "
+            "(K_lat_long_kNpm / K_lat_transv_kNpm) e a carga vertical total "
+            "(V_Ed_total_kN) não foram informadas. Sem elas o modo de sway não "
+            "é quantificável e a 2.ª ordem não pode ser dispensada "
+            "(EN 1993-1-1 §5.2.1(4)B)."
+        )
+        metodo = "alpha_cr_nao_determinado"
     else:
-        ok = ok_geom and ok_imp and ok_acr
-        if ok:
+        ok_2a_ordem = (
+            regime_acr == "1a_ordem"
+            or (regime_acr == "amplificar" and amplificacao_aplicada)
+        )
+        ok = ok_geom and ok_imp and ok_2a_ordem
+        if ok and regime_acr == "1a_ordem":
             conclusao = (
-                "Análise de 1.ª ordem suficiente: sistema non-sway nas duas "
-                "direções (contraventamento vertical §14 + transversal §31 "
-                "verificados), α_cr,arco≥10, abaixamento do freche desprezável e "
-                "H_imp≪H_Ed. P-Δ global dispensado. 2.ª ordem de barra coberta "
-                "por k_c (EC5 §6.3.2)."
+                f"Análise de 1.ª ordem suficiente: sistema non-sway nas duas "
+                f"direções (contraventamento vertical §14 + transversal §31 "
+                f"verificados), α_cr,sistema={alpha_cr:.1f} ≥ {alpha_cr_min:.0f} "
+                f"(direção crítica: {direcao_critica}), abaixamento do freche "
+                f"desprezável e H_imp≪H_Ed. P-Δ global dispensado. 2.ª ordem de "
+                f"barra coberta por k_c (EC5 §6.3.2)."
             )
             metodo = "1a_ordem"
+        elif ok:
+            conclusao = (
+                f"α_cr,sistema={alpha_cr:.2f} < {alpha_cr_min:.0f} na direção "
+                f"{direcao_critica}: a 2.ª ordem NÃO é dispensável, mas os "
+                f"efeitos laterais foram amplificados por k_II={k_II:.3f} "
+                f"(EN 1993-1-1 §5.2.2(5)B, admissível para α_cr ≥ "
+                f"{ALPHA_CR_AMPLIF_MIN:.0f}). Análise de 1.ª ordem AMPLIFICADA."
+            )
+            metodo = "1a_ordem_amplificada"
         else:
             motivos = []
-            if not ok_acr:
-                motivos.append(f"α_cr,arco={alpha_cr:.1f}<{alpha_cr_min:.0f}")
+            if regime_acr == "2a_ordem_rigorosa":
+                motivos.append(
+                    f"α_cr,sistema={alpha_cr:.2f}<{ALPHA_CR_AMPLIF_MIN:.0f} "
+                    f"({direcao_critica}) — amplificação k_II NÃO admissível"
+                )
+            elif regime_acr == "amplificar":
+                motivos.append(
+                    f"α_cr,sistema={alpha_cr:.2f}<{alpha_cr_min:.0f} "
+                    f"({direcao_critica}) e a amplificação k_II={k_II:.3f} NÃO "
+                    f"foi declarada aplicada no contraventamento"
+                )
             if not ok_geom:
                 motivos.append(f"w/f_c={w_over_f:.4f}")
             if not ok_imp:
@@ -358,6 +515,10 @@ def verificar_estabilidade_global(
 
     # η do critério de dispensa (não confundir com η de seção)
     eta_acr = alpha_cr_min / alpha_cr if alpha_cr > 0 else 999.0
+    if metodo == "1a_ordem_amplificada":
+        # Amplificação aplicada: o critério deixa de reprovar por α_cr — a
+        # utilização passa a ser a do contraventamento já amplificado.
+        eta_acr = 0.0
     eta_geom = w_over_f / W_OVER_F_MAX if W_OVER_F_MAX > 0 else 999.0
     if nocional_no_contraventamento:
         # A nocional é resistida no contraventamento; a razão face a H_Ed deixa
@@ -409,10 +570,27 @@ def verificar_estabilidade_global(
         ),
         "nota_sistema":  nota_sistema,
         "nota_direcao_transversal": nota_direcao_transversal,
-        # α_cr sistema (arco) e barra (informativo)
+        # α_cr de SISTEMA (gate) — EN 1993-1-1 Eq. (5.2), achado F-02
         "alpha_cr":      round(alpha_cr, 2),
         "alpha_cr_min":  alpha_cr_min,
-        "alpha_cr_arco": round(alpha_cr, 2),
+        "alpha_cr_amplif_min": ALPHA_CR_AMPLIF_MIN,
+        "alpha_cr_sistema": (
+            None if alpha_cr_sist is None else round(alpha_cr_sist, 2)
+        ),
+        "alpha_cr_long": (
+            None if acr_long is None else round(acr_long["alpha_cr"], 2)
+        ),
+        "alpha_cr_transv": (
+            None if acr_transv is None else round(acr_transv["alpha_cr"], 2)
+        ),
+        "K_lat_long_kNpm":   K_lat_long_kNpm,
+        "K_lat_transv_kNpm": K_lat_transv_kNpm,
+        "V_Ed_total_kN":     V_Ed_sist,
+        "direcao_critica":   direcao_critica,
+        "regime_alpha_cr":   regime_acr,
+        "amplificacao_aplicada": bool(amplificacao_aplicada),
+        # α_cr do modo de arco e de barra — INFORMATIVOS
+        "alpha_cr_arco": round(alpha_cr_arco, 2),
         "L_ef_arco_m":   L_ef_arco,
         "alpha_cr_barra": round(alpha_cr_barra, 2),
         "alpha_cr_viga_h0": acr_viga["alpha_cr"],
@@ -421,7 +599,15 @@ def verificar_estabilidade_global(
         "N_cr_viga_kN":  acr_viga["N_cr_kN"],
         "N_cr_arco_kN":  acr_arco["N_cr_kN"],
         "N_cr_pilar_kN": acr_pilar["N_cr_kN"],
-        "k_II":          round(k_II, 4) if k_II < 1e6 else 1e6,
+        "k_II":          round(k_II, 4) if math.isfinite(k_II) else 1e6,
+        # k_II BRUTO (acima) vs k_II EFETIVAMENTE APLICADO: com α_cr ≥ 10 a
+        # norma permite desprezar a amplificação, e nada é amplificado.
+        "k_II_aplicado": (
+            round(k_II, 4)
+            if (regime_acr == "amplificar" and amplificacao_aplicada
+                and math.isfinite(k_II))
+            else 1.0
+        ),
         "ok_alpha_cr":   ok_acr,
         "nota_alpha_cr_barra": (
             "α_cr de barra (L_ef=L ou H) é informativo; "

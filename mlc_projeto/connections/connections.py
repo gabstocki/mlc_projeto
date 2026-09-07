@@ -170,6 +170,68 @@ def f_h_k(rho_k: float, d_mm: float) -> float:
     return 0.082 * (1 - 0.01 * d_mm) * rho_k
 
 
+#: Coeficientes de k90 por material — EC5 §8.5.1.1(2) Eq. (8.33).
+_K90_BASE = {
+    "conifera": 1.35,   # softwoods — lamelas do glulam deste projeto
+    "lvl":      1.30,
+    "folhosa":  0.90,   # hardwoods
+}
+
+
+def k_90(d_mm: float, material: str = "conifera") -> float:
+    """
+    Fator k_90 do embutimento a 90° — EC5 §8.5.1.1(2) Eq. (8.33).
+
+        k90 = 1,35 + 0,015·d   coníferas   (glulam de lamelas de conífera)
+        k90 = 1,30 + 0,015·d   LVL
+        k90 = 0,90 + 0,015·d   folhosas
+
+    O glulam deste projeto é de conífera (`main.DURABILIDADE`: Picea abies /
+    Pinus spp.), pelo que o default é `"conifera"`.
+    """
+    if material not in _K90_BASE:
+        raise ValueError(
+            f"material='{material}' não reconhecido. Opções: {list(_K90_BASE)}"
+        )
+    return _K90_BASE[material] + 0.015 * d_mm
+
+
+def f_h_alpha_k(
+    rho_k: float,
+    d_mm: float,
+    alpha_deg: float,
+    material: str = "conifera",
+) -> float:
+    """
+    Embutimento característico a um ângulo α com as fibras — EC5 Eq. (8.31).
+
+        f_h,α,k = f_h,0,k / (k90·sen²α + cos²α)
+
+    Achado F-03 da auditoria adversarial v2
+    ---------------------------------------
+    `johansen_chapa_embutida` usava incondicionalmente `f_h_k` (α = 0°), embora
+    o ângulo da resultante com as fibras JÁ fosse calculado — e servisse apenas
+    para as distâncias mínimas. Na ligação de base a resultante é dominada pelo
+    cortante (V ≈ 99 kN contra N ≈ 9 kN), ou seja α ≈ 85°: com d = 24 mm,
+    k90 = 1,710 e f_h cai 41,3 % (23,99 → 14,08 MPa).
+
+    Só o ângulo com a DIREÇÃO das fibras importa: a expressão é par em α e
+    periódica de 180°, pelo que ±α e 180°−α dão o mesmo valor.
+
+    Args:
+        rho_k     : massa volúmica característica (kg/m³)
+        d_mm      : diâmetro do pino (mm)
+        alpha_deg : ângulo entre a força e a direção das fibras (graus)
+        material  : base de k90 (ver `k_90`)
+
+    Returns:
+        f_h,α,k (MPa)
+    """
+    a = math.radians(float(alpha_deg))
+    k90 = k_90(d_mm, material)
+    return f_h_k(rho_k, d_mm) / (k90 * math.sin(a) ** 2 + math.cos(a) ** 2)
+
+
 def M_y_Rk(f_u_k: float, d_mm: float) -> float:
     """
     Momento plástico característico do pino — EC5 §8.2 Eq. 8.30.
@@ -188,71 +250,110 @@ def M_y_Rk(f_u_k: float, d_mm: float) -> float:
 
 # ── Modos de Johansen — EC5 §8.2 Tabela 8.2 ─────────────────────────────────
 
-def johansen_chapa_embutida(
+def johansen_chapa_central(
     rho_k: float,
     d_mm:  float,
     t_mm:  float,
     f_u_k: float = F_U_K_PINO,
+    theta_deg: float = 0.0,
+    material: str = "conifera",
 ) -> dict:
     """
-    Resistência lateral característica por plano de corte — chapa embutida.
+    Resistência lateral por plano de corte — chapa de aço CENTRAL, corte duplo.
 
-    Para ligação madeira-chapa com chapa embutida na ranhura central:
-    A chapa divide a peça em dois elementos com espessura t = b/2 cada.
-    Cada lado tem UM plano de corte com a chapa.
+    Configuração: chapa embutida numa ranhura central da peça, atravessada pelas
+    cavilhas. Cada lado da chapa é um elemento de madeira de espessura t₁, e há
+    um plano de corte por lado.
 
-    Modos aplicáveis (EC5 §8.2 Tabela 8.2 — madeira-chapa, chapa grossa):
-        Modo I   : esmagamento na madeira
-        Modo IIIb: plastificação do pino + esmagamento na madeira
-        Modo IV  : dupla plastificação do pino
+    Modos — EN 1995-1-1 §8.2.3, chapa de aço de QUALQUER espessura como elemento
+    CENTRAL de uma ligação em corte duplo:
 
-    Resistência de cálculo = mínimo entre os modos / γ_M
+        (f)  f_h,1,k · t₁ · d
+        (g)  f_h,1,k · t₁ · d · [ √(2 + 4·M_y,Rk/(f_h,1,k·d·t₁²)) − 1 ]
+        (h)  2,3 · √(M_y,Rk · f_h,1,k · d)
+
+        F_v,Rk = min{ (f), (g), (h) }
+
+    O termo de efeito de corda `F_ax,Rk/4` que se soma a (g) e (h) é NULO aqui:
+    §8.2.2(2) dá `F_ax,Rk = 0` para cavilhas lisas.
+
+    Achado F-14 da auditoria adversarial v2
+    ---------------------------------------
+    O modo (g) estava implementado como `1,15·√(2·M_y·f_h·d)`, que é o modo de
+    chapas de aço FINAS como elementos EXTERNOS de uma ligação em corte duplo —
+    outra configuração. E `t₁` era `b/2`, ignorando a espessura da chapa.
+
+    Os dois erros têm sinais opostos e, antes da correção de F-03, cancelavam-se
+    quase exatamente (26,62 contra 24,97 kN/plano). Com `f_h,α,k` já correto o
+    cancelamento desapareceu e o cálculo ficou 18,3 % ABAIXO do normativo.
+    Corrigi-lo AUMENTA a resistência — é uma correção que REDUZ conservadorismo,
+    e por isso está ancorada modo a modo nos testes.
 
     Args:
-        rho_k : Massa volúmica característica da madeira (kg/m³)
-        d_mm  : Diâmetro do pino (mm)
-        t_mm  : Espessura do elemento de madeira (mm) = b/2 em mm
-        f_u_k : Resistência última do aço (MPa)
+        rho_k     : massa volúmica característica da madeira (kg/m³)
+        d_mm      : diâmetro da cavilha (mm)
+        t_mm      : espessura t₁ do elemento de madeira de CADA lado da chapa
+                    (mm) — para uma peça de largura b com chapa de espessura
+                    t_chapa, t₁ = (b − t_chapa)/2
+        f_u_k     : resistência última do aço da cavilha (MPa)
+        theta_deg : ângulo força–fibras, para f_h,α,k (F-03)
+        material  : base de k90 (ver `k_90`)
 
     Returns:
-        dict com F_v,Rk por modo (N) e modo governante
+        dict com F_v,Rk por modo (N), modo governante e a memória do embutimento.
     """
-    f_hk   = f_h_k(rho_k, d_mm)   # MPa
-    M_y    = M_y_Rk(f_u_k, d_mm)  # N·mm
-    d      = d_mm                   # mm
-    t      = t_mm                   # mm
+    f_hk = f_h_alpha_k(rho_k, d_mm, theta_deg, material)   # MPa
+    M_y  = M_y_Rk(f_u_k, d_mm)                             # N·mm
+    d, t1 = float(d_mm), float(t_mm)
+    if t1 <= 0.0 or d <= 0.0:
+        raise DominioInvalidoError(
+            f"t₁={t1} mm e d={d} mm devem ser positivos: uma chapa central sem "
+            f"madeira de cada lado não transmite carga."
+        )
 
-    # ── Modo I — esmagamento na madeira ──────────────────────
-    F_I = f_hk * t * d   # N por plano de corte
-
-    # ── Modo IIIb — uma rótula plástica no pino ──────────────
-    # EC5 Tabela 8.2 linha 3 (chapa grossa):
-    # F_v,Rk = sqrt(2·M_y·f_h,k·d) × 1,15 (fator para chapa grossa)
-    # Na verdade para chapa embutida (espessura chapa >> d/2):
-    # F_IIIb = 1,15 · sqrt(2 · M_y · f_hk · d)
-    F_IIIb = 1.15 * math.sqrt(2 * M_y * f_hk * d)   # N
-
-    # ── Modo IV — duas rótulas plásticas no pino ─────────────
-    # EC5 Tabela 8.2 linha 4:
-    # F_v,Rk = 2,3 · sqrt(M_y · f_h,k · d)
-    F_IV = 2.3 * math.sqrt(M_y * f_hk * d)   # N
+    # (f) esmagamento na madeira (sem plastificação do pino)
+    F_f = f_hk * t1 * d
+    # (g) uma rótula plástica no pino + esmagamento
+    F_g = f_hk * t1 * d * (
+        math.sqrt(2.0 + 4.0 * M_y / (f_hk * d * t1 ** 2)) - 1.0
+    )
+    # (h) duas rótulas plásticas no pino
+    F_h = 2.3 * math.sqrt(M_y * f_hk * d)
 
     modos = {
-        "modo_I_N":    round(F_I,    1),
-        "modo_IIIb_N": round(F_IIIb, 1),
-        "modo_IV_N":   round(F_IV,   1),
+        "modo_f_N": round(F_f, 1),
+        "modo_g_N": round(F_g, 1),
+        "modo_h_N": round(F_h, 1),
     }
-
-    # Resistência característica por plano de corte = mínimo dos modos
-    F_v_Rk = min(F_I, F_IIIb, F_IV)
+    F_v_Rk = min(F_f, F_g, F_h)
     modo_gov = min(modos, key=modos.get)
 
-    modos["F_v_Rk_N"]  = round(F_v_Rk, 1)
-    modos["modo_gov"]  = modo_gov
-    modos["f_hk_MPa"]  = round(f_hk, 3)
-    modos["M_y_Nmm"]   = round(M_y, 1)
-
+    modos.update({
+        "F_v_Rk_N":  round(F_v_Rk, 1),
+        "modo_gov":  modo_gov,
+        # Chaves legadas — mesmos modos, nomenclatura de Johansen
+        "modo_I_N":    round(F_f, 1),   # embutimento
+        "modo_IIIb_N": round(F_g, 1),   # 1 rótula plástica
+        "modo_IV_N":   round(F_h, 1),   # 2 rótulas plásticas
+        # Memória de cálculo
+        "f_hk_MPa":  round(f_hk, 3),                  # f_h,α,k (Eq. 8.31)
+        "f_h0k_MPa": round(f_h_k(rho_k, d_mm), 3),    # paralelo (Eq. 8.32)
+        "k_90":      round(k_90(d_mm, material), 4),
+        "theta_deg": round(float(theta_deg), 2),
+        "M_y_Nmm":   round(M_y, 1),
+        "t1_mm":     round(t1, 2),
+        # §8.2.2(2): cavilhas lisas não têm efeito de corda
+        "F_ax_Rk_N": 0.0,
+        "norma": (
+            "EN 1995-1-1 §8.2.3 — chapa de aço de qualquer espessura como "
+            "elemento CENTRAL em corte duplo; f_h,α,k por §8.5.1.1"
+        ),
+    })
     return modos
+
+
+#: Nome histórico — a configuração é a chapa CENTRAL embutida na ranhura.
+johansen_chapa_embutida = johansen_chapa_central
 
 
 # ── Ruptura de bloco — EC5 Anexo A (informativo) ─────────────────────────────
@@ -636,11 +737,35 @@ def n_ef(n: int, a1_mm: float, d_mm: float) -> float:
 
 def distancias_minimas(d_mm: float, theta_deg: float = 0.0) -> dict:
     """
-    Distâncias mínimas para pinos — EC5 §8.3.1.2 Tabela 8.2.
+    Espaçamentos e distâncias mínimas para CAVILHAS — EC5 §8.6, **Tabela 8.5**.
+
+        a1   (// fibras)      = (3 + 2·|cos α|)·d
+        a2   (⊥ fibras)       = 3d
+        a3,t (extremo carregado,     −90° ≤ α ≤ 90°)  = max(7d ; 80 mm)
+        a3,c (extremo não carregado,  90° ≤ α ≤ 270°) = 3d
+        a4,t (BORDA CARREGADA,         0° ≤ α ≤ 180°) = max((2 + 2·sen α)·d ; 3d)
+        a4,c (borda não carregada,   180° ≤ α ≤ 360°) = 3d
+
+    Achado F-05 da auditoria adversarial v2
+    ---------------------------------------
+    `a4,t` era `3d` fixo: o termo `(2 + 2·sen α)·d` estava omitido. Com
+    d = 24 mm e α ≈ 85° (a resultante na base é dominada pelo cortante) a
+    exigência é 95,8 mm contra os 72,0 mm adotados — **déficit de 24,9 %** no
+    parâmetro que controla o FENDILHAMENTO, modo frágil que este projeto já
+    precisa de reforçar (§8.7.2).
+
+    Usa-se `|sen α|` — e não `sen α` — porque `verificar_geometria_grupo` aplica
+    `a4,t` às DUAS bordas (a carregada e a não carregada). É o envelope
+    conservador: qualquer que seja o quadrante de α, a borda efetivamente
+    carregada fica coberta.
+
+    NÃO CONFUNDIR com a Tabela 8.4 (parafusos), onde `a3,c` ganha o fator
+    `|sen α|`. Em cavilhas (Tab. 8.5) `a3,c = 3d` em todo o intervalo — é o que
+    fica implementado aqui, deliberadamente.
 
     Args:
         d_mm      : Diâmetro do pino (mm)
-        theta_deg : Ângulo entre força e direção das fibras (graus)
+        theta_deg : Ângulo entre a força e a direção das fibras (graus)
                     0° = força paralela às fibras
                     90° = força perpendicular às fibras
 
@@ -649,13 +774,15 @@ def distancias_minimas(d_mm: float, theta_deg: float = 0.0) -> dict:
     """
     theta = math.radians(theta_deg)
     cos_t = abs(math.cos(theta))
+    sin_t = abs(math.sin(theta))
 
-    a1  = (3 + 2 * cos_t) * d_mm          # entre pinos, dir. fibras
+    a1  = (3 + 2 * cos_t) * d_mm           # entre pinos, dir. fibras
     a2  = 3.0 * d_mm                       # entre pinos, perp. fibras
-    a3t = max(7.0 * d_mm, 80.0)           # borda carregada
-    a3c = max(3.0 * d_mm, 0.0)            # borda não carregada
-    a4t = max(3.0 * d_mm, 0.0)            # borda lateral carregada
-    a4c = max(3.0 * d_mm, 0.0)            # borda lateral não carregada
+    a3t = max(7.0 * d_mm, 80.0)            # extremo carregado
+    a3c = 3.0 * d_mm                       # extremo não carregado (cavilhas)
+    a4t = max((2.0 + 2.0 * sin_t) * d_mm,  # BORDA CARREGADA — F-05
+              3.0 * d_mm)
+    a4c = 3.0 * d_mm                       # borda não carregada
 
     return {
         "a1_mm":  round(a1,  1),
@@ -746,6 +873,7 @@ def dimensionar_ligacao_base(
     gamma_M: float = GAMMA_M_LIGACAO,
     eta_alvo: float = 0.75,
     L_max_mm: float = 1800.0,
+    t_chapa_mm: float | None = None,
 ) -> dict:
     """
     Dimensiona a ligação viga-pilar — rótula na base.
@@ -784,12 +912,22 @@ def dimensionar_ligacao_base(
 
     b_mm  = geo.b * 1000
     h0_mm = geo.h0 * 1000
-    t_mm  = b_mm / 2   # espessura de madeira de cada lado da chapa
+    # F-14: t₁ é a madeira de CADA LADO da chapa central, não b/2. A espessura
+    # da chapa embutida é governada por t ≥ d (chapa rígida para a rótula do
+    # pino) — o esquadro em chapas_dim.py confirma 25 mm para d = 24 mm; adotar
+    # t_chapa = d aqui mantém as duas peças coerentes sem inverter a ordem do
+    # pipeline (as ligações são dimensionadas antes do esquadro).
+    t_chapa = float(t_chapa_mm) if t_chapa_mm is not None else float(d_mm)
+    t_mm  = (b_mm - t_chapa) / 2.0
 
     rho_k = mat.rho_k
 
     # Resistência por pino — Johansen; 2 planos de corte
-    joh      = johansen_chapa_embutida(rho_k, d_mm, t_mm, F_U_K_PINO)
+    # F-03: o ângulo força–fibras (já calculado acima para as distâncias) passa
+    # agora também ao embutimento — EC5 §8.5.1.1(2) Eq. (8.31).
+    joh      = johansen_chapa_embutida(
+        rho_k, d_mm, t_mm, F_U_K_PINO, theta_deg=theta_deg,
+    )
     F_v_Rk   = joh["F_v_Rk_N"] * 2
     F_v_Rd   = k_mod * F_v_Rk / gamma_M   # N
 
@@ -899,7 +1037,11 @@ def dimensionar_ligacao_base(
         "F_v_Rd_kN":     round(F_v_Rd/1e3,    3),
         "modo_gov":      joh["modo_gov"],
         # ── Memória de Johansen (issue 29) ──────────────────────
-        "f_h0k_MPa":     joh["f_hk_MPa"],                # EC5 §8.5.1.1 Eq. 8.32
+        # Memória do embutimento (F-03): f_h,α,k é o valor efetivamente usado.
+        "f_h0k_MPa":     joh["f_hk_MPa"],                # f_h,α,k — EC5 Eq. 8.31
+        "f_h_paralelo_MPa": joh["f_h0k_MPa"],            # f_h,0,k — EC5 Eq. 8.32
+        "k_90":          joh["k_90"],                    # EC5 Eq. 8.33
+        "alpha_fibras_deg": joh["theta_deg"],
         "M_y_Rk_Nmm":    joh["M_y_Nmm"],                 # EC5 §8.5.1.1 Eq. 8.30
         "modo_I_kN":     round(joh["modo_I_N"]/1e3,   3),  # esmagamento madeira
         "modo_IIIb_kN":  round(joh["modo_IIIb_N"]/1e3, 3), # 1 rótula plástica
@@ -1330,12 +1472,16 @@ def dimensionar_ligacao_base_central(
         d_mm=d_mm, k_mod=k_mod, gamma_M=gamma_M, eta_alvo=eta_alvo,
     )
     rho_k = mat.rho_k
-    t_mm  = b_pilar_c / 2 * 1000
-    joh   = johansen_chapa_embutida(rho_k, d_mm, t_mm, F_U_K_PINO)
+    # F-14: idem para a chapa central do pilar
+    t_mm  = (b_pilar_c * 1000 - float(d_mm)) / 2.0
+    theta_deg = res.get("theta_deg", 0.0)
+    # F-03: mesmo ângulo força–fibras da ligação de base (Eq. 8.31).
+    joh   = johansen_chapa_embutida(
+        rho_k, d_mm, t_mm, F_U_K_PINO, theta_deg=theta_deg,
+    )
     F_v_Rd = k_mod * joh["F_v_Rk_N"] * 2 / gamma_M
     F_res_N = res["F_res_kN"] * 1e3
     R_req_N = F_res_N / eta_alvo
-    theta_deg = res.get("theta_deg", 0.0)
     dist = distancias_minimas(d_mm, theta_deg=theta_deg)
     a1_mm = dist["a1_mm"]
     a2_mm = dist["a2_mm"]

@@ -42,6 +42,7 @@ def verifica_flexao(
     mat:  GlulamMaterial,
     load: Carregamentos,
     s:    float = 1.00,
+    posicao_carga: str = "borda_comprimida",
 ) -> dict:
     """
     Verifica flexo-compressão da viga varrendo TODAS as seções do vão.
@@ -66,8 +67,24 @@ def verifica_flexao(
     Returns:
         dict com tensões, fatores e η governante
     """
-    gov = load.combinacao_ELU_governante()
+    b = geo.b
+    # ── Envelope sobre as combinações ELU (achado F-06) ───────────────────
+    # A varredura de SEÇÕES (AUD-014) já existia, mas só para UMA combinação —
+    # a de max|M|, cuja duração impunha o k_mod a toda a verificação. Passa a
+    # varrer combinações × seções, cada combinação com o SEU k_mod.
+    _melhor_comb = None
+    for _c in load.combinacoes_ELU_fisicas().values():
+        _r = _envelope_secoes(
+            geo, mat.com_duracao(_c.duracao), load, _c, s, posicao_carga)
+        if _melhor_comb is None or _r["eta_gov"] > _melhor_comb["eta_gov"]:
+            _melhor_comb = _r
+    if _melhor_comb is None:
+        raise ValueError("Não há combinações ELU para verificar a flexão.")
+    return _construir_saida(geo, load, _melhor_comb)
 
+
+def _envelope_secoes(geo, mat, load, gov, s, posicao_carga) -> dict:
+    """Envelope de η(x) ao longo do vão para UMA combinação (AUD-014)."""
     N_d_N    = abs(gov.N_viga_kN) * 1e3   # compressão no eixo
     x_Mmax   = gov.x_Mmax_m
     b        = geo.b
@@ -118,7 +135,16 @@ def verifica_flexao(
     # ── Flambagem fora do plano (eixo z) ──────────────────────
     # l_ef,z = 0,9·s (entre terças): comprimento CURTO, para o qual a seção
     # local é a representativa — a varredura aqui é mecanicamente própria.
-    l_ef_z      = calcular_l_ef(s, restricao="continua_topo", tipo_carga="distribuida")
+    # F-07: DUAS grandezas distintas que antes partilhavam o mesmo l_ef.
+    #  · l_ef,z — flambagem à COMPRESSÃO em torno de z (§6.3.2). É um
+    #    comprimento de encurvadura entre travamentos: a nota da Tab. 6.1
+    #    (posição da carga na altura) NÃO se aplica.
+    #  · l_ef,LTB — flambagem lateral por flexo-torção (§6.3.3), que alimenta
+    #    σ_m,crit. Aí a nota aplica-se: as terças carregam a borda comprimida.
+    l_ef_z = calcular_l_ef(
+        s, restricao="continua_topo", tipo_carga="distribuida",
+        posicao_carga="centro_gravidade",
+    )
     lam_z_v     = l_ef_z / i_z_v
     lam_rel_z_v = (lam_z_v / math.pi) * math.sqrt(mat.f_c0_k / mat.E0_05)
     k_c_z_v     = _kc(lam_rel_z_v)
@@ -133,9 +159,17 @@ def verifica_flexao(
     eta_624_v = sigma_c_v / (k_c_z_v * mat.f_c0_d) + K_M * sigma_m_v / mat.f_m_d
 
     # ── EC5 §6.3.3 — k_crit na seção local ───────────────────
-    sigma_crit_v = np.array(
-        [calcular_sigma_m_crit(mat.E0_05, b, float(hh), l_ef_z) for hh in h_v]
-    )
+    l_ef_ltb_v = np.array([
+        calcular_l_ef(
+            s, restricao="continua_topo", tipo_carga="distribuida",
+            posicao_carga=posicao_carga, h_m=float(hh),
+        )
+        for hh in h_v
+    ])
+    sigma_crit_v = np.array([
+        calcular_sigma_m_crit(mat.E0_05, b, float(hh), float(le))
+        for hh, le in zip(h_v, l_ef_ltb_v)
+    ])
     lam_rel_m_v = np.array(
         [calcular_lambda_rel_m(mat.f_m_k, float(sc)) for sc in sigma_crit_v]
     )
@@ -182,7 +216,40 @@ def verifica_flexao(
     )
     lam_rel_m, k_crit = float(lam_rel_m_v[i_gov]), float(k_crit_v[i_gov])
 
+    return dict(
+        geo=geo, mat=mat, gov=gov, s=s,
+        eta_gov=eta_gov, eta_623=eta_623, eta_624=eta_624, eta_635=eta_635,
+        verif_gov=verif_gov, x_gov=x_gov, x_Mmax=x_Mmax, i_sm=i_sm, x=x,
+        h_x=h_x, A_sec=A_sec, sigma_c=sigma_c, sigma_m=sigma_m,
+        sigma_m_v=sigma_m_v, l_ef_y=l_ef_y, l_ef_z=l_ef_z,
+        lam_y=lam_y, lam_rel_y=lam_rel_y, k_c_y=k_c_y,
+        lam_z=lam_z, lam_rel_z=lam_rel_z, k_c_z=k_c_z,
+        lam_rel_m=lam_rel_m, k_crit=k_crit,
+        l_ef_ltb=float(l_ef_ltb_v[i_gov]), posicao_carga=posicao_carga,
+    )
+
+
+def _construir_saida(geo, load, m) -> dict:
+    """Monta o dict público a partir da combinação/seção governantes."""
+    mat, gov = m["mat"], m["gov"]
+    eta_gov = m["eta_gov"]
+    x, sigma_m_v = m["x"], m["sigma_m_v"]
+    x_Mmax, i_sm = m["x_Mmax"], m["i_sm"]
+    b = geo.b
+    eta_623, eta_624, eta_635 = m["eta_623"], m["eta_624"], m["eta_635"]
+    x_gov, h_x, A_sec = m["x_gov"], m["h_x"], m["A_sec"]
+    sigma_c, sigma_m = m["sigma_c"], m["sigma_m"]
+    l_ef_y, l_ef_z = m["l_ef_y"], m["l_ef_z"]
+    lam_y, lam_rel_y, k_c_y = m["lam_y"], m["lam_rel_y"], m["k_c_y"]
+    lam_z, lam_rel_z, k_c_z = m["lam_z"], m["lam_rel_z"], m["k_c_z"]
+    lam_rel_m, k_crit, verif_gov = m["lam_rel_m"], m["k_crit"], m["verif_gov"]
+    l_ef_ltb, posicao_carga = m["l_ef_ltb"], m["posicao_carga"]
+
     return {
+        # Combinação governante DESTA verificação (F-06)
+        "comb_gov":       gov.nome,
+        "duracao":        gov.duracao,
+        "n_combinacoes_varridas": len(load.combinacoes_ELU_fisicas()),
         "x_Mmax_m":       round(x_Mmax, 3),
         "x_gov_m":        round(x_gov, 3),
         "x_sigma_m_max_m": round(float(x[i_sm]), 3),
@@ -210,6 +277,10 @@ def verifica_flexao(
         "k_c_z":          round(k_c_z, 4),
         "eta_fora_plano": round(eta_624, 4),
         "k_crit":         round(k_crit, 4),
+        # F-07 — LTB usa l_ef com o +2h da nota da Tab. 6.1; a flambagem à
+        # compressão em torno de z, não.
+        "l_ef_ltb_m":     round(l_ef_ltb, 3),
+        "posicao_carga":  posicao_carga,
         "lambda_rel_m":   round(lam_rel_m, 4),
         "eta_635":        round(eta_635, 4),
         "sigma_c_MPa":    round(sigma_c / 1e6, 4),

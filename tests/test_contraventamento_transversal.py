@@ -38,9 +38,11 @@ def test_demanda_inclui_vento_e_nocional():
     assert dem["n_colunas"] == 9 * 3
     assert dem["H_vento_topo_kN"] > 0.0
     assert dem["H_imp_kN"] > 0.0
-    # H_tr = arrasto no topo + nocional
+    # F-01: a componente horizontal da pressão na cobertura entra na demanda
+    assert dem["H_cob_kN"] > 0.0
+    # H_tr = arrasto no topo + componente da cobertura + nocional
     assert dem["H_tr_kN"] == pytest.approx(
-        dem["H_vento_topo_kN"] + dem["H_imp_kN"], abs=1e-2
+        dem["H_vento_topo_kN"] + dem["H_cob_kN"] + dem["H_imp_kN"], abs=1e-2
     )
 
 

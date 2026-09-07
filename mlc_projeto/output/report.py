@@ -7,6 +7,7 @@ Layout minimalista: Helvetica, A4, margens 2,5 cm, Booktabs, preto/branco.
 
 from __future__ import annotations
 
+import math
 import shutil
 import subprocess
 from pathlib import Path
@@ -80,11 +81,51 @@ _META_KEYS = frozenset({
 })
 
 
+#: Chaves aceites como taxa de utilização, por ordem de precedência.
+_ETA_KEYS = ("eta", "eta_gov", "eta_slip")
+
+#: Estados possíveis de uma linha do resumo.
+STATUS_OK            = "OK"
+STATUS_REPROVADO     = "REPROVADO"
+STATUS_SEM_ETA       = "SEM η"
+STATUS_NAO_EXECUTADA = "NÃO EXECUTADA"
+STATUS_NAO_APLICAVEL = "NÃO APLICÁVEL"
+
+#: Estados que impedem o carimbo APROVADO (resultado em falta, não em falha).
+STATUS_PENDENTES = (STATUS_SEM_ETA, STATUS_NAO_EXECUTADA)
+
+
+def eta_numerico(res: dict) -> float | None:
+    """
+    η estritamente numérico e finito, ou ``None`` — achado F-04.
+
+    NUNCA devolve um valor "de segurança". ``None``, texto, ``bool``, ``NaN`` e
+    ``±inf`` são AUSÊNCIA de resultado, não η = 0: converter qualquer deles em
+    zero transformava uma falha de cálculo em aprovação (o mesmo mecanismo que
+    ``core/validacao.py`` proíbe nos dados de entrada).
+    """
+    for k in _ETA_KEYS:
+        if k in res:
+            v = res[k]
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                return None
+            v = float(v)
+            return v if math.isfinite(v) else None
+    return None
+
+
 def extrair_eta_ok(res: dict | None) -> tuple[float, bool]:
-    """Extrai (η, ok) de um dict de verificação de forma robusta."""
+    """
+    Extrai (η, ok) de um dict de verificação.
+
+    Devolve ``(nan, False)`` quando não há η numérico — indeterminado, nunca
+    aprovado (F-04).
+    """
     if not isinstance(res, dict):
-        return 0.0, False
-    eta = _f(res.get("eta", res.get("eta_gov", res.get("eta_slip", 0.0))))
+        return float("nan"), False
+    eta = eta_numerico(res)
+    if eta is None:
+        return float("nan"), False
     if "ok" in res:
         ok = bool(res["ok"])
     elif "ok_alvo" in res:
@@ -94,50 +135,117 @@ def extrair_eta_ok(res: dict | None) -> tuple[float, bool]:
     return eta, ok
 
 
-def tabela_verificacoes(resultados: dict) -> list[dict]:
+def _linha_resumo(chave, rotulo, norma, eta, ok, status) -> dict:
+    return {
+        "chave":       chave,
+        "Verificação": rotulo,
+        "Norma":       norma,
+        "η":           eta if math.isnan(eta) else round(eta, 4),
+        "OK":          "✓" if ok else "✗",
+        "ok_bool":     ok,
+        "status":      status,
+    }
+
+
+def tabela_verificacoes(
+    resultados: dict,
+    nao_aplicaveis: set[str] | frozenset[str] | None = None,
+) -> list[dict]:
     """
-    Linhas padronizadas para terminal, Excel e resumo.
-    Ordem fixa = VERIFICACOES_EXPORT; só inclui chaves presentes com η.
+    Linhas padronizadas para terminal, Excel e memorial.
+
+    Ordem fixa = ``VERIFICACOES_EXPORT``, **sempre por inteiro** — achado F-04.
+    A versão anterior fazia ``continue`` para as chaves ausentes ou sem η, e a
+    verificação desaparecia do resumo, do ``all_ok``, do ``eta_max``, do Excel e
+    do memorial, sem aviso. Agora cada chave do catálogo produz sempre uma
+    linha, com um ``status`` explícito:
+
+        "OK" / "REPROVADO"    — verificação executada, com η numérico
+        "SEM η"               — dicionário presente mas sem η utilizável
+        "NÃO EXECUTADA"       — chave ausente de `resultados`
+        "NÃO APLICÁVEL"       — exclusão DECLARADA pelo chamador
+
+    Args:
+        resultados     : dicionário de resultados do pipeline.
+        nao_aplicaveis : chaves deliberadamente fora do escopo desta análise
+                         (ex.: o tirante de base na Opção B). Só uma declaração
+                         explícita evita a marcação como pendente — a omissão
+                         nunca é aprovação.
     """
+    fora = set(nao_aplicaveis or ())
     linhas: list[dict] = []
     vistos: set[str] = set()
+
     for chave, rotulo, norma in VERIFICACOES_EXPORT:
+        vistos.add(chave)
+        if chave in fora:
+            linhas.append(_linha_resumo(
+                chave, rotulo, norma, float("nan"), True, STATUS_NAO_APLICAVEL))
+            continue
         res = resultados.get(chave)
         if not isinstance(res, dict):
-            continue
-        if "eta" not in res and "eta_gov" not in res and "eta_slip" not in res:
+            linhas.append(_linha_resumo(
+                chave, rotulo, norma, float("nan"), False, STATUS_NAO_EXECUTADA))
             continue
         eta, ok = extrair_eta_ok(res)
-        if "eta" in res:
-            eta = _f(res["eta"])
-        linhas.append({
-            "chave":       chave,
-            "Verificação": rotulo,
-            "Norma":       norma,
-            "η":           round(eta, 4),
-            "OK":          "✓" if ok else "✗",
-            "ok_bool":     ok,
-        })
-        vistos.add(chave)
+        if math.isnan(eta):
+            status = STATUS_SEM_ETA
+        else:
+            status = STATUS_OK if ok else STATUS_REPROVADO
+        linhas.append(_linha_resumo(chave, rotulo, norma, eta, ok, status))
+
+    # Verificações fora do catálogo — continuam a ser reportadas.
     for chave, res in resultados.items():
         if chave in vistos or chave in _META_KEYS:
             continue
         if not isinstance(res, dict):
             continue
-        if "eta" not in res and "eta_gov" not in res:
+        if not any(k in res for k in _ETA_KEYS):
             continue
         eta, ok = extrair_eta_ok(res)
-        if "eta" in res:
-            eta = _f(res["eta"])
-        linhas.append({
-            "chave":       chave,
-            "Verificação": chave,
-            "Norma":       str(res.get("norma", "—"))[:40],
-            "η":           round(eta, 4),
-            "OK":          "✓" if ok else "✗",
-            "ok_bool":     ok,
-        })
+        if math.isnan(eta):
+            status = STATUS_SEM_ETA
+        else:
+            status = STATUS_OK if ok else STATUS_REPROVADO
+        linhas.append(_linha_resumo(
+            chave, chave, str(res.get("norma", "—"))[:40], eta, ok, status))
     return linhas
+
+
+def estatisticas_resumo(linhas: list[dict]) -> dict:
+    """
+    Estatísticas do resumo — fonte ÚNICA do carimbo APROVADO/REPROVADO (F-04).
+
+    Antes esta lógica estava duplicada em `main` e em `gerar_relatorio`, ambas a
+    fazer `max()` sobre os η e `all()` sobre os `ok_bool` das linhas que a
+    tabela tivesse produzido — sem saber quais tinham sido omitidas.
+
+        η_max     : máximo entre os η NUMÉRICOS (um NaN seria engolido por max())
+        pendentes : chaves sem resultado utilizável — bloqueiam a aprovação
+        status    : APROVADO só se tudo executou, tudo passou e η_max ≤ 1
+    """
+    etas = [
+        float(r["η"]) for r in linhas
+        if isinstance(r.get("η"), (int, float)) and math.isfinite(float(r["η"]))
+    ]
+    eta_max = max(etas, default=0.0)
+    all_ok = all(bool(r.get("ok_bool")) for r in linhas) if linhas else False
+    pendentes = [
+        r["chave"] for r in linhas
+        if r.get("status") in STATUS_PENDENTES
+    ]
+    aprovado = bool(linhas) and all_ok and eta_max <= 1.0 + 1e-9 and not pendentes
+    return {
+        "n_linhas":      len(linhas),
+        "n_executadas":  len(etas),
+        "eta_max":       eta_max,
+        "all_ok":        all_ok,
+        "pendentes":     pendentes,
+        "nao_aplicaveis": [
+            r["chave"] for r in linhas if r.get("status") == STATUS_NAO_APLICAVEL
+        ],
+        "status":        "APROVADO" if aprovado else "REPROVADO",
+    }
 
 
 def _i(x, default: int = 0) -> int:
@@ -487,9 +595,12 @@ def gerar_tex(
     def eta_row(nome_verif, norma, eta, ok=True):
         """Linha Booktabs: η e status em preto (sem cores de alerta)."""
         simbolo = r"\checkmark" if ok else r"$\times$"
+        v = _f(eta, float("nan"))
+        # F-04: η indeterminado imprime-se como travessão, nunca como 0,0000.
+        eta_tex = "--" if math.isnan(v) else f"{v:.4f}"
         return (
             f"  {nome_verif} & {norma} & "
-            f"{_f(eta):.4f} & "
+            f"{eta_tex} & "
             f"{simbolo} \\\\\n"
         )
 
@@ -2064,17 +2175,27 @@ def gerar_tex(
         '  \\midrule\n'
     )
     # Resumo a partir do catálogo único (igual terminal/Excel)
-    _tab_resumo = tabela_verificacoes(resultados)
+    _tab_resumo = tabela_verificacoes(
+        resultados,
+        nao_aplicaveis=set(
+            (resultados.get("meta") or {}).get("nao_aplicaveis", ())
+        ),
+    )
     for _row in _tab_resumo:
         _ok_r = bool(_row.get("ok_bool", False))
+        _rot = str(_row["Verificação"]).replace("_", " ")
+        if _row.get("status") not in (None, STATUS_OK):
+            _rot = f"{_rot} [{_row['status']}]"
         parts.append(eta_row(
-            _tex_escape(str(_row["Verificação"]).replace("_", " ")),
+            _tex_escape(_rot),
             _tex_escape(str(_row["Norma"])),
             float(_row["η"]),
             _ok_r,
         ))
-    _eta_max_tab = max((float(r["η"]) for r in _tab_resumo), default=eta_max)
-    _all_ok_tab = all(bool(r.get("ok_bool")) for r in _tab_resumo) if _tab_resumo else False
+    # F-04: fonte única do carimbo — inclui as verificações sem resultado.
+    _est_resumo = estatisticas_resumo(_tab_resumo)
+    _eta_max_tab = _est_resumo["eta_max"]
+    _all_ok_tab = _est_resumo["all_ok"] and not _est_resumo["pendentes"]
     parts.append('  \\midrule\n  \\multicolumn{2}{l}{\\textbf{$\\eta$ máximo}} &\n  \\multicolumn{2}{c}{\\textbf{')
     parts.append(f'{_eta_max_tab:.4f}')
     parts.append('}} \\\\\n')
@@ -2277,13 +2398,19 @@ def gerar_relatorio(
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     # ── Excel (mesma tabela que o terminal / resumo) ──────────
-    tab = tabela_verificacoes(resultados)
+    tab = tabela_verificacoes(
+        resultados,
+        nao_aplicaveis=set((resultados.get("meta") or {}).get("nao_aplicaveis", ())),
+    )
     linhas_xlsx = [
         {
             "Verificação": r["Verificação"],
             "Norma":       r["Norma"],
-            "η":           r["η"],
+            # F-04: η indeterminado sai como célula vazia + Estado explícito,
+            # nunca como 0 (que se leria como aprovação folgada).
+            "η":           None if math.isnan(float(r["η"])) else r["η"],
             "OK":          r["OK"],
+            "Estado":      r.get("status", ""),
             "chave":       r["chave"],
         }
         for r in tab
@@ -2292,7 +2419,9 @@ def gerar_relatorio(
     if linhas_xlsx:
         pd.DataFrame(linhas_xlsx).to_excel(xlsx_path, index=False)
     else:
-        pd.DataFrame(columns=["Verificação", "Norma", "η", "OK", "chave"]).to_excel(
+        pd.DataFrame(
+            columns=["Verificação", "Norma", "η", "OK", "Estado", "chave"]
+        ).to_excel(
             xlsx_path, index=False
         )
     print(f"  Excel: {xlsx_path}")

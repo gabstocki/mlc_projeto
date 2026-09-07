@@ -28,10 +28,14 @@ class _LoadFake:
     def __init__(self, v=99.6, h=0.0):
         self._v, self._h = v, h
 
-    def combinacoes_ELU(self):
+    def combinacoes_ELU_fisicas(self):
+        # F-06: os envelopes passaram a varrer só as combinações FÍSICAS
+        # (sem os aliases ELU_C*), que é o conjunto que o duplo representa.
         class C:
             V_max_kN = self._v
         return {"c": C()}
+
+    combinacoes_ELU = combinacoes_ELU_fisicas
 
     def H_ELU(self):
         return self._h

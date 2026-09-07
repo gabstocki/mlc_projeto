@@ -12,8 +12,11 @@ non-sway — ver checks/elu/pilares.py e o modelo `pilar_vento_90`).
 
 Cadeia de forças (direção transversal, ⊥ cumeeira, θ=90°)
 --------------------------------------------------------
-  Vento θ=90° (arrasto nos pilares) + força nocional (EN 1993-1-1 §5.3.2)
-       ↓  metade do arrasto de cada pilar vai ao TOPO
+  Vento θ=90°: arrasto nos pilares
+             + COMPONENTE HORIZONTAL da pressão na cobertura (achado F-01)
+             + força nocional (EN 1993-1-1 §5.3.2)
+       ↓  metade do arrasto de cada pilar vai ao TOPO; a componente da
+          cobertura vai INTEIRA ao topo (a viga apoia nas rótulas de topo)
   Diafragma de cobertura (viga horizontal ao longo do comprimento)
        ↓  reação nas extremidades
   Pórticos de extremidade / FRONTÕES contraventados (cruzes de St. André)
@@ -64,6 +67,7 @@ from mlc_projeto.checks.elu.contraventamento_vertical import (
     forca_nocional,
     escolher_diametro,
 )
+from mlc_projeto.checks.elu.estabilidade_global import alpha_cr_sistema
 
 
 # ── Demanda lateral transversal (θ=90° + nocional) ────────────────────────────
@@ -84,6 +88,13 @@ def demanda_transversal(
     Composição:
       · Arrasto de vento θ=90° em cada pilar (NBR 6123, via forca_vento_pilar_90):
         modelo biapoiado → metade da força vai ao topo (diafragma).
+      · COMPONENTE HORIZONTAL da pressão de vento na COBERTURA — achado F-01 da
+        auditoria adversarial v2. A pressão é normal à superfície inclinada; a
+        sua projeção horizontal não se cancela entre as duas águas quando
+        c_esq ≠ c_dir (o que sucede em TODOS os padrões de Cpe usados). Vai
+        inteira ao nível da cobertura, porque a viga apoia nas rótulas de topo
+        dos pilares. Envelope entre combinações ELU: `load.H_cobertura_max_ELU()`
+        (por pórtico) × n_frames.
       · Força nocional global — EN 1993-1-1 §5.3.2: H_imp = φ·V_vertical_total.
 
     Args:
@@ -105,6 +116,11 @@ def demanda_transversal(
     F_col_d = gamma_Q * F_col_k
     H_vento_topo = n_col * F_col_d / 2.0        # metade ao topo (diafragma)
 
+    # Componente horizontal da pressão na cobertura (F-01) — já de cálculo
+    comb_cob = load.combinacao_H_cobertura_max()
+    H_cob_portico = abs(float(comb_cob.H_cob_kN))
+    H_cob = H_cob_portico * n_frames
+
     # Força nocional sobre a carga vertical total do galpão (§5.3.2)
     gov = load.combinacao_ELU_governante()
     R_v = abs(float(gov.V_max_kN))
@@ -112,13 +128,18 @@ def demanda_transversal(
     noc = forca_nocional(V_vert_total, H_pilar_m, m_colunas=n_frames)
     H_imp = noc["H_imp_kN"]
 
-    H_tr = H_vento_topo + H_imp
+    H_tr = H_vento_topo + H_cob + H_imp
 
     return {
         "F_col_k_kN":     round(F_col_k, 3),
         "F_col_d_kN":     round(F_col_d, 3),
         "n_colunas":      n_col,
         "H_vento_topo_kN": round(H_vento_topo, 3),
+        # F-01 — componente horizontal da pressão na cobertura
+        "H_cob_portico_kN": round(H_cob_portico, 4),
+        "H_cob_kN":       H_cob,
+        "comb_H_cob":     comb_cob.nome,
+        "n_frames":       n_frames,
         "phi":            noc["phi"],
         "V_vert_total_kN": round(V_vert_total, 1),
         "H_imp_kN":       H_imp,
@@ -180,6 +201,7 @@ def verificar_contraventamento_transversal(
     d_mm:           float | None = None,
     eta_alvo:       float = 0.90,
     drift_lim:      float = 300.0,
+    V_Ed_total_kN:  float | None = None,
 ) -> dict:
     """
     Verifica o sistema de contraventamento transversal (Opção 2, issue 31):
@@ -197,6 +219,14 @@ def verificar_contraventamento_transversal(
         B_cob_m             : profundidade do diafragma (default 2·L do pórtico)
         aco, d_mm           : aço e diâmetro da diagonal (d_mm=None → auto)
         eta_alvo, drift_lim : critérios de projeto da diagonal/painel
+        V_Ed_total_kN   : carga vertical de cálculo TOTAL estabilizada por este
+                          sistema (kN). Quando informada, calcula-se o α_cr de
+                          sistema desta direção (EN 1993-1-1 Eq. 5.2) a partir
+                          da rigidez dos próprios painéis e, se α_cr < 10,
+                          AMPLIFICA-SE a demanda lateral por k_II = 1/(1−1/α_cr)
+                          (§5.2.2(5)B) antes de dimensionar a diagonal —
+                          achado F-02. Ponto fixo: mais demanda → diagonal mais
+                          grossa → mais rigidez → α_cr maior → k_II menor.
 
     Returns:
         dict com demanda, diafragma, painel do frontão, caminho de carga,
@@ -217,27 +247,53 @@ def verificar_contraventamento_transversal(
     )
     H_tr = dem["H_tr_kN"]
 
-    # 2) Diafragma → reação por frontão
-    diaf = verifica_diafragma(H_tr, L_comp, B_cob_m)
-    R_gable = diaf["R_gable_kN"]
-
-    # 3) Cortante por painel de cruz no frontão
-    V_painel = R_gable / n_pan_gable
-
-    # 4) Diâmetro (auto) e verificação do painel do frontão
     g = geometria_painel(H_pilar_m, b_baia_gable_m)
     d_auto = d_mm is None
-    if d_auto:
-        N_diag_req = V_painel / g["cos_beta"]
-        d_mm = escolher_diametro(N_diag_req, aco=aco, eta_alvo=eta_alvo)
-    d_mm = float(d_mm)
+    d_fixo = None if d_auto else float(d_mm)
 
-    painel = verifica_painel_vertical(
-        V_Ed_kN=V_painel, H_col_m=H_pilar_m, b_baia_m=b_baia_gable_m,
-        d_mm=d_mm, aco=aco, drift_lim=drift_lim,
-    )
+    # 2-4) Ponto fixo demanda ↔ rigidez ↔ 2.ª ordem — achado F-02.
+    #      Sem V_Ed_total_kN mantém-se k_II = 1,0, mas então o α_cr de sistema
+    #      fica indeterminado e estabilidade_global.py recusa dispensar a 2.ª
+    #      ordem (a ausência de dado nunca é aprovação).
+    k_II = 1.0
+    acr = None
+    for _ in range(12):
+        H_tr_amp = H_tr * k_II
+        diaf = verifica_diafragma(H_tr_amp, L_comp, B_cob_m)
+        R_gable = diaf["R_gable_kN"]
+        V_painel = R_gable / n_pan_gable
 
-    lateral_estavel_transv = painel["ok"]
+        if d_auto:
+            N_diag_req = V_painel / g["cos_beta"]
+            d_mm = float(escolher_diametro(N_diag_req, aco=aco, eta_alvo=eta_alvo))
+        else:
+            d_mm = d_fixo
+
+        painel = verifica_painel_vertical(
+            V_Ed_kN=V_painel, H_col_m=H_pilar_m, b_baia_m=b_baia_gable_m,
+            d_mm=d_mm, aco=aco, drift_lim=drift_lim,
+        )
+
+        if V_Ed_total_kN is None or float(V_Ed_total_kN) <= 0.0:
+            break
+
+        K_lat = painel["C_h_kNpm"] * n_pan_gable * n_gables
+        acr = alpha_cr_sistema(K_lat, H_pilar_m, float(V_Ed_total_kN))
+        k_novo = 1.0 if acr["regime"] == "1a_ordem" else acr["k_II"]
+        if not math.isfinite(k_novo):
+            break                      # mecanismo: reprova a jusante, não itera
+        if abs(k_novo - k_II) <= 1e-4:
+            k_II = k_novo
+            break
+        k_II = k_novo
+
+    K_lat_kNpm = painel["C_h_kNpm"] * n_pan_gable * n_gables
+    regime_acr = acr["regime"] if acr is not None else "nao_determinado"
+    amplificacao_aplicada = k_II > 1.0 + 1e-9
+    # Um painel que só "passa" sob amplificação inadmissível (α_cr < 3) ou num
+    # mecanismo não é um sistema de contraventamento válido.
+    regime_ok = regime_acr not in ("2a_ordem_rigorosa", "mecanismo")
+    lateral_estavel_transv = painel["ok"] and regime_ok
 
     # 5) Quantitativo (2 diagonais por cruz)
     n_diagonais = 2 * n_pan_gable * n_gables
@@ -253,6 +309,11 @@ def verificar_contraventamento_transversal(
         "F_col_d_kN":     dem["F_col_d_kN"],
         "n_colunas":      dem["n_colunas"],
         "H_vento_topo_kN": dem["H_vento_topo_kN"],
+        # F-01 — componente horizontal da pressão de vento na cobertura
+        "H_cob_portico_kN": dem["H_cob_portico_kN"],
+        "H_cob_kN":       round(dem["H_cob_kN"], 3),
+        "comb_H_cob":     dem["comb_H_cob"],
+        "n_frames":       dem["n_frames"],
         "phi":            dem["phi"],
         "H_imp_kN":       dem["H_imp_kN"],
         "H_tr_kN":        H_tr,
@@ -289,9 +350,18 @@ def verificar_contraventamento_transversal(
         "eta_delta":      painel["eta_delta"],
         "ok_delta":       painel["ok_delta"],
 
+        # α_cr de sistema desta direção e 2.ª ordem (F-02)
+        "C_h_kNpm":       painel["C_h_kNpm"],
+        "K_lat_kNpm":     round(K_lat_kNpm, 1),
+        "alpha_cr":       None if acr is None else round(acr["alpha_cr"], 2),
+        "k_II":           round(k_II, 4),
+        "regime_alpha_cr": regime_acr,
+        "amplificacao_aplicada": amplificacao_aplicada,
+        "H_tr_amplificado_kN": round(H_tr * k_II, 3),
+
         # Resultado
         "eta":            painel["eta"],
-        "ok":             painel["ok"],
+        "ok":             painel["ok"] and regime_ok,
         "lateral_estavel_transv": lateral_estavel_transv,
 
         # Acoplamento com o dimensionamento dos pilares

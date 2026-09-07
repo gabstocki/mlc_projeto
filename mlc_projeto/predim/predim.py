@@ -221,7 +221,12 @@ def pre_dimensionar(
 
                 for s in s_vals:
                     s_f  = round(float(s), 3)
-                    l_ef = calcular_l_ef(s_f, restricao="continua_topo")
+                    # F-07: +2h da nota da EC5 Tab. 6.1 — carga no extradorso
+                    # (borda comprimida); usa a altura da seção de M_max.
+                    l_ef = calcular_l_ef(
+                        s_f, restricao="continua_topo",
+                        posicao_carga="borda_comprimida", h_m=h_Mmax,
+                    )
 
                     # ── 1. FLEXO-COMPRESSÃO §6.3.2 ────────────
                     eta_fc = eta_flexo_compressao_viga(

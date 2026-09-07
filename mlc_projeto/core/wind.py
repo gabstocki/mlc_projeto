@@ -22,6 +22,7 @@ import math
 from mlc_projeto.core.validacao import (
     DominioInvalidoError,
     exigir_inteiro_minimo,
+    exigir_nao_negativo,
     exigir_positivo,
 )
 
@@ -90,6 +91,11 @@ class ParametrosVento:
     # (p.ex. veículos num estacionamento coberto) acionam, por si só, a rota
     # de edificação fechada — independentemente de a altura h ser suficiente.
     obstrucoes_sob_cobertura: bool = False
+    # Coeficiente de atrito da cobertura isolada para θ=0° (achado F-13).
+    # None → adota-se COEF_ATRITO_COBERTURA_ISOLADA. Declarado aqui, e não
+    # escondido numa constante de módulo, porque o seu valor normativo está por
+    # confirmar e governa TODO o dimensionamento do contraventamento.
+    coef_atrito_cobertura: float | None = None
 
     def __post_init__(self):
         if self.categoria not in PARAM_METEOROLOGICOS:
@@ -102,6 +108,19 @@ class ParametrosVento:
                 f"classe='{self.classe}' inválida. Classes: A, B, C "
                 f"(NBR 6123:2023 §5.3.2)."
             )
+        if self.coef_atrito_cobertura is not None:
+            exigir_nao_negativo(
+                "coef_atrito_cobertura", self.coef_atrito_cobertura,
+            )
+
+    @property
+    def coef_atrito(self) -> float:
+        """Coeficiente de atrito adotado para θ=0° — F-13."""
+        return (
+            COEF_ATRITO_COBERTURA_ISOLADA
+            if self.coef_atrito_cobertura is None
+            else float(self.coef_atrito_cobertura)
+        )
 
     # ── Fator S2 — NBR 6123:2023 §5.3.3 ──────────────────────────────────────
 
@@ -489,11 +508,96 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
 # Valor conservador para seção retangular (pilares MLC): Ca = 1,2
 CA_PILAR_RET = 1.2
 
-# NBR 6123:2023 §7.2.2 — Forças de atrito na cobertura isolada, para vento
-# paralelo à geratriz: Ft = 0,5·q·a·b, com a e b as dimensões EM PLANTA da
-# cobertura. "Estas forças englobam a ação do vento sobre as duas faces da
-# cobertura" — não é um coeficiente de atrito superficial aplicado a uma face.
+# ── Atrito na cobertura isolada, vento paralelo à geratriz ────────────────────
+#
+# NBR 6123:2023 §7.2.2 — TEXTO LITERAL DA CLÁUSULA:
+#
+#   "7.2.2 Para vento paralelo à geratriz da cobertura, devem ser consideradas
+#    forças horizontais de atrito calculadas pela seguinte equação:
+#           Ft = 0,5 · q · a · b
+#    onde a e b são as dimensões em planta da cobertura.
+#    Estas forças englobam a ação do vento sobre as duas faces da cobertura."
+#
+# Histórico (achado F-13 da auditoria adversarial v2 — ENCERRADO)
+# ---------------------------------------------------------------
+# A auditoria classificou o valor 0,50 como «sem fonte primária e fisicamente
+# impossível» e levantou a hipótese de que o correto fosse 0,05. A cláusula,
+# transcrita acima, CONFIRMA 0,50: a hipótese da auditoria estava ERRADA. O que
+# a auditoria acertou foi o defeito de rastreabilidade — o valor não estava
+# ancorado em nenhum texto normativo no repositório, e o teste de regressão
+# limitava-se a reafirmar o próprio número. Isso fica resolvido por esta
+# transcrição.
+#
+# O que continua verdadeiro, e é preciso entender ao ler o resultado: `Ft` é uma
+# AÇÃO DE PROJETO ENVOLVENTE, não uma estimativa de atrito superficial. Para
+# este galpão dá 776,8 kN, contra 356,0 kN de arrasto que a estrutura teria se
+# fosse um corpo SÓLIDO totalmente bloqueante da mesma silhueta (40,5 × 8,79 m,
+# C_d = 1,2) — 2,35×. A norma prescreve deliberadamente um envelope: a própria
+# cláusula diz que a força «engloba a ação do vento sobre as DUAS FACES da
+# cobertura», ou seja, cobre de uma só vez mecanismos que não são só atrito.
+# `arrasto_bloqueio_silhueta` mantém essa comparação como diagnóstico
+# informativo — útil para apanhar erro de ENTRADA (área em planta, q), não para
+# contestar a norma.
 COEF_ATRITO_COBERTURA_ISOLADA = 0.5
+
+CLAUSULA_ATRITO = "NBR 6123:2023 §7.2.2"
+ORIGEM_ATRITO = (
+    "ABNT NBR 6123:2023 §7.2.2 — cláusula transcrita em core/wind.py: "
+    "Ft = 0,5·q·a·b, a e b as dimensões em planta da cobertura; as forças "
+    "englobam a ação do vento sobre as duas faces"
+)
+
+# Coeficiente de arrasto de um corpo sólido bloqueante de silhueta retangular,
+# usado APENAS no diagnóstico comparativo (não é um valor de projeto).
+CA_BLOQUEIO_SILHUETA = 1.2
+
+
+def arrasto_bloqueio_silhueta(
+    params: ParametrosVento,
+    B_cob_m: float,
+    c_d: float = CA_BLOQUEIO_SILHUETA,
+) -> dict:
+    """
+    Arrasto de um corpo sólido de igual silhueta — DIAGNÓSTICO comparativo.
+
+    Não é um valor de projeto nem um limite a impor. É a referência física
+    contra a qual se lê a magnitude da ação longitudinal:
+
+        F_bloqueio = q · c_d · (B_cob · H_max)      c_d = 1,2 (retângulo)
+
+    Serve para dois fins:
+
+    1. **Apanhar erro de ENTRADA.** Uma área em planta ou um `q` errados por uma
+       ordem de grandeza saltam à vista nesta razão.
+    2. **Dar escala ao resultado de §7.2.2.** A força de atrito da NBR 6123
+       §7.2.2 é uma ação ENVOLVENTE — a própria cláusula diz que «engloba a ação
+       do vento sobre as duas faces da cobertura» — e para este galpão vale
+       2,35× este arrasto de bloqueio. Isso é característica da prescrição
+       normativa, não erro do cálculo: quem lê o memorial deve saber a escala do
+       que está a dimensionar.
+
+    Args:
+        params  : parâmetros de vento (fornecem q e H_max)
+        B_cob_m : largura total da cobertura ⊥ à direção do vento θ=0° (m)
+        c_d     : coeficiente de arrasto do bloqueio (1,2 para retângulo)
+
+    Returns:
+        dict com a área de silhueta, o teto de força e os dados de entrada.
+    """
+    B = exigir_positivo("B_cob_m", B_cob_m, unidade="m")
+    A = B * params.H_max
+    return {
+        "q_kNm2":        round(params.q, 4),
+        "B_cob_m":       round(B, 3),
+        "H_max_m":       round(params.H_max, 3),
+        "c_d":           c_d,
+        "A_silhueta_m2": A,
+        "F_bloqueio_kN": params.q * c_d * A,
+        "nota": (
+            "Teto físico (corpo sólido de igual silhueta), não valor de "
+            "projeto. Usado para qualificar o coeficiente de atrito de §7.2.2."
+        ),
+    }
 
 
 def forca_vento_paralelo_cumeeira(
@@ -544,17 +648,32 @@ def forca_vento_paralelo_cumeeira(
         L_cob_m = (n_pilares_linha - 1) * params.dist_portico
     if B_cob_m is None:
         B_cob_m = params.L                       # um vão; main pode passar 2·L
-    # ── §7.2.2 — Ft = 0,5·q·a·b (AUD-003) ────────────────────────────────
-    # A versão anterior usava F = q·Cf·A_planta com Cf=0,04, um coeficiente de
-    # atrito superficial genérico cujo próprio comentário admitia ser "ordem de
-    # grandeza". A norma prescreve equação específica para cobertura isolada,
-    # já integrando as DUAS faces: o resultado era 12,5× menor que o normativo.
+    # ── §7.2.2 — Ft = C·q·a·b (AUD-003; coeficiente A CONFIRMAR — F-13) ──
     a_m = max(L_cob_m, 0.0)
     b_m = max(B_cob_m, 0.0)
     A_planta = a_m * b_m
-    F_fric_kN = COEF_ATRITO_COBERTURA_ISOLADA * q * a_m * b_m
+    coef_atrito = params.coef_atrito
+    F_fric_kN = coef_atrito * q * a_m * b_m
 
     F_total_kN = F_pilares_kN + F_fric_kN
+
+    # ── Diagnóstico de escala — reportado, NUNCA aplicado como limitador ──
+    # §7.2.2 é uma ação ENVOLVENTE (cobre as duas faces da cobertura num só
+    # termo) e excede o arrasto de bloqueio da silhueta. Isso é a prescrição da
+    # norma, não incoerência do cálculo — mas quem lê o memorial tem de saber a
+    # escala. Serve também de rede contra erro de entrada (área, q).
+    blq = arrasto_bloqueio_silhueta(params, B_cob_m=b_m) if b_m > 0 else None
+    F_bloqueio_kN = blq["F_bloqueio_kN"] if blq else float("inf")
+    razao_bloqueio = F_total_kN / F_bloqueio_kN if F_bloqueio_kN > 0 else float("inf")
+    nota_bloqueio = "" if blq is None else (
+        f"A ação longitudinal de projeto (F_total = {F_total_kN:.1f} kN) vale "
+        f"{razao_bloqueio:.2f}× o arrasto de um corpo sólido de igual silhueta "
+        f"({F_bloqueio_kN:.1f} kN; {blq['B_cob_m']:.1f}×{blq['H_max_m']:.2f} m, "
+        f"c_d={blq['c_d']}). É o efeito do envelope de §7.2.2, cuja força de "
+        f"atrito C={coef_atrito:g} engloba a ação sobre as DUAS faces da "
+        f"cobertura. Conferir se ≫ 1 de forma inesperada: pode indicar erro na "
+        f"área em planta ou em q."
+    )
 
     # Pressão linear equivalente no alinhamento de contraventamento (kN/m)
     L_trib = max(L_cob_m, 1e-6)
@@ -565,7 +684,12 @@ def forca_vento_paralelo_cumeeira(
         "direcao":          "paralelo à cumeeira (longitudinal)",
         "q_kNm2":           round(q, 4),
         "Ca_pilar":         CA_PILAR_RET,
-        "coef_atrito_7_2_2": COEF_ATRITO_COBERTURA_ISOLADA,
+        # Coeficiente de atrito — parâmetro DECLARADO, com proveniência (F-13)
+        "coef_atrito":         coef_atrito,
+        "coef_atrito_7_2_2":   coef_atrito,     # compat. com chamadores antigos
+        "coef_atrito_clausula": CLAUSULA_ATRITO,
+        "coef_atrito_origem":  ORIGEM_ATRITO,
+        "coef_atrito_default": COEF_ATRITO_COBERTURA_ISOLADA,
         "A_pilar_m2":       round(A_pil, 4),
         "F_pilar_kN":       round(F_pil_kN, 3),
         "n_pilares":        n_total,
@@ -575,8 +699,14 @@ def forca_vento_paralelo_cumeeira(
         "F_total_kN":       round(F_total_kN, 3),
         "w_long_kNpm":      round(w_long_kNpm, 4),
         "L_trib_m":         round(L_trib, 3),
+        # Diagnóstico de escala face ao arrasto de bloqueio (informativo)
+        "F_bloqueio_kN":    round(F_bloqueio_kN, 3),
+        "A_silhueta_m2":    round(blq["A_silhueta_m2"], 2) if blq else None,
+        "razao_bloqueio":   razao_bloqueio,
+        "nota_bloqueio":    nota_bloqueio,
         "norma":            (
-            "NBR 6123:2023 §6.3 (Ca dos pilares) + §7.2.2 (Ft = 0,5·q·a·b)"
+            f"NBR 6123:2023 §6.3 (Ca dos pilares) + §7.2.2 "
+            f"(Ft = {coef_atrito:g}·q·a·b, dimensões em planta da cobertura)"
         ),
         "nota":             (
             "Tab.25 não se aplica a θ=0°. Arrasto em pilares livres + força de "

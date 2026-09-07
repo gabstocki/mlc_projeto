@@ -114,37 +114,50 @@ def verifica_cumeeira(
     load: Carregamentos,
 ) -> dict:
     """
-    Tração perpendicular na cumeeira — EC5 §6.4.3.
+    Zona do ápice — EC5 §6.4.3: tração ⊥ às fibras e flexão.
 
-    M_ap da combinação ELU governante (análise biarticulada).
+    Varre TODAS as combinações ELU físicas, cada uma com o k_mod da SUA duração
+    (achado F-06). A combinação que maximiza |M_max| — a que era lida antes —
+    não é a que maximiza `M_cumeeira`, e uma combinação de momento menor mas
+    duração «media» (k_mod 0,65) pode governar face a uma de momento maior e
+    duração «curta» (0,70). Na rota da Tabela 25 mediu-se 4,2 % de subestimação.
     """
-    gov  = load.combinacao_ELU_governante()
-    L    = geo.L
-    h_ap = geo.h_ap
-    b    = geo.b
+    L, h_ap, b = geo.L, geo.h_ap, geo.b
 
-    M_ap_kNm = gov.M_cumeeira_kNm
-    M_ap_Nm  = abs(M_ap_kNm) * 1e3
-
-    # ── Volumes da zona do ápice (Fig. 6.9) ───────────────────
+    # Geometria do ápice — independente da combinação
     vols  = calcular_volumes_apice(b, h_ap, L, geo.alpha_deg)
     V     = vols["V_m3"]
-    V_lim = V < vols["V_ap_bruto_m3"] - 1e-12   # True se limitado por 2Vb/3
+    V_lim = V < vols["V_ap_bruto_m3"] - 1e-12
+    k_p   = calcular_k_p(geo.alpha_deg)
+    k_vol = calcular_k_vol(b, h_ap, L, geo.alpha_deg)
+    k_l   = calcular_k_l(geo.alpha_deg)
 
-    # ── (a) Tração perpendicular à fibra — Eq. (6.50/6.54) ────
-    k_p    = calcular_k_p(geo.alpha_deg)
-    k_vol  = calcular_k_vol(b, h_ap, L, geo.alpha_deg)
-    sig_t90 = calcular_sigma_t90d(k_p, M_ap_Nm, b, h_ap)
-    resist_t90 = K_DIS * k_vol * mat.f_t90_d
-    eta_t90 = sig_t90 / resist_t90 if resist_t90 > 0 else 999.0
+    melhor = None
+    for comb in load.combinacoes_ELU_fisicas().values():
+        matc = mat.com_duracao(comb.duracao)
+        M_ap_Nm = abs(comb.M_cumeeira_kNm) * 1e3
 
-    # ── (b) Flexão no ápice — Eq. (6.41/6.42) ─────────────────
-    k_l    = calcular_k_l(geo.alpha_deg)
-    sig_m  = calcular_sigma_m_ap(k_l, M_ap_Nm, b, h_ap)
-    resist_m = K_R * mat.f_m_d
-    eta_m  = sig_m / resist_m if resist_m > 0 else 999.0
+        sig_t90    = calcular_sigma_t90d(k_p, M_ap_Nm, b, h_ap)
+        resist_t90 = K_DIS * k_vol * matc.f_t90_d
+        eta_t90    = sig_t90 / resist_t90 if resist_t90 > 0 else 999.0
 
-    eta = max(eta_t90, eta_m)
+        sig_m    = calcular_sigma_m_ap(k_l, M_ap_Nm, b, h_ap)
+        resist_m = K_R * matc.f_m_d
+        eta_m    = sig_m / resist_m if resist_m > 0 else 999.0
+
+        eta = max(eta_t90, eta_m)
+        if melhor is None or eta > melhor["eta"]:
+            melhor = dict(
+                eta=eta, eta_t90=eta_t90, eta_m=eta_m, comb=comb,
+                sig_t90=sig_t90, sig_m=sig_m,
+                resist_t90=resist_t90, resist_m=resist_m, mat=matc,
+            )
+
+    if melhor is None:
+        raise ValueError("Não há combinações ELU para verificar o ápice.")
+
+    comb, matc = melhor["comb"], melhor["mat"]
+    eta, eta_t90, eta_m = melhor["eta"], melhor["eta_t90"], melhor["eta_m"]
     verif_gov = "t90 (Eq.6.54)" if eta_t90 >= eta_m else "flexão (Eq.6.42)"
 
     return {
@@ -152,9 +165,14 @@ def verifica_cumeeira(
         "h_ap_m":          h_ap,
         "b_m":             b,
         "alpha_deg":       geo.alpha_deg,
-        "alpha_ap_deg":    geo.alpha_deg,     # α_ap = inclinação do extradorso
-        "M_cumeeira_kNm":  round(M_ap_kNm, 3),
+        "alpha_ap_deg":    geo.alpha_deg,
+        "M_cumeeira_kNm":  round(comb.M_cumeeira_kNm, 3),
         "sistema":         "biarticulada",
+        # Combinação governante DESTA verificação (F-06)
+        "comb_gov":        comb.nome,
+        "duracao":         comb.duracao,
+        "k_mod":           matc.k_mod,
+        "n_combinacoes_varridas": len(load.combinacoes_ELU_fisicas()),
         # Volumes (Fig. 6.9)
         "V_b_m3":          round(vols["V_b_m3"], 4),
         "V_ap_bruto_m3":   round(vols["V_ap_bruto_m3"], 4),
@@ -164,25 +182,27 @@ def verifica_cumeeira(
         "k_p":             round(k_p, 6),
         "k_vol":           round(k_vol, 4),
         "k_dis":           K_DIS,
-        "sigma_t90d_MPa":  round(sig_t90 / 1e6, 4),
-        "f_t90d_MPa":      round(mat.f_t90_d / 1e6, 4),
-        "resistencia_MPa": round(resist_t90 / 1e6, 4),   # compat. (t90)
-        "resist_t90_MPa":  round(resist_t90 / 1e6, 4),
+        "sigma_t90d_MPa":  round(melhor["sig_t90"] / 1e6, 4),
+        "f_t90d_MPa":      round(matc.f_t90_d / 1e6, 4),
+        "resistencia_MPa": round(melhor["resist_t90"] / 1e6, 4),
+        "resist_t90_MPa":  round(melhor["resist_t90"] / 1e6, 4),
         "eta_t90":         round(eta_t90, 4),
         # Flexão no ápice (Eq. 6.41/6.42)
         "k_l":             round(k_l, 4),
         "k_r":             K_R,
-        "sigma_m_ap_MPa":  round(sig_m / 1e6, 4),
-        "f_md_MPa":        round(mat.f_m_d / 1e6, 4),
-        "resist_m_MPa":    round(resist_m / 1e6, 4),
+        "sigma_m_ap_MPa":  round(melhor["sig_m"] / 1e6, 4),
+        "f_md_MPa":        round(matc.f_m_d / 1e6, 4),
+        "resist_m_MPa":    round(melhor["resist_m"] / 1e6, 4),
         "eta_flexao_ap":   round(eta_m, 4),
         # Governante
         "eta":             round(float(eta), 4),
         "ok":              bool(eta <= 1.0),
         "verif_gov":       verif_gov,
         "justificativa": (
-            "Peça monolítica de MLC — continuidade na cumeeira; "
-            f"M_ap = {M_ap_kNm:.2f} kN·m (análise biarticulada). "
+            f"Peça monolítica de MLC — continuidade na cumeeira. Envelope sobre "
+            f"{len(load.combinacoes_ELU_fisicas())} combinações ELU, cada uma "
+            f"com o seu k_mod: governa {comb.nome} ({comb.duracao}, "
+            f"k_mod={matc.k_mod:.2f}) com M_ap = {comb.M_cumeeira_kNm:.2f} kN·m. "
             f"Duplo-bisel: r→∞, k_r=1, k_l={k_l:.3f}; governa {verif_gov}"
         ),
         "norma": "EC5 §6.4.3 Eq. 6.41–6.56",

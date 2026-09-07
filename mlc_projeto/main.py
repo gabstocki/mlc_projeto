@@ -24,6 +24,7 @@ STOCKI Engenharia Estrutural | Gabriel Stocki CREA-PR 195315/D
 EC5 + EN 1990 + NBR 6123
 """
 
+import math
 from dataclasses import replace
 from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
@@ -67,7 +68,8 @@ from mlc_projeto.connections.connections      import (
 )
 from mlc_projeto.connections.fadiga_ligacoes  import verificar_fadiga_deslizamento
 from mlc_projeto.output.report                import (
-    gerar_relatorio, tabela_verificacoes, OUTPUT_DIR,
+    gerar_relatorio, tabela_verificacoes, estatisticas_resumo,
+    extrair_eta_ok, OUTPUT_DIR,
 )
 from mlc_projeto.visualization.viz_3d         import visualizar_galpao
 
@@ -155,6 +157,16 @@ VENTO_PARAMS = dict(
     l2                       = 40.5,
     n_tramos                 = 2,
     obstrucoes_sob_cobertura = True,
+    # ── Atrito longitudinal θ=0° — NBR 6123:2023 §7.2.2 (achado F-13, ENCERRADO)
+    # Cláusula transcrita integralmente em core/wind.py:
+    #   "Ft = 0,5·q·a·b, onde a e b são as dimensões em planta da cobertura.
+    #    Estas forças englobam a ação do vento sobre as duas faces da cobertura."
+    # A auditoria adversarial v2 levantou a hipótese de o coeficiente ser 0,05;
+    # a cláusula CONFIRMA 0,50 e a hipótese estava errada. Ft é uma ação
+    # ENVOLVENTE (cobre as duas faces num só termo) e vale 2,35× o arrasto de
+    # bloqueio da silhueta — característica da prescrição, não erro de cálculo.
+    # Governa TODO o dimensionamento do contraventamento longitudinal.
+    coef_atrito_cobertura    = 0.50,
 )
 
 # --- Cargas de área e malha estrutural ----------------------------------------
@@ -247,12 +259,40 @@ ACO_CV          = "S235"
 # só 2 livres para circulação de veículos — inaceitável no uso previsto.
 # Segunda varredura, agora com a seção do pilar de canto como variável:
 #   n=4 + canto 0,32×0,27 → η_canto 0,801 (passa, sem folga)
-#   n=4 + canto 0,32×0,32 → η_canto 0,509   ← adotado, 4 baías livres
+#   n=4 + canto 0,32×0,32 → η_canto 0,509   ← adotado então, 4 baías livres
 #   n=3 + canto 0,32×0,32 → η_canto 0,614, mas exige 6 chumbadores no canto
-# Adota-se n=4 com o pilar de canto engrossado: dobra as baías livres (2 → 4)
-# e mantém a ancoragem de 4×80 kN. Custo: diagonal Ø45 (era Ø39) e uma seção
-# de pilar a mais no fabrico.
-N_PAINEIS_CV_VERT = 4       # painéis de cruz que resistem à força longitudinal
+#
+# ── TERCEIRA VARREDURA (auditoria adversarial v2, no âmbito de F-13) ─────────
+# O pipeline REAL foi corrido para n = 2…16 com a diagonal auto-dimensionada
+# (η ≤ 0,90) e o coeficiente de atrito nas duas leituras. Com C = 0,50:
+#     n    Ø    V_painel  download  η_canto  N_anc   η_anc   η_max   aço
+#     2   64    423,7 kN   580,4 kN   0,936  664,3   1,260  1,3840  915 kg  REPROVA
+#     4   45    211,9 kN   322,5 kN   0,598  406,4   0,771  0,8930  905 kg
+#     6   39    141,2 kN   236,6 kN   0,485  320,5   0,608  0,7926 1019 kg
+#     8   33    105,9 kN   193,6 kN   0,428  277,5   0,526  0,8303  973 kg  ← adotado
+#    10   30     84,7 kN   167,8 kN   0,394  251,7   0,477  0,8037 1005 kg
+#    16   24     53,0 kN   129,1 kN   0,344  213,0   0,404  0,7902 1029 kg
+#
+# Constatação que muda a decisão anterior: **o peso de aço é praticamente
+# INDEPENDENTE de n** (900–1030 kg em toda a varredura) — mais painéis de barra
+# mais fina custam o mesmo aço. O que n compra é margem no CAMINHO DE CARGA:
+# download no montante, ancoragem e bloco de fundação. E o que custa são baías.
+#
+# Baías disponíveis: L_comp/dist_pórtico = 46,0/5,75 = 8 por alinhamento; as duas
+# fachadas longitudinais dão 16 baías candidatas (o alinhamento CENTRAL fica no
+# interior do estacionamento e não é usado). A nota da varredura anterior contava
+# baías livres sobre um universo de 8 — coerente com painéis numa só fachada;
+# distribuindo-os pelas duas, n=8 deixa 8 baías livres (4 por fachada).
+#
+# Adota-se n = 8: diagonal Ø33 em vez de Ø45 (ligações de extremidade muito mais
+# exequíveis), download no pilar de canto 322,5 → 193,6 kN (−40 %), ancoragem do
+# canto 406,4 → 277,5 kN (η_anc 0,771 → 0,526), ao mesmo peso de aço e ainda com
+# metade das baías livres. Acima de n≈6 o η_máximo global deixa de ser governado
+# por este sistema e passa ao contraventamento da COBERTURA (§9.2.5, η=0,7902).
+# Nota: com n=8 a base de canto já passaria com 4 chumbadores (η_sucção 0,867 em
+# vez de 0,578); mantêm-se os 6 para não refazer o bloco de fundação já detalhado
+# (c=600, h_ef=400, ≈1,60×2,00 m) — ver N_CHU_CANTO.
+N_PAINEIS_CV_VERT = 8       # painéis de cruz que resistem à força longitudinal
 D_BARRA_CVV_MM    = None    # mm — None → auto (comercial, η ≤ ETA_CVV_ALVO)
 ACO_CVV           = "S235"
 ETA_CVV_ALVO      = 0.90    # margem de projeto na diagonal vertical
@@ -369,15 +409,18 @@ class _Tee:
 
 
 def _print_eta(nome: str, res: dict) -> None:
-    """Imprime η de forma robusta (aceita dicts parciais / η>1)."""
+    """
+    Imprime η. F-04: resultado ausente, nulo ou não numérico é INDETERMINADO e
+    imprime-se como ✗ «sem η» — nunca como η = 0,0000 ✓ (o antigo `or 0.0`
+    convertia `None` numa aprovação visual).
+    """
     if not isinstance(res, dict):
         print(f"  ✗ {nome:<30} (sem resultado)")
         return
-    eta = float(res.get("eta", res.get("eta_gov", res.get("eta_slip", 0.0))) or 0.0)
-    if "ok" in res:
-        ok_flag = bool(res["ok"])
-    else:
-        ok_flag = eta <= 1.0 + 1e-9
+    eta, ok_flag = extrair_eta_ok(res)
+    if math.isnan(eta):
+        print(f"  ✗ {nome:<30} η = —      (sem η — não concluída)")
+        return
     ok  = "✓" if ok_flag else "✗"
     n_bar = max(0, min(40, int(eta * 20)))
     bar = "█" * n_bar
@@ -389,29 +432,33 @@ def _imprimir_resumo_export(resultados: dict, load, meta: dict) -> dict:
     Resumo unificado terminal = Excel = memorial (§12).
     Devolve estatísticas (eta_max, all_ok, status).
     """
-    tab = tabela_verificacoes(resultados)
+    # F-04: o catálogo é percorrido POR INTEIRO; as exclusões deliberadas têm de
+    # ser DECLARADAS (`meta["nao_aplicaveis"]`), nunca inferidas da ausência.
+    tab = tabela_verificacoes(
+        resultados, nao_aplicaveis=set(meta.get("nao_aplicaveis", ()))
+    )
+    est = estatisticas_resumo(tab)
     print("\n" + "=" * 72)
     print("  RESUMO DE TAXAS DE UTILIZAÇÃO — Viga biarticulada MLC")
     print("  (mesma tabela exportada para Excel / memorial §12)")
     print("=" * 72)
-    print(f"  {'Verificação':<32} {'Norma':<28} {'η':>8}  St")
-    print(f"  {'-'*72}")
-    eta_max = 0.0
-    all_ok = True
+    print(f"  {'Verificação':<32} {'Norma':<24} {'η':>8}  St  Estado")
+    print(f"  {'-'*76}")
     for row in tab:
         eta = float(row["η"])
-        ok_b = bool(row["ok_bool"])
-        all_ok = all_ok and ok_b
-        eta_max = max(eta_max, eta)
+        eta_txt = "       —" if math.isnan(eta) else f"{eta:>8.4f}"
+        estado = "" if row["status"] == "OK" else f"  [{row['status']}]"
         print(
-            f"  {row['Verificação']:<32} {row['Norma']:<28} "
-            f"{eta:>8.4f}  {row['OK']}"
+            f"  {row['Verificação']:<32} {row['Norma']:<24} "
+            f"{eta_txt}  {row['OK']}{estado}"
         )
-    print(f"  {'-'*72}")
+    print(f"  {'-'*76}")
+    eta_max = est["eta_max"]
+    all_ok = est["all_ok"]
     H = float(load.H_ELU()) if load is not None else 0.0
     com_tir = bool(meta.get("com_tirante", False))
     H_sap = 0.0 if com_tir else H
-    status = "APROVADO" if all_ok and eta_max <= 1.0 + 1e-9 else "REPROVADO"
+    status = est["status"]
     print(f"  η máximo     = {eta_max:.4f}")
     if com_tir:
         print(f"  H_arco       = {H:.2f} kN  (Castigliano → tirante)")
@@ -424,14 +471,22 @@ def _imprimir_resumo_export(resultados: dict, load, meta: dict) -> dict:
     print(f"  η_alvo lig.  = {meta.get('eta_lig_alvo', ETA_LIG_ALVO):.2f}")
     print(f"  k_mod vento  = {meta.get('k_mod_vento', 0):.2f} "
           f"(curta; inst.={meta.get('k_mod_vento_instantanea', 0):.2f} não usada)")
-    print(f"  N.º verif.   = {len(tab)}  |  todas OK = {all_ok}")
+    print(f"  N.º verif.   = {est['n_linhas']} "
+          f"({est['n_executadas']} executadas, "
+          f"{len(est['nao_aplicaveis'])} não aplicáveis)  |  todas OK = {all_ok}")
+    if est["pendentes"]:
+        # F-04: uma verificação sem resultado utilizável bloqueia a aprovação e
+        # tem de ser NOMEADA — antes desaparecia em silêncio do resumo.
+        print(f"  ⚠ SEM RESULTADO ({len(est['pendentes'])}): "
+              f"{', '.join(est['pendentes'])}")
     print(f"  Status       = {status}")
     print("=" * 72)
     return {
         "eta_max": eta_max,
         "all_ok": all_ok,
         "status": status,
-        "n_verif": len(tab),
+        "n_verif": est["n_linhas"],
+        "pendentes": est["pendentes"],
         "tabela": tab,
     }
 
@@ -557,6 +612,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"(pilares={load.vento_0['F_pilares_kN']:.1f} + "
               f"fricção={load.vento_0['F_friccao_kN']:.1f}) | "
               f"w={load.vento_0['w_long_kNpm']:.3f} kN/m")
+        print(f"    Atrito §7.2.2: Ft = {load.vento_0['coef_atrito']:g}·q·a·b "
+              f"= {load.vento_0['F_friccao_kN']:.1f} kN "
+              f"(a×b = {load.vento_0['A_planta_m2']:.0f} m² em planta; "
+              f"engloba as duas faces)")
+        print(f"    Escala: {load.vento_0['razao_bloqueio']:.2f}× o arrasto de "
+              f"bloqueio da silhueta ({load.vento_0['F_bloqueio_kN']:.1f} kN) "
+              f"— envelope normativo, ver §7.2.2 transcrito em core/wind.py")
 
     # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
@@ -715,6 +777,11 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"(estab={res_elu['contraventamento'].get('R_ext_estab_kN', 0):.1f}, "
               f"vento0/2={res_elu['contraventamento'].get('F_vento0_kN', 0)/2:.1f})")
 
+    # Carga vertical de cálculo TOTAL do galpão — base do α_cr de sistema
+    # (EN 1993-1-1 Eq. 5.2). Achado F-02 da auditoria adversarial v2.
+    _n_frames = max(2, round(L_COMP_GALPAO / L_T) + 1)
+    V_ED_TOTAL_KN = 2.0 * 2 * abs(load.V_max_ELU()) * _n_frames
+
     # Contraventamento VERTICAL — caminho de carga lateral até a fundação (issue 14)
     print("\n[FASE 2] Contraventamento vertical (força lateral → fundação)...")
     res_elu["contraventamento_vertical"] = verificar_contraventamento_vertical(
@@ -728,6 +795,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         d_mm=D_BARRA_CVV_MM,
         eta_alvo=ETA_CVV_ALVO,
         R_ext_cobertura_kN=res_elu["contraventamento"].get("R_ext_proj_kN"),
+        V_Ed_total_kN=V_ED_TOTAL_KN,
     )
     cvv = res_elu["contraventamento_vertical"]
     _print_eta("Contravento vertical §5.4", cvv)
@@ -738,6 +806,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"η_δ={cvv['eta_delta']:.3f}")
     print(f"  · Caminho à fundação: H_base={cvv['H_base_kN']:.1f} kN + "
           f"arrancamento N_uplift={cvv['N_uplift_kN']:.1f} kN")
+    print(f"  · α_cr,long={cvv['alpha_cr']} ({cvv['regime_alpha_cr']}) | "
+          f"K_lat={cvv['K_lat_kNpm']:.0f} kN/m | k_II={cvv['k_II']:.3f}")
 
     # Contraventamento TRANSVERSAL — diafragma + frontões → fundação (issue 31)
     print("\n[FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...")
@@ -752,11 +822,16 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         aco=ACO_CVT,
         d_mm=D_BARRA_CVT_MM,
         eta_alvo=ETA_CVT_ALVO,
+        V_Ed_total_kN=V_ED_TOTAL_KN,
     )
     cvt = res_elu["contraventamento_transversal"]
     _print_eta("Contravento transversal §5.4", cvt)
     print(f"  · Arrasto θ=90° ({cvt['n_colunas']} pilares)={cvt['H_vento_topo_kN']:.1f} kN"
+          f" + cobertura(F-01)={cvt['H_cob_kN']:.1f} kN"
           f" + H_imp={cvt['H_imp_kN']:.1f} kN → H_tr={cvt['H_tr_kN']:.1f} kN")
+    print(f"  · Componente ⊥→horizontal da pressão de cobertura: "
+          f"{cvt['H_cob_portico_kN']:.2f} kN/pórtico × {cvt['n_frames']} "
+          f"({cvt['comb_H_cob']})")
     print(f"  · Diafragma: R_frontão={cvt['R_gable_kN']:.1f} kN | "
           f"N_corda={cvt['N_corda_kN']:.1f} kN (→ beiral)")
     print(f"  · Frontão ∅{cvt['d_mm']:.0f} mm {cvt['aco']} (β={cvt['beta_deg']}°) | "
@@ -764,6 +839,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"η_δ={cvt['eta_delta']:.3f}")
     print(f"  · Caminho à fundação: H_base={cvt['H_base_kN']:.1f} kN + "
           f"N_uplift={cvt['N_uplift_kN']:.1f} kN | l_ef=1H (non-sway) validado")
+    print(f"  · α_cr,transv={cvt['alpha_cr']} ({cvt['regime_alpha_cr']}) | "
+          f"K_lat={cvt['K_lat_kNpm']:.0f} kN/m | k_II={cvt['k_II']:.3f}")
 
     # Montante de contraventamento — download ±V_Ed·tanβ no pilar (issue 36)
     print("\n[FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...")
@@ -772,8 +849,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # (integra os dois downloads). N_uplift_kN de cada módulo = V_Ed·tanβ por painel.
     _D_long   = float(cvv["N_uplift_kN"])
     _D_transv = float(cvt["N_uplift_kN"])
-    _Rv_comp  = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU().values())
-    _Rv_min   = min(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU().values())
+    _Rv_comp  = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU_fisicas().values())
+    _Rv_min   = min(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU_fisicas().values())
     # Momento de vento na face (concomitante) — o maior entre θ=0° e θ=90°.
     _M_vento  = max(
         float(res_elu.get("pilar_vento_0", {}).get("M_d_kNm", 0.0)),
@@ -835,12 +912,24 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         nocional_no_contraventamento=bool(
             cvt.get("ok") and cvt.get("H_imp_kN", 0.0) > 0.0
         ),
+        # F-02: α_cr de SISTEMA por direção, a partir da rigidez real dos
+        # painéis de cruz (EN 1993-1-1 Eq. 5.2). Sem estes dados a verificação
+        # recusa dispensar a 2.ª ordem — ausência de dado não é aprovação.
+        K_lat_long_kNpm=cvv.get("K_lat_kNpm"),
+        K_lat_transv_kNpm=cvt.get("K_lat_kNpm"),
+        V_Ed_total_kN=V_ED_TOTAL_KN,
+        amplificacao_aplicada=bool(
+            cvv.get("amplificacao_aplicada") or cvt.get("amplificacao_aplicada")
+        ),
     )
     eg = res_elu["estabilidade_global"]
     _print_eta("Estab. global α_cr/P-Δ", eg)
-    print(f"  · α_cr={eg['alpha_cr']:.1f} (mín {eg['alpha_cr_min']:.0f}) | "
-          f"H_imp={eg['H_imp_kN']:.2f} kN "
-          f"({100*eg['H_imp_over_H']:.2f}% de H_Ed) | "
+    print(f"  · α_cr,sistema={eg['alpha_cr']:.1f} (mín {eg['alpha_cr_min']:.0f}, "
+          f"dir. crítica: {eg['direcao_critica']}) | "
+          f"long={eg['alpha_cr_long']} transv={eg['alpha_cr_transv']} | "
+          f"k_II={eg['k_II']:.3f} (aplicado: {eg['k_II_aplicado']:.3f})")
+    print(f"  · α_cr,arco={eg['alpha_cr_arco']:.1f} (informativo, NÃO é o "
+          f"critério) | H_imp={eg['H_imp_kN']:.2f} kN | "
           f"w/f_c={eg['w_over_f']:.5f}")
     print(f"  · {eg['metodo_analise']}: {eg['conclusao'][:80]}…")
 
@@ -1387,6 +1476,18 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "H_arco_kN": H_arco,
             "H_sapata_kN": 0.0 if TIRANTE_BASE else H_arco,
             "com_tirante": TIRANTE_BASE,
+            # Atrito longitudinal §7.2.2 (F-13 encerrado) — coeficiente e a
+            # escala da ação face ao arrasto de bloqueio, para o memorial.
+            "coef_atrito": load.vento_0.get("coef_atrito"),
+            "razao_bloqueio": load.vento_0.get("razao_bloqueio"),
+            "nota_bloqueio": load.vento_0.get("nota_bloqueio", ""),
+            # F-04: exclusões DECLARADAS. Na Opção B (EMPUXO_DESENVOLVE=False) o
+            # tirante de base não tem função — mas a sua ausência tem de ser uma
+            # decisão registada no memorial, não uma linha que desaparece.
+            "nao_aplicaveis": (
+                () if TIRANTE_BASE
+                else ("tirante_base", "tirante_piso_robustez")
+            ),
             "T_tirante_kN": res_tirante.get("T_d_kN", 0.0),
             "d_tirante_mm": res_tirante.get("d_mm", 0.0),
             "aco_tirante": res_tirante.get("aco", ACO_TIRANTE),

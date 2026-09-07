@@ -530,8 +530,14 @@ def varrer_tercas(
     for s in s_vals:
         s_f = round(float(s), 3)
 
-        # l_ef da viga principal para este espaçamento
-        l_ef_viga = calcular_l_ef(s_f, restricao="continua_topo")
+        # l_ef da viga principal para este espaçamento — valor INFORMATIVO,
+        # só para comparar espaçamentos. F-07: é a razão CRUA da EC5 Tab. 6.1,
+        # sem o +2h da nota, porque a altura da viga principal não é variável
+        # desta varredura (que é de terças). A verificação real da LTB da viga
+        # está em checks/elu/flambagem_lateral.py, essa com o +2h.
+        l_ef_viga = calcular_l_ef(
+            s_f, restricao="continua_topo", posicao_carga="centro_gravidade",
+        )
 
         for b in b_vals:
             for h in h_vals:

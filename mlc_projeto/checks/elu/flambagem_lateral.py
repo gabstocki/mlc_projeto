@@ -27,52 +27,105 @@ import numpy as np
 import pandas as pd
 
 from mlc_projeto.core.geometry  import GeometriaViga
+from mlc_projeto.core.validacao import DominioInvalidoError, exigir_positivo
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
 
 
 # ── Comprimento efetivo ───────────────────────────────────────────────────────
 
+#: Razões l_ef/l₁ da EC5 Tabela 6.1, por (restrição, tipo de carga).
+_RAZAO_TAB_6_1 = {
+    ("continua_topo", "distribuida"): 0.9,
+    ("continua_topo", "pontual"):     0.8,
+    ("so_apoios",     "distribuida"): 0.9,
+    ("so_apoios",     "pontual"):     0.8,
+    ("apoios_e_topo", "distribuida"): 0.9,
+    ("apoios_e_topo", "pontual"):     0.8,
+}
+
+#: Correção pela POSIÇÃO da carga na altura — nota da EC5 Tabela 6.1.
+#: (fator a multiplicar por h e somar a l_ef)
+_AJUSTE_POSICAO_CARGA = {
+    "centro_gravidade": 0.0,    # caso de referência das razões tabeladas
+    "borda_comprimida": +2.0,   # "l_ef should be increased by 2h"
+    "borda_tracionada": -0.5,   # "may be decreased by 0,5h"
+}
+
+
 def calcular_l_ef(
-    l_1:          float,
-    restricao:    str = "continua_topo",
-    tipo_carga:   str = "distribuida",
+    l_1:           float,
+    restricao:     str = "continua_topo",
+    tipo_carga:    str = "distribuida",
+    posicao_carga: str = "borda_comprimida",
+    h_m:           float | None = None,
 ) -> float:
     """
-    Comprimento efetivo l_ef para flambagem lateral — EC5 Tabela 6.1.
+    Comprimento efetivo l_ef para flambagem lateral — EC5 Tabela 6.1 + nota.
+
+        l_ef = razão(restrição, tipo_carga) · l₁  +  Δ(posição da carga) · h
+
+        Δ = 0      carga no centro de gravidade (caso das razões tabeladas)
+        Δ = +2,0   carga na BORDA COMPRIMIDA   ("should be increased by 2h")
+        Δ = −0,5   carga na borda tracionada   ("may be decreased by 0,5h")
+
+    Achado F-07 da auditoria adversarial v2
+    ---------------------------------------
+    As razões estavam implementadas, a **nota da própria tabela** não. Neste
+    projeto as terças apoiam no extradorso — a borda COMPRIMIDA sob gravidade —
+    e com l₁ = 2,53 m e h = 2,785 m o l_ef correto é 7,85 m em vez de 2,28 m
+    (3,4×): λ_rel,m sobe de 0,446 para 0,827 e a viga deixa de ser «estável».
+
+    O default é o caso CONSERVADOR (`borda_comprimida`) e `h_m` é então
+    obrigatório: nenhum chamador pode continuar a herdar em silêncio a hipótese
+    mais favorável. Em peça de altura variável, `h_m` deve ser a altura da SEÇÃO
+    verificada, não h0.
 
     Args:
-        l_1        : Distância entre pontos de restrição lateral (m)
-        restricao  : Tipo de restrição lateral
-                     "continua_topo"  — terças com chumbador (usado neste projeto)
-                     "so_apoios"      — restrição apenas nos apoios
-                     "apoios_e_topo"  — apoios + restrição no topo sem rotação
-        tipo_carga : "distribuida" ou "pontual"
+        l_1           : distância entre pontos de restrição lateral (m)
+        restricao     : "continua_topo" | "so_apoios" | "apoios_e_topo"
+        tipo_carga    : "distribuida" | "pontual"
+        posicao_carga : "borda_comprimida" | "centro_gravidade" | "borda_tracionada"
+        h_m           : altura da seção (m) — obrigatória se posicao_carga ≠
+                        "centro_gravidade"
 
     Returns:
-        l_ef (m)
+        l_ef (m), estritamente positivo.
     """
-    if restricao == "continua_topo":
-        # EC5 Tab. 6.1 — carga distribuída + restrição contínua no topo
-        if tipo_carga == "distribuida":
-            return 0.9 * l_1
-        else:
-            return 0.8 * l_1
-
-    elif restricao == "so_apoios":
-        if tipo_carga == "distribuida":
-            return 0.9 * l_1 + 2 * 0.0   # simplificado
-        else:
-            return 0.8 * l_1
-
-    elif restricao == "apoios_e_topo":
-        if tipo_carga == "distribuida":
-            return 0.9 * l_1
-        else:
-            return 0.8 * l_1
-
+    chave = (restricao, tipo_carga)
+    if chave not in _RAZAO_TAB_6_1:
+        raise ValueError(
+            f"Combinação restrição='{restricao}', carga='{tipo_carga}' não "
+            f"tabelada. Opções: {sorted(_RAZAO_TAB_6_1)}"
+        )
+    if posicao_carga not in _AJUSTE_POSICAO_CARGA:
+        raise ValueError(
+            f"posicao_carga='{posicao_carga}' não reconhecida. Opções: "
+            f"{sorted(_AJUSTE_POSICAO_CARGA)}"
+        )
+    delta = _AJUSTE_POSICAO_CARGA[posicao_carga]
+    if delta != 0.0:
+        if h_m is None:
+            raise ValueError(
+                f"posicao_carga='{posicao_carga}' exige h_m: a nota da EC5 Tab. "
+                f"6.1 corrige l_ef em {delta:+g}·h. Declare a altura da seção "
+                f"(ou use posicao_carga='centro_gravidade' se a carga atuar "
+                f"mesmo no centro de gravidade)."
+            )
+        h = exigir_positivo("h_m", h_m, unidade="m")
     else:
-        raise ValueError(f"Tipo de restrição '{restricao}' não reconhecido.")
+        h = 0.0
+
+    l_ef = _RAZAO_TAB_6_1[chave] * exigir_positivo("l_1", l_1, unidade="m") + delta * h
+    if l_ef <= 0.0:
+        # Só possível na borda tracionada com h ≫ l₁ — a redução é um "may",
+        # não pode produzir um comprimento efetivo não físico.
+        raise DominioInvalidoError(
+            f"l_ef = {l_ef:.4f} m ≤ 0 com l_1={l_1} m, h={h_m} m e "
+            f"posicao_carga='{posicao_carga}'. A redução de 0,5h da EC5 Tab. 6.1 "
+            f"é facultativa e não pode anular o comprimento efetivo."
+        )
+    return l_ef
 
 
 # ── Funções principais EC5 §6.3.3 ────────────────────────────────────────────
@@ -170,6 +223,7 @@ def verifica_flambagem_lateral(
     mat:   GlulamMaterial,
     load:  Carregamentos,
     l_1:   float = 5.75,
+    posicao_carga: str = "borda_comprimida",
 ) -> dict:
     """
     Verifica estabilidade lateral por flexo-torção — EC5 §6.3.3.
@@ -193,40 +247,46 @@ def verifica_flambagem_lateral(
         dict com resultados intermediários, η e ok
     """
     # ── Comprimento efetivo ───────────────────────────────────
-    # l_1 já deve incorporar a validade do contraventamento (§9.2.5)
-    l_ef = calcular_l_ef(l_1, restricao="continua_topo", tipo_carga="distribuida")
+    # l_1 já deve incorporar a validade do contraventamento (§9.2.5).
+    # F-07: as terças apoiam no EXTRADORSO — borda comprimida sob gravidade —
+    # logo a nota da EC5 Tab. 6.1 acrescenta 2h. Em peça de altura variável o
+    # h é o da SEÇÃO verificada, pelo que l_ef entra no laço das combinações.
+    b = geo.b
 
-    # ── Seção crítica — ponto de momento máximo ───────────────
-    gov    = load.combinacao_ELU_governante()
-    x_Mmax = gov.x_Mmax_m
-    h_crit = float(geo.h(x_Mmax))
-    b      = geo.b
+    # ── Envelope sobre as combinações ELU (achado F-06) ───────
+    # Cada combinação traz o SEU k_mod e a SUA posição de M_max. A seção
+    # crítica muda com a combinação (viga de altura variável), e uma combinação
+    # de momento menor com k_mod menor pode governar.
+    melhor = None
+    for comb in load.combinacoes_ELU_fisicas().values():
+        matc   = mat.com_duracao(comb.duracao)
+        x_i    = comb.x_Mmax_m
+        h_i    = float(geo.h(x_i))
+        l_ef_i = calcular_l_ef(
+            l_1, restricao="continua_topo", tipo_carga="distribuida",
+            posicao_carga=posicao_carga, h_m=h_i,
+        )
+        sig_cr = calcular_sigma_m_crit(E_005=matc.E0_05, b=b, h=h_i, l_ef=l_ef_i)
+        lam_i  = calcular_lambda_rel_m(matc.f_m_k, sig_cr)
+        kcr_i  = calcular_k_crit(lam_i)
+        W_i    = b * h_i ** 2 / 6.0
+        sig_i  = abs(comb.M_max_kNm) * 1e3 / W_i
+        res_i  = kcr_i * matc.f_m_d
+        eta_i  = sig_i / res_i if res_i > 0 else 999.0
+        if melhor is None or eta_i > melhor["eta"]:
+            melhor = dict(eta=eta_i, comb=comb, mat=matc, x=x_i, h=h_i,
+                          sig_crit=sig_cr, lam=lam_i, k_crit=kcr_i,
+                          sigma_md=sig_i, resist=res_i, l_ef=l_ef_i)
 
-    # ── Tensão crítica de flambagem — EC5 Eq. (6.32) ──────────
-    sigma_crit = calcular_sigma_m_crit(
-        E_005 = mat.E0_05,
-        b     = b,
-        h     = h_crit,
-        l_ef  = l_ef,
-    )
+    if melhor is None:
+        raise ValueError("Não há combinações ELU para verificar a LTB.")
 
-    # ── Esbeltez relativa e k_crit ────────────────────────────
-    lam_rel = calcular_lambda_rel_m(mat.f_m_k, sigma_crit)
-    k_crit  = calcular_k_crit(lam_rel)
+    comb, matc = melhor["comb"], melhor["mat"]
+    x_Mmax, h_crit, l_ef = melhor["x"], melhor["h"], melhor["l_ef"]
+    sigma_crit, lam_rel, k_crit = melhor["sig_crit"], melhor["lam"], melhor["k_crit"]
+    sigma_md, resist, eta = melhor["sigma_md"], melhor["resist"], melhor["eta"]
+    f_md = matc.f_m_d
 
-    # ── Tensão atuante ────────────────────────────────────────
-    M_max_Nm = abs(gov.M_max_kNm) * 1e3   # N·m
-    W_y      = b * h_crit ** 2 / 6
-    sigma_md = M_max_Nm / W_y             # Pa
-
-    # ── Resistência de cálculo ────────────────────────────────
-    f_md   = mat.f_m_d
-    resist = k_crit * f_md
-
-    # ── Taxa de utilização ────────────────────────────────────
-    eta = sigma_md / resist
-
-    # ── Regime de instabilidade ───────────────────────────────
     if lam_rel <= 0.75:
         regime = "estável — sem redução (λ ≤ 0,75)"
     elif lam_rel <= 1.4:
@@ -242,18 +302,29 @@ def verifica_flambagem_lateral(
         "h_ap_m":        geo.h_ap,
         "b_m":           b,
         "h_b":           round(h_crit / b, 2),
+        # Combinação governante DESTA verificação (F-06)
+        "comb_gov":      comb.nome,
+        "duracao":       comb.duracao,
+        "k_mod":         matc.k_mod,
+        "n_combinacoes_varridas": len(load.combinacoes_ELU_fisicas()),
         # Comprimento efetivo (hipótese de restrição lateral)
         "l_1_m":         l_1,
         "l_ef_m":        round(l_ef, 3),
         "fator_l_ef":    0.9,           # EC5 Tab. 6.1 (dist. + restrição no topo)
         "restricao":     "continua_topo (terças fixadas ao banzo comprimido)",
         "tipo_carga":    "distribuida",
-        "l_ef_formula":  "l_ef = 0,9·l_1 (EC5 Tab. 6.1)",
+        # F-07 — nota da EC5 Tab. 6.1: carga na borda comprimida ⇒ +2h
+        "posicao_carga": posicao_carga,
+        "delta_posicao_h": _AJUSTE_POSICAO_CARGA[posicao_carga],
+        "l_ef_formula":  (
+            f"l_ef = 0,9·l_1 {_AJUSTE_POSICAO_CARGA[posicao_carga]:+g}·h "
+            f"(EC5 Tab. 6.1 + nota: carga em '{posicao_carga}')"
+        ),
         "l_1_origem":    ("espaçamento efetivo das terças validado pelo "
                           "contraventamento de cobertura (EC5 §9.2.5); sem "
                           "cobertura válida, l_1 = vão entre baías rígidas"),
         # Tensão crítica — EC5 §6.3.3(2) Eq. (6.32), com E_0,05
-        "E0_05_MPa":        round(mat.E0_05 / 1e6, 0),
+        "E0_05_MPa":        round(matc.E0_05 / 1e6, 0),
         "sigma_m_crit_MPa": round(sigma_crit / 1e6, 3),
         "sigma_m_crit_formula": "σ_m,crit = 0,78·b²·E_0,05/(h·l_ef)  (Eq. 6.32)",
         "lambda_rel_m":     round(lam_rel, 4),
@@ -265,7 +336,7 @@ def verifica_flambagem_lateral(
         "f_md_MPa":      round(f_md     / 1e6, 4),
         "resist_MPa":    round(resist   / 1e6, 4),
         # Momento
-        "M_max_ELU_kNm": round(gov.M_max_kNm, 2),
+        "M_max_ELU_kNm": round(comb.M_max_kNm, 2),
         # Resultado
         "eta":           round(eta, 4),
         "ok":            eta <= 1.0,
@@ -304,7 +375,6 @@ def varrer_flambagem_lateral(
     Returns:
         DataFrame com geometrias aprovadas, ordenado por η crescente
     """
-    l_ef = calcular_l_ef(l_1, restricao="continua_topo")
 
     h0_vals    = np.arange(*h0_range)
     alpha_vals = np.arange(*alpha_range)
@@ -326,6 +396,11 @@ def varrer_flambagem_lateral(
                 h_crit = geo.h_ap
 
                 # Tensão crítica de flambagem
+                # F-07: +2h da nota da EC5 Tab. 6.1 (depende de h).
+                l_ef = calcular_l_ef(
+                    l_1, restricao="continua_topo",
+                    posicao_carga="borda_comprimida", h_m=h_crit,
+                )
                 sigma_crit = calcular_sigma_m_crit(
                     mat.E0_05, float(b), h_crit, l_ef
                 )
@@ -448,7 +523,6 @@ def varrer_combinado(
         K_DIS, V0_KVOL
     )
 
-    l_ef = calcular_l_ef(l_1, restricao="continua_topo")
 
     h0_vals    = np.arange(*h0_range)
     alpha_vals = np.arange(*alpha_range)
@@ -482,6 +556,11 @@ def varrer_combinado(
                 eta_cum = sig_t90 / res_t90
 
                 # ── FLAMBAGEM LATERAL ─────────────────────────
+                # F-07: +2h da nota da EC5 Tab. 6.1 (depende de h).
+                l_ef = calcular_l_ef(
+                    l_1, restricao="continua_topo",
+                    posicao_carga="borda_comprimida", h_m=h_ap,
+                )
                 sig_crit = calcular_sigma_m_crit(
                     mat.E0_05, b_f, h_ap, l_ef
                 )

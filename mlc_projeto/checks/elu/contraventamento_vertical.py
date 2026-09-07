@@ -55,6 +55,11 @@ from __future__ import annotations
 
 import math
 
+# Exceção checks→checks deliberada e documentada (análoga a creep.py →
+# deflection.py e a contraventamento_transversal.py → este módulo): o α_cr de
+# sistema desta direção depende da rigidez dos painéis aqui dimensionados, e a
+# sua definição normativa (EN 1993-1-1 Eq. 5.2) vive em estabilidade_global.py.
+from mlc_projeto.checks.elu.estabilidade_global import alpha_cr_sistema
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.loads     import Carregamentos
 
@@ -238,6 +243,7 @@ def verificar_contraventamento_vertical(
     eta_alvo:       float = 0.90,
     drift_lim:      float = 300.0,
     R_ext_cobertura_kN: float | None = None,
+    V_Ed_total_kN: float | None = None,
 ) -> dict:
     """
     Verifica o contraventamento vertical LONGITUDINAL (paredes // cumeeira) que
@@ -263,6 +269,12 @@ def verificar_contraventamento_vertical(
         eta_alvo           : margem de projeto na escolha automática do diâmetro
         drift_lim          : limite de drift δ ≤ H_col/drift_lim
         R_ext_cobertura_kN : reação entregue pelo contraventamento da cobertura (kN)
+        V_Ed_total_kN : carga vertical de cálculo TOTAL estabilizada por estes
+                        painéis (kN). Quando informada, calcula-se o α_cr de
+                        SISTEMA desta direção (EN 1993-1-1 Eq. 5.2) a partir da
+                        rigidez dos próprios painéis e, se α_cr < 10, AMPLIFICA-SE
+                        a demanda lateral por k_II = 1/(1−1/α_cr) (§5.2.2(5)B)
+                        antes de dimensionar a diagonal — achado F-02.
 
     Returns:
         dict com demanda, painel verificado, caminho de carga, η, ok e o flag
@@ -291,27 +303,56 @@ def verificar_contraventamento_vertical(
         # coerência: a demanda por extremidade não pode ser menor que a reação
         # entregue pelo contraventamento da cobertura (soma nas duas extremidades)
         V_lat_total = max(V_lat_total, 2.0 * float(R_ext_cobertura_kN))
-    V_painel = V_lat_total / n_pan
-
-    # ── 4) Diâmetro (auto) e verificação do painel ────────────────────────────
+    # ── 4) Ponto fixo demanda ↔ rigidez ↔ 2.ª ordem (achado F-02) ─────────────
+    #      Sem V_Ed_total_kN mantém-se k_II = 1,0, mas então o α_cr de sistema
+    #      fica indeterminado e estabilidade_global.py recusa dispensar a 2.ª
+    #      ordem (a ausência de dado nunca é aprovação).
     g = geometria_painel(H_pilar_m, b_baia_long_m)
     d_auto = d_mm is None
-    if d_auto:
-        N_diag_req = V_painel / g["cos_beta"]
-        d_mm = escolher_diametro(N_diag_req, aco=aco, eta_alvo=eta_alvo)
-    d_mm = float(d_mm)
+    d_fixo = None if d_auto else float(d_mm)
 
-    painel = verifica_painel_vertical(
-        V_Ed_kN=V_painel, H_col_m=H_pilar_m, b_baia_m=b_baia_long_m,
-        d_mm=d_mm, aco=aco, drift_lim=drift_lim,
-    )
+    k_II = 1.0
+    acr = None
+    for _ in range(12):
+        V_painel = V_lat_total * k_II / n_pan
+
+        if d_auto:
+            N_diag_req = V_painel / g["cos_beta"]
+            d_mm = float(escolher_diametro(N_diag_req, aco=aco, eta_alvo=eta_alvo))
+        else:
+            d_mm = d_fixo
+
+        painel = verifica_painel_vertical(
+            V_Ed_kN=V_painel, H_col_m=H_pilar_m, b_baia_m=b_baia_long_m,
+            d_mm=d_mm, aco=aco, drift_lim=drift_lim,
+        )
+
+        if V_Ed_total_kN is None or float(V_Ed_total_kN) <= 0.0:
+            break
+
+        K_lat = painel["C_h_kNpm"] * n_pan
+        acr = alpha_cr_sistema(K_lat, H_pilar_m, float(V_Ed_total_kN))
+        k_novo = 1.0 if acr["regime"] == "1a_ordem" else acr["k_II"]
+        if not math.isfinite(k_novo):
+            break                      # mecanismo: reprova a jusante, não itera
+        if abs(k_novo - k_II) <= 1e-4:
+            k_II = k_novo
+            break
+        k_II = k_novo
+
+    K_lat_kNpm = painel["C_h_kNpm"] * n_pan
+    regime_acr = acr["regime"] if acr is not None else "nao_determinado"
+    amplificacao_aplicada = k_II > 1.0 + 1e-9
+    # Um painel que só "passa" sob amplificação inadmissível (α_cr < 3) ou num
+    # mecanismo não é um sistema de contraventamento válido.
+    regime_ok = regime_acr not in ("2a_ordem_rigorosa", "mecanismo")
 
     # ── 5) Quantitativo (2 diagonais por cruz) ────────────────────────────────
     n_diagonais = 2 * n_pan
     L_tot = n_diagonais * g["L_diag_m"]
     peso = L_tot * (math.pi * (d_mm / 1000) ** 2 / 4) * 7850.0
 
-    lateral_estavel_long = painel["ok"]
+    lateral_estavel_long = painel["ok"] and regime_ok
 
     return {
         "sistema": "Contraventamento vertical longitudinal (cruzes de St. André)",
@@ -352,9 +393,18 @@ def verificar_contraventamento_vertical(
         "eta_delta":     painel["eta_delta"],
         "ok_delta":      painel["ok_delta"],
 
+        # α_cr de sistema desta direção e 2.ª ordem (F-02)
+        "C_h_kNpm":      painel["C_h_kNpm"],
+        "K_lat_kNpm":    round(K_lat_kNpm, 1),
+        "alpha_cr":      None if acr is None else round(acr["alpha_cr"], 2),
+        "k_II":          round(k_II, 4),
+        "regime_alpha_cr": regime_acr,
+        "amplificacao_aplicada": amplificacao_aplicada,
+        "V_lat_amplificado_kN": round(V_lat_total * k_II, 3),
+
         # Resultado
         "eta":           painel["eta"],
-        "ok":            painel["ok"],
+        "ok":            painel["ok"] and regime_ok,
         "lateral_estavel_long": lateral_estavel_long,
 
         # Nota sobre a direção transversal (tratada em módulo próprio)

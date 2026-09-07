@@ -251,7 +251,7 @@ def verifica_pilar_governante(
     if fator_reacao <= 0:
         raise ValueError("fator_reacao deve ser > 0 (1=extremidade, 2=central)")
 
-    combos = load.combinacoes_ELU()
+    combos = load.combinacoes_ELU_fisicas()
     if not combos:
         raise ValueError("Nenhuma combinação ELU disponível para verificar o pilar")
 

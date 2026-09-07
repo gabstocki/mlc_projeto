@@ -85,7 +85,9 @@ def verifica_misula(
 
     # k_m,α por regime não depende de x (só de α e do material da combinação);
     # guardamos também os valores para a combinação governante de cada regime.
-    for comb in load.combinacoes_ELU().values():
+    # F-06: só as combinações FÍSICAS — os aliases ELU_C* duplicariam casos
+    # de carga e C3/C4 trariam uma duração fixada que não é a de origem.
+    for comb in load.combinacoes_ELU_fisicas().values():
         if abs(comb.q_esq) < 1e-12 and abs(comb.q_dir) < 1e-12:
             continue
         matc  = mat.com_duracao(comb.duracao)
@@ -139,6 +141,7 @@ def verifica_misula(
         "tan_alpha":    round(math.tan(alpha_rad), 5),
         # Governante
         "comb_gov":     best["comb"],
+        "n_combinacoes_varridas": len(load.combinacoes_ELU_fisicas()),
         "duracao":      best["duracao"],
         "regime":       best["regime"],       # 'compressao' | 'tracao'
         "x_gov_m":      round(best["x_m"], 3),

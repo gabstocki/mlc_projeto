@@ -83,7 +83,7 @@ def montar_quadro_cargas_fundacao(
         dict com as linhas do quadro, os totais e a declaração de escopo.
     """
     # Compressão: maior reação vertical de ELU; tração: menor (uplift).
-    N_comp = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU().values())
+    N_comp = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU_fisicas().values())
 
     # Empuxo do arco na base (0 na Opção B — o pilar birotulado não o transmite).
     H_arco = abs(float(load.H_ELU()))

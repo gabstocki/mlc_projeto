@@ -62,8 +62,9 @@ def test_estabilidade_sem_contravento_e_mecanismo():
     assert res["ok"] is False
     assert res["metodo_analise"] == "instavel_lateralmente"
     assert res["alpha_cr_sway"] == 0.0
-    # o α_cr de arco continua a existir como informativo (snap-through)
-    assert res["alpha_cr"] >= 10.0
+    # F-02: o α_cr de ARCO continua a existir, mas como INFORMATIVO — deixou de
+    # ser o critério de dispensa de 2.ª ordem (`alpha_cr` é agora o de sistema).
+    assert res["alpha_cr_arco"] >= 10.0
 
 
 def test_estabilidade_so_uma_direcao_ainda_mecanismo():
@@ -94,6 +95,10 @@ def test_estabilidade_com_contravento_dispensa_2a_ordem():
         H_pilar_m=7.0, b_pilar=0.22, h_pilar=0.26,
         contravento_vertical_ok=True,
         contravento_transversal_ok=True,
+        # F-02: α_cr de SISTEMA (EN 1993-1-1 Eq. 5.2) — rigidez real das cruzes
+        K_lat_long_kNpm=59417.0,
+        K_lat_transv_kNpm=8450.0,
+        V_Ed_total_kN=3586.0,
     )
     assert res["ok"] is True
     assert res["metodo_analise"] == "1a_ordem"
@@ -101,7 +106,9 @@ def test_estabilidade_com_contravento_dispensa_2a_ordem():
     assert res["non_sway_long"] is True
     assert res["non_sway_transv"] is True
     assert res["alpha_cr_sway"] > 1e5        # estabilidade provida pelos contraventos
-    assert res["alpha_cr"] >= 10.0           # modo arco
+    assert res["alpha_cr"] >= 10.0           # α_cr de SISTEMA (direção crítica)
+    assert res["direcao_critica"] == "transversal"
+    assert res["alpha_cr_arco"] >= 10.0      # modo arco (informativo)
     assert res["H_imp_over_H"] < 0.01        # nocional << empuxo
     assert res["w_over_f"] < 0.05
     assert res["H_imp_kN"] < 5.0

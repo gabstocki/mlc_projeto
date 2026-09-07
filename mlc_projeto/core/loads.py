@@ -179,6 +179,11 @@ class Combinacao:
     q_dir:           float = 0.0   # kN/m — meia-água direita
     padrao_vento:    str = ""      # id do padrão Tab.25 (se aplicável)
     H_rigido_kN:     float = 0.0   # kN   — empuxo Castigliano (apoio rígido; auditoria)
+    # F-01 (auditoria v2): componente HORIZONTAL, no plano do pórtico, da pressão
+    # de vento na cobertura. A pressão atua ⊥ à superfície inclinada; a projeção
+    # vertical já está em q_esq/q_dir, mas a horizontal não se cancela entre as
+    # duas águas quando w_esq ≠ w_dir. Positiva no sentido +x (apoio esq. → dir.).
+    H_cob_kN:        float = 0.0   # kN   — por pórtico, valor de CÁLCULO
 
 
 # ── Análise estrutural — viga biarticulada (MLC monolítica) ───────────────────
@@ -353,6 +358,48 @@ def analisar_biarticulada(
     }
 
 
+def componente_horizontal_cobertura(
+    w_esq: float,
+    w_dir: float,
+    L: float,
+    alpha_rad: float,
+) -> float:
+    """
+    Componente HORIZONTAL da pressão de vento na cobertura — achado F-01.
+
+    A pressão de vento atua perpendicularmente à superfície do telhado. Numa
+    água de inclinação α, a resultante ⊥ à superfície vale
+
+        F_⊥ = c · q · A_água ,      A_água = (L/2)/cos α · L_t
+
+    cuja componente VERTICAL é  F_⊥·cos α = c·q·(L/2)·L_t  — exatamente a carga
+    uniforme sobre a projeção horizontal que `analisar_biarticulada` recebe. A
+    componente HORIZONTAL é  F_⊥·sen α = c·q·(L/2)·L_t·tan α, e aponta em
+    sentidos OPOSTOS nas duas águas (as normais exteriores têm componentes
+    horizontais opostas). O resultante por pórtico é, portanto,
+
+        H_cob = (w_esq − w_dir) · (L/2) · tan α
+
+    com w em kN/m de projeção horizontal de cada meia-água. Só se anula quando
+    w_esq = w_dir; todos os padrões de Cpe da Tab. 10 e da Tab. 25 usados neste
+    projeto são assimétricos.
+
+    Cargas verticais simétricas (peso próprio, sobrecarga) cancelam-se nesta
+    diferença — como devem, por serem gravíticas e não normais à superfície.
+
+    Args:
+        w_esq, w_dir : cargas lineares nas meias-águas esq./dir. (kN/m)
+        L            : vão do pórtico (m)
+        alpha_rad    : inclinação do extradorso (rad)
+
+    Returns:
+        H_cob (kN), positivo no sentido +x (do apoio esquerdo para o direito).
+
+    Referência: equilíbrio de forças; NBR 6123 (campo de pressões ⊥ à superfície).
+    """
+    return (w_esq - w_dir) * (L / 2.0) * math.tan(alpha_rad)
+
+
 # ── Classe principal de carregamentos ────────────────────────────────────────
 
 @dataclass
@@ -501,9 +548,17 @@ class Carregamentos:
 
         def _comb(
             nome, tipo, desc, q_esq, q_dir, duracao, padrao: str = "",
+            w_esq_d: float = 0.0, w_dir_d: float = 0.0,
         ) -> Combinacao:
             r = self._analisar(q_esq=q_esq, q_dir=q_dir)
             q_med = 0.5 * (q_esq + q_dir)
+            # F-01: só a PRESSÃO DE VENTO é normal à superfície inclinada e gera
+            # componente horizontal. As parcelas gravíticas (G, Q) são verticais
+            # e não contribuem — por isso entram aqui as cargas de vento de
+            # cálculo, não q_esq/q_dir. Ver `componente_horizontal_cobertura`.
+            H_cob = componente_horizontal_cobertura(
+                w_esq_d, w_dir_d, self.geo.L, self.geo.alpha_rad,
+            )
             return Combinacao(
                 nome            = nome,
                 tipo            = tipo,
@@ -521,6 +576,7 @@ class Carregamentos:
                 H_rigido_kN     = r.get("H_rigido_kN", r["H_kN"]),
                 x_Mmax_m        = r["x_Mmax_m"],
                 duracao         = duracao,
+                H_cob_kN        = H_cob,
             )
 
         # ── Padrões de vento Tab.25 (θ=90°) ───────────────────
@@ -566,6 +622,7 @@ class Carregamentos:
                 GAMMA_G_sup * g + GAMMA_Q * we,
                 GAMMA_G_sup * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
+                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd,
             )
             c[c_w.nome] = c_w
             elu_vento.append(c_w)
@@ -582,6 +639,7 @@ class Carregamentos:
                 GAMMA_G_EQU_estab * g + GAMMA_Q * we,
                 GAMMA_G_EQU_estab * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
+                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd,
             )
             c[c_s.nome] = c_s
             elu_vento.append(c_s)
@@ -632,7 +690,7 @@ class Carregamentos:
             M_max_kNm=gov_m.M_max_kNm, M_cumeeira_kNm=gov_m.M_cumeeira_kNm,
             V_max_kN=gov_m.V_max_kN, N_viga_kN=gov_m.N_viga_kN,
             V_viga_kN=gov_m.V_viga_kN, H_kN=gov_m.H_kN,
-            H_rigido_kN=gov_m.H_rigido_kN,
+            H_rigido_kN=gov_m.H_rigido_kN, H_cob_kN=gov_m.H_cob_kN,
             x_Mmax_m=gov_m.x_Mmax_m, duracao=gov_m.duracao,
         )
         c["ELU_C3"] = Combinacao(
@@ -643,7 +701,7 @@ class Carregamentos:
             M_max_kNm=gov_s.M_max_kNm, M_cumeeira_kNm=gov_s.M_cumeeira_kNm,
             V_max_kN=gov_s.V_max_kN, N_viga_kN=gov_s.N_viga_kN,
             V_viga_kN=gov_s.V_viga_kN, H_kN=gov_s.H_kN,
-            H_rigido_kN=gov_s.H_rigido_kN,
+            H_rigido_kN=gov_s.H_rigido_kN, H_cob_kN=gov_s.H_cob_kN,
             x_Mmax_m=gov_s.x_Mmax_m, duracao="curta",
         )
         c["ELU_C4"] = Combinacao(
@@ -654,7 +712,7 @@ class Carregamentos:
             M_max_kNm=gov_h.M_max_kNm, M_cumeeira_kNm=gov_h.M_cumeeira_kNm,
             V_max_kN=gov_h.V_max_kN, N_viga_kN=gov_h.N_viga_kN,
             V_viga_kN=gov_h.V_viga_kN, H_kN=gov_h.H_kN,
-            H_rigido_kN=gov_h.H_rigido_kN,
+            H_rigido_kN=gov_h.H_rigido_kN, H_cob_kN=gov_h.H_cob_kN,
             x_Mmax_m=gov_h.x_Mmax_m, duracao="curta",
         )
 
@@ -724,6 +782,49 @@ class Carregamentos:
     def combinacoes_ELS(self) -> dict[str, Combinacao]:
         return {k: v for k, v in self._combinacoes.items()
                 if v.tipo == "ELS"}
+
+    #: Chaves que são PONTEIROS para outras combinações, não casos de carga
+    #: novos (ELU_C1 duplica ELU_Q; C2/C3/C4 apontam para governantes).
+    ALIASES_ELU = ("ELU_C1", "ELU_C2", "ELU_C3", "ELU_C4")
+
+    def combinacoes_ELU_fisicas(self) -> dict[str, Combinacao]:
+        """
+        As combinações ELU REAIS, sem os aliases — achado F-06.
+
+        É sobre este conjunto que cada verificação deve construir o seu
+        envelope. Os aliases duplicariam casos de carga e, em `ELU_C3`/`ELU_C4`,
+        trariam uma duração fixada que não é a da combinação de origem.
+        """
+        return {k: v for k, v in self._combinacoes.items()
+                if v.tipo == "ELU" and k not in self.ALIASES_ELU}
+
+    def envelope_ELU(self, fn, *, apenas_graviticas: bool = False):
+        """
+        Combinação que MAXIMIZA `fn(combinacao)`, e o valor — achado F-06.
+
+        Substitui o «envelope por procuração»: em vez de cada verificação ler a
+        combinação que maximiza |M_max| (que não maximiza `M_cumeeira`, nem
+        `R_v`, nem `σ_m/W`, e cuja duração impunha o k_mod a todas as outras),
+        cada uma passa a maximizar a SUA própria medida de demanda.
+
+        O chamador é responsável por incluir em `fn` o efeito da duração
+        (k_mod) da combinação — é justamente aí que estava a subestimação de
+        4,2 % medida no §6.4.3 na rota da Tabela 25.
+
+        Args:
+            fn : callable(Combinacao) -> float, a medida a maximizar.
+            apenas_graviticas : restringe às combinações de sentido gravítico.
+
+        Returns:
+            (Combinacao, valor) da combinação governante.
+        """
+        cands = list(self.combinacoes_ELU_fisicas().values())
+        if apenas_graviticas:
+            cands = [c for c in cands if c.q_tot > 0] or cands
+        if not cands:
+            raise ValueError("Não há combinações ELU para construir o envelope.")
+        melhor = max(cands, key=fn)
+        return melhor, float(fn(melhor))
 
     def tabela_combinacoes(self) -> list[dict]:
         """
@@ -802,9 +903,10 @@ class Carregamentos:
         """
         if "ELU_C2" in self._combinacoes and self._combinacoes["ELU_C2"].q_tot > 0:
             return self._combinacoes["ELU_C2"]
-        cands = [c for c in self.combinacoes_ELU().values() if c.q_tot > 0]
+        cands = [c for c in self.combinacoes_ELU_fisicas().values()
+                 if c.q_tot > 0]
         if not cands:
-            cands = list(self.combinacoes_ELU().values())
+            cands = list(self.combinacoes_ELU_fisicas().values())
         return max(cands, key=lambda c: abs(c.M_max_kNm))
 
     def combinacao_ELU_succao(self) -> Combinacao:
@@ -845,7 +947,7 @@ class Carregamentos:
         pode elevar V = R_A·cosθ − H·senθ. Usada na verificação de cisalhamento
         (§6.1.7), referida ao eixo da peça (issue 12).
         """
-        cands = list(self.combinacoes_ELU().values())
+        cands = list(self.combinacoes_ELU_fisicas().values())
         return max(cands, key=lambda c: abs(c.V_viga_kN))
 
     def V_viga_max_ELU(self) -> float:
@@ -855,6 +957,23 @@ class Carregamentos:
     def H_ELU(self) -> float:
         """Empuxo horizontal EFETIVO na fundação — ELU governante (0 na Opção B)."""
         return self.combinacao_ELU_governante().H_kN
+
+    def combinacao_H_cobertura_max(self) -> Combinacao:
+        """Combinação que maximiza |H_cob| (componente horizontal da cobertura)."""
+        return max(
+            self.combinacoes_ELU_fisicas().values(),
+            key=lambda c: abs(c.H_cob_kN)
+        )
+
+    def H_cobertura_max_ELU(self) -> float:
+        """
+        Envelope de |H_cob| POR PÓRTICO entre as combinações ELU (kN, de cálculo).
+
+        Achado F-01 da auditoria adversarial v2: componente horizontal da pressão
+        de vento na cobertura. Alimenta o contraventamento transversal e o
+        caminho de carga até a fundação. Ver `componente_horizontal_cobertura`.
+        """
+        return abs(self.combinacao_H_cobertura_max().H_cob_kN)
 
     def H_rigido_ELU(self) -> float:
         """Empuxo Castigliano de apoio RÍGIDO — ELU governante (auditoria issue 38;

@@ -125,6 +125,10 @@ def verificar_icamento(
     sig_c = N_c * 1e3 / A_mid if A_mid > 0 else 0.0
 
     # ── Flambagem lateral (LTB) no vão entre pontos ───────────
+    # F-07: no ICAMENTO a ação é o peso próprio, que atua no CENTRO DE GRAVIDADE
+    # da seção — não é o caso «carga na borda comprimida» da nota da EC5 Tab. 6.1,
+    # logo não se acrescenta 2h. A viga pende das lingas (suspensão acima do
+    # centro de corte), condição estabilizante e não desestabilizante.
     l_ef = L - 2.0 * a_rel * L                       # sem contraventamento
     sig_crit = calcular_sigma_m_crit(E005, b, h_ap, l_ef)
     lam_rel_m = calcular_lambda_rel_m(f_m_k, sig_crit)

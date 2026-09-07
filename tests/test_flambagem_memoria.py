@@ -33,11 +33,18 @@ def test_memoria_expoe_todos_os_valores():
         assert k in r, f"faltou {k}"
 
 
-def test_l_ef_igual_09_l1():
-    """l_ef = 0,9·l_1 (EC5 Tab. 6.1, restrição contínua no topo + carga dist.)."""
+def test_l_ef_igual_09_l1_mais_2h():
+    """
+    l_ef = 0,9·l_1 + 2h — EC5 Tab. 6.1 (restrição contínua no topo + carga
+    distribuída) MAIS a nota da tabela: as terças carregam a borda COMPRIMIDA
+    (achado F-07). A razão crua só se aplica a carga no centro de gravidade.
+    """
     _, _, r = _res(l_1=2.53)
-    assert r["l_ef_m"] == pytest.approx(0.9 * 2.53, abs=1e-3)
-    assert calcular_l_ef(2.53) == pytest.approx(0.9 * 2.53)
+    assert r["l_ef_m"] == pytest.approx(0.9 * 2.53 + 2 * r["h_crit_m"], abs=1e-3)
+    assert r["posicao_carga"] == "borda_comprimida"
+    assert calcular_l_ef(2.53, posicao_carga="centro_gravidade") == pytest.approx(
+        0.9 * 2.53)
+    assert calcular_l_ef(2.53, h_m=2.0) == pytest.approx(0.9 * 2.53 + 4.0)
 
 
 def test_sigma_crit_e_lambda_consistentes():

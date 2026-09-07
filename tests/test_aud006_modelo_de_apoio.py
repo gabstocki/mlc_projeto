@@ -123,6 +123,11 @@ def test_diagonal_mais_rigida_atrai_mais_empuxo():
 
 def _estab(**kw):
     geo, mat, load = _modelo()
+    # F-02: o α_cr de sistema exige a rigidez lateral declarada; sem ela a
+    # verificação recusa dispensar a 2.ª ordem (ver test_f02_alpha_cr_sistema).
+    kw.setdefault("K_lat_long_kNpm", 59417.0)
+    kw.setdefault("K_lat_transv_kNpm", 8450.0)
+    kw.setdefault("V_Ed_total_kN", 3586.0)
     return verificar_estabilidade_global(
         geo, mat, load, H_pilar_m=7.0, b_pilar=0.32, h_pilar=0.27,
         contravento_vertical_ok=True, contravento_transversal_ok=True, **kw,

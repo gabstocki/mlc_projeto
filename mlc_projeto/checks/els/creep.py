@@ -257,7 +257,6 @@ def varrer_acumulado(
     )
     from mlc_projeto.checks.elu.apoio import f_c_alpha_d
 
-    l_ef       = calcular_l_ef(l_1, restricao="continua_topo")
     k_def      = mat.k_def
     lim_inst   = L / 300
     lim_fin    = L / 250
@@ -297,6 +296,11 @@ def varrer_acumulado(
                 eta_cum = sig_t90 / (K_DIS * k_vol * mat.f_t90_d)
 
                 # ── 2. FLAMBAGEM LATERAL §6.3.3 ───────────────
+                # F-07: +2h da nota da EC5 Tab. 6.1 (depende de h).
+                l_ef = calcular_l_ef(
+                    l_1, restricao="continua_topo",
+                    posicao_carga="borda_comprimida", h_m=h_ap,
+                )
                 sig_crit = calcular_sigma_m_crit(
                     mat.E0_05, b_f, h_ap, l_ef
                 )
