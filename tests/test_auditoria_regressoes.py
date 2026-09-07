@@ -371,14 +371,17 @@ def test_aud_017_sapata_expoe_verificacao_completa_de_ancoragem():
     assert r["modos_en_1992_4_pendentes"], "os modos de rotura devem ser listados"
 
     # Com o conjunto completo de dados certificados: contrato cumprido.
+    # O contrato mudou de PÓS-INSTALADO para MOLDADO COM CABEÇA (decisão de
+    # projeto): não há ETA de produto — o lado do concreto é coberto pelos
+    # modelos da norma — e passa a exigir a área de apoio da cabeça.
     completo = dimensionar_sapata(load, geo, dados_ancoragem={
-        "eta_produto": "ETA-XX/XXXX",
-        "h_ef_mm": 200.0,
-        "c_borda_mm": 150.0,
-        "s_grupo_mm": 200.0,
+        "h_ef_mm": 400.0,
+        "A_cabeca_mm2": 2375.0,
+        "c_borda_mm": 600.0,
+        "s_grupo_mm": 400.0,
         "classe_concreto": "C25/30",
         "concreto_fissurado": True,
-        "verificacao_en1992_4": "memoria externa rev.0",
+        "verificacao_en1992_4": "CEN/TS 1992-4-2:2009 §6.2.4/6.2.5/6.3.4/6.4",
     })
     assert completo["en_1992_4_verificado"] is True
     assert completo["produto_chumbador_verificado"] is True

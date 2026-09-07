@@ -275,6 +275,43 @@ F_CHU_KN    = 80.0     # kN — resistência por chumbador (L3)
 # contraventamento (~4,4× a demanda da extremidade). Com 4 painéis longitudinais
 # a demanda é 371,3 kN ⇒ 371,3/(80·0,90) = 5,2 ⇒ 6 chumbadores.
 N_CHU_CANTO = 6        # chumbadores na base de canto (contraventada)
+# Ancoragem por chumbadores MOLDADOS COM CABEÇA (cast-in headed) — decisão de
+# projeto. O lado do concreto fica coberto pelos modelos da EN 1992-4, sem
+# depender de ETA de produto; o lado do aço é a barra roscada (EN 1993-1-8).
+D_CHU_MM    = 24       # mm — barra roscada M24
+CLASSE_CHU  = "8.8"    # classe do aço da barra
+# CHAVETA de cisalhamento sob a chapa de base do canto. No caso governante a
+# base está TRACIONADA: sem compressão não há atrito, e os 236 kN de cortante
+# dos painéis iriam integralmente para os chumbadores, somando-se à tração na
+# interação. A chaveta desacopla os dois efeitos — e passa a exigir a sua
+# própria verificação de esmagamento do concreto (pendente, EN 1992-1-1 §6.7).
+CHAVETA_CISALHAMENTO_CANTO = True
+# Geometria da ancoragem do canto — governada pelo CONE de arrancamento
+# (CEN/TS 1992-4-2:2009 §6.2.5). Constatação do dimensionamento: aumentar h_ef
+# com borda e espaçamento fixos PIORA o resultado, porque A_c,N fica truncado
+# por c e s enquanto A⁰_c,N = (3·h_ef)² cresce ao quadrado. Quem governa é o
+# TAMANHO DO BLOCO, não a profundidade. O cone só se desenvolve com
+# c ≥ 1,5·h_ef; adota-se o par no limite dessa condição.
+#   c=450 h_ef=300 s=400 → η=0,844 | bloco ~1,30×1,70 m
+#   c=600 h_ef=400 s=400 → η=0,673 | bloco ~1,60×2,00 m   ← adotado
+#   c=800 h_ef=533 s=400 → η=0,518 | bloco ~2,00×2,40 m
+H_EF_CHU_MM      = 400.0   # embutimento efetivo
+C_BORDA_CHU_MM   = 600.0   # distância à borda EXIGIDA da fundação (= 1,5·h_ef)
+S_GRUPO_CHU_MM   = 400.0   # espaçamento do grupo
+A_CABECA_CHU_MM2 = 2375.0  # área de apoio da cabeça (d_h≈60 mm para M24)
+LAYOUT_CHU       = (2, 3)  # 6 chumbadores em 2×3
+CLASSE_CONC_FUND = "C25/30"
+CONCRETO_FISSURADO = True  # base tracionada → zona fissurada
+# Contrato de ancoragem partilhado pelas verificações (sem ETA — moldado).
+DADOS_ANCORAGEM = {
+    "h_ef_mm": H_EF_CHU_MM,
+    "A_cabeca_mm2": A_CABECA_CHU_MM2,
+    "c_borda_mm": C_BORDA_CHU_MM,
+    "s_grupo_mm": S_GRUPO_CHU_MM,
+    "classe_concreto": CLASSE_CONC_FUND,
+    "concreto_fissurado": CONCRETO_FISSURADO,
+    "verificacao_en1992_4": "EN 1992-4:2018 §7.2.1.4/7.2.1.5/7.4.1.4/7.2.3",
+}
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 L_AP        = 0.90     # m — comprimento da placa de apoio
 
@@ -1030,6 +1067,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         com_tirante=TIRANTE_BASE,
         b_pilar_m=B_PILAR,
         h_pilar_m=H_PILAR,
+        dados_ancoragem=DADOS_ANCORAGEM,
     )
     # Sem L2 (cumeeira): peça monolítica contínua no ápice (issue 25).
     for key, label in [
@@ -1228,6 +1266,10 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         # Ancoragem PRÓPRIA do canto: dimensionada pelo uplift + downloads dos
         # dois painéis, e não pelo mínimo construtivo das demais bases.
         n_chu_canto=N_CHU_CANTO,
+        # Cortante que os painéis entregam à base de canto, na mesma combinação
+        # de vento que produz o arrancamento (antes não era verificado).
+        V_brace_kN=float(cvv["H_base_kN"]) + float(cvt["H_base_kN"]),
+        chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
     )
     res_elu["succao_uplift"] = res_succao
     _print_eta("Sucção/uplift (ancoragem)", res_succao)
@@ -1243,6 +1285,38 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"N={res_succao['N_uplift_ext_kN']:.1f}+{res_succao['N_brace_anc_kN']:.1f}="
           f"{res_succao['N_uplift_canto_kN']:.1f} kN → η_canto={res_succao['eta_canto']:.3f} "
           f"| governa: {res_succao['base_gov']}")
+
+    # ── Ancoragem do canto — chumbadores moldados com cabeça ───────────────
+    from mlc_projeto.connections.ancoragem import verificar_grupo_ancoragem
+    res_elu["ancoragem_canto"] = verificar_grupo_ancoragem(
+        N_Ed_kN=float(res_succao["N_uplift_canto_kN"]),
+        V_Ed_kN=float(res_succao["V_canto_kN"]),
+        n_chumbadores=N_CHU_CANTO,
+        d_mm=D_CHU_MM, classe=CLASSE_CHU,
+        chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
+        layout=LAYOUT_CHU,
+        dados_concreto=DADOS_ANCORAGEM,
+    )
+    _anc = res_elu["ancoragem_canto"]
+    print("\n[FASE 4d] Ancoragem do canto — chumbadores moldados com cabeça...")
+    _print_eta("Ancoragem canto (aço)", _anc)
+    print(f"  · {_anc['n_chumbadores']}×M{_anc['d_mm']} classe {_anc['classe']} | "
+          f"N_Rd={_anc['N_Rd_grupo_kN']:.0f} kN | V_Rd={_anc['V_Rd_grupo_kN']:.0f} kN "
+          f"(γ_Ms={_anc['gamma_Ms']})")
+    print(f"  · N_Ed={_anc['N_Ed_kN']:.1f} kN | V_Ed={_anc['V_Ed_kN']:.1f} kN "
+          f"→ chaveta={'sim' if _anc['chaveta_cisalhamento'] else 'não'}, "
+          f"V nos chumbadores={_anc['V_nos_chumbadores_kN']:.1f} kN")
+    print(f"  · η_N={_anc['eta_N']:.3f} | η_V={_anc['eta_V']:.3f} | "
+          f"η_interação={_anc['eta_interacao']:.3f} → aço {'OK' if _anc['ok_aco'] else 'FALHA'}")
+    print(f"  · Concreto: h_ef={H_EF_CHU_MM:.0f} c={C_BORDA_CHU_MM:.0f} "
+          f"s={S_GRUPO_CHU_MM:.0f} mm | N_Rd,cone={_anc['N_Rd_cone_kN']:.0f} kN | "
+          f"N_Rd,pull-out={_anc['N_Rd_pullout_kN']:.0f} kN → governa {_anc['modo_concreto_gov']}")
+    print(f"  · β_N={_anc['beta_N']:.3f} | β_V={_anc['beta_V']:.3f} | "
+          f"η_concreto={_anc['eta_concreto']:.3f} ({_anc['norma_concreto']})")
+    print(f"  ⚠ Ainda pendentes: {', '.join(_anc['modos_ainda_pendentes'])}")
+    print(f"  ⚠ A fundação deve garantir bloco com c ≥ {C_BORDA_CHU_MM:.0f} mm "
+          f"em torno do grupo (≈ {(S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f}×"
+          f"{(2*S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f} m em planta)")
 
     # ── Quadro de cargas para a fundação ───────────────────────────────────
     # O projeto NÃO dimensiona fundações (não há sondagem). O entregável é o

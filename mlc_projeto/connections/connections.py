@@ -1022,14 +1022,12 @@ def _dimensionar_chapa_base(
 
 # ── Contrato de verificação de ancoragem — AUD-017 ───────────────────────────
 
-CAMPOS_ANCORAGEM_OBRIGATORIOS = (
-    "eta_produto",           # referência do ETA / laudo do chumbador
-    "h_ef_mm",               # profundidade efetiva de embutimento
-    "c_borda_mm",            # menor distância à borda
-    "s_grupo_mm",            # menor espaçamento do grupo
-    "classe_concreto",       # p.ex. "C25/30"
-    "concreto_fissurado",    # bool — governa k_cr em EN 1992-4
-    "verificacao_en1992_4",  # referência do cálculo/relatório que a cumpriu
+# Fonte única: o contrato é o do módulo de ancoragem, para não divergir.
+# Com chumbador MOLDADO COM CABEÇA não há ETA de produto — o que se exige é a
+# geometria que alimenta os modelos de CEN/TS 1992-4-2 / EN 1992-4.
+from mlc_projeto.connections.ancoragem import (  # noqa: E402
+    CAMPOS_CONCRETO_OBRIGATORIOS as CAMPOS_ANCORAGEM_OBRIGATORIOS,
+    MODOS_CONCRETO_EN1992_4,
 )
 
 
@@ -1062,15 +1060,7 @@ def _estado_ancoragem(dados: dict | None) -> dict:
         "produto_chumbador_verificado": completo,
         "status_ancoragem":             "VERIFICADO" if completo else "NOT VALIDATED",
         "dados_ancoragem_faltando":     faltando,
-        "modos_en_1992_4_pendentes": [] if completo else [
-            "cone de arrancamento (concrete cone)",
-            "pull-out do chumbador",
-            "pry-out sob corte",
-            "rotura de borda sob corte (edge breakage)",
-            "efeito de grupo e espaçamentos",
-            "interação tração-corte",
-            "concreto fissurado / não fissurado",
-        ],
+        "modos_en_1992_4_pendentes": [] if completo else list(MODOS_CONCRETO_EN1992_4),
     }
 
 
@@ -1244,6 +1234,7 @@ def dimensionar_ligacoes(
     com_tirante:  bool = False,
     b_pilar_m:    float = 0.32,
     h_pilar_m:    float = 0.27,
+    dados_ancoragem: dict | None = None,
 ) -> dict:
     """
     Dimensiona as ligações do pórtico (biarticulada): L1 (base) e L3 (sapata).
@@ -1263,6 +1254,7 @@ def dimensionar_ligacoes(
         load, geo, F_chu_kN=F_chu_kN, eta_alvo=eta_alvo,
         com_tirante=com_tirante,
         b_pilar_m=b_pilar_m, h_pilar_m=h_pilar_m,
+        dados_ancoragem=dados_ancoragem,
     )
 
     eta_gov = max(L1["eta"], L3["eta"])

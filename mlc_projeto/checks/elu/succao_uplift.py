@@ -68,6 +68,8 @@ def verificar_succao_uplift(
     g_ms2:         float = G_GRAVIDADE,
     N_brace_anc_kN: float = 0.0,
     n_chu_canto: int | None = None,
+    V_brace_kN: float = 0.0,
+    chaveta_cisalhamento: bool = False,
 ) -> dict:
     """
     Verifica a combinação de sucção: uplift na ancoragem e empuxo invertido
@@ -146,9 +148,24 @@ def verificar_succao_uplift(
     # Base de CANTO (montante de contraventamento): soma a tração do download
     # Σ V_Ed·tanβ, concomitante ao uplift de sucção (mesmo vento) — issue 36.
     N_brace = max(0.0, float(N_brace_anc_kN))
+    # ── Cortante na base de canto ────────────────────────────────────────
+    # Os painéis de contraventamento entregam à MESMA base, na mesma combinação
+    # de vento, uma força horizontal (H_base do painel longitudinal + do
+    # frontão) além do arrancamento. Antes, só o empuxo do arco (`V_base_ext`)
+    # entrava aqui — e ele é NULO na Opção B, pelo que o cortante do
+    # contraventamento simplesmente não era verificado.
+    #
+    # Não há atrito a ajudar: no caso governante a base está TRACIONADA, sem
+    # compressão sob a chapa. O cortante tem de ir pelos chumbadores ou por uma
+    # chaveta. Com `chaveta_cisalhamento=True` o corte é transmitido pela
+    # chaveta e desacoplado das barras — mas a chaveta passa a exigir a sua
+    # própria verificação de esmagamento do concreto.
+    V_canto = V_base_ext + max(0.0, float(V_brace_kN))
+    V_canto_nos_chumbadores = 0.0 if chaveta_cisalhamento else V_canto
+
     N_uplift_canto = N_uplift_ext + N_brace
     eta_N_canto = N_uplift_canto / R_anc_canto
-    eta_canto = eta_N_canto + V_base_ext / R_anc_canto     # + cortante do empuxo inv.
+    eta_canto = eta_N_canto + V_canto_nos_chumbadores / R_anc_canto
 
     eta_gov = max(eta_ext, eta_cen, eta_canto)
     if N_brace > 0.0 and eta_canto >= eta_ext and eta_canto >= eta_cen:
@@ -189,6 +206,9 @@ def verificar_succao_uplift(
         "N_brace_anc_kN":     round(N_brace, 3),
         "N_uplift_canto_kN":  round(N_uplift_canto, 3),
         "n_chu_canto":        _n_canto,
+        "V_canto_kN":         round(V_canto, 3),
+        "V_canto_nos_chumbadores_kN": round(V_canto_nos_chumbadores, 3),
+        "chaveta_cisalhamento": bool(chaveta_cisalhamento),
         "R_anc_canto_kN":     round(R_anc_canto, 3),
         "eta_N_canto":        round(eta_N_canto, 4),
         "eta_canto":          round(eta_canto, 4),
