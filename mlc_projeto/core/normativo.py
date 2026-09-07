@@ -118,6 +118,16 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
         "L/500", "não normalizado", "PROJETO",
         "o EC5 não fixa limite para a abertura dos apoios; ver AUD-006"),
 
+    # ── EN 1992-1-1 — concreto sob a chapa de base ───────────────────────
+    "alpha_cc": _p(1.00, "EN 1992-1-1 §3.1.6(1)", "EN-recomendado",
+                   "efeitos de longa duração na resistência à compressão"),
+    "gamma_C":  _p(1.50, "EN 1992-1-1 Tab. 2.1N", "EN-recomendado",
+                   "coeficiente parcial do concreto, situações persistentes"),
+    "k_confinamento_apoio": _p(
+        1.00, "EN 1992-1-1 §6.7", "PROJETO",
+        "√(A_c1/A_c0) ≤ 3,0; adotado 1,0 (sem ganho) por não se conhecer a "
+        "geometria da sapata — elevá-lo exige dimensionar a fundação"),
+
     # ── Ações de vento ───────────────────────────────────────────────────
     "norma_vento": _p(NORMA_VENTO, "ABNT NBR 6123:2023", "ABNT",
                       "edição única adotada; ver AUD-001 a AUD-005"),

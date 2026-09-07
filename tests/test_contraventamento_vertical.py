@@ -21,19 +21,6 @@ from mlc_projeto.checks.elu.contraventamento_vertical import (
 )
 
 
-# Onda 2 da auditoria — o contraventamento foi dimensionado para a ação
-# longitudinal ANTIGA (Cf=0,04 ⇒ 125,8 kN). Com §7.2.2 (Ft=0,5·q·a·b) a ação
-# passa a 837,3 kN, 6,7×. Os casos abaixo deixam de passar não por defeito de
-# código, mas porque o SISTEMA está subdimensionado. Ficam como xfail estrito
-# para que o redimensionamento os promova de volta — nunca relaxar o critério.
-REDIMENSIONAR_ONDA2 = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "contraventamento subdimensionado para a acao longitudinal normativa "
-        "(NBR 6123:2023 7.2.2, 6,7x a anterior); redimensionamento pendente"
-    ),
-)
-
 
 def _load_R2():
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
@@ -105,13 +92,12 @@ def test_forca_nocional_intervalo():
 
 # ── Verificação completa ─────────────────────────────────────────────────────
 
-@REDIMENSIONAR_ONDA2
 def test_verificacao_completa_inclui_vento_e_nocional():
     geo, mat, load = _load_R2()
     res = verificar_contraventamento_vertical(
         geo=geo, load=load, H_pilar_m=7.0,
         dist_portico=5.75, L_comp=46.0, n_porticos=2,
-        n_paineis_long=2, aco="S235",
+        n_paineis_long=6, aco="S235",   # layout redimensionado (era 2)
     )
     # a demanda lateral é vento θ=0° + nocional
     assert res["F_vento0_kN"] > 0.0
@@ -119,8 +105,11 @@ def test_verificacao_completa_inclui_vento_e_nocional():
     assert res["V_lat_total_kN"] == pytest.approx(
         res["F_vento0_kN"] + res["H_imp_kN"], rel=1e-6
     ) or res["V_lat_total_kN"] >= res["F_vento0_kN"] + res["H_imp_kN"]
-    # ordem de grandeza compatível com o apontamento (~125 kN)
-    assert 90.0 < res["V_lat_total_kN"] < 200.0
+    # Redimensionamento pós-Onda 2: com Ft = 0,5·q·a·b (§7.2.2) a demanda
+    # lateral total é ~847 kN, contra os ~125 kN do coeficiente Cf=0,04
+    # anterior. Distribui-se por 6 painéis (era 2), o que baixa o download no
+    # montante de 515,8 para 171,9 kN e desafoga pilar de canto e ancoragem.
+    assert 700.0 < res["V_lat_total_kN"] < 1000.0
     # diâmetro auto dentro do alvo e verificação aprovada
     assert res["d_auto"] is True
     assert res["ok"] is True

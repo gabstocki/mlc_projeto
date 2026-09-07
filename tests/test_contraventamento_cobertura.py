@@ -18,19 +18,6 @@ from mlc_projeto.checks.elu.contraventamento import (
 )
 
 
-# Onda 2 da auditoria — o contraventamento foi dimensionado para a ação
-# longitudinal ANTIGA (Cf=0,04 ⇒ 125,8 kN). Com §7.2.2 (Ft=0,5·q·a·b) a ação
-# passa a 837,3 kN, 6,7×. Os casos abaixo deixam de passar não por defeito de
-# código, mas porque o SISTEMA está subdimensionado. Ficam como xfail estrito
-# para que o redimensionamento os promova de volta — nunca relaxar o critério.
-REDIMENSIONAR_ONDA2 = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "contraventamento subdimensionado para a acao longitudinal normativa "
-        "(NBR 6123:2023 7.2.2, 6,7x a anterior); redimensionamento pendente"
-    ),
-)
-
 
 def _res(d_barra=22.0):
     geo = GeometriaViga(L=20.25, h0=1.00, alpha_deg=10.0, b=0.32)
@@ -91,22 +78,28 @@ def test_sem_duplicacao_forca():
         assert r["F_diag_kN"] == pytest.approx(F_diag_esperado, rel=1e-3)
 
 
-@REDIMENSIONAR_ONDA2
-def test_diagonal_22mm_passa_e_cobertura_ok():
-    """Com k_f,3=30 (correto) a Ø22 mm passa e a cobertura valida a LTB."""
-    r = _res(d_barra=22.0)
+def test_diagonal_28mm_passa_e_cobertura_ok():
+    """Ø28 mm (redimensionada) passa e a cobertura valida a restrição das terças.
+
+    Redimensionamento pós-Onda 2: com a ação longitudinal normativa (§7.2.2) a
+    Ø22 passou a dar η=1,280 E deixou de validar a restrição lateral — o l_1 da
+    flambagem lateral saltava de s=2,53 m para ℓ=46 m. Varredura: Ø25 → 0,991
+    (sem margem); Ø28 → 0,790 ← adotada; Ø30 → 0,688.
+    """
+    r = _res(d_barra=28.0)
     assert r["eta_diag_N"] < 1.0
     assert r["cobertura_ok"] is True
     assert r["l_1_efetivo_m"] == pytest.approx(2.53, abs=1e-6)  # terças válidas
 
 
-@REDIMENSIONAR_ONDA2
-def test_18mm_passa_com_empuxo_corrigido():
+def test_diametros_insuficientes_reprovam():
+    """Ø18 e Ø22 NÃO servem sob a ação longitudinal normativa.
+
+    Guarda contra regressão do dimensionamento: se alguém reduzir o diâmetro
+    de volta, o η tem de reprovar e a cobertura deixa de validar a restrição
+    lateral das terças. Nunca relaxar estes limites.
     """
-    Empuxo corrigido (termo axial de Castigliano) ⇒ menor compressão na viga ⇒
-    menor força de estabilização §9.2.5 ⇒ a Ø18 mm passa (η<1).
-    NOTA DE PROJETO: a justificativa de resistência para Ø22 mm deixa de valer;
-    se Ø22 for mantida, é por outro critério (Ø mínimo/esbeltez), não por η_N.
-    """
-    r = _res(d_barra=18.0)
-    assert r["eta_diag_N"] < 1.0
+    for d in (18.0, 22.0):
+        r = _res(d_barra=d)
+        assert r["eta_diag_N"] > 1.0, f"Ø{d:.0f} deveria reprovar"
+        assert r["cobertura_ok"] is False

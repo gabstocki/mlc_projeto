@@ -109,6 +109,15 @@ def aplicar_criterio_eta(
 
     Modo frágil → η_limite = eta_alvo (0,75); senão → η_limite = 1,0.
     Preserva `ok_alvo` (η ≤ 0,75) para transparência mesmo nas exceções.
+
+    O critério de η só pode ACRESCENTAR motivo de reprovação, nunca remover um
+    existente: `ok` é conjugado com o valor que a verificação já tinha. Antes,
+    esta função recalculava `ok` exclusivamente a partir de η e apagava
+    qualquer outro bloqueio — foi assim que o `status_ancoragem="NOT VALIDATED"`
+    de `dimensionar_sapata` (AUD-017) chegava ao memorial como aprovado, com
+    η = 0 a "passar" no limite. É exatamente o mecanismo de falsa aprovação que
+    AUD-016 descreve; qualquer verificação com η baixo e bloqueio não numérico
+    estava sujeita a ele.
     """
     cls = classificar_criterio_eta(modo_fragil, eta_alvo)
     res.update(cls)
@@ -116,6 +125,8 @@ def aplicar_criterio_eta(
     ok = eta <= cls["eta_limite"] + 1e-9
     if "ok_geometria" in res:
         ok = ok and bool(res["ok_geometria"])
+    # Nunca promover um `ok` que já era False.
+    ok = ok and bool(res.get("ok", True))
     res["ok"] = ok
     res["ok_alvo"] = eta <= eta_alvo + 1e-9
     return res
@@ -924,6 +935,91 @@ def dimensionar_ligacao_base(
 
 # ── LIGAÇÃO 3 — Sapata na fundação ───────────────────────────────────────────
 
+# ── Apoio da chapa de base no concreto — EN 1992-1-1 ─────────────────────────
+
+# f_ck (MPa) por classe de resistência — EN 1992-1-1 Tab. 3.1.
+F_CK_CLASSE = {
+    "C12/15": 12.0, "C16/20": 16.0, "C20/25": 20.0, "C25/30": 25.0,
+    "C30/37": 30.0, "C35/45": 35.0, "C40/50": 40.0, "C45/55": 45.0,
+    "C50/60": 50.0,
+}
+ALPHA_CC = 1.0    # EN 1992-1-1 §3.1.6(1) — valor recomendado (NDP)
+GAMMA_C  = 1.5    # EN 1992-1-1 Tab. 2.1N — valor recomendado (NDP)
+
+
+def resistencia_apoio_concreto(
+    classe_concreto: str,
+    k_confinamento: float = 1.0,
+) -> dict:
+    """
+    Resistência de apoio sob a chapa de base — EN 1992-1-1 §3.1.6 e §6.7.
+
+        f_cd  = α_cc · f_ck / γ_C
+        f_Rdu = k_conf · f_cd,    com k_conf = √(A_c1/A_c0) ≤ 3,0   (§6.7)
+
+    `k_confinamento` traduz o ganho por área parcialmente carregada: a difusão
+    da carga no bloco de concreto permite tensão de apoio superior a f_cd. Esse
+    ganho depende das dimensões da SAPATA (A_c1), que este módulo não conhece —
+    por isso o default é 1,0, sem ganho. Elevá-lo exige geometria da fundação e
+    o cumprimento das regras de difusão de §6.7.
+    """
+    if classe_concreto not in F_CK_CLASSE:
+        raise ValueError(
+            f"classe_concreto={classe_concreto!r} desconhecida. "
+            f"Opções: {', '.join(sorted(F_CK_CLASSE))}."
+        )
+    if not (1.0 <= k_confinamento <= 3.0):
+        raise ValueError("k_confinamento deve estar em [1,0; 3,0] — §6.7.")
+    f_ck = F_CK_CLASSE[classe_concreto]
+    f_cd = ALPHA_CC * f_ck / GAMMA_C
+    return {
+        "classe_concreto": classe_concreto,
+        "f_ck_MPa": f_ck,
+        "f_cd_MPa": round(f_cd, 3),
+        "k_confinamento": k_confinamento,
+        "f_Rdu_MPa": round(k_confinamento * f_cd, 3),
+        "norma": "EN 1992-1-1 §3.1.6 (f_cd) + §6.7 (área parcialmente carregada)",
+    }
+
+
+def _dimensionar_chapa_base(
+    N_d_kN: float,
+    b_pilar_m: float,
+    h_pilar_m: float,
+    f_Rd_MPa: float,
+    passo_cm: float = 5.0,
+) -> dict:
+    """
+    Dimensiona a chapa de base e DEPOIS a verifica — sem circularidade.
+
+    A versão anterior fazia `A = N/f_c`, o que forçava σ_c = f_c e portanto
+    η ≡ 1,0000 qualquer que fosse a carga ou a resistência: uma tautologia que
+    aparecia no memorial como "no limite" e nunca podia reprovar. Pior, no ramo
+    sem tirante faltava o piso na área do pilar — com f_cd realista a chapa
+    resultava MENOR que o próprio pilar (7,7 cm contra 32×27 cm).
+
+    Agora: área requerida → piso na área do pilar → arredondamento para
+    dimensão construtiva → e só então σ_c e η, que passam a ter margem real.
+    """
+    A_pilar = max(b_pilar_m * h_pilar_m, 1e-6)
+    A_req = N_d_kN * 1e3 / (f_Rd_MPa * 1e6) if f_Rd_MPa > 0 else A_pilar
+    lado_min_cm = math.sqrt(max(A_req, A_pilar)) * 100.0
+    # Dimensão construtiva: múltiplo de `passo_cm` para cima.
+    lado_cm = math.ceil(lado_min_cm / passo_cm) * passo_cm
+    A_chapa = (lado_cm / 100.0) ** 2
+    sigma_c = N_d_kN * 1e3 / (A_chapa * 1e6)
+    return {
+        "A_pilar_m2": round(A_pilar, 6),
+        "A_req_m2": round(A_req, 6),
+        "A_chapa_m2": A_chapa,
+        "A_chapa_cm2": A_chapa * 1e4,
+        "lado_chapa_cm": lado_cm,
+        "sigma_c_MPa": sigma_c,
+        "eta_N": sigma_c / f_Rd_MPa if f_Rd_MPa > 0 else 999.0,
+        "governa_chapa": "area_pilar" if A_pilar >= A_req else "resistencia_concreto",
+    }
+
+
 # ── Contrato de verificação de ancoragem — AUD-017 ───────────────────────────
 
 CAMPOS_ANCORAGEM_OBRIGATORIOS = (
@@ -987,7 +1083,9 @@ def dimensionar_sapata(
     com_tirante: bool = False,
     b_pilar_m: float = 0.32,
     h_pilar_m: float = 0.27,
-    f_c_conc_MPa: float = 1.5,
+    f_c_conc_MPa: float | None = None,
+    classe_concreto: str = "C25/30",
+    k_confinamento: float = 1.0,
     dados_ancoragem: dict | None = None,
 ) -> dict:
     """
@@ -1045,18 +1143,19 @@ def dimensionar_sapata(
     H_arco = load.H_ELU()    # kN — empuxo estrutural do pórtico
     H_d = 0.0 if com_tirante else H_arco
 
-    # Chapa de base — compressão N_d
-    A_pilar_m2 = max(b_pilar_m * h_pilar_m, 1e-6)
-    A_req_m2 = (
-        N_d * 1e3 / (f_c_conc_MPa * 1e6) if f_c_conc_MPa > 0 else A_pilar_m2
-    )
-    A_chapa_m2 = max(A_pilar_m2, A_req_m2) if com_tirante else (
-        N_d * 1e3 / (f_c_conc_MPa * 1e6)
-    )
-    A_chapa_cm2 = A_chapa_m2 * 1e4
-    lado_chapa = math.sqrt(A_chapa_m2) * 100   # cm
-    sigma_c_MPa = (N_d * 1e3) / (A_chapa_m2 * 1e6) if A_chapa_m2 > 0 else 0.0
-    eta_N = sigma_c_MPa / f_c_conc_MPa if f_c_conc_MPa > 0 else 999.0
+    # ── Chapa de base — compressão N_d sobre o concreto ──────────────────
+    # f_c_conc_MPa (legado) mantido apenas para compatibilidade; quando dado,
+    # sobrepõe-se a f_Rdu. O valor default antigo era 1,5 MPa, que NÃO é
+    # resistência de concreto (C25/30 ⇒ f_cd = 16,7 MPa) — ver nota do módulo.
+    _apoio = resistencia_apoio_concreto(classe_concreto, k_confinamento)
+    f_Rd_MPa = float(f_c_conc_MPa) if f_c_conc_MPa else _apoio["f_Rdu_MPa"]
+    _chapa = _dimensionar_chapa_base(N_d, b_pilar_m, h_pilar_m, f_Rd_MPa)
+    A_pilar_m2  = _chapa["A_pilar_m2"]
+    A_chapa_m2  = _chapa["A_chapa_m2"]
+    A_chapa_cm2 = _chapa["A_chapa_cm2"]
+    lado_chapa  = _chapa["lado_chapa_cm"]
+    sigma_c_MPa = _chapa["sigma_c_MPa"]
+    eta_N       = _chapa["eta_N"]
 
     if com_tirante:
         n_chu = 4
@@ -1120,6 +1219,11 @@ def dimensionar_sapata(
         "ok_alvo":        ok_alvo,
         # ── Contrato de ancoragem — AUD-017 ──────────────────────────────
         **_estado_ancoragem(dados_ancoragem),
+        "classe_concreto": _apoio["classe_concreto"],
+        "f_cd_MPa":        _apoio["f_cd_MPa"],
+        "f_Rdu_MPa":       round(f_Rd_MPa, 3),
+        "k_confinamento":  k_confinamento,
+        "governa_chapa":   _chapa["governa_chapa"],
         "ok":             (ok_norma and ok_alvo
                            and _ancoragem_completa(dados_ancoragem)),
         "ok_pre_selecao": ok_norma and ok_alvo,
@@ -1297,9 +1401,11 @@ def dimensionar_sapata_central(
     load:     Carregamentos,
     geo:      GeometriaViga,
     d_chu_mm: float = 20.0,
+    classe_concreto: str = "C25/30",
+    k_confinamento: float = 1.0,
     b_pilar_m: float = 0.32,
     h_pilar_m: float = 0.27,
-    f_c_conc_MPa: float = 1.5,
+    f_c_conc_MPa: float | None = None,
 ) -> dict:
     """
     Sapata do pilar central — empuxo horizontal nulo por simetria.
@@ -1322,19 +1428,16 @@ def dimensionar_sapata_central(
     N_d = 2 * load.V_max_ELU()   # kN
     H_d = 0.0                     # kN — cancelamento simétrico
 
-    # Área do topo do pilar e área necessária no concreto (mesmo f_c que L3)
-    A_pilar_m2 = max(b_pilar_m * h_pilar_m, 1e-6)
-    A_req_m2 = (
-        N_d * 1e3 / (f_c_conc_MPa * 1e6) if f_c_conc_MPa > 0 else A_pilar_m2
-    )
-    # Chapa ≥ pilar; alarga se o concreto sob a pegada do pilar for insuficiente
-    A_chapa_m2 = max(A_pilar_m2, A_req_m2)
-    lado_cm = math.sqrt(A_chapa_m2) * 100
-    chapa_alargada = A_chapa_m2 > A_pilar_m2 + 1e-9
-
-    # Tensão e η sob a chapa (área efetiva de apoio no concreto)
-    sigma_c_MPa = (N_d * 1e3) / (A_chapa_m2 * 1e6)
-    eta_N = sigma_c_MPa / f_c_conc_MPa if f_c_conc_MPa > 0 else 999.0
+    # Chapa de base — mesmo critério de L3 (EN 1992-1-1 §3.1.6 + §6.7)
+    _apoio = resistencia_apoio_concreto(classe_concreto, k_confinamento)
+    f_Rd_MPa = float(f_c_conc_MPa) if f_c_conc_MPa else _apoio["f_Rdu_MPa"]
+    _chapa = _dimensionar_chapa_base(N_d, b_pilar_m, h_pilar_m, f_Rd_MPa)
+    A_pilar_m2  = _chapa["A_pilar_m2"]
+    A_chapa_m2  = _chapa["A_chapa_m2"]
+    lado_cm     = _chapa["lado_chapa_cm"]
+    chapa_alargada = _chapa["governa_chapa"] == "resistencia_concreto"
+    sigma_c_MPa = _chapa["sigma_c_MPa"]
+    eta_N       = _chapa["eta_N"]
 
     n_chu_min = 4   # construtivo — sem esforço horizontal de projeto
     eta_H = 0.0     # H_d = 0 (não confundir com “sapata sem carga”)

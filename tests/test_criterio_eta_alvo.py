@@ -88,7 +88,16 @@ def test_L1_L1c_sob_alvo_075():
 
 
 def test_L3_L3c_excecao_concreto():
-    """L3/L3c (compressão no concreto) são exceção: η pode ir a 1,0."""
+    """L3/L3c (compressão no concreto) são exceção: η pode ir a 1,0.
+
+    Revisto no redimensionamento: `aplicar_criterio_eta` deixou de poder
+    PROMOVER um `ok` que já era False — o critério de η só acrescenta motivo de
+    reprovação. O L3 carrega agora o bloqueio de ancoragem (AUD-017,
+    status_ancoragem="NOT VALIDATED"), pelo que o seu `ok` é False por um
+    motivo alheio a η. O que este teste verifica é o LIMITE de η aplicado, que
+    é a exceção em causa — e verifica-se explicitamente que o bloqueio de
+    ancoragem sobrevive à aplicação do critério.
+    """
     L, Lc = _ligacoes_reais()
     r3 = L["L3"]
     r3c = Lc["L3c"]
@@ -96,7 +105,24 @@ def test_L3_L3c_excecao_concreto():
     aplicar_criterio_eta(r3c, modo_fragil=False)
     assert r3["eta_limite"] == 1.0 and r3c["eta_limite"] == 1.0
     assert r3["alvo_aplica"] is False
-    assert r3["ok"] is True and r3c["ok"] is True
+    # A exceção vale para o critério de η (η ≤ 1,0 é satisfeito nos dois)...
+    assert r3["eta"] <= 1.0 + 1e-9 and r3c["eta"] <= 1.0 + 1e-9
+    assert r3c["ok"] is True
+    # ...mas não apaga o bloqueio de ancoragem por dados insuficientes.
+    assert r3["status_ancoragem"] == "NOT VALIDATED"
+    assert r3["ok"] is False
+
+
+def test_criterio_eta_nunca_promove_um_ok_falso():
+    """Regressão: o critério de η só pode acrescentar reprovação.
+
+    Uma verificação bloqueada por motivo não numérico (p.ex. ancoragem sem
+    dados certificados) tem η baixo e passaria no limite — antes, isso
+    reescrevia `ok` para True e a falsa aprovação chegava ao memorial.
+    """
+    r = {"eta": 0.0, "ok": False}
+    aplicar_criterio_eta(r, modo_fragil=False)
+    assert r["ok"] is False
 
 
 def test_nenhum_modo_fragil_aprovado_acima_do_alvo():

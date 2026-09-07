@@ -183,6 +183,12 @@ H_PILAR     = 0.27     # m — plano do pórtico
 H_PILAR_ALT = 7.0      # m — comprimento
 B_PILAR_C   = 0.32     # m — central idêntico
 H_PILAR_C   = 0.27     # m
+# Pilar de CANTO — montante do painel longitudinal E do frontão transversal.
+# Recebe os dois downloads de contraventamento além da reação de gravidade,
+# somando ~3× a carga do pilar lateral. Até aqui reutilizava a seção do lateral,
+# o que o tornava o gargalo do sistema. Passa a ter seção própria.
+B_PILAR_CANTO = 0.32   # m — mantém a largura da viga (fabricação/ligação)
+H_PILAR_CANTO = 0.32   # m — engrossado de 0,27 (ver varredura no bloco do CV)
 
 # --- Terças (pré-definidas; verificação no pipeline) --------------------------
 B_TERCA = 0.20
@@ -211,17 +217,42 @@ R_FIX_K_KN    = 2.5     # kN — resistência característica do fixador (típic
 # preencher todas as baías da linha frontal/traseira — isso aumenta aço e,
 # com k_ℓ = min(1,√(15/ℓ)), pode AGRAVAR a força por baía (ℓ menor → k_ℓ↑).
 #   n_modulos_cv = 2  → ℓ = L_comp = 46 m entre baías rígidas
-#   d = 18 mm S235    → η_diag ≈ 0,77 (folga ~23%; d=16 ficava η≈0,98)
+#
+# REDIMENSIONAMENTO (pós-Onda 2): com a ação longitudinal normativa (§7.2.2,
+# 6,7× a anterior) a Ø22 passou a reprovar com η_diag = 1,280 E deixou de
+# validar a restrição lateral das terças (l_1 da LTB saltava de s=2,53 m para
+# ℓ=46 m). Varredura de diâmetro, mantendo n_modulos_cv = 2:
+#   Ø22 → η=1,280, cobertura_ok=False   (reprovava)
+#   Ø25 → η=0,991, cobertura_ok=True    (sem margem)
+#   Ø28 → η=0,790, cobertura_ok=True    ← adotado
+#   Ø30 → η=0,688
+# Aumentar n_modulos_cv NÃO reduz F_diag (114,3 kN) e agrava η_δ — mantém-se 2.
 L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
 N_MODULOS_CV    = 2       # baías com cruzes (extremos) — ver nota ell/k_ℓ (issue 15)
-D_BARRA_CV_MM   = 22.0    # mm — diagonal tracionada (issue 15: k_f,3=30 EC5 Tab.9.2
-                          #      ⇒ Ø18 reprovava η=1,19; Ø22 → η≈0,80)
+D_BARRA_CV_MM   = 28.0    # mm — diagonal tracionada (redimensionada: 22 → 28)
 ACO_CV          = "S235"
 
 # --- Contraventamento VERTICAL (issue 14) — caminho de carga lateral à fundação
 # Cruzes de St. André nas paredes longitudinais que descem a força de vento
 # θ=0° do nível da cobertura até a fundação (EN 1993-1-1 §5.3.2+§6.2.3).
-N_PAINEIS_CV_VERT = 2       # painéis de cruz que resistem à força longitudinal
+# REDIMENSIONAMENTO (pós-Onda 2): concentrar os 837,3 kN longitudinais em 2
+# painéis gerava download de 515,8 kN no montante, o que reprovava o pilar de
+# canto (η=1,404) e a sua ancoragem (η=1,966) — e exigia diagonal Ø64 mm.
+# Varredura do nº de painéis (diagonal auto-dimensionada a η≤0,90):
+#   n=2 → Ø64 | download 515,8 | η_canto 1,404 | η_anc 1,966   (reprovava)
+#   n=4 → Ø45 | download 257,8 | η_canto 0,843 | η_anc 1,160   (exigiria 6 chumbadores)
+#   n=6 → Ø39 | download 171,9 | η_canto 0,655 | η_anc 0,892
+# CONSTRUTIBILIDADE (estacionamento aberto nas 4 faces): cada painel é uma cruz
+# de 5,75×7 m entre pilares e obstrui a baía. Com 8 baías por linha, n=6 deixava
+# só 2 livres para circulação de veículos — inaceitável no uso previsto.
+# Segunda varredura, agora com a seção do pilar de canto como variável:
+#   n=4 + canto 0,32×0,27 → η_canto 0,801 (passa, sem folga)
+#   n=4 + canto 0,32×0,32 → η_canto 0,509   ← adotado, 4 baías livres
+#   n=3 + canto 0,32×0,32 → η_canto 0,614, mas exige 6 chumbadores no canto
+# Adota-se n=4 com o pilar de canto engrossado: dobra as baías livres (2 → 4)
+# e mantém a ancoragem de 4×80 kN. Custo: diagonal Ø45 (era Ø39) e uma seção
+# de pilar a mais no fabrico.
+N_PAINEIS_CV_VERT = 4       # painéis de cruz que resistem à força longitudinal
 D_BARRA_CVV_MM    = None    # mm — None → auto (comercial, η ≤ ETA_CVV_ALVO)
 ACO_CVV           = "S235"
 ETA_CVV_ALVO      = 0.90    # margem de projeto na diagonal vertical
@@ -238,6 +269,12 @@ ETA_CVT_ALVO        = 0.90  # margem de projeto na diagonal do frontão
 # --- Ligações / apoio ---------------------------------------------------------
 D_BASE_MM   = 24       # mm — cavilhas L1/L1c (EC5 §8.6(2): 6–30 mm; issue 18)
 F_CHU_KN    = 80.0     # kN — resistência por chumbador (L3)
+# Ancoragem da base de CANTO — dimensionada à parte. O n_chu geral vem do
+# esforço HORIZONTAL, nulo na Opção B, caindo no mínimo construtivo de 4. Mas o
+# canto soma o uplift de sucção aos downloads dos dois painéis de
+# contraventamento (~4,4× a demanda da extremidade). Com 4 painéis longitudinais
+# a demanda é 371,3 kN ⇒ 371,3/(80·0,90) = 5,2 ⇒ 6 chumbadores.
+N_CHU_CANTO = 6        # chumbadores na base de canto (contraventada)
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 L_AP        = 0.90     # m — comprimento da placa de apoio
 
@@ -706,7 +743,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         float(res_elu.get("pilar_vento_90", {}).get("M_d_kNm", 0.0)),
     )
     res_elu["pilar_contraventado"] = verifica_pilar_contraventado(
-        mat=mat_elu, b=B_PILAR, h=H_PILAR, H_pilar=H_PILAR_ALT,
+        mat=mat_elu, b=B_PILAR_CANTO, h=H_PILAR_CANTO, H_pilar=H_PILAR_ALT,
         N_grav_comp_kN=_Rv_comp, N_grav_uplift_kN=_Rv_min,
         downloads_kN=[_D_long, _D_transv], eixo="min", M_vento_kNm=_M_vento,
     )
@@ -1188,6 +1225,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         rho_mean_kgm3=mat_longa.rho_mean,
         com_tirante=TIRANTE_BASE,
         N_brace_anc_kN=_N_brace_anc,
+        # Ancoragem PRÓPRIA do canto: dimensionada pelo uplift + downloads dos
+        # dois painéis, e não pelo mínimo construtivo das demais bases.
+        n_chu_canto=N_CHU_CANTO,
     )
     res_elu["succao_uplift"] = res_succao
     _print_eta("Sucção/uplift (ancoragem)", res_succao)
@@ -1204,8 +1244,24 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"{res_succao['N_uplift_canto_kN']:.1f} kN → η_canto={res_succao['eta_canto']:.3f} "
           f"| governa: {res_succao['base_gov']}")
 
+    # ── Quadro de cargas para a fundação ───────────────────────────────────
+    # O projeto NÃO dimensiona fundações (não há sondagem). O entregável é o
+    # conjunto de esforços que chega a cada base, para o projeto de fundações.
+    from mlc_projeto.output.cargas_fundacao import (
+        imprimir_quadro, montar_quadro_cargas_fundacao,
+    )
+    quadro_fund = montar_quadro_cargas_fundacao(
+        load=load, res_succao=res_succao,
+        cv_vertical=cvv, cv_transversal=cvt,
+        n_pilares_linha=n_pil_linha, n_linhas_portico=3,
+        n_paineis_long=N_PAINEIS_CV_VERT,
+        n_paineis_transv=N_PAINEIS_CV_TRANSV,
+    )
+    imprimir_quadro(quadro_fund)
+
     # ── Pacote de resultados (terminal / Excel / memorial) ─────────────────────
     todos_para_relatorio = {
+        "cargas_fundacao": quadro_fund,
         **res_elu,
         **res_els,
         **({"tirante_base": res_tirante} if res_tirante.get("ativo") else {}),

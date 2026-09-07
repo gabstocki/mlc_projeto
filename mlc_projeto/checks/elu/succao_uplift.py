@@ -67,6 +67,7 @@ def verificar_succao_uplift(
     gamma_G_inf:   float = GAMMA_G_EQU_estab,   # EQU estabilizante (EN 1990 Tab. A1.2(A))
     g_ms2:         float = G_GRAVIDADE,
     N_brace_anc_kN: float = 0.0,
+    n_chu_canto: int | None = None,
 ) -> dict:
     """
     Verifica a combinação de sucção: uplift na ancoragem e empuxo invertido
@@ -124,8 +125,18 @@ def verificar_succao_uplift(
     # No apoio central, os empuxos dos dois vãos cancelam (V_base ≈ 0).
     V_base_ext = abs(H_suc) if (not com_tirante or empuxo_invertido) else 0.0
 
-    # Capacidade de ancoragem (lumped) e interação N–V (linear, conservadora)
+    # Capacidade de ancoragem (lumped) e interação N–V (linear, conservadora).
+    #
+    # A base de CANTO tem ancoragem PRÓPRIA (`n_chu_canto`). Antes, todas as
+    # bases partilhavam o mesmo `n_chu`, que é dimensionado pelo esforço
+    # HORIZONTAL — nulo no modelo adotado (Opção B, H=0) — e portanto caía
+    # sempre no mínimo construtivo de 4. Só que o canto acumula o uplift da
+    # sucção MAIS os downloads dos dois painéis de contraventamento, chegando a
+    # ~4,4× a demanda da extremidade. Dimensionar as três bases pela mesma
+    # ancoragem mínima é o que fazia o canto reprovar.
     R_anc = max(1e-9, n_chu * F_chu_kN)
+    _n_canto = int(n_chu if n_chu_canto is None else n_chu_canto)
+    R_anc_canto = max(1e-9, _n_canto * F_chu_kN)
     eta_N_ext = N_uplift_ext / R_anc
     eta_V_ext = V_base_ext / R_anc
     eta_ext = eta_N_ext + eta_V_ext                        # interação linear
@@ -136,8 +147,8 @@ def verificar_succao_uplift(
     # Σ V_Ed·tanβ, concomitante ao uplift de sucção (mesmo vento) — issue 36.
     N_brace = max(0.0, float(N_brace_anc_kN))
     N_uplift_canto = N_uplift_ext + N_brace
-    eta_N_canto = N_uplift_canto / R_anc
-    eta_canto = eta_N_canto + eta_V_ext                    # + cortante do empuxo inv.
+    eta_N_canto = N_uplift_canto / R_anc_canto
+    eta_canto = eta_N_canto + V_base_ext / R_anc_canto     # + cortante do empuxo inv.
 
     eta_gov = max(eta_ext, eta_cen, eta_canto)
     if N_brace > 0.0 and eta_canto >= eta_ext and eta_canto >= eta_cen:
@@ -177,6 +188,8 @@ def verificar_succao_uplift(
         # Ancoragem — base de CANTO (uplift sucção + download contravent., issue 36)
         "N_brace_anc_kN":     round(N_brace, 3),
         "N_uplift_canto_kN":  round(N_uplift_canto, 3),
+        "n_chu_canto":        _n_canto,
+        "R_anc_canto_kN":     round(R_anc_canto, 3),
         "eta_N_canto":        round(eta_N_canto, 4),
         "eta_canto":          round(eta_canto, 4),
         # Capacidade
