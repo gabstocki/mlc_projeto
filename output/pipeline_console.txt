@@ -27,7 +27,7 @@
 
   RESERVAS NORMATIVAS:
     · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 19 parâmetros adotam o valor recomendado do EN por decisão de projeto. RESULTADO DEPENDENTE DE NATIONAL ANNEX.
-    · [F-18] 11 de 13 valores de origem NBR 6123 têm a CLÁUSULA POR CONFIRMAR contra o texto da ABNT NBR 6123:2023. A coerência interna das tabelas está verificada (BM-15), a fidelidade à edição declarada NÃO. Folha de conferência: ANEXO_A_NBR6123.md.
+    · [F-18] 11 de 15 valores de origem NBR 6123 confirmados contra o TEXTO da ABNT NBR 6123:2023 (BM-17: Tab. 1 45/45, Tab. 2 3/3, Tab. 3 279 células, Tab. 10 40/40, Tab. 25 8 expressões, §4.2/§5.2/§7.2.1/§7.2.2/§7.2.6 à letra). 4 POR RESOLVER: v0_isopleta; s3_estatistico; tabela_10_alpha_90; ca_pilar. Ver ANEXO_A_NBR6123.md.
 
 [FASE 1] Geometria pré-definida (passe rodar_varredura=True para varredura completa)
 
