@@ -37,7 +37,15 @@ def test_catalogo_existe_e_nao_esta_vazio():
 def test_todo_item_declara_clausula_local_estado_e_questao():
     for item in nz.CATALOGO_NBR6123:
         assert item.clausula.startswith("NBR 6123"), item.chave
-        assert ":" in item.local, f"{item.chave}: local sem file:line"
+        if item.simbolos:
+            assert ":" in item.local, f"{item.chave}: local sem file:line"
+        else:
+            # Um item do catálogo pode ser uma LACUNA: algo que a norma tem e o
+            # código não (as colunas b1/b2/b3 da Tab. 10, para α = 90°). Não tem
+            # símbolos nem linha — mas tem de estar listado, senão a lacuna
+            # desaparece do inventário.
+            assert item.local == "NÃO IMPLEMENTADO", item.chave
+            assert item.estado == "NAO_CONFIRMADO", item.chave
         assert item.estado in ("CONFIRMADO", "NAO_CONFIRMADO"), item.chave
         assert item.designacao.strip(), item.chave
         if item.estado == "NAO_CONFIRMADO":
@@ -62,12 +70,40 @@ def test_atrito_722_esta_confirmado():
 
 @pytest.mark.parametrize("chave", [
     "param_meteorologicos", "fator_rajada", "tabela_10_ce", "tabela_25_cp",
+    "pressao_dinamica", "s1_topografico", "cpi_obstrucao", "dominio_tab_24_25",
+    "cp_vedacao_isolada",
 ])
-def test_tabelas_permanecem_por_confirmar(chave):
+def test_tabelas_confirmadas_contra_o_texto(chave):
     """
-    Enquanto o texto da :2023 não for anexado, estas tabelas NÃO podem ser
-    declaradas conformes. Marcá-las CONFIRMADO sem a fonte é exatamente o que
-    a carta de auditoria proíbe.
+    ATUALIZADO. A versão anterior deste teste exigia que estas tabelas
+    permanecessem `NAO_CONFIRMADO` — «enquanto o texto da :2023 não for
+    anexado». O texto ESTAVA anexado: `NBR6123-2023.pdf` está na raiz do
+    projeto (fora do git por ser obra protegida, ver `.gitignore`), e a
+    auditoria nunca o procurou.
+
+    BM-17 (`auditoria_v2/bm_nbr_texto.py`) lê o PDF e confronta valor a valor.
+    Estes itens conferem. O teste passa a exigir o contrário, e a evidência
+    tem de estar escrita.
+    """
+    item = nz.item_nbr(chave)
+    assert item.estado == "CONFIRMADO"
+    assert "BM-17" in item.evidencia, f"{chave}: confirmado sem citar a evidência"
+
+
+@pytest.mark.parametrize("chave", [
+    "v0_isopleta", "s3_estatistico", "ca_pilar", "tabela_10_alpha_90",
+])
+def test_itens_que_o_texto_nao_fecha(chave):
+    """
+    Os quatro que sobram depois de ler a norma — e nenhum é uma tabela:
+
+    · `v0_isopleta`      — a Figura 1 é um mapa e o projeto não declara a
+                           localidade da obra.
+    · `s3_estatistico`   — [F-21] valor do grupo 3 rotulado «grupo 2».
+    · `ca_pilar`         — [F-20] citação inexistente para o fim a que serve.
+    · `tabela_10_alpha_90` — lacuna: a norma tem colunas que o código não tem.
+
+    Marcar qualquer um destes CONFIRMADO seria fechar por cansaço.
     """
     assert nz.item_nbr(chave).estado == "NAO_CONFIRMADO"
 
@@ -76,7 +112,8 @@ def test_itens_nao_confirmados_e_o_complemento():
     nao = nz.itens_nbr_nao_confirmados()
     assert nao, "F-18 ainda está aberto — a lista não pode estar vazia"
     assert all(i.estado == "NAO_CONFIRMADO" for i in nao)
-    assert len(nao) < len(nz.CATALOGO_NBR6123), "§7.2.2 já está confirmado"
+    assert len(nao) == 4, f"esperados 4 em aberto, estão {len(nao)}"
+    assert len(nao) < len(nz.CATALOGO_NBR6123)
 
 
 def test_aviso_nbr_declara_a_reserva_e_conta_os_itens():
@@ -84,6 +121,9 @@ def test_aviso_nbr_declara_a_reserva_e_conta_os_itens():
     assert "NBR 6123" in aviso
     assert str(len(nz.itens_nbr_nao_confirmados())) in aviso
     assert "F-18" in aviso
+    assert "BM-17" in aviso, "o aviso tem de dizer contra o quê foi verificado"
+    for item in nz.itens_nbr_nao_confirmados():
+        assert item.chave in aviso, f"{item.chave} não é nomeado no aviso"
 
 
 # ── 3. Cobertura: nenhum valor NBR fica fora do catálogo ──────────────────────
@@ -97,7 +137,9 @@ def test_todas_as_tabelas_de_wind_estao_catalogadas():
         "PARAM_METEOROLOGICOS", "FATOR_RAJADA", "COEF_PRESSAO_DINAMICA",
         "TABELA_10_CE", "CPI_OBSTRUCAO_SOTAVENTO", "CPI_OBSTRUCAO_BARLAVENTO",
         "CA_PILAR_RET", "COEF_ATRITO_COBERTURA_ISOLADA", "CA_BLOQUEIO_SILHUETA",
+        "CP_VEDACAO_ISOLADA",
     }
+    esperadas.discard("CP_VEDACAO_ISOLADA")   # vive em checks/elu/fixacao_telha.py
     presentes = {n for n in esperadas if hasattr(w, n)}
     assert presentes == esperadas, f"constantes ausentes: {esperadas - presentes}"
     simbolos = {s for i in nz.CATALOGO_NBR6123 for s in i.simbolos}

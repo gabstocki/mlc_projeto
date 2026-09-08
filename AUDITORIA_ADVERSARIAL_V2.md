@@ -212,7 +212,7 @@ não declara essa coerência em lado nenhum. `CONFIRMED` como omissão documenta
 | EN 1993-1-8 | não declarada | pino/bearing/seção líquida/solda | `chapas_aco.py` | `NOT DECLARED` |
 | EN 1992-4 | `:2018` (`main.py:313`) | §7.2.1.4/.5, §7.4.1.4, §7.2.3 | `ancoragem.py` | `MATCH` (parcial — §7.2.1.7/.8, §7.2.2.5 declaradas pendentes) |
 | EN 1992-1-1 | não versionada | §3.1.6(1), Tab. 2.1N, §6.7 | `normativo.py:122-129` | `NOT DECLARED` |
-| **NBR 6123** | **`:2023`** (`normativo.py:69`) | Tab. 1/2 de parâmetros = **valores da edição :1988**; numeração "Tab. 10"/"Tab. 25" só existe na :2023; `Ft=0,5·q·a·b` sem fonte | `wind.py:33-46, 234-245, 496` | **`NOT VERIFIABLE`** |
+| **NBR 6123** | **`:2023`** (`normativo.py:69`) | **verificado contra o texto (BM-17)**: Tab. 1, 2, 3, 10, 25 e §4.2/§5.2/§7.2.1/§7.2.2/§7.2.6 conferem; a numeração Tab. 1/2/3 e Tab. 10/25 é mesmo a da :2023 | `wind.py:33-46, 234-245, 496` | **`MATCH`** (4 itens abertos: F-20, F-21, V0, Tab. 10 α=90°) |
 | EN 1991-1-4 | usada só como comparação nesta auditoria | Tab. 7.10 (c_fr) | — | `NOT APPLICABLE` |
 
 > **[F-18] MÉDIA — `NOT VERIFIABLE — REQUIRES EXTERNAL NORMATIVE SOURCE`.**
@@ -950,10 +950,10 @@ de default, ou cache incorreto.
 | Propriedades GL | `materials.py:27-52` | — | EN 14080:2013 Tab. 5 | conferência item a item | `VALIDATED WITH RESERVATIONS` |
 | k_mod / k_def / γM / k_cr | `materials.py:72-91` | — | EC5 Tab. 3.1/3.2/2.3, §6.1.7 | usados em BM-04/06/07 | `VALIDATED` |
 | Declaração NDP / NA | `normativo.py:60-185` | — | EN 1990/1995 | 17 NDP enumerados | `VALIDATED WITH RESERVATIONS` [F-20, F-23] |
-| S2, Vk, q | `wind.py:113-175` | camada-limite | NBR 6123 §5.3.3, §4.2 | BM-01 (0,000 %) + BM-15 V1..V5 | `VALIDATED WITH RESERVATIONS` [F-18] |
+| S2, Vk, q | `wind.py:113-175` | camada-limite | NBR 6123 §5.3.3, §4.2 c) | **BM-17: Tab. 1 45/45, Tab. 2 3/3, Tab. 3 279 células (pior Δ 0,0050)** | **`VALIDATED`** |
 | Domínio Tab. 24/25 | `wind.py:337-388` | — | NBR 6123 §7.2.1 | ADV-C | `VALIDATED WITH RESERVATIONS` [F-18] |
-| c_pe Tab. 25 | `wind.py:393-483` | — | NBR 6123 Tab. 25 | ADV-C (domínio) + BM-15 V6 (contínua em tg β=0,4) | `NOT VERIFIABLE` [F-18] |
-| c_pe Tab. 10 + c_pi | `wind.py:226-332` | c_net = c_pe − c_pi | NBR 6123 Tab. 10, §7.2.1 | ADV-C (domínio) + BM-15 V7 (sinais) | `NOT VERIFIABLE` [F-18] |
+| c_pe Tab. 25 | `wind.py:393-483` | — | NBR 6123 Tab. 25 | **BM-17: 8 expressões à letra, 216 amostras; o teto ≤ 2,0 é da norma** | **`VALIDATED`** |
+| c_pe Tab. 10 + c_pi | `wind.py:226-332` | c_net = c_pe − c_pi | NBR 6123 Tab. 10, §7.2.1 | **BM-17: 40/40 valores + a nota do atrito; c_pi ±0,8/−0,3 à letra** | **`VALIDATED`** (colunas b1/b2/b3 de α=90° não implementadas) |
 | Atrito θ=0° | `wind.py:496,555` | — | NBR 6123 §7.2.2 (alegada) | **BM-11: 10,13×** | **`ERROR` [F-13]** |
 | Componente horiz. da cobertura | **ausente** | equilíbrio de forças | — | **BM-12: 1,51×** | **`ERROR` [F-01]** |
 | Peso próprio g_k | `loads.py:87-158` | ∫A(x)dx·γ | EN 1991-1-1 §4.1 | BM-02 (0,005 %) | `VALIDATED` |
@@ -993,7 +993,7 @@ de default, ou cache incorreto.
 | Fadiga / deslizamento | `fadiga_ligacoes.py` | K_ser | EC5 §7.1, §8.1.5 | η_slip = 0,057 | `VALIDATED WITH RESERVATIONS` (idem) |
 | Içamento | `icamento.py` | 2 pontos a 0,207L | EN 1991-1-6 | η = 0,042 | `VALIDATED WITH RESERVATIONS` (idem, + [F-07]) |
 | Impacto de veículo | `impacto_veiculo.py` | 50/25 kN a 0,5 m | EN 1991-1-7 | η = 0,477 | `VALIDATED WITH RESERVATIONS` (idem) |
-| Fixação da telha | `fixacao_telha.py` | c_p = ±2,0, classe A | NBR 6123 §7.2.6 | η = 0,679 | `NOT VERIFIABLE` [F-18] |
+| Fixação da telha | `fixacao_telha.py` | c_p = ±2,0 | NBR 6123 §7.2.6 | **BM-17: cláusula à letra**; η = 0,679 | **`VALIDATED`** |
 | Agregação do veredito | `report.py:83-140` | — | — | **ADV-D** | **`ERROR` [F-04]** |
 | Cargas para a fundação | `cargas_fundacao.py` | varre combinações ✔ | — | tabela por base | `VALIDATED WITH RESERVATIONS` (herda [F-01]) |
 | Ambiente de execução | `pyproject.toml:12-27` | — | — | BM-16: 38 η bit-idênticos em NumPy 1.26.4 e 2.4.6; 549 passed nos dois | `VALIDATED` [F-19 fechado] |
@@ -2255,3 +2255,151 @@ ser verificável e é reaberto para verificação contra o texto. O que Z.18
 construiu (catálogo, reserva emitida, BM-15) continua válido como
 infraestrutura; o que muda é que as 11 perguntas passam a ter onde ser
 respondidas.
+
+---
+
+## Z.20 — F-18 · verificação contra o TEXTO da NBR 6123:2023
+
+### O que se passou
+
+Z.18 fechou com a frase «a auditoria não dispõe do texto da norma» e construiu,
+sobre essa premissa, o melhor substituto disponível: o BM-15, sete invariantes
+de coerência interna. A premissa era falsa. `NBR6123-2023.pdf` está na raiz do
+projeto — 107 páginas, texto extraível — deliberadamente fora do git, porque o
+`.gitignore` do projeto diz, com todas as letras, que normas são cópias
+licenciadas e o remoto é público.
+
+O inventário da secção B percorreu os `.py`. Não olhou o resto da árvore. A
+carta manda inventariar 100 % dos ficheiros; a auditoria falhou o seu próprio
+critério de cobertura e depois usou essa falha como fundamento de um
+`NOT VERIFIABLE` que se estendeu a onze itens e a metade da secção D.
+
+O custo não foi só documental: o F-13 — em que se argumentou que
+`Ft = 0,5·q·a·b` era fisicamente impossível, se propôs 0,05, e se teve de
+retratar depois de o utilizador colar a cláusula — resolvia-se abrindo o
+ficheiro.
+
+### BM-17 — ler a norma, não reproduzi-la
+
+`auditoria_v2/bm_nbr_texto.py` extrai as tabelas do PDF com `pdftotext`,
+confronta com o repositório, descarta. **Nada da norma fica no repositório** —
+é obra protegida e o remoto é público; um memorial cita cláusulas, não
+reimprime a norma. Sem o PDF o benchmark aborta com instrução, nunca degrada em
+silêncio para a verificação mais fraca.
+
+Isto corrige, de passagem, a formulação da própria ação P0 do F-18, que pedia
+«anexar ao memorial a reprodução das Tab. 1, 2, 10 e 25». Era má indicação:
+reproduzir a tabela é o que não se pode fazer. O que se faz é verificar e
+citar.
+
+| Verificação | Resultado |
+|---|---|
+| Tabela 1 — parâmetros meteorológicos | **45/45** |
+| Tabela 2 — fator de rajada | **3/3** |
+| **Tabela 3 — S2 tabelado contra a fórmula de §5.3.3** | **279 células**, pior Δ = 0,0050 |
+| Tabela 10 — telhados múltiplos | **40/40** + a nota do atrito |
+| Tabela 25 — cobertura isolada duas águas | **8 expressões**, 216 amostras |
+| §4.2 c), §5.2 a), §7.2.1, §7.2.2, §7.2.6 | à letra |
+
+**A Tabela 3 é a verificação forte.** A norma dá o S2 tabelado *e* a fórmula
+que o gera. Confrontar uma com a outra em 279 células testa `bm`, `p`, `z_g`,
+`F_r` e a regra especial da Categoria V simultaneamente, contra dados que não
+saíram do repositório. Pior desvio: 0,0050 — exatamente o arredondamento a duas
+casas decimais. Nenhuma célula falha.
+
+### O que Z.18 disse de errado, ponto por ponto
+
+**«A numeração das tabelas é inconsistente.»** Não é. A :2023 tem mesmo Tab. 1
+(parâmetros meteorológicos), Tab. 2 (fator de rajada) e Tab. 3 (S2 tabelado),
+exatamente como o código sempre citou. O quadro de deslocamentos +7/+4 que Z.18
+construiu comparava a :2023 com uma recordação da :1988. Retirado.
+
+**«O teto `Cpb,1 ≤ 2,0` pode ser interpolação do autor.»** Está na norma, na
+própria célula da Tabela 25.
+
+**«Reconheço os valores como os da edição :1988.»** O reconhecimento acertou —
+mas continuava a não ser fonte, e a conclusão que dele se tirava (que a :2023
+poderia tê-los revisto) resolvia-se lendo. A regra permanece; o que falhou foi
+não procurar a fonte.
+
+### O que a leitura destapou — dois achados novos
+
+Verificar contra a fonte não confirmou apenas: **destapou dois defeitos que
+nenhuma verificação de coerência interna podia apanhar.** Ambos foram
+declarados, nenhum foi corrigido — os dois exigem dados que o projeto não tem.
+
+**[F-20] MÉDIA — `C_a = 1,2` do pilar sob citação inexistente.**
+`wind.py:507-509` citava «NBR 6123 §6.3 / Tab. 13». Na :2023, §6.3 é *Pressões
+internas em edificações* e a Tab. 13 é *Distribuição das pressões externas em
+edificações cilíndricas de seção circular*. Nenhuma trata do arrasto de uma
+barra prismática livre. A rota correta é §8.1.1: `Cx`/`Cy` da Tab. 26 (barras de
+faces planas, comprimento infinito) vezes o fator `K` da Tab. 28 (0,62 a 0,95
+para ℓ/c de 2 a 100). A Tab. 26 dá `Cx ≥ +1,6` em α = 0°; com `K ≈ 0,7` vem
+≈ 1,1–1,4. O valor 1,2 cai dentro do intervalo mas não foi obtido por essa rota
+e não está demonstrado conservador. Refazê-lo exige a relação ℓ1/ℓ2 da secção
+do pilar, e as figuras da Tab. 26 são imagens no PDF. **Peso:** o arrasto dos
+pilares vale 60,5 kN em 837,3 kN do vento θ = 0° — 7,2 %.
+
+**[F-21] MÉDIA, potencialmente NÃO CONSERVATIVO — `S3 = 1,00` rotulado
+«grupo 2».** A Tabela 4 da :2023 dá:
+
+| Grupo | S3 | Tp |
+|---|---|---|
+| 2 — ruína com substancial risco à vida, aglomerações | **1,06** | 75 anos |
+| 3 — residências, hotéis, comércio, indústrias | **1,00** | 50 anos |
+
+O projeto adota `S3 = 1,00` — o valor do **grupo 3** — com a justificação
+escrita «grupo 2». O valor e o seu rótulo afirmam coisas diferentes. Se a
+classificação correta for o grupo 2, **toda** a ação de vento sobe 1,06² =
+**+12,4 %**, e o defeito é não conservativo em cada verificação que o vento
+governa — o que, neste projeto, é o contraventamento inteiro.
+
+Um estacionamento coberto parece grupo 3. Mas quem classifica a edificação é o
+projetista, e o rótulo atual diz o contrário do valor usado. `S3` passou a
+`ABNT-A-CONFIRMAR`, o que o faz reaparecer em `parametros_a_confirmar()` — o
+guard que estava vazio desde o F-13 e que agora volta a apitar.
+
+### Uma lacuna, também
+
+A Tabela 10 tem, além das zonas a*..z* para α = 0°, as colunas b1/b2/b3 para
+α = 90° (−0,8 / −0,6 / −0,2) e uma linha de `c_pe` médio para elementos
+localizados. O repositório só transcreveu α = 0°. Na rota de edificação fechada
+do §7.2.1, o vento paralelo às cumeeiras devia usar b1/b2/b3; o projeto trata
+θ = 0° pela rota de cobertura isolada (§7.2.2 + arrasto dos pilares). As duas
+rotas estarem a ser misturadas de forma coerente é decisão do projetista.
+Catalogado como `tabela_10_alpha_90` — uma lacuna também é um item do
+inventário, senão desaparece dele.
+
+### Limpeza feita
+
+O docstring de `fixacao_telha.py` descrevia uma rota por zonas de `C_pe` local
+da «Tab. 5» com `c_pi` de §6.2.5 que o código não executa. Confirmado §7.2.6,
+foi substituído. (Na :2023 a Tab. 5 é *altura de camada limite e comprimento de
+rugosidade* — nada que ver.)
+
+### O papel que sobra ao BM-15
+
+Continua a correr, agora no lugar certo: guarda de regressão que não precisa do
+PDF. Quem clonar o repositório sem a cópia licenciada tem as sete invariantes;
+quem a tiver corre o BM-17 e verifica contra o texto. As duas coisas são
+complementares — e a segunda não substitui a primeira num repositório onde a
+norma não pode ser versionada.
+
+### Estado
+
+| | |
+|---|---|
+| Itens catalogados | 15 |
+| **Confirmados contra o texto** | **11** |
+| Por resolver | 4 — `v0_isopleta`, `s3_estatistico` [F-21], `ca_pilar` [F-20], `tabela_10_alpha_90` |
+
+`pytest -q` → **558 passed, 0 failed**. Painel: **13/13**. Cinco testes
+atualizados, todos documentados: quatro exigiam que as tabelas permanecessem
+`NAO_CONFIRMADO` («enquanto o texto não for anexado» — estava), e um exigia
+`parametros_a_confirmar() == {}`, que deixou de valer porque o guard apanhou o
+F-21. Desligar o alarme para o teste passar seria o pior desfecho.
+
+**F-18 continua ABERTO**, mas mudou de natureza: já não é «não verificável por
+falta de fonte». É uma lista de quatro decisões, e **nenhuma delas é uma
+tabela** — são um dado que o projeto não declara (a localidade), duas
+classificações que só o projetista faz, e uma lacuna de implementação.

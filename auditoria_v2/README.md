@@ -56,3 +56,34 @@ Resultado: os **38 η e o veredito são bit-idênticos** entre
 python auditoria_v2/bm_ambiente.py                    # BM-16
 python auditoria_v2/bm_ambiente.py py1 py2 py3        # ou interpretadores à escolha
 ```
+
+## BM-17 — valores contra o TEXTO da norma (`bm_nbr_texto.py`)
+
+Supera o BM-15. Lê `NBR6123-2023.pdf` (raiz do projeto, **fora do git** — obra
+protegida, remoto público) com `pdftotext`, extrai as tabelas e confronta valor
+a valor com o repositório. Extrai, compara, descarta: nada da norma fica
+versionado. Sem o PDF **aborta com instrução**, nunca degrada em silêncio.
+
+| Verificação | Resultado |
+|---|---|
+| Tabela 1 — parâmetros meteorológicos | 45/45 |
+| Tabela 2 — fator de rajada | 3/3 |
+| **Tabela 3 — S2 tabelado vs fórmula de §5.3.3** | **279 células**, pior Δ 0,0050 |
+| Tabela 10 — telhados múltiplos | 40/40 |
+| Tabela 25 — cobertura isolada | 8 expressões, 216 amostras |
+| §4.2 c), §5.2 a), §7.2.1, §7.2.2, §7.2.6 | à letra |
+
+A Tabela 3 é a forte: a norma dá o S2 tabelado *e* a fórmula que o gera, logo
+confrontar uma com a outra testa `bm`, `p`, `z_g` e `F_r` de uma só vez contra
+dados externos ao repositório.
+
+Destapou [F-20] (`C_a` do pilar sob citação inexistente) e [F-21] (`S3 = 1,00`
+rotulado «grupo 2», quando 1,00 é grupo 3 e grupo 2 exige 1,06).
+
+```bash
+python auditoria_v2/bm_nbr_texto.py      # BM-17 (precisa do PDF + poppler-utils)
+python auditoria_v2/bm_nbr_tabelas.py    # BM-15 (coerência interna, sem PDF)
+```
+
+O BM-15 mantém-se como guarda de regressão para quem clone o repositório sem a
+cópia licenciada da norma.

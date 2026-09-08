@@ -504,9 +504,31 @@ def padroes_cpe_tabela25(tg_beta: float) -> list[dict]:
 
 # ── θ = 0° — paralelo à cumeeira (estrutura aberta) ───────────────────────────
 
-# Coeficiente de arrasto de elementos prismáticos livres — NBR 6123 §6.3 / Tab. 13
-# Valor conservador para seção retangular (pilares MLC): Ca = 1,2
+# ── [F-20] Coeficiente de arrasto dos pilares livres — CITAÇÃO POR REFAZER ───
+#
+# Este valor foi citado como «NBR 6123 §6.3 / Tab. 13». BM-17 leu o texto da
+# :2023 e nenhuma das duas serve: §6.3 é «Pressões internas em edificações» e a
+# Tab. 13 é «Distribuição das pressões externas em edificações cilíndricas de
+# seção circular». Nem uma nem outra trata do arrasto de uma barra prismática
+# livre.
+#
+# A rota correta é §8.1.1 — coeficientes de força Cx/Cy da Tabela 26 (barras
+# prismáticas de faces planas, comprimento infinito) multiplicados pelo fator
+# de redução K de comprimento finito da Tabela 28 (0,62 a 0,95 para ℓ/c entre
+# 2 e 100). A Tab. 26 dá Cx ≥ +1,6 em α = 0°; com K ≈ 0,7 chega-se a ≈ 1,1–1,4.
+# O valor 1,2 cai dentro do intervalo, mas NÃO foi obtido por esta rota e não
+# está demonstrado como conservador.
+#
+# NÃO se alterou o valor: refazê-lo exige a relação ℓ1/ℓ2 da secção do pilar e
+# o ℓ/c para entrar na Tab. 28, e as figuras da Tab. 26 são imagens no PDF que
+# não se leem por extração de texto. Peso do termo: o arrasto dos pilares vale
+# 60,5 kN em 837,3 kN da ação de vento θ=0° — 7,2 %.
 CA_PILAR_RET = 1.2
+
+CLAUSULA_CA_PILAR = (
+    "NBR 6123:2023 §8.1.1 Tab. 26 × Tab. 28 — POR REFAZER [F-20]; o valor "
+    "corrente (1,2) foi adotado sob citação errada (§6.3 / Tab. 13)"
+)
 
 # ── Atrito na cobertura isolada, vento paralelo à geratriz ────────────────────
 #

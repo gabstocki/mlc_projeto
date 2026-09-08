@@ -24,26 +24,20 @@ Metodologia (NBR 6123)
 
   Verificação:  η = F_fix,d / R_fix,d ≤ 1,  R_fix,d = R_fix,k / γ_M
 
-Zonas de C_pe local (NBR 6123 Tab. 5 — telhado a duas águas, baixa inclinação):
-  · campo (geral) : C_pe ≈ −1,0
-  · borda         : C_pe ≈ −1,5
-  · canto/beiral  : C_pe ≈ −2,0   (sucções locais mais severas)
+Coeficiente de pressão adotado (NBR 6123:2023 §7.2.6)
+  "Cada elemento de vedação deve ser calculado com cp = ±2,0."
+  Cláusula confirmada à letra contra o texto da norma (BM-17). É um coeficiente
+  LÍQUIDO, que já engloba as duas faces da cobertura isolada.
 
-Pressão interna C_pi (NBR 6123 §6.2.5):
-  O galpão é ABERTO nas laterais (estacionamento coberto). Com o vento
-  entrando pela face aberta, o interior é pressurizado (abertura dominante):
-  C_pi = +0,8 — que SOMA ao uplift (empurra a cobertura de baixo para cima).
-  É o cenário conservador de arrancamento.
+  NÃO se soma C_pi: pressão interna é conceito de edificação FECHADA, e esta
+  cobertura é isolada — sobre suportes de reduzidas dimensões, com o vento a
+  agir diretamente sobre as faces superior e inferior (§7.2).
 
-CAVEAT (dado do fabricante — issue 17)
---------------------------------------
-  R_fix,k é a resistência característica ao arrancamento do CONJUNTO fixador
-  (parafuso autoperfurante Ø6,3 mm com arruela de vedação EPDM sobre chapa
-  fina): governa em geral o *pull-over* (a cabeça/arruela atravessa a chapa),
-  não o *pull-out* da rosca na madeira (alto em MLC). O valor default (2,5 kN)
-  é TÍPICO de catálogo — **confirmar na ficha técnica da telha adotada** e
-  substituir. A metodologia e o resultado (espaçamento de fixadores exigido
-  por zona) permanecem válidos com o R_fix,k real.
+  [Removido em F-18] Este cabeçalho descrevia antes uma rota por zonas de C_pe
+  local (campo/borda/canto) da «Tab. 5» somada a um C_pi de §6.2.5. O código
+  nunca fez isso, e a documentação de um método que não é o executado é uma
+  armadilha para quem revir o memorial. Na :2023 a Tab. 5 é «Valores de altura
+  de camada limite zg e de comprimento de rugosidade z0» — nada que ver.
 
 Referência: ABNT NBR 6123 — edição única adotada no projeto: **2023**.
             EN 1995-1-1 §8.7.2 / ETA do fixador (R_fix,k, γ_M=1,3).

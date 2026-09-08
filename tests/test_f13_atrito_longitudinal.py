@@ -146,8 +146,22 @@ def test_atrito_registado_como_ABNT_confirmada():
 
 def test_nao_restam_parametros_com_clausula_por_confirmar():
     """
-    Guarda permanente: qualquer parâmetro cuja cláusula não tenha sido
-    verificada tem de aparecer aqui e bloquear o memorial. Hoje, nenhum.
+    ATUALIZADO. Este teste exigia `parametros_a_confirmar() == {}` — verdade
+    quando F-13 fechou e mais nada estava pendente.
+
+    Deixou de ser verdade, e por bom motivo: BM-17 leu a NBR 6123:2023 e
+    apanhou [F-21], a contradição do S3 (valor do grupo 3 rotulado «grupo 2»).
+    O guard fez exatamente o que devia — reter um parâmetro cuja cláusula não
+    está resolvida. Esvaziá-lo agora seria desligar o alarme.
+
+    O que o teste passa a exigir: o atrito de §7.2.2 NÃO está pendente (é o
+    objeto do F-13, e está fechado), e tudo o que estiver pendente diz porquê.
     """
     from mlc_projeto.core.normativo import parametros_a_confirmar
-    assert parametros_a_confirmar() == {}
+
+    pendentes = parametros_a_confirmar()
+    assert "coef_atrito_cobertura_isolada" not in pendentes, (
+        "F-13 está fechado: a cláusula §7.2.2 foi confirmada contra o texto")
+    assert set(pendentes) == {"S3"}, (
+        f"pendências inesperadas: {sorted(set(pendentes) - {'S3'})}")
+    assert "F-21" in pendentes["S3"].nota

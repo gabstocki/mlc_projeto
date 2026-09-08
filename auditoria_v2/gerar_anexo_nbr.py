@@ -32,114 +32,117 @@ CABECALHO = f"""# ANEXO A — Proveniência dos valores da {NORMA_VENTO}
 
 ## O que este anexo é, e o que não é
 
-Não é uma reprodução da NBR 6123:2023. A auditoria **não dispõe do texto da
-norma** e a carta de auditoria proíbe preencher a lacuna de memória ou por
-analogia com a edição de 1988.
+**Não reproduz a NBR 6123:2023.** A norma é obra protegida por direito autoral
+e o repositório tem remoto público; `NBR6123-2023.pdf` está deliberadamente
+fora do git (ver `.gitignore`). O controle documental exige uma cópia
+controlada disponível ao projetista, não a sua redistribuição — e um memorial
+cita cláusulas, não reimprime a norma.
 
-É a lista fechada de **todos** os números do projeto que dependem da NBR 6123,
-com o local exato no código, a cláusula que o código alega e — para cada item
-por confirmar — a pergunta a fazer. Com a norma em mãos, fecha-se numa sessão.
+É o registo de **todos** os números do projeto que dependem da NBR 6123, com o
+local exato no código, a cláusula, o estado de verificação e a evidência.
+
+## Como foi verificado
+
+`auditoria_v2/bm_nbr_texto.py` (BM-17) **lê o PDF** com `pdftotext`, extrai as
+tabelas e confronta valor a valor com o que o repositório implementa. Extrai,
+compara, descarta: nada da norma fica no repositório. Sem o PDF, aborta com
+instrução — nunca degrada em silêncio para uma verificação mais fraca.
+
+| Verificação | Resultado |
+|---|---|
+| Tabela 1 — parâmetros meteorológicos | **45/45** valores |
+| Tabela 2 — fator de rajada | **3/3** valores |
+| **Tabela 3 — S2 tabelado contra a fórmula de §5.3.3** | **279 células**, pior Δ = 0,0050 |
+| Tabela 10 — telhados múltiplos | **40/40** valores |
+| Tabela 25 — cobertura isolada duas águas | **8 expressões**, 216 amostras |
+| §4.2 c), §5.2 a), §7.2.1, §7.2.2, §7.2.6, nota da Tab. 10 | à letra |
+
+A **Tabela 3** é a verificação forte. A norma dá o S2 tabelado *e* a fórmula
+que o gera; confrontar uma com a outra testa `b`, `p`, `z_g`, `F_r` e a regra
+especial da Categoria V de uma só vez, contra dados externos ao repositório. O
+pior desvio em 279 células é 0,0050 — exatamente o arredondamento a duas casas.
 
 ## Porque isto importa em obra
 
 O vento governa **toda** a estrutura metálica de contraventamento e a
 verificação da telha. Um erro numa destas tabelas não produz um aviso: produz
-um dimensionamento errado que passa em todos os testes. Daí a lista existir em
-código (`itens_nbr_nao_confirmados()`), fazer falhar a suíte se um valor NBR
-novo entrar sem registo, e ser impressa no cabeçalho do pipeline.
+um dimensionamento errado que passa em todos os testes.
 
 ## Estado
 
 | | |
 |---|---|
 | Itens catalogados | {len(CATALOGO_NBR6123)} |
-| **Por confirmar** | **{len(itens_nbr_nao_confirmados())}** |
-| Confirmados | {len(CATALOGO_NBR6123) - len(itens_nbr_nao_confirmados())} |
+| Confirmados contra o texto | **{len(CATALOGO_NBR6123) - len(itens_nbr_nao_confirmados())}** |
+| **Por resolver** | **{len(itens_nbr_nao_confirmados())}** |
 
 Dois estados apenas, deliberadamente: `CONFIRMADO` significa que o texto
-literal foi obtido e transcrito. Tudo o resto é `NAO_CONFIRMADO` — «é o valor
-de sempre» e «bate com a edição de 1988» não são fontes.
+literal foi lido e confrontado. Tudo o resto é `NAO_CONFIRMADO`.
+
+**Nenhum dos que sobram é uma tabela.** São um valor que depende de um dado que
+o projeto não declara, duas decisões que só o projetista toma, e uma lacuna.
 
 ---
 
-## A. Itens por confirmar
+## A. Itens por resolver
 
-Para cada um: ler a cláusula na norma, comparar com o valor transcrito, e
-depois marcar `estado="CONFIRMADO"` no catálogo (ou abrir achado, se divergir).
 """
 
 RODAPE = """
 ---
 
-## C. Verificação independente já realizada — BM-15
+## C. O que mudou, e porquê importa
 
-`auditoria_v2/bm_nbr_tabelas.py` lê as tabelas do código-fonte por análise
-sintática (sem importar o repositório) e testa sete invariantes que um erro de
-transcrição quebraria:
+A primeira versão deste anexo declarava
+`NOT VERIFIABLE — REQUIRES EXTERNAL NORMATIVE SOURCE` para as onze tabelas e
+cláusulas, e construiu o BM-15 — sete invariantes de coerência interna — como o
+melhor que se podia fazer sem a norma.
 
-| | Invariante | Resultado |
-|---|---|---|
-| V1 | Tab. 1: b decresce e p cresce de I para V | OK |
-| V2 | Tab. 1: p cresce de A para C | OK |
-| V3 | Tab. 1: z_g cresce com a categoria, constante entre classes | OK |
-| V4 | Tab. 2: F_r decresce de A para C | OK |
-| V5 | **S2(z_g) igual nas cinco categorias** (vento gradiente) | **dispersão 0,72 %** |
-| V6 | Tab. 25: os quatro ramos juntam-se em tg β = 0,4 sem salto | salto = 0 |
-| V7 | Tab. 10: coerência de sinais e pico de sucção em θ = 10° | OK |
+**A norma estava na raiz do projeto o tempo todo.** A auditoria nunca listou a
+árvore à procura dela: inventariou os `.py` e ignorou o resto. É falha de
+cobertura da própria auditoria, e o episódio do [F-13] — em que se argumentou
+que `Ft = 0,5·q·a·b` era fisicamente impossível, com retratação depois — teria
+sido evitado abrindo o ficheiro.
 
-**V5 é a invariante forte.** Acima da camada limite o escoamento é geostrófico:
-a velocidade não depende do terreno. Logo `S2(z_g) = b·F_r·(z_g/10)^p` tem de
-dar o mesmo nas cinco categorias — o que liga três colunas independentes da
-tabela. Dá 1,331 a 1,347, dispersão máxima 0,72 %.
+O BM-15 continua a correr, agora no papel certo: guarda de regressão barata
+que não precisa do PDF. Quem clonar o repositório sem a cópia licenciada tem
+as sete invariantes; quem a tiver corre o BM-17 e verifica contra o texto.
 
-Poder de deteção medido, perturbando um único valor:
+## D. Achados abertos pela leitura da norma
 
-| Perturbação | Dispersão resultante | |
-|---|---|---|
-| b(IV) +0,10 | 8,69 % | detetado |
-| p(III) +0,020 | 6,02 % | detetado |
-| z_g(II) +100 m | 1,75 % | **não detetado** (limite 2 %) |
+Verificar contra a fonte confirmou onze itens **e destapou dois defeitos** que
+nenhuma verificação de coerência interna podia apanhar:
 
-**Limitação declarada:** z_g é a coluna mal policiada. b e p entram na
-convergência com peso alto; z_g entra elevado a p (≈ 0,1) e um erro grosseiro
-de 100 m ainda cabe dentro do limite. Confirmar z_g à vista, não por invariante.
+**[F-20] `C_a = 1,2` sob citação inexistente.** Estava citado como
+«§6.3 / Tab. 13». Na :2023, §6.3 é *Pressões internas em edificações* e a
+Tab. 13 é *edificações cilíndricas de seção circular*. A rota correta é §8.1.1
+(Tab. 26, `Cx`/`Cy`) com o fator `K` de comprimento finito (Tab. 28). O valor
+cai dentro do intervalo plausível mas não foi obtido por essa rota. Peso:
+7,2 % da ação de vento θ = 0°.
 
-### O que V1–V7 provam e o que não provam
+**[F-21] `S3 = 1,00` rotulado «grupo 2».** A Tab. 4 dá grupo 2 → 1,06
+(Tp 75 anos) e grupo 3 → 1,00 (Tp 50 anos). O valor usado é o do grupo 3; o
+rótulo diz grupo 2. Se a classificação correta for o grupo 2, **toda** a ação
+de vento sobe 1,06² = **+12,4 %** — defeito não conservativo. Só o projetista
+classifica a edificação.
 
-**Provam** que a transcrição é uma tabela de camada-limite consistente: os
-valores não foram inventados nem baralhados, e um erro futuro de edição não
-passa em silêncio (as invariantes estão congeladas em
-`tests/test_f18_proveniencia_nbr.py`).
+Nenhum dos dois foi corrigido: ambos exigem dados que o projeto não tem
+(a secção do pilar para a Tab. 28; a classificação da edificação). Estão
+declarados no código, no catálogo e nas saídas.
 
-**Não provam** fidelidade à edição :2023. Se a ABNT tiver revisto os
-parâmetros em 2023, uma tabela revista seria igualmente coerente — e o
-benchmark diria OK à mesma. A coerência interna não distingue edições.
+## E. Como fechar o que resta
 
-## D. Numeração das tabelas — a inconsistência a esclarecer
+1. **`v0_isopleta`** — declarar a localidade da obra e ler a isopleta na
+   Figura 1.
+2. **`s3_estatistico`** — classificar a edificação na Tab. 4 e acertar valor e
+   rótulo entre si.
+3. **`ca_pilar`** — refazer `C_a` por §8.1.1 com a secção real do pilar.
+4. **`tabela_10_alpha_90`** — decidir se a rota de edificação fechada exige as
+   colunas b1/b2/b3 para vento paralelo às cumeeiras.
 
-O deslocamento de numeração alegado entre :1988 e :2023 não é uniforme:
-
-| Conteúdo | Nº na :1988 (alegado) | Nº usado no código | Δ |
-|---|---|---|---|
-| Cobertura isolada duas águas | Tab. 18 | Tab. 25 | +7 |
-| Telhados múltiplos | Tab. 6 | Tab. 10 | +4 |
-| Parâmetros meteorológicos | Tab. 1 (com F_r) | Tab. 1 (sem F_r) + Tab. 2 | — |
-
-O terceiro caso é o mais delicado: na :1988 b, p **e F_r** estão todos na
-Tab. 1, e a Tab. 2 é o S2 tabelado. O código separa F_r numa «Tab. 2» e trata o
-S2 tabelado por «Tab. 3» (`core/wind.py:144`). Ou a :2023 reorganizou a
-apresentação, ou a citação está errada. **Só o texto decide.**
-
-## E. Como fechar
-
-1. Obter a NBR 6123:2023.
-2. Percorrer a secção A deste anexo, item a item.
-3. Para cada um que confira: `estado="CONFIRMADO"` no catálogo, com o texto
-   literal na `evidencia`, à maneira do que já foi feito para o §7.2.2.
-4. Para cada um que divirja: **abrir achado** — é um erro de dimensionamento,
-   não um erro de documentação.
-5. Regenerar este anexo e correr `pytest tests/test_f18_proveniencia_nbr.py`.
-6. Quando a lista esvaziar, `aviso_nbr()` deixa de emitir a reserva sozinho.
+Para cada um: `estado="CONFIRMADO"` no catálogo com a evidência escrita, ou
+abrir achado se divergir. Depois regenerar este anexo e correr
+`pytest tests/test_f18_proveniencia_nbr.py`.
 """
 
 
@@ -166,7 +169,7 @@ def main() -> int:
     for n, item in enumerate(itens_nbr_nao_confirmados(), start=1):
         partes.append(bloco_item(item, n))
 
-    partes.append("---\n\n## B. Itens confirmados\n")
+    partes.append("---\n\n## B. Itens confirmados contra o texto\n")
     for item in CATALOGO_NBR6123:
         if item.estado != "CONFIRMADO":
             continue

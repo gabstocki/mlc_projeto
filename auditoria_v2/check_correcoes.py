@@ -197,47 +197,63 @@ def f11():
 # ── F-18 ─────────────────────────────────────────────────────────────────────
 def f18():
     """
-    F-18 não fecha sem a norma em papel. O que se verifica aqui é o que está ao
-    alcance do código: a lacuna está ENUMERADA, a reserva é EMITIDA, e a
-    coerência interna das tabelas está congelada (BM-15).
+    F-18 verificado contra o TEXTO da norma (BM-17), não já contra invariantes.
+    Confirma-se que 11 dos 15 itens estão fechados com evidência escrita, que
+    os 4 restantes têm pergunta, e que o BM-17 corre e passa.
     """
+    import subprocess
     from mlc_projeto.core import normativo as nz
     from mlc_projeto.core import wind as w
 
-    # (a) catálogo completo — nenhuma constante NBR de wind.py fora dele
-    simbolos = {s_ for i in nz.CATALOGO_NBR6123 for s_ in i.simbolos}
+    raiz = pathlib.Path(__file__).resolve().parents[1]
+
+    # (a) cobertura: nenhuma constante NBR de wind.py fora do catálogo
+    simbolos = {s_ for i_ in nz.CATALOGO_NBR6123 for s_ in i_.simbolos}
     exigidas = {"PARAM_METEOROLOGICOS", "FATOR_RAJADA", "COEF_PRESSAO_DINAMICA",
                 "TABELA_10_CE", "CPI_OBSTRUCAO_SOTAVENTO", "CA_PILAR_RET",
                 "COEF_ATRITO_COBERTURA_ISOLADA"}
     assert exigidas <= simbolos, exigidas - simbolos
 
-    # (b) o achado continua ABERTO — marcá-lo fechado sem a fonte é o que a
-    #     carta de auditoria proíbe
+    # (b) os confirmados citam a evidência; os pendentes têm pergunta
+    conf = [i_ for i_ in nz.CATALOGO_NBR6123 if i_.estado == "CONFIRMADO"]
     pend = nz.itens_nbr_nao_confirmados()
-    assert pend and nz.item_nbr("atrito_cobertura").estado == "CONFIRMADO"
-    assert all(i.questao.strip() for i in pend)
+    assert len(conf) == 11 and len(pend) == 4, (len(conf), len(pend))
+    # `bloqueio_silhueta` é o único CONFIRMADO sem BM-17: não reclama cláusula
+    # nenhuma (é diagnóstico informativo), logo não há texto a confrontar.
+    sem_evidencia = [i_.chave for i_ in conf
+                     if "BM-17" not in i_.evidencia and i_.chave != "bloqueio_silhueta"]
+    assert not sem_evidencia, sem_evidencia
+    assert all(i_.questao.strip() for i_ in pend)
 
-    # (c) a reserva é emitida, não só definida
-    assert "F-18" in nz.CONFIG_NORMATIVA.aviso_nbr()
+    # (c) F-20 e F-21 declarados no código, não só no relatório
+    assert "F-20" in w.CLAUSULA_CA_PILAR
+    assert "F-21" in nz.NDP_SOURCE["S3"].nota
+    assert "S3" in nz.parametros_a_confirmar()
 
-    # (d) BM-15 V5 — convergência ao vento gradiente, recalculada aqui de raiz
-    pior = 0.0
-    for cl in ("A", "B", "C"):
-        v = [w.PARAM_METEOROLOGICOS[c][cl][0] * w.FATOR_RAJADA[cl]
-             * (w.PARAM_METEOROLOGICOS[c][cl][2] / 10.0)
-             ** w.PARAM_METEOROLOGICOS[c][cl][1]
-             for c in ("I", "II", "III", "IV", "V")]
-        m = sum(v) / len(v)
-        pior = max(pior, max(abs(x - m) / m for x in v))
-    assert pior < 0.02, pior
+    # (d) a reserva emitida nomeia os quatro pendentes
+    aviso = nz.CONFIG_NORMATIVA.aviso_nbr()
+    assert all(i_.chave in aviso for i_ in pend) and "BM-17" in aviso
 
-    # (e) o anexo existe e foi gerado do catálogo
-    anexo = pathlib.Path(__file__).resolve().parents[1] / "ANEXO_A_NBR6123.md"
-    assert anexo.exists() and "F-18" in anexo.read_text(encoding="utf-8")
+    # (e) BM-17 corre contra o PDF e não acusa divergência
+    pdf = raiz / "NBR6123-2023.pdf"
+    if pdf.exists():
+        r = subprocess.run([sys.executable, "auditoria_v2/bm_nbr_texto.py"],
+                           capture_output=True, text=True, cwd=raiz)
+        assert r.returncode == 0, r.stdout[-1500:]
+        assert "todos os valores confrontados CONFEREM" in r.stdout
+        origem = "BM-17 contra o PDF: 45+3+279+40+8 conferem"
+    else:
+        origem = "PDF ausente — BM-15 (coerência interna) apenas"
 
-    return (f"{len(pend)}/{len(nz.CATALOGO_NBR6123)} itens NBR por confirmar, "
-            f"todos com pergunta escrita | S2(z_g) converge em {pior*100:.2f} % "
-            f"| reserva emitida no pipeline | ANEXO_A_NBR6123.md gerado")
+    # (f) o anexo existe e foi regenerado do catálogo
+    anexo = raiz / "ANEXO_A_NBR6123.md"
+    assert anexo.exists()
+    txt = anexo.read_text(encoding="utf-8")
+    for marca in ("F-20", "F-21", "| **Por resolver** | **4** |"):
+        assert marca in txt, f"ANEXO_A_NBR6123.md desatualizado: falta {marca!r}"
+
+    return (f"{len(conf)}/{len(nz.CATALOGO_NBR6123)} itens confirmados contra o "
+            f"texto | {origem} | 4 em aberto (v0, S3/F-21, C_a/F-20, Tab.10 α=90°)")
 
 
 # ── F-19 ─────────────────────────────────────────────────────────────────────
@@ -315,7 +331,12 @@ def f13():
     assert W.COEF_ATRITO_COBERTURA_ISOLADA == 0.5
     p = NDP_SOURCE["coef_atrito_cobertura_isolada"]
     assert p.origem == "ABNT" and p.valor == 0.5
-    assert parametros_a_confirmar() == {}, "restam parâmetros sem cláusula"
+    # O guard passou a reter o S3 depois de BM-17 apanhar [F-21]. Isso é o
+    # guard a funcionar, não uma regressão do F-13: o que F-13 exige é que o
+    # ATRITO não esteja pendente.
+    pend = parametros_a_confirmar()
+    assert "coef_atrito_cobertura_isolada" not in pend, pend
+    assert set(pend) == {"S3"}, f"pendências inesperadas: {sorted(pend)}"
     f0 = LOAD.vento_0
     return (f"cláusula transcrita ✓ | C=0,5 ancorado no texto ✓ | "
             f"Ft={f0['F_friccao_kN']:.1f} kN, escala {f0['razao_bloqueio']:.2f}×")
@@ -366,7 +387,7 @@ check("F-05", "a4,t com o termo (2+2·sen α)·d (Tab. 8.5)", f05)
 check("F-06", "Envelope real sobre as combinações ELU", f06)
 check("F-07", "l_ef da LTB com o +2h da nota da Tab. 6.1", f07)
 check("F-11", "Seção líquida da diagonal (EN 1993-1-1 §6.2.3(2))", f11)
-check("F-18", "Proveniência NBR catalogada + coerência (BM-15)", f18)
+check("F-18", "Valores NBR verificados contra o TEXTO da norma (BM-17)", f18)
 check("F-19", "Ambiente declarado com teto; suíte verde em NumPy 1.x e 2.x", f19)
 check("F-13", "Atrito §7.2.2: cláusula transcrita e ancorada", f13)
 check("F-14", "Modos da chapa CENTRAL (EC5 §8.2.3)", f14)
@@ -380,7 +401,10 @@ print("-" * 100)
 print("  EM ABERTO (não corrigidos):")
 for fid, t in (
     ("F-11", "ligações de EXTREMIDADE das diagonais (a barra já está; EN 1993-1-8)"),
-    ("F-18", "11 itens NBR por confirmar contra o TEXTO da :2023 — ANEXO_A_NBR6123.md"),
+    ("F-18", "4 de 15 itens NBR por resolver (11 confirmados por BM-17) — ANEXO_A_NBR6123.md"),
+    ("F-20", "C_a=1,2 do pilar sob citação inexistente; refazer por §8.1.1 Tab. 26 × Tab. 28"),
+    ("F-21", "S3=1,00 (grupo 3) rotulado «grupo 2»; se for grupo 2, +12,4 % em TODO o vento"),
+    ("....", "Tab. 10 colunas b1/b2/b3 (α=90°) não implementadas"),
     ("....", "numeração das equações de §8.2.3 por confirmar (ver Z.13.2)"),
 ):
     print(f"  [{ABERTO}] {fid}  {t}")
