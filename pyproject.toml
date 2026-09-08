@@ -9,13 +9,25 @@ description = "Verificação estrutural de galpão em MLC — Eurocode 5"
 authors = [{ name = "Gabriel Stocki", email = "contato@stocki.eng.br" }]
 readme = "README.md"
 requires-python = ">=3.12"
+# [F-19] Todo intervalo tem teto. Um ">=" sem limite superior admite majors
+# que não existem e não podem ser exercitadas — e foi assim que a suíte passou
+# a falhar sozinha quando o venv avançou para NumPy 2.4.6 e o np.trapz de um
+# teste desapareceu. O teto é a afirmação conservadora e verdadeira: "não
+# verificado além daqui"; subi-lo exige exercitar o projeto na major nova.
+#
+# Exercitado de facto (os 38 η do pipeline são BIT-IDÊNTICOS nos dois):
+#   A: Python 3.12.7 | numpy 1.26.4 scipy 1.15.3 pandas 2.2.2
+#      matplotlib 3.9.2 sympy 1.13.2 openpyxl 3.1.5
+#   B: Python 3.12.7 | numpy 2.4.6  scipy 1.17.1 pandas 3.0.3
+#      matplotlib 3.11.0 sympy 1.14.0 openpyxl 3.1.5
+# Evidência: auditoria_v2/bm_ambiente.py (BM-16).
 dependencies = [
-    "numpy>=1.26",
-    "scipy>=1.12",
-    "pandas>=2.2",
-    "matplotlib>=3.8",
-    "sympy>=1.12",
-    "openpyxl>=3.1",
+    "numpy>=1.26,<3",
+    "scipy>=1.12,<2",
+    "pandas>=2.2,<4",
+    "matplotlib>=3.8,<4",
+    "sympy>=1.12,<2",
+    "openpyxl>=3.1,<4",
 ]
 
 [project.optional-dependencies]

@@ -242,22 +242,117 @@ def test_nao_ha_uso_de_api_numpy_acima_do_floor_declarado():
     )
 
 
-def test_trapezoid_do_scipy_e_equivalente_ao_do_numpy():
+def test_trapezoid_do_scipy_implementa_a_regra_do_trapezio():
     """
-    Verificação da equivalência numérica que autoriza a substituição de NC-01.
+    [F-19] Verificação da equivalência que autoriza a substituição de NC-01.
 
-    ``scipy.integrate.trapezoid`` e ``numpy.trapz`` (renomeado ``numpy.trapezoid``
-    em NumPy 2.0) implementam a mesma regra composta do trapézio. A igualdade é
-    exigida em precisão de máquina para que a correção seja neutra sobre todos os
-    resultados estruturais (H por compatibilidade, volume/peso próprio,
-    flexibilidades f_flex/f_ax, peso de içamento).
+    A versão anterior deste teste comparava ``scipy.integrate.trapezoid`` com
+    ``numpy.trapz``. Isso tinha dois problemas:
+
+    1. ``np.trapz`` foi REMOVIDO em NumPy 2.0. Como o intervalo declarado
+       (``numpy>=1.26``) admite a 2.x, a suíte não passava no seu próprio
+       intervalo declarado — era esse o achado F-19.
+    2. Comparar uma biblioteca com o alias de outra biblioteca prova apenas
+       que as duas concordam, não que alguma delas está certa.
+
+    A referência passa a ser escrita aqui de raiz, com ``math.fsum``, que soma
+    com arredondamento correto — é portanto uma referência MAIS exata do que
+    qualquer das duas implementações vetorizadas. Não depende de nenhuma API
+    do NumPy e vale em todas as majors.
+
+    Tolerância: 1 ulp da escala de condicionamento Σ|Δx·(|y_i|+|y_{i+1}|)/2|.
+    Medido: pior desvio 1,51e-16 (≈ 0,68 ulp), idêntico em NumPy 1.26.4 e
+    2.4.6.
     """
+    import math
+
     import numpy as np
     from scipy.integrate import trapezoid
 
+    def referencia(y, x):
+        """Regra composta do trapézio com soma de arredondamento correto."""
+        return math.fsum((x[k + 1] - x[k]) * (y[k + 1] + y[k]) / 2.0
+                         for k in range(len(x) - 1))
+
+    def escala(y, x):
+        """Condicionamento: soma dos módulos das contribuições."""
+        return math.fsum(abs(x[k + 1] - x[k]) * (abs(y[k + 1]) + abs(y[k])) / 2.0
+                         for k in range(len(x) - 1))
+
     rng = np.random.default_rng(20260906)
+    pior = 0.0
     for _ in range(200):
         n = int(rng.integers(2, 400))
         x = np.sort(rng.uniform(-1.0e3, 1.0e3, n))
         y = rng.uniform(-1.0e6, 1.0e6, n)
-        assert trapezoid(y, x) == np.trapz(y, x)
+        xs, ys = x.tolist(), y.tolist()
+        obtido = float(trapezoid(y, x))
+        exato = referencia(ys, xs)
+        cond = escala(ys, xs)
+        desvio = abs(obtido - exato) / cond if cond else 0.0
+        pior = max(pior, desvio)
+    assert pior <= 2.3e-16, f"desvio de {pior:.3e} excede 1 ulp da escala"
+
+
+def test_nenhum_ficheiro_usa_api_removida_no_intervalo_declarado():
+    """
+    [F-19] O simétrico de ``test_nao_ha_uso_de_api_numpy_acima_do_floor``.
+
+    Aquele guarda contra usar uma API que só existe ACIMA do intervalo
+    declarado (``np.trapezoid``, NumPy >= 2.0). Faltava o outro lado: usar uma
+    API que já não existe no TOPO do intervalo (``np.trapz``, removida na 2.0).
+    Era por aí que o F-19 entrava — e entrava por um ficheiro de teste, que a
+    guarda existente nem sequer varre.
+
+    Ambos os lados são agora vigiados, no pacote **e** nos testes.
+    """
+    dep_numpy = next(
+        Requirement(d) for d in _pyproject()["project"]["dependencies"]
+        if Requirement(d).name == "numpy"
+    )
+    admite_2x = SpecifierSet(str(dep_numpy.specifier)).contains(Version("2.0.0"))
+    if not admite_2x:
+        pytest.skip("intervalo declarado exclui NumPy 2.x — np.trapz é admissível")
+
+    ofensas: list[str] = []
+    for arq in sorted(PACOTE.rglob("*.py")) + sorted((RAIZ / "tests").rglob("*.py")):
+        arvore = ast.parse(arq.read_text(encoding="utf-8"), filename=str(arq))
+        for no in ast.walk(arvore):
+            if (
+                isinstance(no, ast.Attribute)
+                and no.attr == "trapz"
+                and isinstance(no.value, ast.Name)
+                and no.value.id in {"np", "numpy"}
+            ):
+                ofensas.append(f"{arq.relative_to(RAIZ)}:{no.lineno}")
+
+    assert not ofensas, (
+        f"numpy.trapz foi removido na NumPy 2.0, admitida pelo intervalo "
+        f"declarado ({dep_numpy.specifier}). Use scipy.integrate.trapezoid "
+        f"em: " + ", ".join(ofensas)
+    )
+
+
+def test_toda_dependencia_declara_limite_superior():
+    """
+    [F-19] Um intervalo sem teto não é um ambiente declarado.
+
+    ``numpy>=1.26`` admite a 3.x, que não existe e não pode ser exercitada.
+    Declarar o que não se consegue testar é a não-conformidade que AUD-019
+    levantou — e foi assim que a suíte passou a falhar sozinha quando o venv
+    do projeto avançou para a NumPy 2.4.6.
+
+    O teto na major seguinte é a afirmação conservadora e verdadeira: «não
+    verificado além daqui». Subi-lo exige exercitar o projeto na major nova.
+    """
+    sem_teto = []
+    for dep in _pyproject()["project"]["dependencies"]:
+        req = Requirement(dep)
+        tem_teto = any(e.operator in ("<", "<=", "==", "~=")
+                       for e in req.specifier)
+        if not tem_teto:
+            sem_teto.append(f"{req.name}{req.specifier}")
+    assert not sem_teto, (
+        "dependências sem limite superior — o ambiente declarado admite "
+        "versões que nunca foram exercitadas: " + ", ".join(sem_teto)
+    )

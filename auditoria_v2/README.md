@@ -41,3 +41,18 @@ ver [F-18] e `ANEXO_A_NBR6123.md`.
 python auditoria_v2/bm_nbr_tabelas.py     # BM-15
 python auditoria_v2/gerar_anexo_nbr.py    # regenerar o anexo do catálogo
 ```
+
+## BM-16 — invariância dos resultados face ao ambiente (`bm_ambiente.py`)
+
+Corre o pipeline em cada interpretador disponível, em subprocessos isolados, e
+compara os η em igualdade **exata**. Num memorial de cálculo, um teste que falha
+é chato; um número que muda com a versão da biblioteca é insalvável.
+
+Resultado: os **38 η e o veredito são bit-idênticos** entre
+`numpy 1.26.4 / scipy 1.15.3 / pandas 2.2.2` e
+`numpy 2.4.6 / scipy 1.17.1 / pandas 3.0.3`.
+
+```bash
+python auditoria_v2/bm_ambiente.py                    # BM-16
+python auditoria_v2/bm_ambiente.py py1 py2 py3        # ou interpretadores à escolha
+```

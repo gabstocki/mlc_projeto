@@ -11,6 +11,8 @@ Uso:  .venv/bin/python auditoria_v2/check_correcoes.py
 import contextlib
 import inspect
 import io
+import ast
+import sys
 import math
 import pathlib
 
@@ -238,6 +240,70 @@ def f18():
             f"| reserva emitida no pipeline | ANEXO_A_NBR6123.md gerado")
 
 
+# ── F-19 ─────────────────────────────────────────────────────────────────────
+def f19():
+    """
+    F-19: a suíte não passava no seu PRÓPRIO intervalo declarado. Verifica-se
+    (a) que todo o intervalo tem teto, (b) que nada usa API removida dentro
+    dele, (c) que a regra do trapézio bate contra referência de arredondamento
+    correto, e (d) que a suíte passa nos dois ambientes reais.
+    """
+    import subprocess
+    import tomllib
+    from packaging.requirements import Requirement
+
+    raiz = pathlib.Path(__file__).resolve().parents[1]
+    with (raiz / "pyproject.toml").open("rb") as fh:
+        deps = tomllib.load(fh)["project"]["dependencies"]
+    sem_teto = [d for d in deps
+                if not any(e.operator in ("<", "<=", "==", "~=")
+                           for e in Requirement(d).specifier)]
+    assert not sem_teto, sem_teto
+
+    # nenhuma API removida na 2.0 sobrevive no pacote nem nos testes
+    ofensas = []
+    for arq in list((raiz / "mlc_projeto").rglob("*.py")) + \
+               list((raiz / "tests").rglob("*.py")):
+        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+            if (isinstance(no, ast.Attribute) and no.attr == "trapz"
+                    and isinstance(no.value, ast.Name)
+                    and no.value.id in {"np", "numpy"}):
+                ofensas.append(f"{arq.name}:{no.lineno}")
+    assert not ofensas, ofensas
+
+    # a regra do trapézio contra referência exata (fsum), sem np.trapz
+    from scipy.integrate import trapezoid
+    import numpy as _np
+    rng = _np.random.default_rng(20260906)
+    pior = 0.0
+    for _ in range(50):
+        n = int(rng.integers(2, 400))
+        x = _np.sort(rng.uniform(-1e3, 1e3, n)).tolist()
+        y = rng.uniform(-1e6, 1e6, n).tolist()
+        exato = math.fsum((x[k+1]-x[k])*(y[k+1]+y[k])/2.0 for k in range(n-1))
+        cond = math.fsum(abs(x[k+1]-x[k])*(abs(y[k+1])+abs(y[k]))/2.0
+                         for k in range(n-1))
+        obtido = float(trapezoid(_np.array(y), _np.array(x)))
+        pior = max(pior, abs(obtido-exato)/cond if cond else 0.0)
+    assert pior <= 2.3e-16, pior
+
+    # a suíte passa nos dois ambientes reais
+    ambientes = []
+    for exe in (sys.executable, str(raiz / ".venv" / "bin" / "python")):
+        if not pathlib.Path(exe).exists():
+            continue
+        r = subprocess.run([exe, "-m", "pytest", "-q", "--no-header", "-x"],
+                           capture_output=True, text=True, cwd=raiz)
+        v = subprocess.run([exe, "-c", "import numpy;print(numpy.__version__)"],
+                           capture_output=True, text=True).stdout.strip()
+        ambientes.append((v, r.returncode))
+    assert ambientes and all(rc == 0 for _, rc in ambientes), ambientes
+
+    return (f"6/6 dependências com teto | 0 usos de np.trapz | trapézio a "
+            f"{pior:.2e} da referência fsum | suíte verde em numpy "
+            + ", ".join(v for v, _ in ambientes))
+
+
 # ── F-13 ─────────────────────────────────────────────────────────────────────
 def f13():
     import mlc_projeto.core.wind as W
@@ -301,6 +367,7 @@ check("F-06", "Envelope real sobre as combinações ELU", f06)
 check("F-07", "l_ef da LTB com o +2h da nota da Tab. 6.1", f07)
 check("F-11", "Seção líquida da diagonal (EN 1993-1-1 §6.2.3(2))", f11)
 check("F-18", "Proveniência NBR catalogada + coerência (BM-15)", f18)
+check("F-19", "Ambiente declarado com teto; suíte verde em NumPy 1.x e 2.x", f19)
 check("F-13", "Atrito §7.2.2: cláusula transcrita e ancorada", f13)
 check("F-14", "Modos da chapa CENTRAL (EC5 §8.2.3)", f14)
 check("....", "Pipeline de ponta a ponta", pipeline)
@@ -314,7 +381,6 @@ print("  EM ABERTO (não corrigidos):")
 for fid, t in (
     ("F-11", "ligações de EXTREMIDADE das diagonais (a barra já está; EN 1993-1-8)"),
     ("F-18", "11 itens NBR por confirmar contra o TEXTO da :2023 — ANEXO_A_NBR6123.md"),
-    ("F-19", "pyproject numpy>=1.26: passa em 1.26.4, falha sob NumPy 2.x"),
     ("....", "numeração das equações de §8.2.3 por confirmar (ver Z.13.2)"),
 ):
     print(f"  [{ABERTO}] {fid}  {t}")

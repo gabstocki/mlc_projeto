@@ -83,7 +83,7 @@ lógica de cálculo). Todos os demais estão individualizados.
 
 | Arquivo | Função | Entradas | Saídas | Dependências | Criticidade |
 |---|---|---|---|---|---|
-| `pyproject.toml` | metadados/ambiente declarado | — | build, deps | setuptools | **ALTA** (F-19) |
+| `pyproject.toml` | metadados/ambiente declarado | — | build, deps | setuptools | `VALIDATED` (F-19 fechado, Z.19) |
 | `README.md` | descrição do projeto | — | texto | — | BAIXA (vão declarado 40,5 m ≠ 20,25 m de `main`) |
 | `.cursorrules` | convenções (SI, dict+η, docstring normativa) | — | texto | — | MÉDIA (contrato de unidades) |
 | `.gitignore` | exclusões | — | — | — | NULA |
@@ -996,7 +996,7 @@ de default, ou cache incorreto.
 | Fixação da telha | `fixacao_telha.py` | c_p = ±2,0, classe A | NBR 6123 §7.2.6 | η = 0,679 | `NOT VERIFIABLE` [F-18] |
 | Agregação do veredito | `report.py:83-140` | — | — | **ADV-D** | **`ERROR` [F-04]** |
 | Cargas para a fundação | `cargas_fundacao.py` | varre combinações ✔ | — | tabela por base | `VALIDATED WITH RESERVATIONS` (herda [F-01]) |
-| Ambiente de execução | `pyproject.toml:12` | — | — | 350 passed / **1 failed** | **`NOT VALIDATED` [F-19]** |
+| Ambiente de execução | `pyproject.toml:12-27` | — | — | BM-16: 38 η bit-idênticos em NumPy 1.26.4 e 2.4.6; 549 passed nos dois | `VALIDATED` [F-19 fechado] |
 | Modelo FEM OpenSees | `opensees/` | validação cruzada | — | **não executado** (dependência ausente) | `NOT VERIFIABLE` |
 | Fundação | — | — | EN 1997 | — | `NOT APPLICABLE` (declarado fora de escopo) |
 | Resistência ao fogo | — | — | EN 1995-1-2 | — | `NOT APPLICABLE` (não avaliada) |
@@ -1057,7 +1057,7 @@ de default, ou cache incorreto.
     justificativa da escolha na extremidade permissiva do intervalo da Tab. 7.2.
 17. **[F-23]** Registar `drift_lim = H/300` e `k_s`/`k_f,2`/`k_f,3` em `NDP_SOURCE`.
 18. **[F-12]** Corrigir ou remover a verificação de Hankinson no apoio.
-19. **[F-19]** Fixar `numpy>=1.26,<2.0` **ou** adaptar o teste; a suíte deve passar
+19. ~~**[F-19]** Fixar `numpy>=1.26,<2.0` **ou** adaptar o teste~~ → **FECHADO (Z.19)**: teto em todas as 6 dependências e a referência do trapézio reescrita; a suíte passa
     100 % no ambiente declarado.
 20. **[F-21]** Corrigir o rótulo `"ELU_C2 (1,35G+1,5W+1,05Q)"` em `tercas.py`.
 21. **[F-22]** Recommitar `output/pipeline_console.txt` (a versão versionada estava
@@ -1090,7 +1090,7 @@ de default, ou cache incorreto.
 | `test_l_ef_ltb_soma_2h_para_carga_no_topo` | [F-07] | `l_ef = 0,9·l1 + 2h` |
 | `test_analisar_biarticulada_recusa_h0_zero` | [F-09] | levanta `DominioInvalidoError` |
 | `test_parametros_vento_recusa_V0_negativo_e_nan` | [F-08] | levanta |
-| `test_suite_passa_no_ambiente_declarado` | [F-19] | 0 failed |
+| `test_suite_passa_no_ambiente_declarado` | [F-19] | 0 failed em NumPy 1.26.4 **e** 2.4.6 |
 
 ---
 
@@ -2150,3 +2150,108 @@ divergência de ambiente, não um defeito de código.
 
 **F-18 continua ABERTO.** Baixa de `NOT VERIFIABLE` difuso para uma lista de 11
 perguntas com resposta de meia hora, para quem tenha a norma.
+
+---
+
+## Z.19 — F-19 · o ambiente declarado
+
+### O achado, reformulado depois de o reproduzir
+
+Estava registado como «`np.trapz` falha sob NumPy 2.4.6». Reproduzindo-o nos
+dois interpretadores da máquina, o achado é mais preciso e mais interessante:
+
+**A suíte não passava no seu próprio intervalo declarado.** `pyproject`
+declarava `numpy>=1.26` — um intervalo aberto que atravessa uma fronteira de
+major — e um teste comparava `scipy.integrate.trapezoid` com `np.trapz`, API
+**removida na NumPy 2.0**. Bastou o venv do projeto avançar para a 2.4.6 para a
+suíte se autodenunciar.
+
+| Ambiente | Python | NumPy | SciPy | Suíte (antes) |
+|---|---|---|---|---|
+| anaconda | 3.12.7 | 1.26.4 | 1.15.3 | 547 passed |
+| `.venv` do projeto | 3.12.7 | **2.4.6** | 1.17.1 | 546 passed, **1 failed** |
+
+### A pergunta que importava não era essa
+
+Num memorial de cálculo, um teste que falha é chato; **um número que muda com a
+versão da biblioteca é insalvável**. Antes de corrigir seja o que for, medi
+isso — é o BM-16.
+
+O pipeline foi corrido nos dois ambientes, em subprocessos isolados, e os η
+comparados por `repr()`, em igualdade **exata**:
+
+```
+numpy 1.26.4 / scipy 1.15.3 / pandas 2.2.2  →  status=APROVADO  η_max=0.7902
+numpy 2.4.6  / scipy 1.17.1 / pandas 3.0.3  →  status=APROVADO  η_max=0.7902
+38 η comparados em igualdade EXATA, 0 divergentes
+```
+
+**Os 38 η e o veredito são bit-idênticos.** F-19 nunca foi um defeito de
+reprodutibilidade numérica — é um defeito de declaração. Convém dizê-lo, porque
+a classificação inicial (**ALTA**) supunha o contrário.
+
+### Três defeitos, não um
+
+**1. Referência num alias removido.** O teste provava a substituição NC-01
+comparando `scipy.integrate.trapezoid` com `numpy.trapz`. Além de morrer na
+2.0, isso prova apenas que duas bibliotecas concordam — não que alguma está
+certa. A referência passa a ser escrita de raiz com `math.fsum`, que soma com
+**arredondamento correto** e é portanto mais exata do que qualquer das duas
+implementações vetorizadas. Não depende de NumPy nenhum.
+
+Desvio medido contra a referência exata: **1,51 × 10⁻¹⁶** da escala de
+condicionamento `Σ|Δx·(|yᵢ|+|yᵢ₊₁|)/2|` — 0,68 ulp — e idêntico nas duas
+majors. O teste é hoje uma afirmação mais forte do que a que substituiu.
+
+**2. Guarda assimétrica.** Existia
+`test_nao_ha_uso_de_api_numpy_acima_do_floor_declarado`, que proíbe
+`np.trapezoid` (só existe ≥ 2.0) enquanto o piso admitir a 1.x. Faltava o outro
+lado: proibir a API que já **não** existe no topo do intervalo. E a guarda
+existente varre só `mlc_projeto/` — o F-19 entrou por um ficheiro de **teste**,
+que ela nem olhava. Ambos os lados são agora vigiados, no pacote e nos testes.
+
+**3. Intervalos sem teto.** As seis dependências declaravam só piso.
+`numpy>=1.26` admite a 3.x, que não existe e não pode ser exercitada — é
+literalmente a não-conformidade que AUD-019 levantou, sobrevivendo na forma
+inversa. Passam todas a ter teto na major seguinte à exercitada, com registo em
+comentário de quais versões foram de facto corridas. O teto é a afirmação
+conservadora e verdadeira: *não verificado além daqui*.
+
+```toml
+"numpy>=1.26,<3",   "scipy>=1.12,<2",   "pandas>=2.2,<4",
+"matplotlib>=3.8,<4",   "sympy>=1.12,<2",   "openpyxl>=3.1,<4",
+```
+
+### Estado
+
+**549 passed, 0 failed** — nos **dois** ambientes. 3 testes novos
+(`test_toda_dependencia_declara_limite_superior`,
+`test_nenhum_ficheiro_usa_api_removida_no_intervalo_declarado`), 1 reescrito
+(`test_trapezoid_do_scipy_implementa_a_regra_do_trapezio`). Painel: **13/13**.
+
+**F-19 FECHADO.** Severidade real: MÉDIA, não ALTA — os resultados nunca
+dependeram do ambiente, e isso está agora medido em vez de suposto.
+
+---
+
+## RETIFICAÇÃO — a NBR 6123:2023 está no repositório
+
+`NBR6123-2023.pdf` está na **raiz do projeto** desde 6 de setembro: ABNT NBR
+6123:2023, segunda edição, 107 páginas, texto extraível.
+
+Toda a secção D e o Z.18 foram escritos a declarar
+`NOT VERIFIABLE — REQUIRES EXTERNAL NORMATIVE SOURCE` **sem que a auditoria
+alguma vez tivesse listado a raiz do projeto à procura da fonte**. A afirmação
+«a auditoria não dispõe do texto da norma», repetida em Z.18, é falsa.
+
+Isto é uma falha de cobertura da própria auditoria, e das graves: a carta manda
+inventariar **100 % dos ficheiros**, e o inventário da secção B percorreu os
+`.py` e ignorou o resto da árvore. O episódio do F-13 — em que se argumentou que
+`Ft = 0,5·q·a·b` era fisicamente impossível e se propôs 0,05, com retratação
+depois de o utilizador colar a cláusula — resolvia-se abrindo este ficheiro.
+
+**Consequência:** F-18 deixa de ser `NOT VERIFIABLE` por falta de fonte. Passa a
+ser verificável e é reaberto para verificação contra o texto. O que Z.18
+construiu (catálogo, reserva emitida, BM-15) continua válido como
+infraestrutura; o que muda é que as 11 perguntas passam a ter onde ser
+respondidas.
