@@ -225,6 +225,17 @@ não declara essa coerência em lado nenhum. `CONFIRMED` como omissão documenta
 > declarada **não pode ser verificada** com o material fornecido.
 > **Ação P0:** anexar ao memorial a reprodução das Tab. 1, 2, 10 e 25 e do §7.2.2 da
 > NBR 6123:2023 efetivamente consultada.
+>
+> **ATUALIZAÇÃO (Z.18) — parcialmente tratado, NÃO fechado.** O §7.2.2 foi
+> fornecido e está confirmado. As tabelas continuam por confirmar: sem o texto
+> da norma, reproduzi-las seria inventá-las. O que foi feito em vez disso:
+> a lacuna passou de difusa a **enumerável** (`CATALOGO_NBR6123`, 13 itens, 11
+> por confirmar, cada um com a pergunta escrita), a reserva passou a ser
+> **emitida** no pipeline (`aviso_nbr()`), e a coerência interna das tabelas
+> ficou **verificada e congelada** (BM-15, 7 invariantes). Folha de
+> conferência: `ANEXO_A_NBR6123.md`.
+> **Status revisto:** Tab. 1 e 2 → `VALIDATED WITH RESERVATIONS` (coerência
+> demonstrada, edição não); Tab. 10, Tab. 25 e restantes → `NOT VERIFIABLE`.
 
 ---
 
@@ -939,10 +950,10 @@ de default, ou cache incorreto.
 | Propriedades GL | `materials.py:27-52` | — | EN 14080:2013 Tab. 5 | conferência item a item | `VALIDATED WITH RESERVATIONS` |
 | k_mod / k_def / γM / k_cr | `materials.py:72-91` | — | EC5 Tab. 3.1/3.2/2.3, §6.1.7 | usados em BM-04/06/07 | `VALIDATED` |
 | Declaração NDP / NA | `normativo.py:60-185` | — | EN 1990/1995 | 17 NDP enumerados | `VALIDATED WITH RESERVATIONS` [F-20, F-23] |
-| S2, Vk, q | `wind.py:113-175` | camada-limite | NBR 6123 §5.3.3, §4.2 | BM-01 (0,000 %) | `VALIDATED WITH RESERVATIONS` [F-18] |
+| S2, Vk, q | `wind.py:113-175` | camada-limite | NBR 6123 §5.3.3, §4.2 | BM-01 (0,000 %) + BM-15 V1..V5 | `VALIDATED WITH RESERVATIONS` [F-18] |
 | Domínio Tab. 24/25 | `wind.py:337-388` | — | NBR 6123 §7.2.1 | ADV-C | `VALIDATED WITH RESERVATIONS` [F-18] |
-| c_pe Tab. 25 | `wind.py:393-483` | — | NBR 6123 Tab. 25 | ADV-C (domínio) | `NOT VERIFIABLE` [F-18] |
-| c_pe Tab. 10 + c_pi | `wind.py:226-332` | c_net = c_pe − c_pi | NBR 6123 Tab. 10, §7.2.1 | ADV-C (domínio) | `NOT VERIFIABLE` [F-18] |
+| c_pe Tab. 25 | `wind.py:393-483` | — | NBR 6123 Tab. 25 | ADV-C (domínio) + BM-15 V6 (contínua em tg β=0,4) | `NOT VERIFIABLE` [F-18] |
+| c_pe Tab. 10 + c_pi | `wind.py:226-332` | c_net = c_pe − c_pi | NBR 6123 Tab. 10, §7.2.1 | ADV-C (domínio) + BM-15 V7 (sinais) | `NOT VERIFIABLE` [F-18] |
 | Atrito θ=0° | `wind.py:496,555` | — | NBR 6123 §7.2.2 (alegada) | **BM-11: 10,13×** | **`ERROR` [F-13]** |
 | Componente horiz. da cobertura | **ausente** | equilíbrio de forças | — | **BM-12: 1,51×** | **`ERROR` [F-01]** |
 | Peso próprio g_k | `loads.py:87-158` | ∫A(x)dx·γ | EN 1991-1-1 §4.1 | BM-02 (0,005 %) | `VALIDATED` |
@@ -1020,8 +1031,10 @@ de default, ou cache incorreto.
    `NÃO EXECUTADA / ✗` em vez de `continue`; `_imprimir_resumo_export` deve verificar
    que todas as chaves obrigatórias de `VERIFICACOES_EXPORT` estão presentes ou
    explicitamente marcadas "não aplicável".
-7. **[F-18]** Anexar ao memorial a reprodução das Tab. 1, 2, 10 e 25 e do §7.2.2 da
-   NBR 6123:**2023** efetivamente consultada, ou declarar a edição realmente usada.
+7. **[F-18]** ~~Anexar ao memorial a reprodução das Tab. 1, 2, 10 e 25~~ →
+   **parcialmente tratado (Z.18)**: §7.2.2 confirmado; as 11 restantes ficam
+   catalogadas item a item com a pergunta escrita em `ANEXO_A_NBR6123.md`. Só
+   fecha com o texto da
 
 ### P1 — corrigir antes da próxima revisão
 
@@ -1168,7 +1181,7 @@ e `ℓ_ef` não explorados), **F-16**/**F-17** (LOW — `G_05`, `k_h`).
 | 11 | O software escolhe automaticamente o caso mais favorável? | **Sim, em efeito**: a governante é escolhida por `max\|M\|` e impõe o k_mod dela a verificações cujo governante é outro. | `CONFIRMED` | F-06 |
 | 12 | A transformação característico→cálculo está correta? | Sim — `f_d = k_mod·f_k/γM` em todas as propriedades; nenhum fator duplicado, invertido ou fora do lugar. | `CONFIRMED` | `materials.py:189-200` |
 | 13 | As combinações EN 1990 estão corretas? | Sim — Eq. 6.10, Tab. A1.1/A1.2; gerador recriado de forma independente com Δ ≤ 0,001 %. | `CONFIRMED` | BM-03 |
-| 14 | O vento segue a NBR 6123? | S2/Vk/q sim (Δ = 0,000 %); os **coeficientes tabelados e o §7.2.2 não são verificáveis** e o atrito é fisicamente impossível. | `CONFIRMED` (S2/q) / `NOT VERIFIABLE` (tabelas) | F-13, F-18 |
+| 14 | O vento segue a NBR 6123? | S2/Vk/q sim (Δ = 0,000 %); o §7.2.2 **está confirmado** (texto fornecido, Z.16) e não é atrito de superfície mas ação envolvente; os **coeficientes tabelados continuam não verificáveis** contra o texto da :2023, embora BM-15 demonstre a coerência interna da transcrição (7/7). | `CONFIRMED` (S2/q, §7.2.2) / `NOT VERIFIABLE` (tabelas) | F-13, F-18 |
 | 15 | A interface vento→combinação está correta? | Sim — só valores característicos atravessam; nenhum γf da NBR aplicado antes do γQ da EN 1990. | `CONFIRMED` | Seção I |
 | 16 | O ELU está completo? | Não — falta a componente horizontal do vento e o `f_h,α,k`; o α_cr não é de sistema. | `CONFIRMED` | F-01, F-02, F-03 |
 | 17 | O ELS está correto? | Sim — flexão + cisalhamento de Timoshenko com I(x), A(x), `E_mean`/`G_mean`, Eq. (2.2); benchmark exato. | `CONFIRMED` | BM-08 |
@@ -1843,7 +1856,7 @@ $ .venv/bin/python auditoria_v2/check_correcoes.py
 |---|---|---|
 | ⏳ | **F-07** | `l_ef` da LTB sem o `+2h` de carga na borda comprimida (Tab. 6.1, nota) |
 | ⏳ | **F-11** | seção líquida das diagonais e ligações de extremidade (§6.2.3(2)) |
-| ⏳ | **F-18** | Tab. 1, 2, 10 e 25 da NBR 6123:2023 por anexar (o §7.2.2 já está) |
+| ⏳ | **F-18** | 11 de 13 itens NBR por confirmar contra o TEXTO da :2023 — catalogados e com pergunta escrita em `ANEXO_A_NBR6123.md`; coerência interna verificada (BM-15) |
 | ⏳ | **F-19** | `pyproject` `numpy>=1.26` vs NumPy 2.4.6 — 1 teste falha no ambiente |
 | ⏳ | — | numeração das equações de §8.2.3 por confirmar (Z.13.2) |
 
@@ -1989,3 +2002,151 @@ que a ligação não governa, e isso tem de estar escrito.
 `pytest -q` → **528 passed, 1 failed** (F-19). **10 testes novos**; três
 pré-existentes atualizados (um codificava a área bruta, dois usavam Ø6 e Ø8 —
 não comerciais — para forçar η > 1). Painel: **11/11 OK**.
+
+---
+
+## Z.18 — F-18 · proveniência das tabelas da NBR 6123
+
+### O que este achado é
+
+Não é um erro de cálculo. É a constatação de que **nenhuma tabela da NBR
+6123:2023 está reproduzida com citação verificável no repositório**. Os números
+podem estar todos certos — a auditoria não consegue demonstrá-lo.
+
+### O que NÃO foi feito, e porquê
+
+**Não se reproduziram as tabelas.** A auditoria não dispõe do texto da NBR
+6123:2023, e a carta é inequívoca: *nunca inventar uma cláusula, tabela ou
+coeficiente; nunca preencher uma lacuna «como é habitual»*. Reconheço os 45
+valores de `PARAM_METEOROLOGICOS` como sendo os da edição :1988 — e esse
+reconhecimento **não é fonte**. É de memória, e a lição do F-13 foi
+precisamente essa: a confiança do auditor não substitui o texto.
+
+Fechar F-18 marcando-o conforme seria o pior desfecho possível deste achado.
+
+### O que foi feito
+
+Três coisas que estão ao alcance do código e que mudam o custo de fechar o
+achado.
+
+**1. A lacuna passou de difusa a enumerável.** `CATALOGO_NBR6123`
+(`core/normativo.py`) regista os **13** valores de origem NBR usados no projeto
+— cada um com a cláusula que o código alega, o local exato, os símbolos que o
+materializam, o estado de confirmação e, para os **11** por confirmar, **a
+pergunta concreta a fazer** com a norma à frente. Só dois estados são
+admitidos, deliberadamente: `CONFIRMADO` significa que o texto literal foi
+obtido; tudo o resto é `NAO_CONFIRMADO`.
+
+Um valor NBR novo que entre no projeto sem registo faz falhar
+`test_todas_as_tabelas_de_wind_estao_catalogadas`. A lacuna não pode voltar a
+diluir-se.
+
+**2. A reserva passou a ser emitida.** `ConfiguracaoNormativa.aviso_nbr()`
+declara quantos itens estão por confirmar. Ao escrevê-lo descobriu-se que
+`aviso()` — o aviso **obrigatório** de NDP, definido desde a Onda 3 — nunca era
+impresso em lado nenhum. Ambos passam a sair no cabeçalho do pipeline:
+
+```
+  RESERVAS NORMATIVAS:
+    · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 19 parâmetros adotam o valor
+      recomendado do EN por decisão de projeto.
+    · [F-18] 11 de 13 valores de origem NBR 6123 têm a CLÁUSULA POR CONFIRMAR
+      contra o texto da ABNT NBR 6123:2023.
+```
+
+Um aviso que não se imprime não é um aviso.
+
+**3. A coerência interna ficou verificada — BM-15.**
+
+### BM-15 — o que se pode verificar sem a norma
+
+`auditoria_v2/bm_nbr_tabelas.py` lê as tabelas do código-fonte por **análise
+sintática** (`ast`), sem importar nada de `mlc_projeto`, e testa sete
+invariantes que um erro de transcrição quebraria.
+
+| | Invariante | Resultado |
+|---|---|---|
+| V1 | Tab. 1: `b` decresce e `p` cresce de I para V | OK |
+| V2 | Tab. 1: `p` cresce de A para C | OK |
+| V3 | Tab. 1: `z_g` cresce com a categoria, constante entre classes | OK |
+| V4 | Tab. 2: `F_r` decresce de A para C | OK |
+| V5 | **`S2(z_g)` igual nas cinco categorias** | **dispersão 0,72 %** |
+| V6 | Tab. 25: os quatro ramos juntam-se em tg β = 0,4 | salto = 0 |
+| V7 | Tab. 10: sinais coerentes, pico de sucção em θ = 10° | OK |
+
+**V5 é a invariante forte.** A lei de potência `S2 = b·F_r·(z/10)^p` modela uma
+camada limite cujo topo é `z_g`; acima dela o escoamento é geostrófico e **não
+depende do terreno**. Logo `S2(z_g)` tem de dar o mesmo nas cinco categorias —
+uma relação entre `b`, `p` e `z_g`, três colunas independentes:
+
+```
+classe B:  I=1,3410  II=1,3310  III=1,3381  IV=1,3291  V=1,3378
+           média 1,3354   dispersão máxima 0,47 %
+```
+
+Poder de deteção medido, perturbando um único valor: `b(IV) +0,10` → 8,69 %
+(detetado); `p(III) +0,020` → 6,02 % (detetado); **`z_g(II) +100 m` → 1,75 %
+(NÃO detetado**, limite 2 %). Declaro a limitação: `z_g` entra elevado a
+`p ≈ 0,1` e é a coluna que esta invariante mal policia. Confirmar à vista.
+
+**V6** merece nota: os quatro ramos lineares da Tabela 25 fecham em tg β = 0,4
+com salto **exatamente nulo** nos quatro (`Cpb,1` = +1,56; `Cps,1` = +0,70;
+`Cpb,2` = −0,50; `Cps,2` = −1,00). Um ajuste linear a pontos tabelados que fecha
+assim no ponto de quebra é indício forte de transcrição fiel.
+
+### O que BM-15 prova, e o que não prova
+
+**Prova** que a transcrição é uma tabela de camada-limite consistente: os
+valores não foram inventados nem baralhados, e uma edição futura não a degrada
+em silêncio (as sete invariantes estão congeladas em
+`tests/test_f18_proveniencia_nbr.py`).
+
+**Não prova** fidelidade à edição :2023. Se a ABNT reviu os parâmetros em 2023,
+a tabela revista seria igualmente coerente e o benchmark diria OK à mesma. A
+coerência interna não distingue edições — é por isso que o status sobe apenas
+para `VALIDATED WITH RESERVATIONS`, e só nas Tab. 1 e 2.
+
+### A inconsistência de numeração, precisada
+
+O deslocamento alegado entre edições não é uniforme:
+
+| Conteúdo | Nº na :1988 | Nº no código | Δ |
+|---|---|---|---|
+| Cobertura isolada duas águas | Tab. 18 | Tab. 25 | +7 |
+| Telhados múltiplos | Tab. 6 | Tab. 10 | +4 |
+| Parâmetros meteorológicos | Tab. 1 (**com** `F_r`) | Tab. 1 (sem) + Tab. 2 | — |
+
+O terceiro é o mais delicado: na :1988 `b`, `p` **e** `F_r` estão todos na
+Tab. 1 e a Tab. 2 é o `S2` tabelado; o código separa `F_r` numa «Tab. 2» e
+trata o `S2` tabelado por «Tab. 3» (`wind.py:144`). Ou a :2023 reorganizou a
+apresentação, ou a citação está errada. Só o texto decide — está registado como
+a questão do item `fator_rajada`.
+
+### Achado secundário apanhado ao catalogar
+
+`checks/elu/fixacao_telha.py:27-34` — o docstring do módulo ainda descreve a
+rota **antiga**, por zonas de `C_pe` local da «Tab. 5» com `c_pi` de §6.2.5. O
+código não faz isso: usa `CP_VEDACAO_ISOLADA = 2,0` de §7.2.6, coeficiente
+líquido sem `c_pi`. Documentação obsoleta que descreve um método diferente do
+executado é uma armadilha para quem revir o memorial. Não foi apagada agora
+porque a cláusula que a substitui é ela própria uma das 11 por confirmar —
+fica registada na questão do item `cp_vedacao_isolada`.
+
+### O item mais desamparado
+
+Não é nenhuma tabela: é `V0 = 45 m/s`. As tabelas ao menos têm coerência
+interna demonstrável. A velocidade básica lê-se num mapa de isopletas em função
+da **localidade da obra** — e o projeto **não declara a localidade em lado
+nenhum**. Não há como rastreá-la, nem sequer como aplicar-lhe uma invariante.
+Registado como `v0_isopleta`.
+
+### Estado
+
+`pytest -q` → **547 passed, 0 failed** com NumPy 1.26.4, a versão declarada em
+`pyproject`. **18 testes novos**, nenhum pré-existente alterado. Painel:
+**12/12 OK**. O achado F-19 não se manifesta neste ambiente — a falha do
+`np.trapz` só ocorre sob NumPy 2.x, que está fora do intervalo declarado; é uma
+divergência de ambiente, não um defeito de código.
+
+**F-18 continua ABERTO.** Baixa de `NOT VERIFIABLE` difuso para uma lista de 11
+perguntas com resposta de meia hora, para quem tenha a norma.

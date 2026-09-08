@@ -620,6 +620,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"bloqueio da silhueta ({load.vento_0['F_bloqueio_kN']:.1f} kN) "
               f"— envelope normativo, ver §7.2.2 transcrito em core/wind.py")
 
+    # ── Reservas normativas obrigatórias ──────────────────────────────────────
+    # Estavam definidas (ConfiguracaoNormativa.aviso / .aviso_nbr) e não eram
+    # emitidas em lado nenhum. Um aviso que não se imprime não é um aviso.
+    print(f"\n  RESERVAS NORMATIVAS:")
+    print(f"    · {load.aviso_ndp}")
+    print(f"    · {load.aviso_nbr}")
+
     # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
         print("\n[FASE 1] Varredura paramétrica...")

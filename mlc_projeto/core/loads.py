@@ -468,6 +468,11 @@ class Carregamentos:
     def aviso_ndp(self) -> str:
         return self.config_normativa.aviso()
 
+    @property
+    def aviso_nbr(self) -> str:
+        """Reserva sobre a proveniência dos valores NBR 6123 — achado F-18."""
+        return self.config_normativa.aviso_nbr()
+
     _combinacoes: dict = field(default_factory=dict, init=False, repr=False)
     _area_trib:   float = field(init=False, repr=False)
     _varredura_90: dict = field(default_factory=dict, init=False, repr=False)

@@ -25,6 +25,10 @@
     Atrito §7.2.2: Ft = 0.5·q·a·b = 776.8 kN (a×b = 1863 m² em planta; engloba as duas faces)
     Escala: 2.35× o arrasto de bloqueio da silhueta (356.0 kN) — envelope normativo, ver §7.2.2 transcrito em core/wind.py
 
+  RESERVAS NORMATIVAS:
+    · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 19 parâmetros adotam o valor recomendado do EN por decisão de projeto. RESULTADO DEPENDENTE DE NATIONAL ANNEX.
+    · [F-18] 11 de 13 valores de origem NBR 6123 têm a CLÁUSULA POR CONFIRMAR contra o texto da ABNT NBR 6123:2023. A coerência interna das tabelas está verificada (BM-15), a fidelidade à edição declarada NÃO. Folha de conferência: ANEXO_A_NBR6123.md.
+
 [FASE 1] Geometria pré-definida (passe rodar_varredura=True para varredura completa)
 
 [FASE 2] Verificações ELU...
@@ -292,4 +296,4 @@
 Pipeline concluído. Relatório gerado em output/
   Status global = APROVADO | η_max = 0.7902
 
-[FASE 6] Visualização 3D omitida (abrir_viz=False)
+[FASE 6] Abrindo visualização 3D interativa...

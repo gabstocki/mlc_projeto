@@ -12,6 +12,7 @@ import contextlib
 import inspect
 import io
 import math
+import pathlib
 
 OK, XX, ABERTO = "OK ", "XX ", "-- "
 linhas = []
@@ -191,6 +192,52 @@ def f11():
             f"| ligações de extremidade declaradas pendentes")
 
 
+# ── F-18 ─────────────────────────────────────────────────────────────────────
+def f18():
+    """
+    F-18 não fecha sem a norma em papel. O que se verifica aqui é o que está ao
+    alcance do código: a lacuna está ENUMERADA, a reserva é EMITIDA, e a
+    coerência interna das tabelas está congelada (BM-15).
+    """
+    from mlc_projeto.core import normativo as nz
+    from mlc_projeto.core import wind as w
+
+    # (a) catálogo completo — nenhuma constante NBR de wind.py fora dele
+    simbolos = {s_ for i in nz.CATALOGO_NBR6123 for s_ in i.simbolos}
+    exigidas = {"PARAM_METEOROLOGICOS", "FATOR_RAJADA", "COEF_PRESSAO_DINAMICA",
+                "TABELA_10_CE", "CPI_OBSTRUCAO_SOTAVENTO", "CA_PILAR_RET",
+                "COEF_ATRITO_COBERTURA_ISOLADA"}
+    assert exigidas <= simbolos, exigidas - simbolos
+
+    # (b) o achado continua ABERTO — marcá-lo fechado sem a fonte é o que a
+    #     carta de auditoria proíbe
+    pend = nz.itens_nbr_nao_confirmados()
+    assert pend and nz.item_nbr("atrito_cobertura").estado == "CONFIRMADO"
+    assert all(i.questao.strip() for i in pend)
+
+    # (c) a reserva é emitida, não só definida
+    assert "F-18" in nz.CONFIG_NORMATIVA.aviso_nbr()
+
+    # (d) BM-15 V5 — convergência ao vento gradiente, recalculada aqui de raiz
+    pior = 0.0
+    for cl in ("A", "B", "C"):
+        v = [w.PARAM_METEOROLOGICOS[c][cl][0] * w.FATOR_RAJADA[cl]
+             * (w.PARAM_METEOROLOGICOS[c][cl][2] / 10.0)
+             ** w.PARAM_METEOROLOGICOS[c][cl][1]
+             for c in ("I", "II", "III", "IV", "V")]
+        m = sum(v) / len(v)
+        pior = max(pior, max(abs(x - m) / m for x in v))
+    assert pior < 0.02, pior
+
+    # (e) o anexo existe e foi gerado do catálogo
+    anexo = pathlib.Path(__file__).resolve().parents[1] / "ANEXO_A_NBR6123.md"
+    assert anexo.exists() and "F-18" in anexo.read_text(encoding="utf-8")
+
+    return (f"{len(pend)}/{len(nz.CATALOGO_NBR6123)} itens NBR por confirmar, "
+            f"todos com pergunta escrita | S2(z_g) converge em {pior*100:.2f} % "
+            f"| reserva emitida no pipeline | ANEXO_A_NBR6123.md gerado")
+
+
 # ── F-13 ─────────────────────────────────────────────────────────────────────
 def f13():
     import mlc_projeto.core.wind as W
@@ -253,6 +300,7 @@ check("F-05", "a4,t com o termo (2+2·sen α)·d (Tab. 8.5)", f05)
 check("F-06", "Envelope real sobre as combinações ELU", f06)
 check("F-07", "l_ef da LTB com o +2h da nota da Tab. 6.1", f07)
 check("F-11", "Seção líquida da diagonal (EN 1993-1-1 §6.2.3(2))", f11)
+check("F-18", "Proveniência NBR catalogada + coerência (BM-15)", f18)
 check("F-13", "Atrito §7.2.2: cláusula transcrita e ancorada", f13)
 check("F-14", "Modos da chapa CENTRAL (EC5 §8.2.3)", f14)
 check("....", "Pipeline de ponta a ponta", pipeline)
@@ -265,8 +313,8 @@ print("-" * 100)
 print("  EM ABERTO (não corrigidos):")
 for fid, t in (
     ("F-11", "ligações de EXTREMIDADE das diagonais (a barra já está; EN 1993-1-8)"),
-    ("F-18", "Tab. 1, 2, 10 e 25 da NBR 6123:2023 por anexar (o §7.2.2 já está)"),
-    ("F-19", "pyproject numpy>=1.26 vs NumPy 2.4.6 — 1 teste falha no ambiente"),
+    ("F-18", "11 itens NBR por confirmar contra o TEXTO da :2023 — ANEXO_A_NBR6123.md"),
+    ("F-19", "pyproject numpy>=1.26: passa em 1.26.4, falha sob NumPy 2.x"),
     ("....", "numeração das equações de §8.2.3 por confirmar (ver Z.13.2)"),
 ):
     print(f"  [{ABERTO}] {fid}  {t}")

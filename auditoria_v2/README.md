@@ -25,3 +25,19 @@ Execução:
 .venv/bin/python auditoria_v2/bm_envelope_t25.py
 .venv/bin/python auditoria_v2/adv.py
 ```
+
+## BM-15 — coerência interna das tabelas NBR 6123 (`bm_nbr_tabelas.py`)
+
+Lê as tabelas de `core/wind.py` por análise sintática (`ast`) — **sem importar
+`mlc_projeto`** — e testa sete invariantes que um erro de transcrição
+quebraria. A mais forte (V5): acima da camada limite o escoamento é geostrófico
+e não depende do terreno, logo `S2(z_g) = b·F_r·(z_g/10)^p` tem de dar o mesmo
+nas cinco categorias. Dá, com dispersão de 0,72 %.
+
+Prova que a transcrição é coerente. **Não** prova fidelidade à edição :2023 —
+ver [F-18] e `ANEXO_A_NBR6123.md`.
+
+```bash
+python auditoria_v2/bm_nbr_tabelas.py     # BM-15
+python auditoria_v2/gerar_anexo_nbr.py    # regenerar o anexo do catálogo
+```
