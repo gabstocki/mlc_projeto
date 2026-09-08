@@ -49,10 +49,17 @@ def test_geometria_painel_angulo():
 
 
 def test_resistencia_tracao_EN1993():
-    # N_t,Rd = A·f_y/γM0 ; d=27 mm S235
+    """
+    F-11: N_t,Rd = min(N_pl,Rd ; N_u,Rd) — EN 1993-1-1 §6.2.3(2). A barra é
+    roscada nas extremidades, logo a seção líquida é a da rosca.
+    """
+    from mlc_projeto.checks.elu.contraventamento_vertical import (
+        GAMMA_M2, area_resistente_rosca)
     A = math.pi * 27.0 ** 2 / 4.0
-    esperado = A * ACO["S235"]["f_y"] / 1.0 / 1e3
-    assert _n_t_rd_kN(27.0, "S235") == pytest.approx(esperado, rel=1e-9)
+    N_pl = A * ACO["S235"]["f_y"] / 1.0 / 1e3
+    N_u = 0.9 * area_resistente_rosca(27.0) * ACO["S235"]["f_u"] / GAMMA_M2 / 1e3
+    assert _n_t_rd_kN(27.0, "S235") == pytest.approx(min(N_pl, N_u), rel=1e-9)
+    assert _n_t_rd_kN(27.0, "S235") < N_pl
 
 
 # ── Caminho de carga do painel ───────────────────────────────────────────────

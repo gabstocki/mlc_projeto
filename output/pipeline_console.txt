@@ -57,20 +57,20 @@
   · Contraventamento: força governante = vento_0 | R_ext=209.3 kN (estab=1.7, vento0/2=418.7)
 
 [FASE 2] Contraventamento vertical (força lateral → fundação)...
-  ✓ Contravento vertical §5.4      η = 0.8303  ████████████████
+  ✓ Contravento vertical §5.4      η = 0.7883  ███████████████
   · F_vento0=837.3 kN + H_imp=10.1 kN → V_lat=847.4 kN / 8 painéis
-  · Diagonal ∅33 mm S235 (β=50.6°) | N_diag=166.9 kN | η_N=0.830 | η_δ=0.568
+  · Diagonal ∅36 mm S235 (β=50.6°) | N_diag=166.9 kN | η_N=0.788 | η_δ=0.477
   · Caminho à fundação: H_base=105.9 kN + arrancamento N_uplift=129.0 kN
-  · α_cr,long=124.75 (1a_ordem) | K_lat=63906 kN/m | k_II=1.000
+  · α_cr,long=148.47 (1a_ordem) | K_lat=76054 kN/m | k_II=1.000
 
 [FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...
-  ✓ Contravento transversal §5.4   η = 0.7867  ███████████████
+  ✓ Contravento transversal §5.4   η = 0.7024  ██████████████
   · Arrasto θ=90° (27 pilares)=38.3 kN + cobertura(F-01)=57.8 kN + H_imp=10.1 kN → H_tr=106.2 kN
   · Componente ⊥→horizontal da pressão de cobertura: 6.42 kN/pórtico × 9 (ELU_W_T10_t1_esq_cpi+0.8)
   · Diafragma: R_frontão=53.1 kN | N_corda=15.1 kN (→ beiral)
-  · Frontão ∅24 mm S235 (β=50.6°) | N_diag=83.6 kN | η_N=0.787 | η_δ=0.538
+  · Frontão ∅27 mm S235 (β=50.6°) | N_diag=83.6 kN | η_N=0.702 | η_δ=0.425
   · Caminho à fundação: H_base=53.1 kN + N_uplift=64.6 kN | l_ef=1H (non-sway) validado
-  · α_cr,transv=16.5 (1a_ordem) | K_lat=8450 kN/m | k_II=1.000
+  · α_cr,transv=20.88 (1a_ordem) | K_lat=10695 kN/m | k_II=1.000
 
 [FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...
   ✓ Pilar canto (grav+brace+vento) §6.2.3/§6.3.2 η = 0.4283  ████████
@@ -86,8 +86,8 @@
   · Continuidade: 3 emenda(s) × 15.1 kN (obrigatória p/ o diafragma funcionar)
 
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
-  ✓ Estab. global α_cr/P-Δ         η = 0.6062  ████████████
-  · α_cr,sistema=16.5 (mín 10, dir. crítica: transversal) | long=124.75 transv=16.5 | k_II=1.065 (aplicado: 1.000)
+  ✓ Estab. global α_cr/P-Δ         η = 0.4790  █████████
+  · α_cr,sistema=20.9 (mín 10, dir. crítica: transversal) | long=148.47 transv=20.88 | k_II=1.050 (aplicado: 1.000)
   · α_cr,arco=2817.4 (informativo, NÃO é o critério) | H_imp=0.65 kN | w/f_c=0.01102
   · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway nas duas direções (contraventa…
 
@@ -250,10 +250,10 @@
   Terça Q_k concentrado            EN 1991-1-1 Tab.6.10       0.0546  ✓
   Fixação telha (sucção)           NBR 6123 §6.2.5+Tab.5      0.6788  ✓
   Contraventamento cobertura       EC5 §9.2.5                 0.7902  ✓
-  Contravento vertical             EN 1993-1-1 §5.3+§6.2.3    0.8303  ✓
-  Contravento transversal          EN 1993-1-1 §5.3+§6.2.3    0.7867  ✓
+  Contravento vertical             EN 1993-1-1 §5.3+§6.2.3    0.7883  ✓
+  Contravento transversal          EN 1993-1-1 §5.3+§6.2.3    0.7024  ✓
   Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2          0.0553  ✓
-  Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3      0.6062  ✓
+  Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3      0.4790  ✓
   Impacto veículo (A_d)            EN 1991-1-7                0.4774  ✓
   Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3     0.0420  ✓
   Ancoragem canto (moldada)        EN 1993-1-8 + EN 1992-4    0.5261  ✓
@@ -275,7 +275,7 @@
   Fadiga/slip L1c                  EC5 §7.1+§8.1.5            0.0472  ✓
   abertura_springings              EN 1995-1-1 §7.2 (ELS, deformações) — li   0.0632  ✓
   ----------------------------------------------------------------------------
-  η máximo     = 0.8303
+  η máximo     = 0.7902
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
@@ -290,6 +290,6 @@
   PDF  : /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.pdf
 
 Pipeline concluído. Relatório gerado em output/
-  Status global = APROVADO | η_max = 0.8303
+  Status global = APROVADO | η_max = 0.7902
 
 [FASE 6] Visualização 3D omitida (abrir_viz=False)

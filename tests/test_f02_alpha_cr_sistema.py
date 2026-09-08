@@ -245,7 +245,7 @@ def test_alpha_cr_abaixo_de_3_nao_e_contraventamento_valido():
         geo=geo, load=load, params_vento=pv,
         H_pilar_m=7.0, dist_portico=5.75, L_comp=46.0, n_porticos=2,
         b_pilar=0.32, h_pilar=0.27, aco="S235",
-        d_mm=8.0, V_Ed_total_kN=60000.0,
+        d_mm=12.0, V_Ed_total_kN=60000.0,
     )
     assert r["alpha_cr"] < ALPHA_CR_AMPLIF_MIN
     assert r["regime_alpha_cr"] == "2a_ordem_rigorosa"

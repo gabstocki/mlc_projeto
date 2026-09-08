@@ -100,7 +100,7 @@ def test_reprova_com_diagonal_fina():
     res = verificar_contraventamento_transversal(
         geo=geo, load=load, params_vento=pv,
         H_pilar_m=7.0, dist_portico=5.75, L_comp=46.0, n_porticos=2,
-        b_pilar=0.32, h_pilar=0.27, aco="S235", d_mm=6.0,
+        b_pilar=0.32, h_pilar=0.27, aco="S235", d_mm=12.0,
     )
     assert res["eta_diag_N"] > 1.0
     assert res["ok"] is False

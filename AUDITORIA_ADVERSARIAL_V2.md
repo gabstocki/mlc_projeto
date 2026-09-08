@@ -1137,7 +1137,7 @@ fechada. Fora desse domínio — nomeadamente na rota Tab. 25 — [F-06] passa a
 | **F-08** | MÉDIA | `ParametrosVento` não valida V0/S1/S3/h/L/H1/ℓ2 | `wind.py:94-104` | `V0 = −45` → `q` positivo "válido"; `V0 = NaN` → `q = NaN` | `CONFIRMED` |
 | **F-09** | MÉDIA | Clamp `1e-18` torna calculável seção nula; NaN propaga | `loads.py:241-242` | `h0 = 0` ⇒ `H = 0` sem erro | `CONFIRMED` |
 | **F-10** | MÉDIA | `ELU_C3`/`C4` com duração fixada em "curta" | `loads.py:647, 658` | k_mod 0,70 vs 0,65 (**f_d +7,7 %**) se `gov_h = ELU_Q` | `PROBABLE` (latente na Opção B) |
-| **F-11** | MÉDIA | Diagonais sem seção líquida nem ligações de extremidade | `contraventamento_vertical.py:127-131` | `N_u,Rd = 338 kN < N_pl,Rd = 374 kN` (Ø45 roscada) | `CONFIRMED` (omissão) |
+| **F-11** ✅ | MÉDIA | ~~Diagonais sem seção líquida~~ **CORRIGIDO (Z.17)**; ligações de extremidade continuam por dimensionar, agora **declaradas** | `contraventamento_vertical.py:127-131` | `N_u,Rd = 338 kN < N_pl,Rd = 374 kN` (Ø45 roscada) | `CONFIRMED` (omissão) |
 | **F-12** | LOW | Hankinson no apoio com ângulo e área errados | `apoio.py:90-92` | `f_c,α,d = 9,91 MPa` ≈ `f_c,0,d`; não governa | `CONFIRMED` |
 | **F-20** | MÉDIA | Limites da Tab. 7.2 no extremo permissivo, rotulados "EN-recomendado" | `normativo.py:115-116` | ℓ/300 vs ℓ/500; ℓ/250 vs ℓ/350 | `CONFIRMED` |
 | **F-25** | LOW | `theta` com 3 significados; `b` com 2 | `wind.py`, `loads.py` | sem erro numérico hoje | `CONFIRMED` |
@@ -1942,3 +1942,50 @@ de pré-dimensionamento, onde a escolha da geometria é feita.
   (`rodar_varredura=True`) também foi executada, para exercitar `predim` e as
   quatro funções `varrer_*` que tiveram o `l_ef` movido para dentro dos laços.
 - Painel de controlo: **10/10 verificações independentes OK**.
+
+
+---
+
+## Z.17 — F-11 · seção líquida das diagonais (EN 1993-1-1 §6.2.3(2))
+
+    N_t,Rd = min( N_pl,Rd = A·f_y/γ_M0 ;  N_u,Rd = 0,9·A_net·f_u/γ_M2 )
+
+`_n_t_rd_kN` devolvia só `N_pl,Rd`, sobre a área **bruta**. As diagonais são
+barras redondas **roscadas nas extremidades**: a seção que rompe é a da rosca.
+
+`area_resistente_rosca(d) = π/4·(d − 0,9382·p)²`, com o passo de rosca métrica
+de perfil grosso tabelado por diâmetro. **Sem passo tabelado o valor não é
+estimado — recusa-se**, pela mesma razão de sempre: uma área líquida inventada
+seria pior do que nenhuma.
+
+Em S235 a rotura da seção líquida **governa sempre** (A_s ≈ 0,81·A, e
+0,9·f_u/γ_M2 = 259 MPa contra f_y/γ_M0 = 235 MPa): para Ø33, 179,7 kN contra
+201,0 kN — **−10,6 %**.
+
+### Efeito
+
+| | Antes | Depois |
+|---|---|---|
+| Diagonal longitudinal | Ø33 | **Ø36** |
+| η contravento vertical | 0,8303 | **0,7883** |
+| Diagonal do frontão | Ø24 | **Ø27** |
+| η contravento transversal | 0,7867 | **0,7024** |
+| η estabilidade global | 0,6062 | **0,4790** (mais rigidez ⇒ α_cr maior) |
+| **η máximo do pipeline** | 0,8303 | **0,7902** |
+
+O auto-dimensionamento subiu ambas as diagonais um degrau comercial. O η máximo
+passa a ser governado pelo **contraventamento da cobertura** (§9.2.5, 0,7902),
+como Z.11.4 antecipava.
+
+### O que fica por fazer
+
+As **ligações de extremidade** das diagonais — gousset, esticador, olhal/pino,
+solda ao montante — continuam por dimensionar. Passa a ser **declarado no
+resultado** (`pendente`) em vez de omitido: a resistência calculada pressupõe
+que a ligação não governa, e isso tem de estar escrito.
+
+### Estado
+
+`pytest -q` → **528 passed, 1 failed** (F-19). **10 testes novos**; três
+pré-existentes atualizados (um codificava a área bruta, dois usavam Ø6 e Ø8 —
+não comerciais — para forçar η > 1). Painel: **11/11 OK**.

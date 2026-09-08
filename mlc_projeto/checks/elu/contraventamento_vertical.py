@@ -66,7 +66,16 @@ from mlc_projeto.core.loads     import Carregamentos
 
 # ── Constantes de aço (EN 1993-1-1) ───────────────────────────────────────────
 E_ACO_MPA = 210_000.0    # MPa
-GAMMA_M0  = 1.00         # EN 1993-1-1 §6.1
+GAMMA_M0  = 1.00         # EN 1993-1-1 §6.1 — resistência das seções
+GAMMA_M2  = 1.25         # EN 1993-1-1 §6.1 — rotura de seções tracionadas
+
+#: Passo da rosca métrica de perfil grosso (mm), por diâmetro nominal.
+#: As diagonais são barras redondas roscadas nas extremidades — a seção que
+#: rompe é a da rosca, não a do fuste (achado F-11).
+PASSO_ROSCA_MM = {
+    12: 1.75, 16: 2.0, 20: 2.5, 24: 3.0, 27: 3.0, 30: 3.5, 33: 3.5, 36: 4.0,
+    39: 4.0, 42: 4.5, 45: 4.5, 48: 5.0, 52: 5.0, 56: 5.5, 60: 5.5, 64: 6.0,
+}
 
 ACO = {
     "S235": {"f_y": 235.0, "f_u": 360.0},
@@ -129,11 +138,51 @@ def forca_nocional(V_vertical_kN: float, h_m: float, m_colunas: int) -> dict:
 
 # ── Resistência da diagonal à tração — EN 1993-1-1 §6.2.3 ─────────────────────
 
-def _n_t_rd_kN(d_mm: float, aco: str) -> float:
+def area_resistente_rosca(d_mm: float) -> float:
+    """
+    Área resistente da rosca métrica de perfil grosso, A_s (mm²) — achado F-11.
+
+        A_s = π/4 · (d − 0,9382·p)²
+
+    É a seção líquida das diagonais, que são barras redondas roscadas nas
+    extremidades. Sem passo tabelado o valor NÃO é estimado: recusa-se.
+    """
+    d = int(round(float(d_mm)))
+    if d not in PASSO_ROSCA_MM or abs(d - float(d_mm)) > 1e-6:
+        raise ValueError(
+            f"d = {d_mm} mm não tem passo de rosca tabelado. Diâmetros: "
+            f"{sorted(PASSO_ROSCA_MM)}. Sem passo não se estima A_net."
+        )
+    return math.pi / 4.0 * (d - 0.9382 * PASSO_ROSCA_MM[d]) ** 2
+
+
+def resistencia_tracao_diagonal(d_mm: float, aco: str) -> dict:
+    """
+    Resistência à tração da diagonal — EN 1993-1-1 §6.2.3(2), achado F-11.
+
+        N_t,Rd = min( N_pl,Rd = A·f_y/γ_M0 ;  N_u,Rd = 0,9·A_net·f_u/γ_M2 )
+
+    A versão anterior devolvia só `N_pl,Rd`, sobre a área BRUTA. Com barra
+    roscada em S235 a rotura da seção líquida governa (A_s ≈ 0,81·A) e a
+    resistência real é ~10 % menor.
+    """
     if aco not in ACO:
         raise ValueError(f"Aço '{aco}' não reconhecido. Use {list(ACO)}")
-    A_mm2 = math.pi * d_mm ** 2 / 4.0
-    return A_mm2 * ACO[aco]["f_y"] / GAMMA_M0 / 1e3   # kN
+    A = math.pi * float(d_mm) ** 2 / 4.0
+    A_net = area_resistente_rosca(d_mm)
+    N_pl = A * ACO[aco]["f_y"] / GAMMA_M0 / 1e3            # kN
+    N_u = 0.9 * A_net * ACO[aco]["f_u"] / GAMMA_M2 / 1e3   # kN
+    return {
+        "A_mm2": A, "A_net_mm2": A_net,
+        "N_pl_Rd_kN": N_pl, "N_u_Rd_kN": N_u,
+        "N_t_Rd_kN": min(N_pl, N_u),
+        "modo_tracao_gov": "secao_liquida" if N_u < N_pl else "plastificacao",
+        "norma": "EN 1993-1-1 §6.2.3(2)",
+    }
+
+
+def _n_t_rd_kN(d_mm: float, aco: str) -> float:
+    return resistencia_tracao_diagonal(d_mm, aco)["N_t_Rd_kN"]
 
 
 def escolher_diametro(
@@ -188,9 +237,11 @@ def verifica_painel_vertical(
     H_base = V_Ed_kN                         # kN — → fundação (cortante)
     N_uplift = V_Ed_kN * tan_b               # kN — → fundação (arrancamento)
 
-    # Resistência (EN 1993-1-1 §6.2.3)
-    A_mm2 = math.pi * d_mm ** 2 / 4.0
-    N_t_Rd = _n_t_rd_kN(d_mm, aco)
+    # Resistência à tração — EN 1993-1-1 §6.2.3(2): plastificação da seção
+    # bruta E rotura da seção líquida da rosca (F-11).
+    tr = resistencia_tracao_diagonal(d_mm, aco)
+    A_mm2 = tr["A_mm2"]
+    N_t_Rd = tr["N_t_Rd_kN"]
     eta_N = N_diag / N_t_Rd if N_t_Rd > 0 else 999.0
 
     # Rigidez / drift (uma diagonal ativa)
@@ -209,7 +260,19 @@ def verifica_painel_vertical(
         "aco":           aco,
         "A_mm2":         round(A_mm2, 1),
         "N_diag_kN":     round(N_diag, 3),
+        # F-11 — os dois modos de §6.2.3(2), e qual governa
+        "A_net_mm2":     round(tr["A_net_mm2"], 1),
+        "N_pl_Rd_kN":    round(tr["N_pl_Rd_kN"], 3),
+        "N_u_Rd_kN":     round(tr["N_u_Rd_kN"], 3),
         "N_t_Rd_kN":     round(N_t_Rd, 3),
+        "modo_tracao_gov": tr["modo_tracao_gov"],
+        "pendente": (
+            "As LIGAÇÕES DE EXTREMIDADE das diagonais (chapa de gousset, "
+            "esticador, pino/olhal, solda ao montante) NÃO estão dimensionadas "
+            "neste módulo — só a barra. Dimensionar por EN 1993-1-8 antes do "
+            "detalhamento; a resistência aqui pressupõe que a ligação não "
+            "governa."
+        ),
         "eta_N":         round(eta_N, 4),
         "ok_N":          eta_N <= 1.0,
         # Caminho de carga até a fundação

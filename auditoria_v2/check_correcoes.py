@@ -170,6 +170,27 @@ def f07():
             f"λ_rel={r['lambda_rel_m']:.3f} k_crit={r['k_crit']:.4f} η={r['eta']:.4f}")
 
 
+# ── F-11 ─────────────────────────────────────────────────────────────────────
+def f11():
+    from mlc_projeto.checks.elu.contraventamento_vertical import (
+        ACO, GAMMA_M0, GAMMA_M2, PASSO_ROSCA_MM, _n_t_rd_kN,
+        area_resistente_rosca, verifica_painel_vertical)
+    for d in (16.0, 24.0, 33.0, 45.0):
+        p_ = PASSO_ROSCA_MM[int(d)]
+        As = math.pi / 4 * (d - 0.9382 * p_) ** 2
+        assert abs(area_resistente_rosca(d) - As) < 1e-9
+        A = math.pi * d ** 2 / 4
+        npl = A * ACO["S235"]["f_y"] / GAMMA_M0 / 1e3
+        nu = 0.9 * As * ACO["S235"]["f_u"] / GAMMA_M2 / 1e3
+        assert abs(_n_t_rd_kN(d, "S235") - min(npl, nu)) < 1e-9, d
+    r = verifica_painel_vertical(100.0, 7.0, 5.75, 33.0, "S235")
+    assert r["modo_tracao_gov"] == "secao_liquida"
+    assert "ligações de extremidade" in r["pendente"].lower()
+    return (f"Ø33: N_pl={r['N_pl_Rd_kN']:.1f} vs N_u={r['N_u_Rd_kN']:.1f} kN → "
+            f"governa {r['modo_tracao_gov']} ({r['N_u_Rd_kN']/r['N_pl_Rd_kN']-1:+.1%}) "
+            f"| ligações de extremidade declaradas pendentes")
+
+
 # ── F-13 ─────────────────────────────────────────────────────────────────────
 def f13():
     import mlc_projeto.core.wind as W
@@ -231,6 +252,7 @@ check("F-04", "Agregação do veredito: ausência ≠ aprovação", f04)
 check("F-05", "a4,t com o termo (2+2·sen α)·d (Tab. 8.5)", f05)
 check("F-06", "Envelope real sobre as combinações ELU", f06)
 check("F-07", "l_ef da LTB com o +2h da nota da Tab. 6.1", f07)
+check("F-11", "Seção líquida da diagonal (EN 1993-1-1 §6.2.3(2))", f11)
 check("F-13", "Atrito §7.2.2: cláusula transcrita e ancorada", f13)
 check("F-14", "Modos da chapa CENTRAL (EC5 §8.2.3)", f14)
 check("....", "Pipeline de ponta a ponta", pipeline)
@@ -242,7 +264,7 @@ for st, fid, tit, det in linhas:
 print("-" * 100)
 print("  EM ABERTO (não corrigidos):")
 for fid, t in (
-    ("F-11", "seção líquida das diagonais e ligações de extremidade (§6.2.3(2))"),
+    ("F-11", "ligações de EXTREMIDADE das diagonais (a barra já está; EN 1993-1-8)"),
     ("F-18", "Tab. 1, 2, 10 e 25 da NBR 6123:2023 por anexar (o §7.2.2 já está)"),
     ("F-19", "pyproject numpy>=1.26 vs NumPy 2.4.6 — 1 teste falha no ambiente"),
     ("....", "numeração das equações de §8.2.3 por confirmar (ver Z.13.2)"),
