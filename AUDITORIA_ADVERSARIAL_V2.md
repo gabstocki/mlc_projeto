@@ -2403,3 +2403,221 @@ F-21. Desligar o alarme para o teste passar seria o pior desfecho.
 falta de fonte». É uma lista de quatro decisões, e **nenhuma delas é uma
 tabela** — são um dado que o projeto não declara (a localidade), duas
 classificações que só o projetista faz, e uma lacuna de implementação.
+
+---
+
+## AA — AUDITORIA DE CONFORMIDADE AO EUROCÓDIGO (achados A1–A6, B1–B4, C1–C5, D1–D3)
+
+Revisão feita do ponto de vista do **engenheiro estrutural**, não do auditor de
+código: percorrer o que o Eurocódigo exige de um galpão em MLC e perguntar, para
+cada exigência, se o repositório a cumpre, a declara, ou nem uma coisa nem
+outra. As três respostas são diferentes e a terceira é a única inaceitável.
+
+Estado de partida: `pytest` 558 passed, painel 13/13, η_max = 0,7902, APROVADO.
+Todos os achados ALTA/MÉDIA da auditoria adversarial com efeito numérico
+estavam fechados. O que segue é o que sobrava.
+
+### AA.1 — Numeração: duas colisões que quebravam a rastreabilidade [D3]
+
+Antes de mais, uma errata. Dois identificadores designam, neste documento, dois
+achados distintos cada um. Quem seguisse a referência chegava ao achado errado:
+
+| Id | Achado A | Achado B |
+|---|---|---|
+| **F-20** | limites da Tab. 7.2 do EC5 no extremo permissivo, rotulados «EN-recomendado» (§E, §U, §V.16) | `C_a = 1,2` do pilar sob citação inexistente da NBR 6123 (§Z.20) |
+| **F-21** | rótulo `"ELU_C2 (1,35G+1,5W+1,05Q)"` em `tercas.py` (§V.20) | `S3 = 1,00` (grupo 3) rotulado «grupo 2» (§Z.20) |
+
+Doravante, e para não reescrever o histórico: **F-20a / F-21a** designam os
+achados A (Eurocódigo) e **F-20b / F-21b** os achados B (NBR 6123). O painel
+`check_correcoes.py` e `core/normativo.py` referem-se aos B, que são os que
+continuam em aberto. Os A estão fechados nesta ronda.
+
+### AA.2 — O que estava por fazer, e o que se fez
+
+| Id | Achado | Estado |
+|---|---|---|
+| **A5** | **EN 1995-1-2 (fogo) ausente E não declarada** | **fechado** — verificado |
+| **A3** | ligações de EXTREMIDADE das diagonais nunca dimensionadas | **fechado** |
+| **A4** | três modos de concreto da EN 1992-4 «pendentes»; §6.7 sob a chaveta | **fechado** |
+| **A1** | resíduo do [F-06] em 6 módulos de produção + terças | **fechado** |
+| **A2** | Hankinson no apoio com argumentos errados [F-12] | **fechado** — retirado |
+| **A6** | `k_h`, `k_sys`, `k_c,90` omitidos (conservador) | **declarado** |
+| **B1** | classe de consequência (EN 1990 Anexo B) não declarada | **declarado, a confirmar** |
+| **B2** | híbrido NBR 6123 (ação) × EN 1990 (combinação) não declarado | **fechado** |
+| **B3** | limites da Tab. 7.2 rotulados «EN-recomendado» [F-20a] | **fechado** |
+| **B4** | `drift_lim = H/300` e `k_s`/`k_f,2`/`k_f,3` fora do `NDP_SOURCE` [F-23] | **fechado** |
+| **C1** | `np.maximum(·, 1e-18)` em `I(x)`/`A(x)` [F-09] | **fechado** |
+| **C2** | fallback `w_char = 5,0 mm` [S-4] | **fechado** |
+| **C3** | duração fixada nos aliases `ELU_C3`/`C4` [F-10] | **fechado** |
+| **C4** | `ParametrosVento` sem validação numérica [F-08] | **fechado** |
+| **C5** | `G_05 = E_0,05/16` com nome de propriedade tabelada [F-16] | **fechado** |
+| **D1** | rótulo «NBR 6123 §6.2.5+Tab.5» na fixação da telha | **fechado** |
+| **D2** | rótulo `"ELU_C2 (1,35G+1,5W+1,05Q)"` nas terças [F-21a] | **fechado** |
+| **D3** | colisão de numeração F-20/F-21 | **fechado** — AA.1 |
+
+### AA.3 — O achado com mais peso: o fogo [A5]
+
+Não era uma omissão conservadora. Era uma lacuna: nem verificação, nem
+declaração de escopo — ao contrário da fundação, que está explicitamente fora
+de escopo com ênfase. Num estacionamento coberto, o silêncio sobre o fogo é a
+pior das três posições possíveis.
+
+`checks/elu/fogo.py` implementa o método da **seção reduzida** (EN 1995-1-2
+§4.2.2): `d_ef = β_n·t + k_0·d_0` com `β_n = 0,70 mm/min` (Tab. 3.1, MLC de
+coníferas com ρ_k ≥ 290), propriedades ao 20 % fractil (§2.3: `k_fi = 1,15`,
+`γ_M,fi = 1,00`, `k_mod,fi = 1,00`) e combinação acidental EN 1990 Eq. (6.11b).
+
+O ponto de engenharia que a implementação obrigou a ver: aos 30 minutos a viga
+perde **17,5 % da largura** (320 → 264 mm) e apenas 4 % da altura no apoio. É a
+largura que governa a flambagem lateral (σ_m,crit ∝ b²), e é por isso que a
+verificação varre as seções com a seção residual em vez de usar só a de M_max.
+
+| | R30 | R60 |
+|---|---|---|
+| d_ef | 28,0 mm | 49,0 mm |
+| η (governa o pilar central) | **0,2128** | **0,4795** |
+
+A estrutura tem capacidade de sobra. O que faltava era demonstrá-lo.
+
+**O tempo requerido R não é do Eurocódigo.** A EN 1995-1-2 dá o método; o R vem
+do regulamento nacional (ABNT NBR 14432 / IT do corpo de bombeiros estadual).
+Fica em `NDP_SOURCE` como `PROJETO-A-CONFIRMAR` — uma nova classificação, para
+distinguir «decisão tomada e justificada» de «decisão em falta».
+
+### AA.4 — O elo que não existia [A3]
+
+A barra das diagonais estava verificada desde o [F-11] (seção líquida da rosca,
+η = 0,79). O que a segura não existia em lado nenhum:
+
+```
+barra (η = 0,79)  →  rosca/manilha  →  PINO  →  chapa-olhal  →  solda  →  ✗
+```
+
+Numa cruz de Santo André com tirantes roscados, o elo fraco é quase sempre a
+extremidade. Publicar 0,79 na barra e deixar a extremidade por dimensionar é
+publicar uma taxa que não descreve o sistema.
+
+`connections/ligacao_diagonal.py` implementa o detalhe manilha → pino →
+chapa-olhal soldada, com todos os modos da EN 1993-1-8 §3.13 e §4.5.3.3.
+
+**Critério: capacidade, não esforço.** A ligação dimensiona-se para o `N_t,Rd`
+da barra, para que a plastificação fique no tirante — dúctil, com aviso — e não
+no pino ou na solda, que rompem de forma frágil. Efeito colateral útil: torna a
+ligação indiferente a qual combinação governa.
+
+| | longitudinal | frontão |
+|---|---|---|
+| barra | Ø36 (N_Ed = 166,9; N_t,Rd = 211,7 kN) | Ø27 (83,6; 119,1 kN) |
+| pino | Ø36 S355, corte duplo | Ø27 S355 |
+| olhal | t = 20 mm S235, a = 55, c = 40 mm | t = 15, a = 40, c = 30 mm |
+| solda | 2 × a5 × 120 mm | 2 × a4 × 100 mm |
+| η sob N_Ed | 0,771 | 0,763 |
+| η sob a capacidade | 0,871 | 0,889 |
+
+A manilha e a rosca são peças de catálogo: o memorial **declara a força que o
+fabricante tem de certificar** e não lhes atribui resistência.
+
+### AA.5 — O resíduo do [F-06], e o que ele escondia nas terças [A1]
+
+Auditoria por AST das chamadas a `combinacao_ELU_governante()`: três estavam em
+blocos `__main__` de demonstração — não são pipeline — e seis eram produção.
+Corrigidas, cada uma a maximizar a SUA medida (`N_d` do contraventamento, a
+carga vertical das nocionais, `√(N²+V²)` da fadiga). Em `estabilidade_global`
+foi preciso separar **três** envelopes, e tratar a razão `H_imp/H_Ed` DENTRO de
+cada combinação: tomar o H de uma e o H_imp de outra seria misturar estados —
+o vício que o envelope existe para evitar.
+
+Mas o caso grave estava nas terças, e não era o seletor. Estava escrito:
+
+```
+q_ELU = 1,35G + 1,50W + 1,05Q     # rotulado "ELU_C2"
+```
+
+O termo `1,05Q` é `1,5·ψ0,Q·Q` com **ψ0,Q = 0,70 — o valor de outra categoria de
+uso**. Este projeto é categoria H: ψ0,Q = 0 e Q não é concomitante com o vento
+(EN 1990 Tab. A1.1 + EN 1991-1-1 §3.3.2(1)), que é como `core/loads.py` monta
+todas as outras combinações. **A terça era o único sítio do projeto a
+contradizê-lo.** E `ELU_C2` nem é uma fórmula: é um alias para a governante de
+|M| — o rótulo publicado descrevia uma combinação que não existe.
+
+Efeito da correção: terça flexão **0,0769 → 0,0979** (+27 %); terça-biela
+0,2405 → 0,2609. Governa agora `1,35G+1,5Q` com k_mod = 0,65, e não a
+combinação de vento com 0,70. Tudo o resto ficou inalterado — o que confirma
+que a procuração coincidia com o envelope nos outros casos. **Coincidir não é
+verificar.**
+
+### AA.6 — Hankinson no apoio: retirado, não corrigido [A2]
+
+No apoio as lamelas correm paralelas ao intradorso, que é horizontal, e a
+reação é vertical: α = 90°, para o qual Hankinson devolve exatamente `f_c,90,d`
+— o que §6.1.5 já verifica. O que estava implementado passava
+`α = α_telhado` (3,94°, quase **paralelo** às fibras, o oposto do caso real)
+sobre a área `b·h0` da seção inteira em vez da área de contacto `b·l_ap`. Dois
+erros de sinal contrário que davam η ≈ 0,03: inofensivo no número, errado no
+memorial. O `k_c,90` não aplicado (§6.1.5(4), até 1,75 para MLC) fica declarado
+na saída — é omissão conservadora, não esquecimento.
+
+### AA.7 — O que a EN 1992-4 ainda não verificava [A4]
+
+Os três modos deixaram de ser uma lista de pendências e passaram a ter uma de
+três saídas, nunca silêncio: resistência calculada, dispensa com a cláusula
+citada, ou não-verificável com o dado em falta escrito — e sem `ok`.
+
+- **blow-out (§7.2.1.9)**: dispensado, `c1 = 600 mm > 0,5·h_ef = 200 mm`, com a
+  cláusula na saída;
+- **fendilhamento (§7.2.1.7)**: `ψ_h,sp = (h/2h_ef)^(2/3)`; depende de `h_bloco`,
+  que é dado da FUNDAÇÃO;
+- **rotura de borda sob corte (§7.2.2.5)**: não aplicável — mas *demonstrado*:
+  exige-se a declaração da chaveta **e** que a força nas barras seja nula.
+
+E a contrapartida da chaveta, que estava declarada como pendente em `main.py`:
+**esmagamento do concreto sob a chaveta (EN 1992-1-1 §6.7)**, η = **0,596**.
+A chaveta desacopla o corte dos chumbadores — o que resolve o lado do aço e
+**cria** esta verificação.
+
+O dado que a superestrutura não tem não foi arbitrado:
+`requisitos_de_fundacao_para_ancoragem` publica-o como **requisito ao projetista
+de fundações** — `c1 > 200 mm`, `h_bloco ≥ 800 mm` — e sem ele o fendilhamento
+fica não-verificável e `ok_concreto = False`. Adotou-se `h_bloco = 800 mm`, que
+é exatamente o valor a partir do qual ψ_h,sp = 1; com 400 mm o fendilhamento
+passaria a governar (testado).
+
+### AA.8 — As duas declarações que faltavam [B1, B2]
+
+**Classe de consequência (EN 1990 Anexo B):** não estava declarada em lado
+nenhum — nenhuma ocorrência de CC/RC/K_FI no repositório. E é a **mesma
+pergunta** que o `S3` da NBR 6123 [F-21b]: CC3 ⇔ grupo 2 ⇔ `K_FI = 1,10` **e**
+`S3 = 1,06` (+12,4 % em toda a ação de vento). Ficam declaradas
+solidariamente, ambas a confirmar, e o guard mantém-nas visíveis.
+
+**O híbrido NBR 6123 × EN 1990:** os γ e ψ do EN 1990 foram calibrados pelo CEN
+contra a ação característica da **EN 1991-1-4** (média de 10 min com c_s·c_d),
+não contra a rajada de 3 s da NBR. É uma decisão de projeto legítima e corrente
+— mas não estava escrita, e é a de maior alcance no memorial. `aviso_hibrido()`
+declara-a, com a consequência: a fiabilidade resultante é a da NBR para a AÇÃO e
+a do EN 1990 para a COMBINAÇÃO, e não a de nenhum dos dois sistemas completos.
+
+### AA.9 — Estado
+
+| | |
+|---|---|
+| `pytest -q` | **650 passed** |
+| Painel `check_correcoes.py` | **13/13** |
+| Verificações no pipeline | **44** (era 38) |
+| η máximo | **0,7902** — contraventamento de cobertura, EC5 §9.2.5 |
+| Status | **APROVADO** |
+
+Verificações novas: fogo (EN 1995-1-2), duas ligações de extremidade das
+diagonais (EN 1993-1-8 §3.13), esmagamento sob a chaveta (EN 1992-1-1 §6.7).
+
+**Em aberto**, e todas por decisão do projetista, não por cálculo em falta:
+
+1. **classe de consequência + K_FI + S3** — uma classificação, duas normas.
+   Se for CC3/grupo 2: +10 % nos γ desfavoráveis **e** +12,4 % no vento.
+2. **R de resistência ao fogo** — a confirmar com o corpo de bombeiros; o
+   memorial publica R30 verificado e a margem em R60.
+3. **F-20b** (`C_a` do pilar) e **F-18** — quatro itens NBR, ver `ANEXO_A_NBR6123.md`.
+4. **Tab. 10 colunas b1/b2/b3 (α = 90°)** — lacuna de implementação.
+5. **Modelo FEM OpenSees** — `openseespy` não é dependência declarada e não
+   importa nesta máquina. A análise de Castigliano continua sem verificação
+   cruzada por um método DIFERENTE (o BM-03 reconstrói a mesma formulação).
