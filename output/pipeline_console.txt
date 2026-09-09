@@ -82,6 +82,20 @@
   · Caminho à fundação: H_base=53.1 kN + N_uplift=64.6 kN | l_ef=1H (non-sway) validado
   · α_cr,transv=20.88 (1a_ordem) | K_lat=10695 kN/m | k_II=1.000
 
+[FASE 2] Ligações de extremidade das diagonais (EN 1993-1-8 §3.13)...
+  ✓ Lig. diagonal longitudinal §3.13 η = 0.7713  ███████████████
+  · barra ∅36 (N_Ed=166.9 kN, N_t,Rd=211.7 kN) → dimensionada por capacidade com N=211.7 kN (1.27× N_Ed)
+  · pino ∅36 S355 (corte duplo) | olhal t=20 mm S235, a=55 (req 42.4), c=40 (req 30.1) mm
+  · solda de ângulo a=5 mm × 120 mm × 2 cordões | F_w,Rd=249.4 kN
+  · sob N_Ed: governa geometria_a, η=0.7713 | sob a capacidade da barra: geometria_c, η=0.8713
+  ⚠ A manilha/forquilha e a rosca de extremidade são peças de catálogo: especificar com resistência de cálculo à tração ≥ 211.7 kN, certificada pelo fabricante. Não são dimensionadas neste memorial.
+  ✓ Lig. diagonal frontão §3.13    η = 0.7633  ███████████████
+  · barra ∅27 (N_Ed=83.6 kN, N_t,Rd=119.1 kN) → dimensionada por capacidade com N=119.1 kN (1.42× N_Ed)
+  · pino ∅27 S355 (corte duplo) | olhal t=15 mm S235, a=40 (req 30.5), c=30 (req 21.2) mm
+  · solda de ângulo a=4 mm × 100 mm × 2 cordões | F_w,Rd=166.3 kN
+  · sob N_Ed: governa geometria_a, η=0.7633 | sob a capacidade da barra: geometria_a, η=0.8889
+  ⚠ A manilha/forquilha e a rosca de extremidade são peças de catálogo: especificar com resistência de cálculo à tração ≥ 119.1 kN, certificada pelo fabricante. Não são dimensionadas neste memorial.
+
 [FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...
   ✓ Pilar canto (grav+brace+vento) §6.2.3/§6.3.2 η = 0.4283  ████████
   · Download: long=129.0 + transv=64.6 = 193.6 kN (canto = 2 painéis) | M_vento=2.9 kNm
@@ -272,6 +286,8 @@
   Contraventamento cobertura       EC5 §9.2.5                 0.7902  ✓
   Contravento vertical             EN 1993-1-1 §5.3+§6.2.3    0.7883  ✓
   Contravento transversal          EN 1993-1-1 §5.3+§6.2.3    0.7024  ✓
+  Lig. diagonal longitudinal       EN 1993-1-8 §3.13+§4.5     0.7713  ✓
+  Lig. diagonal frontão            EN 1993-1-8 §3.13+§4.5     0.7633  ✓
   Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2          0.0553  ✓
   Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3      0.4790  ✓
   Impacto veículo (A_d)            EN 1991-1-7                0.4774  ✓
@@ -299,7 +315,7 @@
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 41 (39 executadas, 2 não aplicáveis)  |  todas OK = True
+  N.º verif.   = 43 (41 executadas, 2 não aplicáveis)  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 

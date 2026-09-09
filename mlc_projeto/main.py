@@ -58,6 +58,7 @@ from mlc_projeto.checks.elu.estabilidade_global import (
 from mlc_projeto.checks.elu.fogo import (
     verificar_fogo, reacao_vertical_incendio,
 )
+from mlc_projeto.connections.ligacao_diagonal import dimensionar_ligacao_diagonal
 from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
 from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
 from mlc_projeto.checks.elu.tirante_piso_robustez import (
@@ -873,6 +874,43 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"N_uplift={cvt['N_uplift_kN']:.1f} kN | l_ef=1H (non-sway) validado")
     print(f"  · α_cr,transv={cvt['alpha_cr']} ({cvt['regime_alpha_cr']}) | "
           f"K_lat={cvt['K_lat_kNpm']:.0f} kN/m | k_II={cvt['k_II']:.3f}")
+
+    # Ligações de EXTREMIDADE das diagonais — EN 1993-1-8 §3.13 (achado A3)
+    #
+    # A barra estava verificada (F-11: seção líquida da rosca); o que a segura
+    # não existia. Detalhe: manilha → pino → chapa-olhal soldada. Dimensionado
+    # por CAPACIDADE (N_t,Rd da barra), para que a plastificação fique no
+    # tirante — dúctil — e não no pino ou na solda.
+    print("\n[FASE 2] Ligações de extremidade das diagonais (EN 1993-1-8 §3.13)...")
+    for _chave, _rot, _cv in (
+        ("lig_diag_vertical",   "longitudinal", cvv),
+        ("lig_diag_transversal", "frontão",     cvt),
+    ):
+        res_elu[_chave] = dimensionar_ligacao_diagonal(
+            N_Ed_kN       = float(_cv["N_diag_kN"]),
+            N_barra_Rd_kN = float(_cv["N_t_Rd_kN"]),
+            d_barra_mm    = float(_cv["d_mm"]),
+            aco_chapa     = "S235",
+            aco_pino      = "S355",
+            nome          = _chave,
+        )
+        _ld = res_elu[_chave]
+        _print_eta(f"Lig. diagonal {_rot} §3.13", _ld)
+        print(f"  · barra ∅{_cv['d_mm']:.0f} (N_Ed={_ld['N_Ed_real_kN']:.1f} kN, "
+              f"N_t,Rd={_ld['N_barra_Rd_kN']:.1f} kN) → dimensionada por "
+              f"{_ld['criterio']} com N={_ld['N_dimensionamento_kN']:.1f} kN "
+              f"({_ld['sobre_resistencia']:.2f}× N_Ed)")
+        print(f"  · pino ∅{_ld['d_pino_mm']:.0f} {_ld['aco_pino']} (corte duplo) | "
+              f"olhal t={_ld['t_eye_mm']:.0f} mm {_ld['aco_chapa']}, "
+              f"a={_ld['a_borda_mm']:.0f} (req {_ld['a_req_mm']:.1f}), "
+              f"c={_ld['c_borda_mm']:.0f} (req {_ld['c_req_mm']:.1f}) mm")
+        print(f"  · solda de ângulo a={_ld['a_solda_mm']:.0f} mm × "
+              f"{_ld['l_solda_mm']:.0f} mm × {_ld['n_cordoes']} cordões | "
+              f"F_w,Rd={_ld['F_w_Rd_kN']:.1f} kN")
+        print(f"  · sob N_Ed: governa {_ld['modo_gov']}, η={_ld['eta']:.4f} | "
+              f"sob a capacidade da barra: {_ld['modo_gov_capacidade']}, "
+              f"η={_ld['eta_capacidade']:.4f}")
+        print(f"  ⚠ {_ld['nota_manilha']}")
 
     # Montante de contraventamento — download ±V_Ed·tanβ no pilar (issue 36)
     print("\n[FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...")

@@ -57,6 +57,9 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
     ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
     ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
+    # [A3] As diagonais estavam verificadas; o que as segura, não.
+    ("lig_diag_vertical",   "Lig. diagonal longitudinal","EN 1993-1-8 §3.13+§4.5"),
+    ("lig_diag_transversal","Lig. diagonal frontão",     "EN 1993-1-8 §3.13+§4.5"),
     ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
     ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
