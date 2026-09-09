@@ -51,7 +51,7 @@
   ✓ Flambagem §6.3.3               η = 0.1039  ██
   ✓ Flexo-comp. §6.3.2+6.35        η = 0.1672  ███
   ✓ Cisalhamento §6.1.7            η = 0.3814  ███████
-  ✓ Apoio §6.1.5+§6.2.2            η = 0.2660  █████
+  ✓ Apoio §6.1.5                   η = 0.2660  █████
   ✓ Pilar 0.32×0.27m §6.3.2        η = 0.2075  ████
 
 [FASE 2] Verificações ELU — Pilar central...
@@ -244,7 +244,15 @@
   · η_N=0.273 | η_V=0.000 | η_interação=0.195 → aço OK
   · Concreto: h_ef=400 c=600 s=400 mm | N_Rd,cone=527 kN | N_Rd,pull-out=1781 kN → governa cone
   · β_N=0.526 | β_V=0.000 | η_concreto=0.526 (BS EN 1992-4:2018)
-  ⚠ Ainda pendentes: fendilhamento do concreto (§7.2.1.7), blow-out lateral (§7.2.1.8), rotura de borda sob corte (§7.2.2.5)
+  · Blow-out §7.2.1.9: c1 = 600 mm > 0,5·h_ef = 200 mm (EN 1992-4:2018 §7.2.1.9(1)) — blow-out não governa.
+  · Fendilhamento §7.2.1.7: ψ_h,sp=1.0 → N_Rd=527 kN
+  · Borda sob corte §7.2.2.5: O corte é transmitido por CHAVETA embutida no concreto, não pelos chumbadores (V nas barras = 0). A rotura de borda de §7.2.2.5 pressupõe corte transmitido pelas barras. Em contrapartida exige-se o esmagamento sob a chaveta (EN 1992-1-1 §6.7) — ver `esmagamento_chaveta`.
+  ✓ Chaveta — esmagamento §6.7     η = 0.5963  ███████████
+  · V_Ed=159.0 kN sobre 200×80 mm | f_cd=16.67 MPa | F_Rdu=267 kN
+  ⚠ A_c1/A_c0 = 1,0 adotado (sem ganho): elevá-lo exige a geometria da sapata, fora de escopo. Ver NDP_SOURCE['k_confinamento_apoio'].
+  · REQUISITOS À FUNDAÇÃO (EN 1992-4 §7.2.1.7(2)/§7.2.1.9(1)):
+      c1 > 200 mm (blow-out) — declarado 600 mm: OK
+      h_bloco ≥ 800 mm (fendilhamento) — adotado 800 mm
   ⚠ A fundação deve garantir bloco com c ≥ 600 mm em torno do grupo (≈ 1.60×2.00 m em planta)
 
 ==============================================================================
@@ -272,7 +280,7 @@
   Flambagem lateral                EC5 §6.3.3                 0.1039  ✓
   Flexo-comp. viga                 EC5 §6.3.2+§6.3.3          0.1672  ✓
   Cisalhamento                     EC5 §6.1.7                 0.3814  ✓
-  Apoio                            EC5 §6.1.5+§6.2.2          0.2660  ✓
+  Apoio                            EC5 §6.1.5                 0.2660  ✓
   Pilar lateral (N)                EC5 §6.3.2                 0.2075  ✓
   Pilar central (N)                EC5 §6.3.2                 0.4151  ✓
   Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2        0.2433  ✓
@@ -293,6 +301,7 @@
   Impacto veículo (A_d)            EN 1991-1-7                0.4774  ✓
   Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3     0.0420  ✓
   Ancoragem canto (moldada)        EN 1993-1-8 + EN 1992-4    0.5261  ✓
+  Chaveta — esmagamento            EN 1992-1-1 §6.7           0.5963  ✓
   Sucção/uplift (ancoragem)        EN 1990+EN 1992-4          0.5781  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3              —  ✓  [NÃO APLICÁVEL]
   Robustez tirante piso            EN 1991-1-7+335+1993-1-2        —  ✓  [NÃO APLICÁVEL]
@@ -315,7 +324,7 @@
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 43 (41 executadas, 2 não aplicáveis)  |  todas OK = True
+  N.º verif.   = 44 (42 executadas, 2 não aplicáveis)  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 

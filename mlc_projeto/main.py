@@ -356,8 +356,19 @@ LAYOUT_CHU       = (2, 3)  # 6 chumbadores em 2×3
 CLASSE_CONC_FUND = "C25/30"
 CONCRETO_FISSURADO = True  # base tracionada → zona fissurada
 # Contrato de ancoragem partilhado pelas verificações (sem ETA — moldado).
+# Espessura do bloco de fundação — REQUISITO publicado ao projetista de
+# fundações, não um dado que a superestrutura conheça (achado A4). O
+# fendilhamento de §7.2.1.7 só deixa de reduzir a resistência do cone quando
+# h >= 2·h_ef; abaixo disso ψ_h,sp < 1 e a ancoragem tem de ser reverificada.
+H_BLOCO_FUND_MM = 2.0 * H_EF_CHU_MM       # 800 mm
+# Chaveta de cisalhamento (bloco soldado sob a chapa de base). Desacopla o
+# corte dos chumbadores — e cria a verificação de esmagamento do concreto
+# (EN 1992-1-1 §6.7), que estava declarada como pendente.
+CHAVETA_L_MM = 200.0    # comprimento em contacto com o concreto
+CHAVETA_H_MM = 80.0     # altura embutida
 DADOS_ANCORAGEM = {
     "h_ef_mm": H_EF_CHU_MM,
+    "h_bloco_mm": H_BLOCO_FUND_MM,
     "A_cabeca_mm2": A_CABECA_CHU_MM2,
     "c_borda_mm": C_BORDA_CHU_MM,
     "s_grupo_mm": S_GRUPO_CHU_MM,
@@ -1511,7 +1522,46 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"N_Rd,pull-out={_anc['N_Rd_pullout_kN']:.0f} kN → governa {_anc['modo_concreto_gov']}")
     print(f"  · β_N={_anc['beta_N']:.3f} | β_V={_anc['beta_V']:.3f} | "
           f"η_concreto={_anc['eta_concreto']:.3f} ({_anc['norma_concreto']})")
-    print(f"  ⚠ Ainda pendentes: {', '.join(_anc['modos_ainda_pendentes'])}")
+    # [A4] Os três modos deixaram de ser pendências e passaram a ter resultado.
+    _bl, _sp, _bo = _anc["blowout"], _anc["fendilhamento"], _anc["borda_corte"]
+    print(f"  · Blow-out §7.2.1.9: "
+          + (_bl["criterio_dispensa"] if not _bl["aplicavel"]
+             else f"N_Rd={_anc['N_Rd_blowout_kN']:.0f} kN"))
+    print(f"  · Fendilhamento §7.2.1.7: "
+          + (_sp.get("criterio_dispensa") or _sp.get("motivo")
+             or f"ψ_h,sp={_sp.get('psi_h_sp')} → N_Rd="
+                f"{_anc['N_Rd_fendilhamento_kN']:.0f} kN"))
+    print(f"  · Borda sob corte §7.2.2.5: "
+          + (_bo.get("criterio_dispensa") or _bo.get("motivo")
+             or f"V_Rd={_anc['V_Rd_borda_kN']:.0f} kN"))
+    if _anc["modos_nao_verificaveis"]:
+        print(f"  ⚠ NÃO VERIFICÁVEIS: {', '.join(_anc['modos_nao_verificaveis'])}")
+
+    # Esmagamento do concreto sob a chaveta — EN 1992-1-1 §6.7 (era pendente)
+    from mlc_projeto.connections.ancoragem import (
+        esmagamento_chaveta, requisitos_de_fundacao_para_ancoragem,
+    )
+    res_elu["chaveta_concreto"] = esmagamento_chaveta(
+        V_Ed_kN=float(res_succao["V_canto_kN"]),
+        l_chaveta_mm=CHAVETA_L_MM, h_embutida_mm=CHAVETA_H_MM,
+        classe_concreto=CLASSE_CONC_FUND,
+    )
+    _ch = res_elu["chaveta_concreto"]
+    _print_eta("Chaveta — esmagamento §6.7", _ch)
+    print(f"  · V_Ed={_ch['V_Ed_kN']:.1f} kN sobre "
+          f"{_ch['l_chaveta_mm']:.0f}×{_ch['h_embutida_mm']:.0f} mm | "
+          f"f_cd={_ch['f_cd_MPa']:.2f} MPa | F_Rdu={_ch['F_Rdu_kN']:.0f} kN")
+    print(f"  ⚠ {_ch['nota_confinamento']}")
+
+    _req_fund = requisitos_de_fundacao_para_ancoragem(
+        H_EF_CHU_MM, C_BORDA_CHU_MM)
+    print("  · REQUISITOS À FUNDAÇÃO (EN 1992-4 §7.2.1.7(2)/§7.2.1.9(1)):")
+    print(f"      c1 > {_req_fund['c1_min_dispensa_blowout_mm']:.0f} mm "
+          f"(blow-out) — declarado {C_BORDA_CHU_MM:.0f} mm: "
+          f"{'OK' if _req_fund['blowout_dispensado_pela_borda_declarada'] else 'NÃO CUMPRE'}")
+    print(f"      h_bloco ≥ "
+          f"{_req_fund['h_bloco_min_dispensa_fendilhamento_mm']:.0f} mm "
+          f"(fendilhamento) — adotado {H_BLOCO_FUND_MM:.0f} mm")
     print(f"  ⚠ A fundação deve garantir bloco com c ≥ {C_BORDA_CHU_MM:.0f} mm "
           f"em torno do grupo (≈ {(S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f}×"
           f"{(2*S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f} m em planta)")

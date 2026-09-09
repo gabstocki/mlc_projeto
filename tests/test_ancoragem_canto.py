@@ -191,7 +191,13 @@ def test_declara_a_edicao_normativa_usada():
                                   dados_concreto=DADOS_COMPLETOS, layout=(2, 3))
     assert r["norma_concreto"] == "BS EN 1992-4:2018"
     assert "CEN/TS" not in r["norma_concreto"], "a TS de 2009 está retirada"
-    assert r["modos_ainda_pendentes"], "blow-out/fendilhamento/borda seguem pendentes"
+    # [A4] Os três modos deixaram de ser uma LISTA DE PENDÊNCIAS e passaram a
+    # ser verificações: cada um devolve resistência, critério de dispensa
+    # citado, ou motivo escrito de não-verificabilidade.
+    assert r["modos_ainda_pendentes"] == []
+    for chave in ("blowout", "fendilhamento", "borda_corte"):
+        assert chave in r, f"{chave} tem de estar verificado, não pendente"
+        assert "eq" in r[chave] or "motivo" in r[chave]
 
 
 def test_coeficientes_sao_os_da_edicao_2018():

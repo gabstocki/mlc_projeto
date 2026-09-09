@@ -258,9 +258,56 @@ def verificar_grupo_ancoragem(
         N_Rd_pull = n_chumbadores * pull["N_Rk_p_kN"] / g_Mc
         V_Rd_pry  = K8_PRYOUT * cone["N_Rk_c_kN"] / g_Mc         # (7.39a)
 
-        N_Rd_conc = min(N_Rd_cone, N_Rd_pull)
+        # ── Os três modos que estavam pendentes (achado A4) ──────────────
+        # h_bloco_mm é dado da FUNDAÇÃO; sem ele o fendilhamento fica
+        # NÃO VERIFICADO e a saída di-lo — nunca o converte em ok.
+        h_bloco = d.get("h_bloco_mm")
+        blow = resistencia_blowout(
+            c1_mm=d["c_borda_mm"], A_h_mm2=d["A_cabeca_mm2"],
+            h_ef_mm=d["h_ef_mm"], classe_concreto=d["classe_concreto"],
+            fissurado=fiss, n_bordas=int(d.get("n_bordas", 1)),
+            s_grupo_mm=d["s_grupo_mm"], n_paralelo_borda=layout[0],
+        )
+        if h_bloco is None:
+            split = {
+                "aplicavel": True, "verificavel": False, "N_Rk_sp_kN": None,
+                "motivo": (
+                    "h_bloco_mm (espessura do elemento de concreto) não "
+                    "declarado: §7.2.1.7 não é verificável. Ver "
+                    "`requisitos_de_fundacao_para_ancoragem`."
+                ),
+                "eq": "EN 1992-4:2018 §7.2.1.7",
+            }
+        else:
+            split = resistencia_fendilhamento(
+                c_min_mm=d["c_borda_mm"], h_bloco_mm=h_bloco,
+                h_ef_mm=d["h_ef_mm"], N_Rk_c_kN=cone["N_Rk_c_kN"],
+                armadura_controla_fissuras=bool(
+                    d.get("armadura_controla_fissuras", False)),
+            )
+            split["verificavel"] = True
+        borda = resistencia_borda_corte(
+            chaveta_cisalhamento=bool(chaveta_cisalhamento),
+            V_nos_chumbadores_kN=V_nos_chumbadores,
+            c1_mm=d["c_borda_mm"], h_ef_mm=d["h_ef_mm"],
+            d_nom_mm=float(d_mm), l_f_mm=d["h_ef_mm"],
+            classe_concreto=d["classe_concreto"], fissurado=fiss,
+        )
+
+        N_Rd_blow = blow["N_Rk_cb_kN"] / g_Mc
+        N_Rd_split = (math.inf if not split.get("aplicavel")
+                      else (None if not split.get("verificavel")
+                            else split["N_Rk_sp_kN"] / g_Mc))
+        V_Rd_borda = (math.inf if not borda.get("aplicavel")
+                      else (None if not borda.get("verificavel")
+                            else borda["V_Rk_c_kN"] / g_Mc))
+
+        N_Rd_conc = min(N_Rd_cone, N_Rd_pull, N_Rd_blow,
+                        N_Rd_split if N_Rd_split is not None else math.inf)
         beta_N = N_Ed / N_Rd_conc if N_Rd_conc > 0 else 999.0
-        beta_V = (V_nos_chumbadores / V_Rd_pry) if V_Rd_pry > 0 else 0.0
+        V_Rd_corte = min(V_Rd_pry,
+                         V_Rd_borda if V_Rd_borda is not None else math.inf)
+        beta_V = (V_nos_chumbadores / V_Rd_corte) if V_Rd_corte > 0 else 0.0
         # §6.4.1.2 Eq. (47) — outros modos governantes: β_N + β_V ≤ 1,2
         eta_conc = max(beta_N, beta_V, (beta_N + beta_V) / 1.2)
         conc = {
@@ -271,17 +318,41 @@ def verificar_grupo_ancoragem(
             "N_Rd_cone_kN": round(N_Rd_cone, 2),
             "N_Rd_pullout_kN": round(N_Rd_pull, 2),
             "V_Rd_pryout_kN": round(V_Rd_pry, 2),
-            "modo_concreto_gov": "cone" if N_Rd_cone <= N_Rd_pull else "pull-out",
+            "modo_concreto_gov": min(
+                (("cone", N_Rd_cone), ("pull-out", N_Rd_pull),
+                 ("blow-out", N_Rd_blow),
+                 ("fendilhamento",
+                  N_Rd_split if N_Rd_split is not None else math.inf)),
+                key=lambda kv: kv[1],
+            )[0],
+            "blowout": blow,
+            "fendilhamento": split,
+            "borda_corte": borda,
+            "N_Rd_blowout_kN": (None if math.isinf(N_Rd_blow)
+                                else round(N_Rd_blow, 2)),
+            "N_Rd_fendilhamento_kN": (
+                None if N_Rd_split is None or math.isinf(N_Rd_split)
+                else round(N_Rd_split, 2)),
+            "V_Rd_borda_kN": (None if V_Rd_borda is None or math.isinf(V_Rd_borda)
+                              else round(V_Rd_borda, 2)),
+            # Um modo aplicável e NÃO verificável não pode passar por ok.
+            "modos_nao_verificaveis": [
+                m for m, r in (("fendilhamento (§7.2.1.7)", split),
+                               ("rotura de borda sob corte (§7.2.2.5)", borda))
+                if r.get("aplicavel") and not r.get("verificavel", True)
+            ],
             "beta_N": round(beta_N, 4),
             "beta_V": round(beta_V, 4),
             "eta_concreto": round(eta_conc, 4),
-            "ok_concreto": eta_conc <= 1.0 + 1e-9,
+            "ok_concreto": (
+                eta_conc <= 1.0 + 1e-9
+                and split.get("verificavel", True)
+                and borda.get("verificavel", True)
+            ),
             "norma_concreto": NORMA_CONCRETO,
-            "modos_ainda_pendentes": [
-                "fendilhamento do concreto (§7.2.1.7)",
-                "blow-out lateral (§7.2.1.8)",
-                "rotura de borda sob corte (§7.2.2.5)",
-            ],
+            # [A4] Os três modos deixaram de ser uma lista de pendências e
+            # passaram a ser verificações com resultado ou com motivo escrito.
+            "modos_ainda_pendentes": [],
         }
 
     return {
@@ -447,4 +518,353 @@ def resistencia_pullout(
         "k2": k2,
         "N_Rk_p_kN": round(N_Rk_p / 1e3, 2),
         "eq": "EN 1992-4:2018 Fórmulas (7.11)–(7.12)",
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Os três modos que estavam DECLARADOS COMO PENDENTES (achado A4)
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# `modos_ainda_pendentes` listava fendilhamento (§7.2.1.7), blow-out lateral
+# (§7.2.1.9) e rotura de borda sob corte (§7.2.2.5) com a nota «devem ser
+# confirmados como não governantes». Declarar é melhor que esquecer, mas não é
+# verificar: com a ancoragem a η = 0,53–0,58, um modo não verificado é uma
+# incógnita no elo mais frágil da estrutura.
+#
+# Dois deles precisam de dados que a SUPERESTRUTURA não possui — a espessura do
+# bloco `h` e a distância de borda `c1` da sapata. Este projeto declara a
+# fundação fora de escopo. A saída correta não é assumir um bloco: é verificar
+# em função desses dados e publicar o REQUISITO MÍNIMO que a fundação tem de
+# cumprir. É o que `requisitos_de_fundacao_para_ancoragem` faz.
+
+#: Fórmula (7.24) — blow-out: k5 por estado do concreto.
+K5_BLOWOUT_CR  = 8.0    # fissurado
+K5_BLOWOUT_UCR = 11.2   # não fissurado
+
+#: §7.2.1.9(1) — dispensa de blow-out quando a borda é folgada face a h_ef.
+C1_SOBRE_HEF_DISPENSA_BLOWOUT = 0.5
+
+#: §7.2.1.7 — na ausência de ETA adota-se c_cr,sp = 3·h_ef, o limite superior
+#: admitido para ancoragens moldadas com cabeça e, por ser o maior, o mais
+#: exigente (conservador).
+C_CR_SP_SOBRE_HEF = 3.0
+
+
+def resistencia_blowout(
+    c1_mm: float,
+    A_h_mm2: float,
+    h_ef_mm: float,
+    classe_concreto: str,
+    *,
+    fissurado: bool = True,
+    n_bordas: int = 1,
+    s_grupo_mm: float = 0.0,
+    n_paralelo_borda: int = 1,
+) -> dict:
+    """
+    Blow-out lateral (rotura do concreto na borda, junto à CABEÇA) —
+    EN 1992-4:2018 §7.2.1.9, Fórmulas (7.24) a (7.28).
+
+        N0_Rk,cb = k5 · c1 · raiz(A_h) · raiz(f_ck)               (7.24)
+        N_Rk,cb  = N0_Rk,cb · (A_c,Nb/A0_c,Nb) · psi_s,Nb · psi_g,Nb · psi_ec,Nb
+
+    A verificação é DISPENSADA quando c1 > 0,5·h_ef (§7.2.1.9(1)): a cabeça
+    está longe da borda e o cone de arrancamento governa antes.
+
+    O modo é o oposto do cone: parte da CABEÇA e rompe LATERALMENTE. Por isso
+    depende de c1 (borda) e de A_h (área da cabeça), e não de h_ef.
+
+    Args:
+        c1_mm      : distância da barra à borda mais próxima
+        A_h_mm2    : área de apoio da cabeça (Eq. 7.12)
+        n_bordas   : 1 (borda única) ou 2 (canto — a resistência reduz-se)
+        s_grupo_mm : espaçamento entre barras PARALELAS à borda
+        n_paralelo_borda : número de barras nessa fila
+
+    Returns:
+        dict com o estado (dispensado/verificado) e N_Rk,cb (kN).
+    """
+    if classe_concreto not in F_CK_CILINDRO:
+        raise ValueError(f"classe_concreto={classe_concreto!r} desconhecida.")
+    c1 = float(c1_mm)
+    h_ef = float(h_ef_mm)
+    if c1 <= 0 or h_ef <= 0 or A_h_mm2 <= 0:
+        raise ValueError("c1_mm, h_ef_mm e A_h_mm2 devem ser positivos")
+
+    if c1 > C1_SOBRE_HEF_DISPENSA_BLOWOUT * h_ef:
+        return {
+            "aplicavel": False,
+            "N_Rk_cb_kN": math.inf,
+            "criterio_dispensa": (
+                f"c1 = {c1:.0f} mm > 0,5·h_ef = {0.5 * h_ef:.0f} mm "
+                f"(EN 1992-4:2018 §7.2.1.9(1)) — blow-out não governa."
+            ),
+            "eq": "EN 1992-4:2018 §7.2.1.9(1)",
+        }
+
+    f_ck = F_CK_CILINDRO[classe_concreto]
+    k5 = K5_BLOWOUT_CR if fissurado else K5_BLOWOUT_UCR
+    N0 = k5 * c1 * math.sqrt(float(A_h_mm2)) * math.sqrt(f_ck)   # N — (7.24)
+
+    # Área de referência: quadrado de lado 4·c1 centrado na barra (7.25).
+    s_cr_Nb = 4.0 * c1
+    A0 = s_cr_Nb ** 2
+    ext = min(float(s_grupo_mm), s_cr_Nb) * max(0, int(n_paralelo_borda) - 1)
+    # Canto: a área trunca-se também na segunda borda.
+    largura = (2.0 * c1 + ext) if n_bordas <= 1 else (1.5 * c1 + ext)
+    A_cNb = largura * s_cr_Nb
+
+    psi_s_Nb = 1.0 if n_bordas <= 1 else 0.85   # canto — reduzido (7.27)
+    psi_g_Nb = 1.0
+    psi_ec_Nb = 1.0
+
+    N_Rk_cb = N0 * (A_cNb / A0) * psi_s_Nb * psi_g_Nb * psi_ec_Nb
+    return {
+        "aplicavel": True,
+        "k5": k5,
+        "c1_mm": round(c1, 1),
+        "N0_Rk_cb_kN": round(N0 / 1e3, 2),
+        "A_c_Nb_mm2": round(A_cNb, 0),
+        "A0_c_Nb_mm2": round(A0, 0),
+        "psi_s_Nb": round(psi_s_Nb, 4),
+        "N_Rk_cb_kN": round(N_Rk_cb / 1e3, 2),
+        "eq": "EN 1992-4:2018 Fórmulas (7.24)-(7.28)",
+    }
+
+
+def resistencia_fendilhamento(
+    c_min_mm: float,
+    h_bloco_mm: float,
+    h_ef_mm: float,
+    N_Rk_c_kN: float,
+    *,
+    c_cr_sp_mm: float | None = None,
+    armadura_controla_fissuras: bool = False,
+) -> dict:
+    """
+    Fendilhamento do concreto sob carga — EN 1992-4:2018 §7.2.1.7.
+
+    A verificação é DISPENSADA (§7.2.1.7(2)) se qualquer destas se cumprir:
+      (a) c >= 1,2·c_cr,sp  E  h >= 2·h_ef ;
+      (b) existe armadura que limita a abertura de fissura a cerca de 0,3 mm.
+
+    Caso contrário (7.26):
+
+        N_Rk,sp = N_Rk,c · psi_h,sp ,  psi_h,sp = (h/(2·h_ef))^(2/3) <= 1
+
+    Sem ETA adota-se c_cr,sp = 3·h_ef (limite superior para moldados com
+    cabeça e, por ser o maior, o mais exigente).
+
+    `h_bloco_mm` é a espessura do elemento de concreto — dado da FUNDAÇÃO. Sem
+    ele nada se verifica, e é por isso que a função o exige em vez de arbitrar.
+    """
+    h_ef = float(h_ef_mm)
+    c_cr_sp = float(c_cr_sp_mm) if c_cr_sp_mm else C_CR_SP_SOBRE_HEF * h_ef
+    c = float(c_min_mm)
+    h = float(h_bloco_mm)
+    if h <= 0 or h_ef <= 0 or c <= 0:
+        raise ValueError("c_min_mm, h_bloco_mm e h_ef_mm devem ser positivos")
+
+    if armadura_controla_fissuras:
+        return {
+            "aplicavel": False,
+            "N_Rk_sp_kN": math.inf,
+            "criterio_dispensa": (
+                "armadura de controlo de fissuração declarada (w = 0,3 mm) — "
+                "EN 1992-4:2018 §7.2.1.7(2)(b)."
+            ),
+            "eq": "EN 1992-4:2018 §7.2.1.7(2)",
+        }
+    if c >= 1.2 * c_cr_sp and h >= 2.0 * h_ef:
+        return {
+            "aplicavel": False,
+            "N_Rk_sp_kN": math.inf,
+            "c_cr_sp_mm": round(c_cr_sp, 1),
+            "criterio_dispensa": (
+                f"c = {c:.0f} >= 1,2·c_cr,sp = {1.2 * c_cr_sp:.0f} mm e "
+                f"h = {h:.0f} >= 2·h_ef = {2 * h_ef:.0f} mm "
+                f"(EN 1992-4:2018 §7.2.1.7(2)(a))."
+            ),
+            "eq": "EN 1992-4:2018 §7.2.1.7(2)",
+        }
+
+    psi_h_sp = min((h / (2.0 * h_ef)) ** (2.0 / 3.0), 1.0)
+    return {
+        "aplicavel": True,
+        "c_cr_sp_mm": round(c_cr_sp, 1),
+        "psi_h_sp": round(psi_h_sp, 4),
+        "N_Rk_sp_kN": round(float(N_Rk_c_kN) * psi_h_sp, 2),
+        "eq": "EN 1992-4:2018 Fórmula (7.26)",
+    }
+
+
+def resistencia_borda_corte(
+    *,
+    chaveta_cisalhamento: bool,
+    V_nos_chumbadores_kN: float,
+    c1_mm: float | None = None,
+    h_ef_mm: float | None = None,
+    d_nom_mm: float | None = None,
+    l_f_mm: float | None = None,
+    classe_concreto: str | None = None,
+    fissurado: bool = True,
+) -> dict:
+    """
+    Rotura de borda do concreto sob CORTE — EN 1992-4:2018 §7.2.2.5.
+
+        V0_Rk,c = k9 · d_nom^alpha · l_f^beta · raiz(f_ck) · c1^1,5   (7.39)
+        alpha = 0,1·(l_f/c1)^0,5 ;  beta = 0,1·(d_nom/c1)^0,2
+        k9 = 1,7 (fissurado) | 2,4 (não fissurado)
+
+    NÃO APLICÁVEL quando o corte não passa pelas barras. É o caso deste
+    projeto: o corte vai por CHAVETA embutida (bloco soldado sob a chapa). Mas
+    «não aplicável» tem de ser DEMONSTRADO e não afirmado — a função exige a
+    declaração explícita E confirma que a força nas barras é de facto nula.
+    """
+    V = abs(float(V_nos_chumbadores_kN))
+    if chaveta_cisalhamento and V <= 1e-9:
+        return {
+            "aplicavel": False,
+            "V_Rk_c_kN": math.inf,
+            "criterio_dispensa": (
+                "O corte é transmitido por CHAVETA embutida no concreto, não "
+                "pelos chumbadores (V nas barras = 0). A rotura de borda de "
+                "§7.2.2.5 pressupõe corte transmitido pelas barras. Em "
+                "contrapartida exige-se o esmagamento sob a chaveta "
+                "(EN 1992-1-1 §6.7) — ver `esmagamento_chaveta`."
+            ),
+            "eq": "EN 1992-4:2018 §7.2.2.5 (não aplicável)",
+        }
+
+    faltam = [n for n, v in (("c1_mm", c1_mm), ("h_ef_mm", h_ef_mm),
+                             ("d_nom_mm", d_nom_mm), ("l_f_mm", l_f_mm),
+                             ("classe_concreto", classe_concreto)) if v is None]
+    if faltam:
+        return {
+            "aplicavel": True,
+            "verificavel": False,
+            "V_Rk_c_kN": None,
+            "motivo": (
+                f"O corte passa pelos chumbadores (V = {V:.1f} kN) e faltam "
+                f"dados para §7.2.2.5: {', '.join(faltam)}. Sem eles a rotura "
+                f"de borda NÃO está verificada — e não verificado não é ok."
+            ),
+            "eq": "EN 1992-4:2018 §7.2.2.5",
+        }
+
+    c1 = float(c1_mm)
+    l_f = min(float(l_f_mm), 12.0 * float(d_nom_mm))   # §7.2.2.5: l_f <= 12·d
+    d_nom = min(float(d_nom_mm), 60.0)                 # §7.2.2.5: d <= 60 mm
+    f_ck = F_CK_CILINDRO[classe_concreto]
+    k9 = 1.7 if fissurado else 2.4
+    alpha = 0.1 * (l_f / c1) ** 0.5
+    beta = 0.1 * (d_nom / c1) ** 0.2
+    V0 = (k9 * d_nom ** alpha * l_f ** beta
+          * math.sqrt(f_ck) * c1 ** 1.5)               # N
+    return {
+        "aplicavel": True,
+        "verificavel": True,
+        "k9": k9, "alpha": round(alpha, 4), "beta": round(beta, 4),
+        "l_f_mm": round(l_f, 1), "d_nom_mm": round(d_nom, 1),
+        "V_Rk_c_kN": round(V0 / 1e3, 2),
+        "eq": "EN 1992-4:2018 Fórmula (7.39)",
+    }
+
+
+def esmagamento_chaveta(
+    V_Ed_kN: float,
+    l_chaveta_mm: float,
+    h_embutida_mm: float,
+    classe_concreto: str,
+    *,
+    A_c1_sobre_A_c0: float = 1.0,
+    alpha_cc: float = 1.0,
+    gamma_C: float = 1.5,
+) -> dict:
+    """
+    Esmagamento do concreto sob a chaveta de cisalhamento — EN 1992-1-1 §6.7
+    (áreas parcialmente carregadas).
+
+        F_Rdu = A_c0 · f_cd · raiz(A_c1/A_c0)  <=  3,0 · f_cd · A_c0
+
+    Estava declarado como pendente em `main.py`. A chaveta desacopla o corte
+    dos chumbadores — o que resolve o lado do aço e CRIA esta verificação.
+
+    `A_c1/A_c0 = 1,0` por omissão (sem ganho de confinamento), coerente com
+    `NDP_SOURCE["k_confinamento_apoio"]`: elevá-lo exige conhecer a sapata,
+    que está fora de escopo.
+    """
+    if classe_concreto not in F_CK_CILINDRO:
+        raise ValueError(f"classe_concreto={classe_concreto!r} desconhecida.")
+    if l_chaveta_mm <= 0 or h_embutida_mm <= 0:
+        raise ValueError("l_chaveta_mm e h_embutida_mm devem ser positivos")
+    if A_c1_sobre_A_c0 < 1.0:
+        raise ValueError("A_c1/A_c0 não pode ser menor que 1,0")
+
+    f_cd = alpha_cc * F_CK_CILINDRO[classe_concreto] / gamma_C     # MPa
+    A_c0 = float(l_chaveta_mm) * float(h_embutida_mm)              # mm²
+    conf = min(math.sqrt(float(A_c1_sobre_A_c0)), 3.0)
+    F_Rdu = A_c0 * f_cd * conf / 1e3                               # kN
+    V_Ed = abs(float(V_Ed_kN))
+    eta = V_Ed / F_Rdu if F_Rdu > 0 else math.inf
+    return {
+        "verificacao": "Esmagamento do concreto sob a chaveta",
+        "V_Ed_kN": round(V_Ed, 2),
+        "l_chaveta_mm": float(l_chaveta_mm),
+        "h_embutida_mm": float(h_embutida_mm),
+        "A_c0_mm2": round(A_c0, 0),
+        "f_cd_MPa": round(f_cd, 3),
+        "fator_confinamento": round(conf, 3),
+        "F_Rdu_kN": round(F_Rdu, 2),
+        "eta": round(eta, 4),
+        "ok": eta <= 1.0,
+        "norma": "EN 1992-1-1 §6.7 (áreas parcialmente carregadas)",
+        "nota_confinamento": (
+            "A_c1/A_c0 = 1,0 adotado (sem ganho): elevá-lo exige a geometria "
+            "da sapata, fora de escopo. Ver NDP_SOURCE['k_confinamento_apoio']."
+        ),
+    }
+
+
+def requisitos_de_fundacao_para_ancoragem(
+    h_ef_mm: float,
+    c_borda_mm: float,
+    *,
+    c_cr_sp_mm: float | None = None,
+) -> dict:
+    """
+    O que a FUNDAÇÃO tem de garantir para que os modos de §7.2.1.7 e §7.2.1.9
+    não governem — publicado como REQUISITO, não assumido como dado.
+
+    A superestrutura não dimensiona a sapata (declarado fora de escopo), mas
+    também não pode ficar calada sobre as dimensões de que depende. Estes três
+    números vão para o memorial e para o projetista de fundações:
+
+        c1 > 0,5·h_ef        dispensa o blow-out          (§7.2.1.9(1))
+        c >= 1,2·c_cr,sp
+        h >= 2·h_ef          dispensam o fendilhamento    (§7.2.1.7(2)(a))
+    """
+    h_ef = float(h_ef_mm)
+    c_cr_sp = float(c_cr_sp_mm) if c_cr_sp_mm else C_CR_SP_SOBRE_HEF * h_ef
+    c1_min_blowout = C1_SOBRE_HEF_DISPENSA_BLOWOUT * h_ef
+    c_min_split = 1.2 * c_cr_sp
+    h_min_split = 2.0 * h_ef
+    return {
+        "h_ef_mm": h_ef,
+        "c_borda_declarada_mm": float(c_borda_mm),
+        "c_cr_sp_mm": round(c_cr_sp, 1),
+        "c1_min_dispensa_blowout_mm": round(c1_min_blowout, 1),
+        "c_min_dispensa_fendilhamento_mm": round(c_min_split, 1),
+        "h_bloco_min_dispensa_fendilhamento_mm": round(h_min_split, 1),
+        "blowout_dispensado_pela_borda_declarada": (
+            float(c_borda_mm) > c1_min_blowout),
+        "fendilhamento_dispensado_pela_borda_declarada": (
+            float(c_borda_mm) >= c_min_split),
+        "norma": "EN 1992-4:2018 §7.2.1.7(2) e §7.2.1.9(1)",
+        "destinatario": (
+            "Projetista de fundações. Estas são condições de contorno da "
+            "ancoragem, não do dimensionamento geotécnico: se o bloco não as "
+            "cumprir, os modos de fendilhamento e blow-out passam a governar e "
+            "a ancoragem tem de ser reverificada."
+        ),
     }

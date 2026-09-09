@@ -66,6 +66,9 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
     ("icamento",            "Içamento (montagem)",       "EN 1991-1-6+EC5 §6.3.3"),
     ("ancoragem_canto",     "Ancoragem canto (moldada)", "EN 1993-1-8 + EN 1992-4"),
+    # [A4] O corte vai por chaveta — o que cria esta verificação, que estava
+    # declarada como pendente em main.py.
+    ("chaveta_concreto",    "Chaveta — esmagamento",     "EN 1992-1-1 §6.7"),
     ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
     ("tirante_piso_robustez","Robustez tirante piso",    "EN 1991-1-7+335+1993-1-2"),
