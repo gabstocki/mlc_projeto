@@ -44,6 +44,7 @@ from scipy.integrate import cumulative_trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
+from mlc_projeto.core.normativo import NDP_SOURCE
 from mlc_projeto.core.wind      import ParametrosVento, calcular_vento
 from mlc_projeto.checks.elu.flambagem_lateral import calcular_l_ef
 
@@ -129,11 +130,37 @@ def verifica_terca(
     q_k_lin = q_k_m2 * s    # kN/m — sobrecarga
     w_k_lin = w_kNm2  * s   # kN/m — vento
 
-    # ── Combinação ELU governante ─────────────────────────────
-    # ELU_C2: 1,35G + 1,5W + 1,05Q — vento dominante (curta duração)
-    q_ELU = 1.35*g_k_lin + 1.50*w_k_lin + 1.05*q_k_lin  # kN/m
+    # ── Combinações ELU — envelope, não uma fórmula fixa ──────
+    #
+    # Achados [F-06] e [D2]. Estava escrito, em código e no rótulo publicado:
+    #
+    #     q_ELU = 1,35G + 1,50W + 1,05Q     # "ELU_C2"
+    #
+    # Duas coisas erradas de uma vez. A parcela `1,05Q` é `1,5·ψ0,Q·Q` com
+    # ψ0,Q = 0,70 — o valor de OUTRA categoria de uso. Este projeto é categoria
+    # H, onde `ψ0,Q = 0` (EN 1990 Tab. A1.1) e a sobrecarga de cobertura NÃO é
+    # concomitante com o vento (EN 1991-1-1 §3.3.2(1)); é assim que
+    # `core/loads.py` monta TODAS as outras combinações. A terça era o único
+    # sítio do projeto a contradizê-lo. E `ELU_C2` nem é uma fórmula: é um
+    # ALIAS para a governante de |M| — o rótulo descrevia uma combinação que
+    # não existe.
+    #
+    # Passa a haver um envelope de duas combinações, cada uma com a SUA duração
+    # (e portanto o seu k_mod), e os ψ vêm do catálogo normativo.
+    psi_0_Q = float(NDP_SOURCE["psi_0_Q"].valor)
+    psi_0_W = float(NDP_SOURCE["psi_0_W"].valor)
 
-    # Para sucção: 0,9G + 1,5W_suc (verificar separadamente se necessário)
+    combinacoes_elu = (
+        # (nome, q_ELU [kN/m], duração)
+        ("1,35G+1,5W" + (f"+{1.5*psi_0_Q:.2f}Q" if psi_0_Q else " (cat.H: sem Q)"),
+         1.35 * g_k_lin + 1.50 * w_k_lin + 1.50 * psi_0_Q * q_k_lin,
+         "curta"),
+        ("1,35G+1,5Q (cat.H: sem vento)",
+         1.35 * g_k_lin + 1.50 * q_k_lin,
+         "media"),
+    )
+    # Sucção (0,9G + 1,5W_suc) é uplift e verifica-se em succao_uplift.py /
+    # fixacao_telha.py, não aqui: a flexão da terça é governada pela gravidade.
 
     # ── Propriedades da seção ─────────────────────────────────
     A   = b * h                  # m²
@@ -141,10 +168,6 @@ def verifica_terca(
     W_y = b * h**2 / 6          # m³ — módulo resistente eixo forte
     I_z = h * b**3 / 12         # m⁴ — eixo fraco
     W_z = h * b**2 / 6          # m³ — módulo resistente eixo fraco
-
-    # ── Esforços ELU (bi-apoiada, carga uniforme) ─────────────
-    M_d_Nm   = q_ELU * L_t**2 / 8 * 1e3   # N·m — momento máximo
-    V_d_N    = q_ELU * L_t / 2  * 1e3    # N   — cortante máximo
 
     # ── Componente lateral (Mz) ───────────────────────────────
     # A componente do peso próprio ao longo da inclinação cria Mz
@@ -154,32 +177,54 @@ def verifica_terca(
     alpha_rad = math.radians(alpha_deg)
     g_lin_lat = g_k_lin * math.sin(alpha_rad)   # componente lateral
     M_z_Nm    = 1.35 * g_lin_lat * L_t**2 / 8 * 1e3  # N·m
+    sigma_mz  = M_z_Nm / W_z   # Pa — flexão eixo fraco
 
-    # ── Tensões ───────────────────────────────────────────────
-    sigma_my = M_d_Nm / W_y    # Pa — flexão eixo forte
-    sigma_mz = M_z_Nm / W_z   # Pa — flexão eixo fraco
-    # EC5 §6.1.7: b_ef = k_cr · b → A_ef = k_cr · A
-    tau_d    = 1.5 * V_d_N / (mat.k_cr * A)  # Pa — cisalhamento
+    # ── Envelope sobre as combinações ELU, cada uma com o SEU k_mod ──
+    def _avalia(q_ELU: float, duracao: str) -> dict:
+        M_d_Nm = q_ELU * L_t**2 / 8 * 1e3     # N·m
+        V_d_N  = q_ELU * L_t / 2 * 1e3        # N
+        sigma_my = M_d_Nm / W_y               # Pa
+        # EC5 §6.1.7: b_ef = k_cr · b → A_ef = k_cr · A
+        tau_d = 1.5 * V_d_N / (mat.k_cr * A)  # Pa
+        m = GlulamMaterial(mat.classe, mat.classe_servico, duracao)
+        f_md, f_vd = m.f_m_d, m.f_v_d
+        # Flexão biaxial — EC5 §6.1.6 Eq. (6.11)/(6.12)
+        eta_bx1 = sigma_my / f_md + k_m * sigma_mz / f_md
+        eta_bx2 = k_m * sigma_my / f_md + sigma_mz / f_md
+        eta_flex = max(eta_bx1, eta_bx2)
+        eta_cis = tau_d / f_vd                # EC5 §6.1.7
+        return dict(
+            q_ELU=q_ELU, duracao=duracao, k_mod=m.k_mod,
+            M_d_Nm=M_d_Nm, V_d_N=V_d_N, sigma_my=sigma_my, tau_d=tau_d,
+            f_md=f_md, f_vd=f_vd, eta_flex=eta_flex, eta_cis=eta_cis,
+            eta=max(eta_flex, eta_cis),
+        )
 
-    # ── Resistências de cálculo (k_mod curta duração) ─────────
-    mat_curta = GlulamMaterial(mat.classe, mat.classe_servico, "curta")
-    f_md = mat_curta.f_m_d    # Pa
-    f_vd = mat_curta.f_v_d    # Pa
+    _casos = {nome: _avalia(q, dur) for nome, q, dur in combinacoes_elu}
+    _comb_gov = max(_casos, key=lambda k: _casos[k]["eta"])
+    _r = _casos[_comb_gov]
 
-    # ── Verificação flexão biaxial — EC5 §6.1.6 Eq. 6.12 ─────
-    # Condição 1: σ_my/f_md + k_m·σ_mz/f_md ≤ 1,0
-    # Condição 2: k_m·σ_my/f_md + σ_mz/f_md ≤ 1,0
-    eta_bx1 = sigma_my/f_md + k_m * sigma_mz/f_md
-    eta_bx2 = k_m * sigma_my/f_md + sigma_mz/f_md
-    eta_flex = max(eta_bx1, eta_bx2)
-
-    # ── Verificação cisalhamento — EC5 §6.1.7 ────────────────
-    eta_cis = tau_d / f_vd
+    q_ELU    = _r["q_ELU"]
+    M_d_Nm   = _r["M_d_Nm"]
+    V_d_N    = _r["V_d_N"]
+    sigma_my = _r["sigma_my"]
+    tau_d    = _r["tau_d"]
+    f_md     = _r["f_md"]
+    f_vd     = _r["f_vd"]
+    eta_flex = _r["eta_flex"]
+    eta_cis  = _r["eta_cis"]
 
     # ── Verificação flecha ELS ────────────────────────────────
     # Flecha = flexão + cisalhamento (Timoshenko, EC5 §2.2.3(2)/Anexo B).
-    # ELS S1: G + Q + 0,6W
-    q_ELS_S1 = (g_k_lin + q_k_lin + 0.6*w_k_lin) * 1e3  # N/m
+    #
+    # ELS característico (EN 1990 Eq. 6.14b). Estava `G + Q + 0,6W`, que soma
+    # Q e W — não concomitantes em categoria H, exatamente como no ELU acima.
+    # Envelope das duas ações-líder, com os ψ0 declarados:
+    #     G + Q + ψ0,W·W    e    G + W + ψ0,Q·Q
+    q_ELS_S1 = 1e3 * max(
+        g_k_lin + q_k_lin + psi_0_W * w_k_lin,
+        g_k_lin + w_k_lin + psi_0_Q * q_k_lin,
+    )  # N/m
     mat_longa = GlulamMaterial(mat.classe, mat.classe_servico, "longa")
     E_l, G_l = mat_longa.E0_mean, mat_longa.G_mean
     w_inst      = flecha_terca(q_ELS_S1, L_t, E_l, b, h, G=G_l)
@@ -217,6 +262,15 @@ def verifica_terca(
         "alpha_deg":    alpha_deg,
         # Cargas
         "q_ELU_kNm":   round(q_ELU,         4),
+        # Envelope ELU (F-06 / D2): qual combinação governa, com que duração
+        "comb_gov":    _comb_gov,
+        "duracao_gov": _r["duracao"],
+        "k_mod_gov":   _r["k_mod"],
+        "etas_por_combinacao": {
+            k: round(v["eta"], 4) for k, v in _casos.items()
+        },
+        "psi_0_Q":     psi_0_Q,
+        "psi_0_W":     psi_0_W,
         "g_lin_kNm":   round(g_k_lin,        4),
         "q_lin_kNm":   round(q_k_lin,        4),
         "w_lin_kNm":   round(w_k_lin,        4),
@@ -272,7 +326,7 @@ def verifica_terca_flexocompressao(
     Quando a terça atua como **biela de contraventamento** (§9.2.5), à flexão
     da cobertura soma-se a **compressão axial de estabilização** N_c. Os dois
     efeitos são CONCOMITANTES — nascem da MESMA combinação ELU de vento+gravidade
-    (ELU_C2: 1,35G+1,5W+1,05Q; a mesma que governa a flexão em `verifica_terca`
+    (a MESMA combinação que governa a flexão em `verifica_terca`
     e a força de estabilização em `forca_compressao_estabilizar`). Por isso a
     verificação tem de ser **combinada**, não a soma de dois η isolados
     (correção do apontamento do orientador — issue 16).
@@ -309,7 +363,7 @@ def verifica_terca_flexocompressao(
     Returns:
         dict com termos das Eq. 6.23/6.24, k_c,y, k_c,z e η combinado único.
     """
-    # ── Flexão da cobertura (mesma combinação ELU_C2 de verifica_terca) ──
+    # ── Flexão da cobertura (a combinação governante de verifica_terca) ──
     # Reutiliza a rotina de flexão biaxial → concomitância garantida por
     # construção (idênticos σ_m,y,d, σ_m,z,d, f_m,d).
     rf = verifica_terca(
@@ -360,11 +414,16 @@ def verifica_terca_flexocompressao(
         "N_c_kN":       round(abs(N_c_kN), 4),
         "sigma_c_MPa":  round(sigma_c/1e6, 4),
         "f_c0d_MPa":    round(f_c0d/1e6, 4),
-        # Flexão (concomitante, ELU_C2)
+        # Flexão (concomitante — mesma combinação e mesmo k_mod)
         "sigma_my_MPa": rf["sigma_my_MPa"],
         "sigma_mz_MPa": rf["sigma_mz_MPa"],
         "f_md_MPa":     rf["f_md_MPa"],
-        "comb":         "ELU_C2 (1,35G+1,5W+1,05Q)",
+        # [D2] Dizia "ELU_C2 (1,35G+1,5W+1,05Q)": uma fórmula com ψ0,Q de
+        # outra categoria, sob o nome de um ALIAS. Passa a publicar a
+        # combinação que de facto governou o envelope de `verifica_terca`.
+        "comb":         rf["comb_gov"],
+        "duracao_comb": rf["duracao_gov"],
+        "k_mod_comb":   rf["k_mod_gov"],
         # Flambagem
         "i_y_m":        round(i_y, 5),
         "i_z_m":        round(i_z, 5),

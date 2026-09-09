@@ -106,13 +106,14 @@ def verificar_fadiga_deslizamento(
     # Esforços por combinação (sem hardcode)
     comb_s1 = load.combinacoes["ELS_S1"]
     comb_s3 = load.combinacoes["ELS_S3"]
-    gov     = load.combinacao_ELU_governante()
-
     # Resultante na base: √(N²+V²) ≈ √(R_v²+H²) — mesma definição da L1
     def F_res(comb) -> float:
         return (comb.N_viga_kN ** 2 + comb.V_viga_kN ** 2) ** 0.5
 
-    F_ELU  = F_res(gov)
+    # Resíduo do [F-06]: lia-se `combinacao_ELU_governante()` (max|M|), que não
+    # maximiza a RESULTANTE na base — a combinação de maior momento não é a de
+    # maior √(N²+V²). Envelope sobre a própria medida (EN 1990 §6.4.3.2).
+    gov, F_ELU = load.envelope_ELU(F_res)
     F_S1   = F_res(comb_s1)
     F_S3   = F_res(comb_s3)
 

@@ -36,7 +36,13 @@ def test_concomitancia_flexao_igual_verifica_terca():
     assert rc["sigma_my_MPa"] == pytest.approx(rt["sigma_my_MPa"], rel=1e-9)
     assert rc["sigma_mz_MPa"] == pytest.approx(rt["sigma_mz_MPa"], rel=1e-9)
     assert rc["f_md_MPa"] == pytest.approx(rt["f_md_MPa"], rel=1e-9)
-    assert rc["comb"].startswith("ELU_C2")
+    # [D2] O rótulo era "ELU_C2 (1,35G+1,5W+1,05Q)" — um ALIAS a fingir de
+    # fórmula, com ψ0,Q = 0,70 de outra categoria de uso. A terça passa a fazer
+    # o envelope das combinações reais e a publicar a que governou; a exigência
+    # que interessa é que a interação use A MESMA que a flexão.
+    assert rc["comb"] == rt["comb_gov"]
+    assert rc["comb"] in rt["etas_por_combinacao"]
+    assert "1,05Q" not in rc["comb"]
 
 
 def test_eq_623_624_formula_linear_kc():

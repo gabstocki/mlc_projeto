@@ -331,12 +331,18 @@ def f13():
     assert W.COEF_ATRITO_COBERTURA_ISOLADA == 0.5
     p = NDP_SOURCE["coef_atrito_cobertura_isolada"]
     assert p.origem == "ABNT" and p.valor == 0.5
-    # O guard passou a reter o S3 depois de BM-17 apanhar [F-21]. Isso é o
-    # guard a funcionar, não uma regressão do F-13: o que F-13 exige é que o
-    # ATRITO não esteja pendente.
+    # O guard passou a reter o S3 depois de BM-17 apanhar [F-21], e depois a
+    # classe de consequência, o K_FI e o R de incêndio (auditoria de
+    # conformidade ao Eurocódigo, achados A5/B1). Isso é o guard a funcionar,
+    # não uma regressão do F-13: o que F-13 exige é que o ATRITO não esteja
+    # pendente. As quatro pendências são decisões do projetista, nenhuma é uma
+    # cláusula por transcrever.
+    ESPERADAS = {"S3", "classe_consequencia", "K_FI", "R_fogo_req_min"}
     pend = parametros_a_confirmar()
     assert "coef_atrito_cobertura_isolada" not in pend, pend
-    assert set(pend) == {"S3"}, f"pendências inesperadas: {sorted(pend)}"
+    assert set(pend) == ESPERADAS, (
+        f"a mais: {sorted(set(pend) - ESPERADAS)} | "
+        f"a menos: {sorted(ESPERADAS - set(pend))}")
     f0 = LOAD.vento_0
     return (f"cláusula transcrita ✓ | C=0,5 ancorado no texto ✓ | "
             f"Ft={f0['F_friccao_kN']:.1f} kN, escala {f0['razao_bloqueio']:.2f}×")
@@ -400,7 +406,8 @@ for st, fid, tit, det in linhas:
 print("-" * 100)
 print("  EM ABERTO (não corrigidos):")
 for fid, t in (
-    ("F-11", "ligações de EXTREMIDADE das diagonais (a barra já está; EN 1993-1-8)"),
+    ("B-1 ", "classe de consequência (EN 1990 Anexo B) e K_FI por confirmar — solidários com F-21"),
+    ("A-5 ", "tempo requerido R de resistência ao fogo: regulamento nacional, não o EC5"),
     ("F-18", "4 de 15 itens NBR por resolver (11 confirmados por BM-17) — ANEXO_A_NBR6123.md"),
     ("F-20", "C_a=1,2 do pilar sob citação inexistente; refazer por §8.1.1 Tab. 26 × Tab. 28"),
     ("F-21", "S3=1,00 (grupo 3) rotulado «grupo 2»; se for grupo 2, +12,4 % em TODO o vento"),

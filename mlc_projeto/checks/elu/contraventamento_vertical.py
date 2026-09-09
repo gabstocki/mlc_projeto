@@ -352,8 +352,11 @@ def verificar_contraventamento_vertical(
     F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
 
     # ── 2) Força nocional (imperfeição global) — EN 1993-1-1 §5.3.2 ───────────
-    gov = load.combinacao_ELU_governante()
-    R_v = abs(float(gov.V_max_kN))                       # reação vertical por apoio
+    # Resíduo do [F-06]: a nocional é φ·V_Ed,vertical, logo o que se maximiza é
+    # a CARGA VERTICAL, não |M_max|. `combinacao_ELU_governante()` é um seletor
+    # gravítico por procuração — coincide muitas vezes, mas coincidir não é
+    # verificar (EN 1990 §6.4.3.2).
+    gov, R_v = load.envelope_ELU(lambda c: abs(float(c.V_max_kN)))
     n_frames = max(2, round(L_comp / dist_portico) + 1)  # pórticos ao longo do comp.
     # Carga vertical total ≈ 2·n_porticos·R_v por pórtico × n_frames
     V_vert_total = 2.0 * n_porticos * R_v * n_frames

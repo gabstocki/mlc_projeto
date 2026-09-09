@@ -1203,7 +1203,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # Auditoria do empuxo acoplado (issue 38): quanto de H realmente se desenvolve
     # dada a rigidez horizontal real do apoio (pilar biarticulado = mecanismo).
     print("\n[FASE 4a] Auditoria do empuxo acoplado (issue 38 — coerência do modelo)...")
-    _gov_grav = load.combinacao_ELU_governante()   # max |M| (gravidade)
+    # Resíduo do [F-06]: a auditoria do empuxo acoplado consome H_rigido, logo
+    # é H_rigido que se maximiza — não |M_max|, que era uma procuração.
+    _gov_grav, _ = load.envelope_ELU(lambda c: abs(float(c.H_rigido_kN)))
     res_empuxo = analisar_empuxo_acoplado(
         geo=geo, E_Pa=mat_longa.E0_mean,
         H_rigido_kN=abs(float(_gov_grav.H_rigido_kN)),  # empuxo RÍGIDO (auditoria)

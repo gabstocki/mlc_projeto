@@ -122,8 +122,9 @@ def demanda_transversal(
     H_cob = H_cob_portico * n_frames
 
     # Força nocional sobre a carga vertical total do galpão (§5.3.2)
-    gov = load.combinacao_ELU_governante()
-    R_v = abs(float(gov.V_max_kN))
+    # Resíduo do [F-06]: a medida a maximizar é a carga VERTICAL, não |M_max|
+    # (ver a mesma correção em contraventamento_vertical.py).
+    gov, R_v = load.envelope_ELU(lambda c: abs(float(c.V_max_kN)))
     V_vert_total = 2.0 * n_porticos * R_v * n_frames
     noc = forca_nocional(V_vert_total, H_pilar_m, m_colunas=n_frames)
     H_imp = noc["H_imp_kN"]

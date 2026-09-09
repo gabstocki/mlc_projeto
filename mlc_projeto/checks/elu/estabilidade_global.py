@@ -270,15 +270,44 @@ def verificar_estabilidade_global(
     Returns:
         dict com nocionais, α_cr, critérios e ok global
     """
-    gov = load.combinacao_ELU_governante()
-    R_v = abs(float(gov.V_max_kN))
-    H_Ed = abs(float(gov.H_kN))
-    N_viga = abs(float(gov.N_viga_kN))
+    # Resíduo do [F-06]. Esta verificação usa TRÊS medidas com envelopes
+    # diferentes e é preciso separá-las, senão uma delas fica refém do seletor
+    # de outra:
+    #   · V_portal = 2·R_v alimenta a nocional  → maximiza-se a carga vertical;
+    #   · H_Ed é o denominador da razão de dispensa H_imp/H_Ed → o caso adverso
+    #     é uma RAZÃO entre duas grandezas da MESMA combinação — avalia-se
+    #     combinação a combinação e retém-se a razão máxima;
+    #   · N_viga entra em α_cr como ΣN_Ed → maximiza-se.
+    # Lia-se tudo da combinação de max|M|, que não é o envelope de nenhuma das
+    # três (EN 1990 §6.4.3.2).
+    #
+    # A razão MERECE o cuidado extra: tomar o H mínimo de uma combinação e o
+    # H_imp de outra seria misturar estados — exatamente o vício que o envelope
+    # existe para evitar. Cada combinação é um estado coerente; a razão calcula-se
+    # dentro dele.
+    gov, R_v = load.envelope_ELU(lambda c: abs(float(c.V_max_kN)))
+    _, N_viga = load.envelope_ELU(lambda c: abs(float(c.N_viga_kN)))
     V_portal = 2.0 * R_v  # dois apoios
 
     # ── 1) Forças nocionais ───────────────────────────────────
     noc = forca_nocional(V_portal, H_pilar_m, m_colunas=m_colunas)
     H_imp = noc["H_imp_kN"]
+
+    def _razao_imp(comb) -> float:
+        """H_imp/H_Ed DENTRO de uma combinação — ambos do mesmo estado."""
+        h_i = forca_nocional(2.0 * abs(float(comb.V_max_kN)), H_pilar_m,
+                             m_colunas=m_colunas)["H_imp_kN"]
+        h_e = abs(float(comb.H_kN))
+        if h_e > 1e-9:
+            return h_i / h_e
+        return math.inf if h_i > 1e-9 else 0.0
+
+    comb_imp, ratio_por_combinacao = load.envelope_ELU(_razao_imp)
+    # H_Ed continua a ser o empuxo MÁXIMO — é o que alimenta H_gov e o que o
+    # memorial publica como empuxo de projeto. O H da combinação que governa a
+    # RAZÃO vai à parte, para rastreabilidade: são perguntas diferentes.
+    _, H_Ed = load.envelope_ELU(lambda c: abs(float(c.H_kN)))
+    H_Ed_ratio = abs(float(comb_imp.H_kN))
     # AUD-008 / AUD-006: com H_Ed = 0 a razão H_imp/H_Ed é indefinida, NÃO nula.
     # O fallback original (`else 0.0`) convertia a pior condição possível em
     # aprovação automática.
@@ -292,12 +321,7 @@ def verificar_estabilidade_global(
     # `nocional_no_contraventamento` declara que a nocional entrou, verificada,
     # no caminho lateral. O default é False para preservar a proteção de
     # AUD-008 quando o chamador não o declara.
-    if H_Ed > 1e-9:
-        ratio_imp = H_imp / H_Ed
-    elif H_imp > 1e-9:
-        ratio_imp = math.inf
-    else:
-        ratio_imp = 0.0          # nenhuma imperfeição a equilibrar
+    ratio_imp = ratio_por_combinacao
 
     ok_imp = (
         ratio_imp <= H_IMP_OVER_H_MAX          # dispensa pelo empuxo de 1.ª ordem
@@ -551,6 +575,10 @@ def verificar_estabilidade_global(
         "alpha_m":       noc["alpha_m"],
         "H_imp_kN":      H_imp,
         "H_imp_over_H":  round(ratio_imp, 5),
+        # Rastreabilidade do envelope da razão (resíduo do F-06): qual combinação
+        # a governa e com que empuxo — que NÃO é o empuxo máximo de projeto.
+        "comb_H_imp_over_H": comb_imp.nome,
+        "H_Ed_da_razao_kN":  round(H_Ed_ratio, 3),
         "ok_nocional":   ok_imp,
         "nocional_no_contraventamento": bool(nocional_no_contraventamento),
         "criterio_nocional": (

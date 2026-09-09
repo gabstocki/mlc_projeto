@@ -109,12 +109,21 @@ def test_estabilidade_com_contravento_dispensa_2a_ordem():
     assert res["alpha_cr"] >= 10.0           # α_cr de SISTEMA (direção crítica)
     assert res["direcao_critica"] == "transversal"
     assert res["alpha_cr_arco"] >= 10.0      # modo arco (informativo)
-    assert res["H_imp_over_H"] < 0.01        # nocional << empuxo
+    # Resíduo do [F-06]: a razão H_imp/H_Ed passou a ser avaliada COMBINAÇÃO A
+    # COMBINAÇÃO (cada uma um estado coerente) e retém-se a máxima, em vez de
+    # ser lida da combinação de max|M|. Sobe de ~0,0086 para ~0,0122 — continua
+    # muito abaixo do limiar de dispensa de 0,10, que é o critério normativo.
+    assert res["H_imp_over_H"] < 0.10        # limiar de dispensa (AUD-008)
+    assert res["H_imp_over_H"] > 0.01        # e é o envelope, não a de max|M|
     assert res["w_over_f"] < 0.05
     assert res["H_imp_kN"] < 5.0
     # Onda 2: sem o caso de pressão descendente da Tab.25, a combinação que
     # maximiza a reação vertical passa a ser gravítica e H cai (~374 kN).
     assert res["H_Ed_kN"] > 300.0
+    # E o empuxo da combinação que governa a RAZÃO é outro — muito menor. São
+    # perguntas diferentes e o resultado publica as duas.
+    assert res["H_Ed_da_razao_kN"] < res["H_Ed_kN"]
+    assert res["comb_H_imp_over_H"]
     # barra pode ter α_cr < 10 — informativo, coberto por k_c
     assert "k_c" in res["nota_alpha_cr_barra"]
 

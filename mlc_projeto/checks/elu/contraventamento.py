@@ -161,17 +161,33 @@ def forca_compressao_estabilizar(
         N_flex = (1 − k_crit)·M_d / h   (EC5 §9.2.5.2, Swedish Wood 12.1)
 
     N_d = |N_axial| + N_flex   (sobreposição conservadora; MLC biarticulada)
+
+    Envelope sobre as combinações — resíduo do [F-06]
+    -------------------------------------------------
+    Lia-se `combinacao_ELU_governante()`, que maximiza |M_max|. Mas o que esta
+    função precisa de maximizar é `N_d = |N| + (1−k_crit)·M/h`, e essa medida
+    não é monótona em |M|: `h` é a altura NA SEÇÃO de M_max e varia com a
+    combinação (uma combinação com M menor mas máximo mais perto do apoio, onde
+    h é menor, pode dar N_flex maior), e a parcela axial vem do empuxo, que
+    segue outro padrão de carga. Passa a usar-se `envelope_ELU` sobre a própria
+    medida — que é o que o EN 1990 §6.4.3.2 pede.
     """
-    gov = load.combinacao_ELU_governante()
+    k_c = max(0.0, min(1.0, float(k_crit)))
+
+    def _N_d(comb) -> float:
+        h_c = float(geo.h(comb.x_Mmax_m))
+        if h_c <= 0:
+            h_c = float(geo.h_ap)
+        return (abs(float(comb.N_viga_kN))
+                + (1.0 - k_c) * abs(float(comb.M_max_kNm)) / h_c)
+
+    gov, N_d = load.envelope_ELU(_N_d)
     N_ax = abs(float(gov.N_viga_kN))
     M_d  = abs(float(gov.M_max_kNm))
     h    = float(geo.h(gov.x_Mmax_m))
     if h <= 0:
         h = float(geo.h_ap)
-
-    k_c = max(0.0, min(1.0, float(k_crit)))
     N_flex = (1.0 - k_c) * M_d / h          # kN
-    N_d    = N_ax + N_flex                  # kN
 
     return {
         "N_axial_kN": round(N_ax, 3),

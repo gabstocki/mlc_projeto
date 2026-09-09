@@ -104,9 +104,9 @@
   · Governa: compressao | η=0.4283 (vs pilar interno ~0.207)
 
 [FASE 2] Corda do diafragma — elemento de beiral (issue 32)...
-  ✓ Corda beiral §6.2.3/§6.3.2     η = 0.0553  █
+  ✓ Corda beiral §6.2.3/§6.3.2     η = 0.0656  █
   · Terça de beiral = corda do diafragma (MLC GL24h) | N_corda=15.1 kN (±) | seção 0.2×0.58 m
-  · flexo-compr §6.3.2 η=0.055 | flexo-tração §6.2.3 η=0.047 → η=0.0553 (flexo-compressão (§6.3.2))
+  · flexo-compr §6.3.2 η=0.066 | flexo-tração §6.2.3 η=0.061 → η=0.0656 (flexo-compressão (§6.3.2))
   · Continuidade: 3 emenda(s) × 15.1 kN (obrigatória p/ o diafragma funcionar)
 
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
@@ -129,14 +129,14 @@
   · η governante (cisalhamento) = 0.0420
 
 [FASE 2] Verificações ELU — Terças (flexão cobertura)...
-  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.0769  █
-  ✓ Terça-biela flexo-comp. §6.3.2 η = 0.2405  ████
-  · N_c=104.7 kN (estab. §9.2.5) + M cobertura [ELU_C2 (1,35G+1,5W+1,05Q)] → interação COMBINADA
-  · σ_c=0.902 | σ_m,y=0.765 | σ_m,z=0.246 MPa (f_md=13.44)
-  · k_c,y=0.967 (λ_y=34) | k_c,z=0.368 (λ_z=100) | η_6.23=0.139 η_6.24=0.240 → η=0.2405 (Eq.6.24)
+  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.0979  █
+  ✓ Terça-biela flexo-comp. §6.3.2 η = 0.2609  █████
+  · N_c=104.7 kN (estab. §9.2.5) + M cobertura [1,35G+1,5Q (cat.H: sem vento)] → interação COMBINADA
+  · σ_c=0.902 | σ_m,y=1.049 | σ_m,z=0.246 MPa (f_md=12.48)
+  · k_c,y=0.967 (λ_y=34) | k_c,z=0.368 (λ_z=100) | η_6.23=0.167 η_6.24=0.261 → η=0.2609 (Eq.6.24)
   ✓ Terça Q_k conc. §EN1991-1-1    η = 0.0546  █
   · Q_k=1.0 kN a meio-vão (não concomit. c/ UDL nem vento) | M_d=7.65 kN·m (dur. média, k_mod=0.65)
-  · η_flex=0.0546 | η_cis=0.0484 → η=0.0546 | vs UDL η_flex=0.070 (a mais desfavorável governa)
+  · η_flex=0.0546 | η_cis=0.0484 → η=0.0546 | vs UDL η_flex=0.098 (a mais desfavorável governa)
   · Telha: M_local,d=0.949 kN·m/m → ficha do fabricante (issue 17)
 
 [FASE 2] Fixação telha→terça (sucção — NBR 6123)...
@@ -278,8 +278,8 @@
   Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2        0.2433  ✓
   Pilar vento θ=90°                NBR 6123+EC5 §6.3.2        0.2587  ✓
   Pilar canto (grav+brace+vento)   EC5 §6.2.3+§6.3.2          0.4283  ✓
-  Terça flexão                     EC5 §6.1.6+§6.1.7          0.0769  ✓
-  Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24    0.2405  ✓
+  Terça flexão                     EC5 §6.1.6+§6.1.7          0.0979  ✓
+  Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24    0.2609  ✓
   Terça Q_k concentrado            EN 1991-1-1 Tab.6.10       0.0546  ✓
   Fixação telha (sucção)           NBR 6123 §7.2.6            0.6788  ✓
   Fogo (seção reduzida)            EN 1995-1-2 §4.2.2         0.2128  ✓
@@ -288,7 +288,7 @@
   Contravento transversal          EN 1993-1-1 §5.3+§6.2.3    0.7024  ✓
   Lig. diagonal longitudinal       EN 1993-1-8 §3.13+§4.5     0.7713  ✓
   Lig. diagonal frontão            EN 1993-1-8 §3.13+§4.5     0.7633  ✓
-  Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2          0.0553  ✓
+  Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2          0.0656  ✓
   Estabilidade global P-Δ          EN 1993-1-1 §5.2+§5.3      0.4790  ✓
   Impacto veículo (A_d)            EN 1991-1-7                0.4774  ✓
   Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3     0.0420  ✓
