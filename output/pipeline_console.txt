@@ -26,8 +26,14 @@
     Escala: 2.35× o arrasto de bloqueio da silhueta (356.0 kN) — envelope normativo, ver §7.2.2 transcrito em core/wind.py
 
   RESERVAS NORMATIVAS:
-    · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 19 parâmetros adotam o valor recomendado do EN por decisão de projeto. RESULTADO DEPENDENTE DE NATIONAL ANNEX.
+    · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 21 parâmetros adotam o valor recomendado do EN por decisão de projeto. RESULTADO DEPENDENTE DE NATIONAL ANNEX.
     · [F-18] 11 de 15 valores de origem NBR 6123 confirmados contra o TEXTO da ABNT NBR 6123:2023 (BM-17: Tab. 1 45/45, Tab. 2 3/3, Tab. 3 279 células, Tab. 10 40/40, Tab. 25 8 expressões, §4.2/§5.2/§7.2.1/§7.2.2/§7.2.6 à letra). 4 POR RESOLVER: v0_isopleta; s3_estatistico; tabela_10_alpha_90; ca_pilar. Ver ANEXO_A_NBR6123.md.
+    · A ação de vento é obtida pela ABNT NBR 6123:2023 (rajada de 3 s, Tr = 50 anos via S3) e introduzida no formato de segurança da EN 1990 (γ_Q = 1,50; ψ_0,W = 0,60; ψ_2,W = 0). Esses coeficientes foram calibrados pelo CEN contra a ação característica da EN 1991-1-4 (velocidade média de 10 min com c_s·c_d e pressão de pico q_p), NÃO contra a rajada de 3 s da NBR. A equivalência entre as duas ações características não é demonstrada neste memorial: adota-se o par (NBR 6123 para a ação, EN 1990 para a combinação) por decisão de projeto, por ser a prática corrente quando a obra é brasileira e o dimensionamento da madeira segue o EC5. Consequência a declarar: a fiabilidade resultante é a da NBR para a AÇÃO e a do EN 1990 para a COMBINAÇÃO, e não a fiabilidade calibrada de nenhum dos dois sistemas completos.
+    · 4 PARÂMETRO(S) A CONFIRMAR PELO PROJETISTA: K_FI, R_fogo_req_min, S3, classe_consequencia
+        - K_FI = 1.0 (EN 1990 Anexo B §B3.3 Tab. B3)
+        - R_fogo_req_min = 30.0 (regulamento nacional (ABNT NBR 14432 / IT do CBM); método por EN 1995-1-2:2004 §4.2.2)
+        - S3 = 1.0 (NBR 6123:2023 §5.4 Tab. 4)
+        - classe_consequencia = 'CC2' (EN 1990 Anexo B Tab. B1)
 
 [FASE 1] Geometria pré-definida (passe rodar_varredura=True para varredura completa)
 
@@ -124,6 +130,15 @@
   · q=0.890 kN/m² (classe A, z=8.79 m) | c_p=±2.0 (§7.2.6) | R_fix,d=1.92 kN (R_k=2.5 típico)
   · e_fix=0.20 m (a cada nervura) | η=0.679 | e_fix máx p/ η≤1: 0.29 m
   ⚠ R_fix,k TÍPICO (2,5 kN) — confirmar na ficha técnica da telha; governa pull-over da chapa fina, não pull-out na madeira.
+
+[FASE 2] Resistência ao fogo (EN 1995-1-2, seção reduzida)...
+  ✓ Fogo R30 EN 1995-1-2           η = 0.2128  ████
+  · d_ef=28.0 mm (4 faces) | b: 320→264 mm (−17.5%) | q_fi=4.732 kN/m
+  · viga: η_M=0.0469 | η_LTB=0.0469 (k_crit=1.0000) | η_V=0.1065 → governa cisalhamento
+  · pilar_lateral: 320×270 → 264×214 mm (−34.6% de área) | N_fi=47.9 kN | k_c=0.2887 | η=0.1064
+  · pilar_central: 320×270 → 264×214 mm (−34.6% de área) | N_fi=95.8 kN | k_c=0.2887 | η=0.2128
+  · margem por patamar: R30: η=0.2128 | R60: η=0.4795
+  ⚠ O tempo requerido R NÃO é fixado pelo Eurocódigo: vem do regulamento nacional de segurança contra incêndio (ABNT NBR 14432 / IT do CBM estadual). O valor aqui verificado é uma DECLARAÇÃO de projeto, registada em NDP_SOURCE com origem 'PROJETO'.
 
 [FASE 3] Verificações ELS...
   ✓ ELS §2.3.2.2+Tab.7.2           η = 0.1900  ███
@@ -252,7 +267,8 @@
   Terça flexão                     EC5 §6.1.6+§6.1.7          0.0769  ✓
   Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24    0.2405  ✓
   Terça Q_k concentrado            EN 1991-1-1 Tab.6.10       0.0546  ✓
-  Fixação telha (sucção)           NBR 6123 §6.2.5+Tab.5      0.6788  ✓
+  Fixação telha (sucção)           NBR 6123 §7.2.6            0.6788  ✓
+  Fogo (seção reduzida)            EN 1995-1-2 §4.2.2         0.2128  ✓
   Contraventamento cobertura       EC5 §9.2.5                 0.7902  ✓
   Contravento vertical             EN 1993-1-1 §5.3+§6.2.3    0.7883  ✓
   Contravento transversal          EN 1993-1-1 §5.3+§6.2.3    0.7024  ✓
@@ -283,17 +299,17 @@
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 40 (38 executadas, 2 não aplicáveis)  |  todas OK = True
+  N.º verif.   = 41 (39 executadas, 2 não aplicáveis)  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
 [FASE 5] Export relatório (Excel + LaTeX/PDF)...
-  Excel: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.xlsx
-  Figura: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc_diagrama_MVN.pdf
-  LaTeX: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.tex
-  PDF  : /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.pdf
+  Excel: C:\Users\AutoSombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.xlsx
+  Figura: C:\Users\AutoSombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc_diagrama_MVN.pdf
+  LaTeX: C:\Users\AutoSombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.tex
+  PDF  : C:\Users\AutoSombra\Documents\Projeto MLC UFPR\mlc_projeto\output\relatorio_mlc.pdf
 
 Pipeline concluído. Relatório gerado em output/
   Status global = APROVADO | η_max = 0.7902
 
-[FASE 6] Abrindo visualização 3D interativa...
+[FASE 6] Visualização 3D omitida (abrir_viz=False)

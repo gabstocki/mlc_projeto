@@ -154,14 +154,36 @@ def test_nao_restam_parametros_com_clausula_por_confirmar():
     O guard fez exatamente o que devia — reter um parâmetro cuja cláusula não
     está resolvida. Esvaziá-lo agora seria desligar o alarme.
 
-    O que o teste passa a exigir: o atrito de §7.2.2 NÃO está pendente (é o
-    objeto do F-13, e está fechado), e tudo o que estiver pendente diz porquê.
+    ATUALIZADO OUTRA VEZ (auditoria de conformidade ao Eurocódigo, achados
+    A5/B1): juntaram-se três pendências, todas do mesmo tipo — decisões que só
+    o projetista pode tomar e que estavam a ser tomadas por omissão:
+
+      · `classe_consequencia` e `K_FI` — EN 1990 Anexo B. Não estavam
+        declaradas em lado nenhum, e são a MESMA pergunta que o S3 [F-21]
+        (grupo 2 ⇒ CC3 ⇒ K_FI = 1,10 **e** S3 = 1,06). Resolvem-se juntas.
+      · `R_fogo_req_min` — a EN 1995-1-2 dá o método, o regulamento nacional
+        dá o tempo. Verificado a R30 e publicada a margem a R60, mas o valor
+        exigível tem de vir do corpo de bombeiros.
+
+    O que o teste exige: o atrito de §7.2.2 NÃO está pendente (é o objeto do
+    F-13, e está fechado); o conjunto de pendências é EXATAMENTE o esperado —
+    nem a menos (alarme desligado) nem a mais (pendência nova sem registo); e
+    cada uma diz porquê.
     """
     from mlc_projeto.core.normativo import parametros_a_confirmar
+
+    ESPERADAS = {"S3", "classe_consequencia", "K_FI", "R_fogo_req_min"}
 
     pendentes = parametros_a_confirmar()
     assert "coef_atrito_cobertura_isolada" not in pendentes, (
         "F-13 está fechado: a cláusula §7.2.2 foi confirmada contra o texto")
-    assert set(pendentes) == {"S3"}, (
-        f"pendências inesperadas: {sorted(set(pendentes) - {'S3'})}")
+    assert set(pendentes) == ESPERADAS, (
+        f"a mais: {sorted(set(pendentes) - ESPERADAS)} | "
+        f"a menos: {sorted(ESPERADAS - set(pendentes))}")
     assert "F-21" in pendentes["S3"].nota
+    # A solidariedade entre as duas normas tem de estar ESCRITA: quem resolver
+    # uma tem de ser levado à outra.
+    assert "F-21" in pendentes["classe_consequencia"].nota
+    assert "classe_consequencia" in pendentes["K_FI"].nota
+    # E nenhuma pendência pode passar por NDP: não há Anexo Nacional que as fixe.
+    assert not any(p.e_ndp for p in pendentes.values())

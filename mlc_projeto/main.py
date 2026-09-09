@@ -30,6 +30,9 @@ from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
 from mlc_projeto.core.wind       import ParametrosVento
 from mlc_projeto.core.loads      import carregamentos_com_vento, peso_proprio_gk
+from mlc_projeto.core.normativo  import (
+    NDP_SOURCE, CONFIG_NORMATIVA, parametros_a_confirmar,
+)
 
 from mlc_projeto.predim.predim   import pre_dimensionar, relatorio
 
@@ -51,6 +54,9 @@ from mlc_projeto.checks.elu.contraventamento_transversal import (
 )
 from mlc_projeto.checks.elu.estabilidade_global import (
     verificar_estabilidade_global, relatorio_estabilidade_global,
+)
+from mlc_projeto.checks.elu.fogo import (
+    verificar_fogo, reacao_vertical_incendio,
 )
 from mlc_projeto.checks.elu.impacto_veiculo import verificar_impacto_veiculo
 from mlc_projeto.checks.elu.succao_uplift import verificar_succao_uplift
@@ -136,6 +142,12 @@ DURABILIDADE = dict(
         "retenção com o tratador no projeto executivo."
     ),
 )
+
+# --- Incêndio: tempo requerido (EN 1995-1-2 dá o MÉTODO, não o R) -------------
+# O R vem do regulamento nacional (ABNT NBR 14432 / IT do CBM estadual), não do
+# Eurocódigo. Fica declarado em NDP_SOURCE como PROJETO-A-CONFIRMAR e é lido
+# daqui para que exista UM só valor no projeto.
+R_FOGO_REQ_MIN = float(NDP_SOURCE["R_fogo_req_min"].valor)   # min
 
 # --- Vento NBR 6123 (H1 alinhado a h_ap−h0 no main) ---------------------------
 VENTO_PARAMS = dict(
@@ -626,6 +638,19 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"\n  RESERVAS NORMATIVAS:")
     print(f"    · {load.aviso_ndp}")
     print(f"    · {load.aviso_nbr}")
+    # Achado B2 — o híbrido NBR 6123 (ação) × EN 1990 (combinação). Os γ e ψ do
+    # EN 1990 foram calibrados contra a EN 1991-1-4, não contra a rajada de 3 s
+    # da NBR. É a decisão de projeto de maior alcance no memorial e não estava
+    # escrita em lado nenhum.
+    print(f"    · {CONFIG_NORMATIVA.aviso_hibrido()}")
+    # Achado B1 — decisões de classificação por tomar. Enquanto existirem, o
+    # memorial não pode afirmar a classe de fiabilidade nem o tempo de fogo.
+    _pend = parametros_a_confirmar()
+    if _pend:
+        print(f"    · {len(_pend)} PARÂMETRO(S) A CONFIRMAR PELO PROJETISTA: "
+              + ", ".join(sorted(_pend)))
+        for _k in sorted(_pend):
+            print(f"        - {_k} = {_pend[_k].valor!r} ({_pend[_k].clausula})")
 
     # ── Fase 1: Pré-dimensionamento ───────────────────────────────────────────
     if rodar_varredura:
@@ -1059,6 +1084,43 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · e_fix={_fx['e_fix_m']:.2f} m (a cada nervura) | "
           f"η={_fx['eta']:.3f} | e_fix máx p/ η≤1: {_fx['e_fix_req_m']:.2f} m")
     print(f"  ⚠ {_fx['caveat']}")
+
+    # Resistência ao fogo — EN 1995-1-2, método da seção reduzida (achado A5)
+    #
+    # O fogo estava ausente E não declarado. O Eurocódigo dá o método; o tempo
+    # requerido R vem do regulamento nacional (NBR 14432 / IT do CBM) e está
+    # declarado em NDP_SOURCE["R_fogo_req_min"] como PROJETO-A-CONFIRMAR — o
+    # guard `parametros_a_confirmar()` mantém-no visível até o projetista o
+    # fixar. Combinação acidental EN 1990 Eq. (6.11b): com ψ1,Q = ψ2,W = 0
+    # (categoria H) reduz-se ao permanente sem coeficiente parcial.
+    print("\n[FASE 2] Resistência ao fogo (EN 1995-1-2, seção reduzida)...")
+    _N_fi_lateral = reacao_vertical_incendio(geo, load)
+    res_elu["fogo"] = verificar_fogo(
+        geo, mat_elu, load, R_req_min=R_FOGO_REQ_MIN, s=S,
+        pilares=(
+            dict(b=B_PILAR, h=H_PILAR, H_col_m=H_PILAR_ALT,
+                 N_fi_kN=_N_fi_lateral, nome="pilar_lateral"),
+            dict(b=B_PILAR_C, h=H_PILAR_C, H_col_m=H_PILAR_ALT,
+                 N_fi_kN=2.0 * _N_fi_lateral, nome="pilar_central"),
+        ),
+    )
+    _fg = res_elu["fogo"]
+    _fgv = _fg["viga"]
+    _print_eta(f"Fogo R{int(R_FOGO_REQ_MIN)} EN 1995-1-2", _fg)
+    print(f"  · d_ef={_fgv['d_ef_mm']:.1f} mm ({_fgv['faces_expostas']} faces) | "
+          f"b: {_fgv['b_inicial_mm']:.0f}→{_fgv['b_fi_mm']:.0f} mm "
+          f"(−{_fgv['perda_b_pct']:.1f}%) | q_fi={_fgv['q_fi_kNm']:.3f} kN/m")
+    print(f"  · viga: η_M={_fgv['eta_flexao']:.4f} | "
+          f"η_LTB={_fgv['eta_ltb']:.4f} (k_crit={_fgv['k_crit']:.4f}) | "
+          f"η_V={_fgv['eta_cisalhamento']:.4f} → governa {_fgv['modo_gov']}")
+    for _p_fi in _fg["pilares"]:
+        print(f"  · {_p_fi['nome']}: {_p_fi['b_mm']:.0f}×{_p_fi['h_mm']:.0f} → "
+              f"{_p_fi['b_fi_mm']:.0f}×{_p_fi['h_fi_mm']:.0f} mm "
+              f"(−{_p_fi['perda_A_pct']:.1f}% de área) | N_fi={_p_fi['N_fi_kN']:.1f} kN | "
+              f"k_c={_p_fi['k_c']:.4f} | η={_p_fi['eta']:.4f}")
+    print(f"  · margem por patamar: "
+          + " | ".join(f"{k}: η={v}" for k, v in _fg['margem_por_R'].items()))
+    print(f"  ⚠ {_fg['nota_R']}")
 
     # ── Fase 3: Verificações ELS ──────────────────────────────────────────────
     print("\n[FASE 3] Verificações ELS...")

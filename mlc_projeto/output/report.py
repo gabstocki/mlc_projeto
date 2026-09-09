@@ -48,7 +48,12 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
     ("terca_Qk_conc",       "Terça Q_k concentrado",     "EN 1991-1-1 Tab.6.10"),
-    ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §6.2.5+Tab.5"),
+    # [D1] O rótulo dizia "§6.2.5+Tab.5". O BM-17 leu a :2023: §6.2.5 é
+    # *Pressões internas* e a Tab. 5 é *altura de camada limite* — nem uma nem
+    # outra sustenta c_p = ±2,0 para elementos de vedação. A rota executada pelo
+    # módulo é §7.2.6, e é essa que o memorial passa a citar.
+    ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §7.2.6"),
+    ("fogo",                "Fogo (seção reduzida)",     "EN 1995-1-2 §4.2.2"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
     ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
     ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),

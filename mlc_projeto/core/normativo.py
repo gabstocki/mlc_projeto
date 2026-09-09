@@ -37,6 +37,12 @@ Classificação usada em `origem`
     "ABNT-A-CONFIRMAR" — atribuído a uma cláusula da ABNT que NÃO foi
                       reproduzida nem verificada (achado F-13). Não é um valor
                       normativo enquanto a cláusula não for anexada ao memorial.
+    "PROJETO-A-CONFIRMAR" — escolha de projeto que o projetista ainda não fez
+                      (classe de consequência, tempo requerido de resistência ao
+                      fogo). Difere de "PROJETO" precisamente nisto: ali há uma
+                      decisão tomada e justificada; aqui há um valor a usar
+                      provisoriamente e uma decisão em falta. Ambos os sufixos
+                      "-A-CONFIRMAR" caem em `parametros_a_confirmar()`.
 """
 
 from __future__ import annotations
@@ -60,7 +66,31 @@ class ParametroNormativo:
         return self.origem == "EN-recomendado"
 
 
-EUROCODE_BASE = "EN 1990:2002 + EN 1991-1-1:2002 + EN 1995-1-1:2004/A1:2008"
+EUROCODE_BASE = (
+    "EN 1990:2002 + EN 1991-1-1:2002 + EN 1995-1-1:2004/A1:2008 "
+    "+ EN 1995-1-2:2004"
+)
+
+#: Declaração do HÍBRIDO NBR 6123 × EN 1990 (achado B2 da auditoria de
+#: conformidade). Os coeficientes parciais e ψ da EN 1990 Tab. A1.1/A1.2 foram
+#: calibrados contra a ação de vento característica da **EN 1991-1-4**. Este
+#: projeto substitui essa ação pela da NBR 6123:2023 e mantém o formato de
+#: segurança do EN 1990. Não é ilegítimo — é uma DECISÃO DE PROJETO, e como tal
+#: tem de estar escrita: quem lê o memorial não pode inferi-la dos números.
+HIBRIDO_VENTO = (
+    "A ação de vento é obtida pela ABNT NBR 6123:2023 (rajada de 3 s, "
+    "Tr = 50 anos via S3) e introduzida no formato de segurança da EN 1990 "
+    "(γ_Q = 1,50; ψ_0,W = 0,60; ψ_2,W = 0). Esses coeficientes foram calibrados "
+    "pelo CEN contra a ação característica da EN 1991-1-4 (velocidade média de "
+    "10 min com c_s·c_d e pressão de pico q_p), NÃO contra a rajada de 3 s da "
+    "NBR. A equivalência entre as duas ações características não é demonstrada "
+    "neste memorial: adota-se o par (NBR 6123 para a ação, EN 1990 para a "
+    "combinação) por decisão de projeto, por ser a prática corrente quando a "
+    "obra é brasileira e o dimensionamento da madeira segue o EC5. Consequência "
+    "a declarar: a fiabilidade resultante é a da NBR para a AÇÃO e a do EN 1990 "
+    "para a COMBINAÇÃO, e não a fiabilidade calibrada de nenhum dos dois "
+    "sistemas completos."
+)
 
 NATIONAL_ANNEX = (
     "NENHUM — o Brasil não publica Anexo Nacional aos Eurocódigos. "
@@ -115,8 +145,19 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
     "beta_c": _p(0.10, "EN 1995-1-1 §6.3.2(1)", "EN", "MLC"),
 
     # ── EN 1995-1-1 — serviço ────────────────────────────────────────────
-    "lim_w_inst":    _p("L/300", "EN 1995-1-1 Tab. 7.2", "EN-recomendado"),
-    "lim_w_net_fin": _p("L/250", "EN 1995-1-1 Tab. 7.2", "EN-recomendado"),
+    # [F-20] A Tab. 7.2 do EC5 dá INTERVALOS (w_inst: ℓ/300–ℓ/500;
+    # w_net,fin: ℓ/250–ℓ/350), não um "valor recomendado" — não há aqui um NDP
+    # a herdar do EN. Adotar a extremidade MAIS PERMISSIVA de cada intervalo é
+    # escolha do projetista e fica classificada como tal. (η_ELS = 0,19: a
+    # extremidade rígida seria igualmente atendida — a reclassificação é de
+    # rastreabilidade, não de dimensionamento.)
+    "lim_w_inst":    _p("L/300", "EN 1995-1-1 Tab. 7.2 (intervalo ℓ/300–ℓ/500)",
+                        "PROJETO",
+                        "extremidade permissiva do intervalo; cobertura "
+                        "industrial sem forro nem elementos frágeis apoiados"),
+    "lim_w_net_fin": _p("L/250", "EN 1995-1-1 Tab. 7.2 (intervalo ℓ/250–ℓ/350)",
+                        "PROJETO",
+                        "idem; a flecha final verificada é 0,19 do limite"),
     "lim_abertura_springings": _p(
         "L/500", "não normalizado", "PROJETO",
         "o EC5 não fixa limite para a abertura dos apoios; ver AUD-006"),
@@ -166,6 +207,71 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
                            "não normalizado; ver AUD-006/AUD-008"),
     "w_over_f_max":     _p(0.05, "critério de dispensa", "PROJETO",
                            "abaixamento relativo do freche"),
+
+    # ── Contraventamento: parâmetros que GOVERNAM e não constavam [F-23] ──
+    # O limite de deslocamento dos painéis de cruz governa o Ø das diagonais em
+    # ELS (η_δ ≈ 0,61) e estava só como default de assinatura, sem cláusula e
+    # fora deste catálogo. O EC5 não fixa drift para painéis de contraventamento
+    # de cobertura; H/300 é a prática corrente para estruturas industriais e é,
+    # portanto, escolha do projetista.
+    "drift_lim_paineis": _p(
+        300.0, "não normalizado (δ ≤ H_col/300)", "PROJETO",
+        "limite de deslocamento horizontal dos painéis de contraventamento "
+        "vertical e transversal; governa o diâmetro das diagonais em ELS"),
+    "k_s_contravento":  _p(4.0, "EN 1995-1-1 Tab. 9.2 (§9.2.5.3)", "EN-recomendado",
+                           "fator de modificação por n.º de vãos"),
+    "k_f_2":            _p(80.0, "EN 1995-1-1 Tab. 9.2 (§9.2.5.3)", "EN-recomendado",
+                           "rigidez do contraventamento — Eq. (9.36)"),
+    "k_f_3":            _p(30.0, "EN 1995-1-1 Tab. 9.2 (§9.2.5.3)", "EN-recomendado",
+                           "rigidez do contraventamento — Eq. (9.37)"),
+
+    # ── Fiabilidade: classe de consequência (EN 1990 Anexo B) ────────────
+    # Achado B1: a classe de consequência NÃO estava declarada em lado nenhum,
+    # e é a MESMA pergunta que o S3 da NBR 6123 (grupo 2 vs 3) em aberto no
+    # [F-21]. Uma classificação, duas normas: têm de responder o mesmo.
+    #
+    # A EN 1990 §B3.3 permite modificar γ por K_FI (CC1: 0,9 | CC2: 1,0 |
+    # CC3: 1,1). A aplicação de K_FI é ela própria um NDP e a EN 1990 §B1(3)
+    # nota que a diferenciação por K_FI pode ser dispensada quando outras
+    # medidas (controlo de projeto e execução) a substituem.
+    "classe_consequencia": _p(
+        "CC2", "EN 1990 Anexo B Tab. B1", "PROJETO-A-CONFIRMAR",
+        "Estacionamento coberto: CC2 («consequência MÉDIA — edifícios "
+        "residenciais e de escritórios, públicos com consequências médias»). "
+        "PENDENTE DE CONFIRMAÇÃO pelo projetista, e a decisão é solidária com "
+        "o grupo da Tab. 4 da NBR 6123 [F-21]: CC3 (aglomerações, ruína com "
+        "risco elevado) corresponde ao grupo 2 (S3 = 1,06) e implicaria "
+        "K_FI = 1,10 sobre as ações desfavoráveis MAIS +12,4 % na ação de "
+        "vento. Enquanto o par não for confirmado, o memorial não pode "
+        "afirmar a classe."),
+    "K_FI": _p(
+        1.00, "EN 1990 Anexo B §B3.3 Tab. B3", "PROJETO-A-CONFIRMAR",
+        "K_FI = 1,00 é o valor de CC2. Solidário com 'classe_consequencia': "
+        "se a edificação for CC3, K_FI = 1,10 multiplica γ_G e γ_Q "
+        "desfavoráveis (EN 1990 §B3.3(2)) e TODAS as verificações ELU sobem "
+        "10 %. Não aplicado enquanto a classe não estiver confirmada."),
+
+    # ── Incêndio (EN 1995-1-2) ───────────────────────────────────────────
+    # O Eurocódigo dá o método, não o tempo requerido: R vem do regulamento
+    # nacional de segurança contra incêndio (ABNT NBR 14432 / IT do CBM
+    # estadual). É por isso "PROJETO", e não "EN-recomendado".
+    "R_fogo_req_min": _p(
+        30.0, "regulamento nacional (ABNT NBR 14432 / IT do CBM); método por "
+              "EN 1995-1-2:2004 §4.2.2", "PROJETO-A-CONFIRMAR",
+        "Tempo requerido de resistência ao fogo. R30 adotado para a "
+        "verificação; a exigência efetiva depende da classificação de ocupação, "
+        "área e altura da edificação e TEM de ser confirmada com o corpo de "
+        "bombeiros do estado. O memorial publica também a margem em R60."),
+    "beta_n_MLC": _p(
+        0.70, "EN 1995-1-2:2004 Tab. 3.1", "EN",
+        "taxa de carbonização NOCIONAL (mm/min) para MLC de coníferas com "
+        "ρ_k ≥ 290 kg/m³; GL24h tem ρ_k = 385"),
+    "k_fi_MLC": _p(
+        1.15, "EN 1995-1-2:2004 Tab. 2.1", "EN",
+        "converte o 5 % fractil no 20 % fractil em situação de incêndio"),
+    "gamma_M_fi": _p(
+        1.00, "EN 1995-1-2:2004 §2.3(1)", "EN-recomendado",
+        "coeficiente parcial da madeira em situação acidental de incêndio"),
 })
 
 
@@ -175,8 +281,15 @@ def parametros_ndp() -> dict[str, ParametroNormativo]:
 
 
 def parametros_de_projeto() -> dict[str, ParametroNormativo]:
-    """Só as escolhas de projeto — não normalizadas, responsabilidade do autor."""
-    return {k: v for k, v in NDP_SOURCE.items() if v.origem == "PROJETO"}
+    """
+    Só as escolhas de projeto — não normalizadas, responsabilidade do autor.
+
+    Inclui as ainda por confirmar (`PROJETO-A-CONFIRMAR`): uma decisão em falta
+    continua a ser responsabilidade do projetista, e omiti-la desta lista fá-la
+    desaparecer do memorial.
+    """
+    return {k: v for k, v in NDP_SOURCE.items()
+            if v.origem.startswith("PROJETO")}
 
 
 # ── [F-18] Catálogo de proveniência dos valores de origem NBR 6123 ───────────
@@ -504,6 +617,17 @@ class ConfiguracaoNormativa:
             f"valor recomendado do EN por decisão de projeto. "
             f"RESULTADO DEPENDENTE DE NATIONAL ANNEX."
         )
+
+    def aviso_hibrido(self) -> str:
+        """
+        Declaração do híbrido NBR 6123 (ação) × EN 1990 (combinação) — achado B2.
+
+        `aviso_ndp` cobre a ausência de Anexo Nacional e `aviso_nbr` a
+        proveniência dos valores da NBR. Nenhum dos dois dizia que os γ e ψ do
+        EN 1990 foram calibrados contra OUTRA ação de vento — que é a decisão
+        de projeto com maior alcance neste memorial.
+        """
+        return HIBRIDO_VENTO
 
     def aviso_nbr(self) -> str:
         """
