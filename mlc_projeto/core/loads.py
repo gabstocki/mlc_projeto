@@ -53,6 +53,9 @@ from scipy.integrate import trapezoid
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.normativo import CONFIG_NORMATIVA, ConfiguracaoNormativa
+from mlc_projeto.core.validacao import (
+    DominioInvalidoError, exigir_finito, exigir_positivo,
+)
 
 
 # ── Coeficientes EN 1990 ─────────────────────────────────────────────────────
@@ -247,6 +250,22 @@ def analisar_biarticulada(
         passar q_esq e q_dir (kN/m) em cada meia-água.
         Se omitidos, usa-se q uniforme em todo o vão.
     """
+    # ── Pré-condições de domínio (achado F-09) ────────────────────────────
+    # Antes destas linhas havia, mais abaixo, `np.maximum(I_x, 1e-18)` e
+    # `np.maximum(b·h_x, 1e-18)`. Um clamp desses não protege nada: transforma
+    # uma geometria degenerada (h0 ≤ 0, b ≤ 0, L ≤ 0) num resultado FINITO —
+    # rigidez de 1e-18 dá um empuxo absurdo mas numérico, e o pipeline segue e
+    # aprova. É o mesmo mecanismo do F-04: ausência de resultado disfarçada de
+    # resultado. A geometria valida-se aqui e falha aqui.
+    L    = exigir_positivo("L", L, unidade="m")
+    h0   = exigir_positivo("h0", h0, unidade="m")
+    h_ap = exigir_positivo("h_ap", h_ap, unidade="m")
+    b    = exigir_positivo("b", b, unidade="m")
+    alpha_rad = exigir_finito("alpha_rad", alpha_rad)
+    for _nome, _v in (("q", q), ("q_esq", q_esq), ("q_dir", q_dir)):
+        if _v is not None:
+            exigir_finito(_nome, _v)
+
     x = np.linspace(0.0, L, n_pts)
 
     # Resolver q_esq / q_dir
@@ -287,8 +306,15 @@ def analisar_biarticulada(
     y_c   = x_sim * tan_a / 2.0
     h_x   = h0 + x_sim * tan_a
     I_x   = b * h_x ** 3 / 12.0
-    I_x = np.maximum(I_x, 1e-18)
-    A_x   = np.maximum(b * h_x, 1e-18)
+    A_x   = b * h_x
+    # Sem clamp (F-09): com h0 > 0 e b > 0 validados acima, h_x ≥ h0 > 0 em
+    # todo o vão e as duas grandezas são estritamente positivas por
+    # construção. A asserção documenta a dependência em vez de a mascarar.
+    if not (np.all(I_x > 0.0) and np.all(A_x > 0.0)):
+        raise DominioInvalidoError(
+            f"Seção degenerada ao longo do vão com h0={h0}, h_ap={h_ap}, "
+            f"b={b}, alpha_rad={alpha_rad}: I(x) ou A(x) não positivos."
+        )
 
     if abs(q_esq - q_dir) < 1e-12:
         M0 = 0.5 * q_esq * x * (L - x)
@@ -707,7 +733,11 @@ class Carregamentos:
             V_max_kN=gov_s.V_max_kN, N_viga_kN=gov_s.N_viga_kN,
             V_viga_kN=gov_s.V_viga_kN, H_kN=gov_s.H_kN,
             H_rigido_kN=gov_s.H_rigido_kN, H_cob_kN=gov_s.H_cob_kN,
-            x_Mmax_m=gov_s.x_Mmax_m, duracao="curta",
+            # [F-10] Estava `duracao="curta"` fixado. Os aliases são PONTEIROS
+            # para outra combinação: herdar a duração dela é a única leitura
+            # coerente — caso contrário o alias oferece um k_mod que a
+            # combinação de origem não tem (EC5 §3.1.3).
+            x_Mmax_m=gov_s.x_Mmax_m, duracao=gov_s.duracao,
         )
         c["ELU_C4"] = Combinacao(
             nome="ELU_C4", tipo="ELU",
@@ -718,7 +748,7 @@ class Carregamentos:
             V_max_kN=gov_h.V_max_kN, N_viga_kN=gov_h.N_viga_kN,
             V_viga_kN=gov_h.V_viga_kN, H_kN=gov_h.H_kN,
             H_rigido_kN=gov_h.H_rigido_kN, H_cob_kN=gov_h.H_cob_kN,
-            x_Mmax_m=gov_h.x_Mmax_m, duracao="curta",
+            x_Mmax_m=gov_h.x_Mmax_m, duracao=gov_h.duracao,   # [F-10]
         )
 
         # ELS característico — categoria H: Q e W NÃO concomitantes

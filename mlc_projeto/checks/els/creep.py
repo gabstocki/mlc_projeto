@@ -238,7 +238,7 @@ def varrer_acumulado(
         2. Flambagem lateral     — EC5 §6.3.3
         3. Flexão simples        — EC5 §6.1.6
         4. Cisalhamento          — EC5 §6.1.7
-        5. Apoio (perp.+Hankinson) — EC5 §6.1.5 + §6.2.2
+        5. Apoio (compressão ⊥ às fibras) — EC5 §6.1.5
 
     ELS:
         6. Flecha instantânea    — w_inst ≤ L/300
@@ -255,7 +255,6 @@ def varrer_acumulado(
         calcular_l_ef, calcular_sigma_m_crit,
         calcular_lambda_rel_m, calcular_k_crit,
     )
-    from mlc_projeto.checks.elu.apoio import f_c_alpha_d
 
     k_def      = mat.k_def
     lim_inst   = L / 300
@@ -337,16 +336,17 @@ def varrer_acumulado(
                 eta_net_fin = w_net_fin / lim_fin
                 eta_els     = max(eta_inst, eta_net_fin)
 
-                # ── 5. APOIO §6.1.5 + §6.2.2 — varrer l_ap ───
-                f_ca    = f_c_alpha_d(mat, al_f)
-                sig_ca  = V_max_N / (b_f * h0_f)
-                eta_ca  = sig_ca / f_ca
-
+                # ── 5. APOIO §6.1.5 — varrer l_ap ───
+                # [F-12] A parcela de Hankinson (§6.2.2) foi retirada aqui pela
+                # mesma razão que em checks/elu/apoio.py: no apoio a reação é
+                # perpendicular às fibras (α = 90°) e Hankinson degenera em
+                # f_c,90,d. O que estava a ser calculado usava α = α_telhado e a
+                # área da seção inteira — não descrevia o apoio.
                 for l_ap in l_ap_vals:
                     l_ap_f  = round(float(l_ap), 3)
                     sig_c90 = V_max_N / (b_f * l_ap_f)
                     eta_c90 = sig_c90 / mat.f_c90_d
-                    eta_ap  = max(eta_c90, eta_ca)
+                    eta_ap  = eta_c90
 
                     etas = {
                         "cumeeira":  eta_cum,
@@ -395,7 +395,7 @@ def relatorio_acumulado(df: pd.DataFrame, n: int = 25) -> None:
     """Imprime relatório consolidado de todas as verificações ELU + ELS."""
     print("=" * 108)
     print("  VARREDURA COMPLETA — ELU (5 verif.) + ELS (flecha)")
-    print("  EC5: §6.4.3 | §6.3.3 | §6.1.6 | §6.1.7 | §6.1.5+§6.2.2 | §2.3.2.2 + Tab.7.2")
+    print("  EC5: §6.4.3 | §6.3.3 | §6.1.6 | §6.1.7 | §6.1.5 | §2.3.2.2 + Tab.7.2")
     print("=" * 108)
 
     if df.empty:

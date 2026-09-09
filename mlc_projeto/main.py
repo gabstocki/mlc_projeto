@@ -748,7 +748,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     _print_eta("Cisalhamento §6.1.7", res_elu["cisalhamento"])
 
     res_elu["apoio"] = verifica_apoio(geo, mat_elu, load, l_ap=L_AP)
-    _print_eta("Apoio §6.1.5+§6.2.2", res_elu["apoio"])
+    _print_eta("Apoio §6.1.5", res_elu["apoio"])
 
     res_elu["flexo_comp"] = verifica_flexo_compressao(
         geo=geo, mat=mat_elu, load=load,

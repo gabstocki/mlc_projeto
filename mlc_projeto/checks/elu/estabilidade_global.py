@@ -49,6 +49,7 @@ import math
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.loads     import Carregamentos
+from mlc_projeto.core.validacao import DominioInvalidoError
 
 
 # EN 1993-1-1 §5.3.2 — imperfeição global (força nocional)
@@ -434,13 +435,22 @@ def verificar_estabilidade_global(
     # ── 5) Geometria do arco — abaixamento do freche ──────────
     f_c = (geo.h_ap - geo.h0) / 2.0  # m — freche do eixo centroidal
     if w_Ed_mm is None:
-        try:
-            from mlc_projeto.checks.els.deflection_els import verificar_ELS
-            els = verificar_ELS(geo, mat, load)
-            w_char = float(els.get("w_S1_mm", els.get("w_fin_mm", 5.0)))
-        except Exception:
-            w_char = 5.0
-        w_Ed_mm = w_char * 1.5  # majoração aproximada para ELU
+        # Achado [S-4]. Estava aqui um `except Exception: w_char = 5.0` — um
+        # número inventado que entrava no critério de abaixamento do freche
+        # como se fosse resultado. Se o ELS falhar, a estabilidade geométrica
+        # não é verificável, e não-verificável nunca é aprovado. O 5,0 mm nem
+        # sequer era conservador: era arbitrário.
+        from mlc_projeto.checks.els.deflection_els import verificar_ELS
+        els = verificar_ELS(geo, mat, load)
+        w_char = els.get("w_S1_mm", els.get("w_fin_mm"))
+        if w_char is None or not math.isfinite(float(w_char)):
+            raise DominioInvalidoError(
+                "verificar_ELS não devolveu flecha característica (w_S1_mm nem "
+                "w_fin_mm): sem ela o abaixamento do freche não é verificável. "
+                "Passe `w_Ed_mm` explicitamente ou corrija o ELS — não há "
+                "valor por omissão que possa substituir um cálculo em falta."
+            )
+        w_Ed_mm = float(w_char) * 1.5  # majoração aproximada para ELU
     w_Ed_m = w_Ed_mm / 1000.0
     w_over_f = w_Ed_m / f_c if f_c > 0 else 999.0
     ok_geom = w_over_f <= W_OVER_F_MAX

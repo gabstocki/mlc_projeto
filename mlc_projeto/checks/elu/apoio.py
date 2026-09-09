@@ -66,7 +66,16 @@ def verifica_apoio(
     l_ap: float = 0.40,
 ) -> dict:
     """
-    Compressão perpendicular (EC5 §6.1.5) e Hankinson (§6.2.2) no apoio.
+    Compressão perpendicular às fibras no apoio — EC5 §6.1.5.
+
+    [F-12] A verificação de Hankinson (§6.2.2) que aqui existia foi RETIRADA,
+    não corrigida: no apoio não há caso de compressão inclinada. As lamelas
+    correm paralelas ao intradorso (horizontal) e a reação é vertical — α = 90°,
+    para o qual Hankinson degenera exatamente em f_c,90,d, que é o que §6.1.5
+    já verifica. O que estava implementado passava α = α_telhado (quase
+    paralelo às fibras) sobre a área b·h0 da seção inteira em vez da área de
+    contacto b·l_ap: dois erros de sinal contrário que produziam um η ≈ 0,03
+    inofensivo — e uma linha errada no memorial.
 
     Varre TODAS as combinações ELU físicas, cada uma com o k_mod da SUA duração
     (achado F-06): a combinação que maximiza |M_max| não é necessariamente a que
@@ -89,22 +98,17 @@ def verifica_apoio(
         sigma_c90 = R_d_N / (b * l_ap)
         eta_c90   = sigma_c90 / matc.f_c90_d
 
-        f_ca     = f_c_alpha_d(matc, alpha_deg)
-        sigma_ca = R_d_N / (b * h0)
-        eta_ca   = sigma_ca / f_ca
-
-        eta = max(eta_c90, eta_ca)
+        eta = eta_c90
         if melhor is None or eta > melhor["eta"]:
-            melhor = dict(eta=eta, eta_c90=eta_c90, eta_ca=eta_ca, comb=comb,
-                          mat=matc, R_d_N=R_d_N, sigma_c90=sigma_c90,
-                          sigma_ca=sigma_ca, f_ca=f_ca)
+            melhor = dict(eta=eta, eta_c90=eta_c90, comb=comb,
+                          mat=matc, R_d_N=R_d_N, sigma_c90=sigma_c90)
 
     if melhor is None:
         raise ValueError("Não há combinações ELU para verificar o apoio.")
 
     comb, matc = melhor["comb"], melhor["mat"]
     eta_gov   = melhor["eta"]
-    verif_gov = "perp." if melhor["eta_c90"] >= melhor["eta_ca"] else "Hankinson"
+    verif_gov = "perp."
 
     return {
         "L_m":             geo.L,
@@ -122,17 +126,32 @@ def verifica_apoio(
         "f_c90d_MPa":      round(matc.f_c90_d / 1e6, 4),
         "eta_c90":         round(melhor["eta_c90"], 4),
         "ok_c90":          melhor["eta_c90"] <= 1.0,
-        "sigma_cad_MPa":   round(melhor["sigma_ca"] / 1e6, 4),
-        "f_cad_MPa":       round(melhor["f_ca"] / 1e6, 4),
-        "eta_ca":          round(melhor["eta_ca"], 4),
-        "ok_ca":           melhor["eta_ca"] <= 1.0,
+        # [F-12] Hankinson RETIRADO — ver nota abaixo. As chaves ficam com o
+        # motivo, e não com um número, para que quem lia `eta_ca` perceba.
+        "hankinson_aplicavel": False,
+        "hankinson_motivo": (
+            "O apoio não é um caso de §6.2.2. As lamelas correm paralelas ao "
+            "intradorso, que é HORIZONTAL, e a reação é VERTICAL: o ângulo "
+            "entre a força e as fibras é 90°, e Hankinson com α = 90° devolve "
+            "exatamente f_c,90,d — a verificação de §6.1.5 que já está feita. "
+            "O que estava implementado usava α = α_telhado (3,94°, quase "
+            "PARALELO às fibras, o oposto do caso real) e área b·h0 (a seção "
+            "inteira) em vez de b·l_ap (a área de contacto) — dois erros que se "
+            "compensavam e produziam η ≈ 0,03, sempre não governante."
+        ),
+        "k_c90_aplicado":  1.0,
+        "k_c90_nota": (
+            "k_c,90 (EC5 §6.1.5(4)) NÃO é aplicado: para MLC sobre apoio "
+            "descontínuo a norma permitiria até 1,75, elevando f_c,90,d. A "
+            "omissão é conservadora e declarada — não é esquecimento."
+        ),
         "eta":             round(eta_gov, 4),
         "ok":              eta_gov <= 1.0,
         "verif_gov":       verif_gov,
         "referencial":     ("R_d = reação VERTICAL R_v (compressão ⊥ às fibras na "
                             "face horizontal do intradorso; §6.1.5). Plano distinto "
                             "do cisalhamento (⊥ eixo, §6.1.7) — ver issue 12."),
-        "norma":           "EC5 §6.1.5 + §6.2.2",
+        "norma":           "EC5 §6.1.5",
     }
 
 

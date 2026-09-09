@@ -39,7 +39,8 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("flambagem",           "Flambagem lateral",         "EC5 §6.3.3"),
     ("flexao",              "Flexo-comp. viga",          "EC5 §6.3.2+§6.3.3"),
     ("cisalhamento",        "Cisalhamento",              "EC5 §6.1.7"),
-    ("apoio",               "Apoio",                     "EC5 §6.1.5+§6.2.2"),
+    # [F-12] Hankinson (§6.2.2) retirado: no apoio a força é ⊥ às fibras.
+    ("apoio",               "Apoio",                     "EC5 §6.1.5"),
     ("flexo_comp",          "Pilar lateral (N)",         "EC5 §6.3.2"),
     ("pilar_central",       "Pilar central (N)",         "EC5 §6.3.2"),
     ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
@@ -946,7 +947,7 @@ def gerar_tex(
     parts.append(eta_row('Flambagem lateral', 'EC5 \\S6.3.3', _eta(r_fl), _ok(r_fl)))
     parts.append(eta_row('Flexo-compressão viga', 'EC5 \\S6.3.2+\\S6.3.3', _eta(r_fx), _ok(r_fx)))
     parts.append(eta_row('Cisalhamento ($b_{ef}=k_{cr}b$)', 'EC5 \\S6.1.7', _eta(r_ci), _ok(r_ci)))
-    parts.append(eta_row('Compressão no apoio', 'EC5 \\S6.1.5+\\S6.2.2', _eta(r_ap), _ok(r_ap)))
+    parts.append(eta_row('Compressão no apoio', 'EC5 \\S6.1.5', _eta(r_ap), _ok(r_ap)))
     parts.append('  \\bottomrule\n\\end{tabular}\n\n')
 
     # ── Convenção de eixos e esforços no apoio (issue 12) ─────────────────────

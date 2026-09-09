@@ -157,18 +157,25 @@ class GlulamMaterial:
     def rho_mean(self) -> float: return self._p["rho_mean"]
 
     @property
-    def G_05(self) -> float:
+    def G_g_05(self) -> float:
         """
-        G_0,05 — relação implícita em EC5 §6.3.3(2) para coníferas:
-        a fórmula simplificada (6.32) decorre de G_0,05 = E_0,05 / 16
-        na formulação geral (6.31) com I_tor ≈ h·b³/3.
+        G_g,05 — módulo de distorção característico, EN 14080:2013 Tab. 5.
 
-        Nota: a EN 14080:2013 Tab. 5 tabela G_g,05 = 540 MPa (constante). Este
-        valor derivado (E_0,05/16 ≈ 600 MPa p/ GL24h) é o que sustenta a Eq.
-        (6.32) do EC5 e é usado apenas nessa forma simplificada; a verificação
-        de flambagem lateral usa a Eq. (6.32) (não consome esta propriedade).
+        Constante para todas as classes homogéneas: 540 N/mm².
+
+        Achado [F-16]
+        -------------
+        Existia aqui uma propriedade `G_05 = E_0,05/16` (≈ 600 MPa para GL24h)
+        que NÃO é uma propriedade do material: é a relação implícita de que o
+        EC5 se serve para deduzir a forma SIMPLIFICADA da Eq. (6.32) a partir
+        da geral (6.31), com I_tor ≈ h·b³/3. Nunca era consumida — mas era um
+        valor 11 % acima do tabelado, com o nome de uma propriedade tabelada,
+        a uma chamada de distância de entrar num cálculo.
+
+        Quem quiser usar a Eq. (6.31) geral deve passar ESTE valor; a Eq.
+        (6.32) simplificada não precisa de nenhum (a relação está lá dentro).
         """
-        return self.E0_05 / 16.0
+        return 540e6
 
     # ── Coeficientes ──────────────────────────────────────────
     @property

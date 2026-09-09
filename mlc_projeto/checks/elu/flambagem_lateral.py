@@ -145,9 +145,13 @@ def calcular_sigma_m_crit(
         σ_m,crit = 0,78 · b² · E_0,05 / (h · l_ef)
 
     Esta expressão decorre da formulação geral (6.31) com
-    G_0,05 = E_0,05/16 e I_tor ≈ h·b³/3.
+    G_0,05 = E_0,05/16 e I_tor ≈ h·b³/3. A relação E_0,05/16 vive AQUI, dentro
+    da dedução da Eq. (6.32) — não é uma propriedade do material e não deve ser
+    exposta como tal (achado [F-16]; ver `GlulamMaterial.G_g_05`, que é o valor
+    tabelado da EN 14080:2013 Tab. 5, 540 MPa).
 
-    Se G_05 for fornecido, usa-se a formulação geral EC5 Eq. (6.31):
+    Se G_05 for fornecido — e o valor a fornecer é `mat.G_g_05` — usa-se a
+    formulação geral EC5 Eq. (6.31):
         σ_m,crit = π · √(E_0,05·I_z·G_0,05·I_tor) / (l_ef · W_y)
 
     Args:

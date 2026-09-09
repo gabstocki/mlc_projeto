@@ -113,6 +113,25 @@ class ParametrosVento:
                 "coef_atrito_cobertura", self.coef_atrito_cobertura,
             )
 
+        # ── Domínio dos parâmetros numéricos (achado F-08) ────────────────
+        # `categoria` e `classe` eram validadas; os NÚMEROS não. Um V0 negativo
+        # ou NaN atravessava até q = 0,613e-3·V_k², produzia pressão finita (ou
+        # NaN, que é pior) e o resto do pipeline aceitava. Como em toda a parte
+        # neste projeto: dado fora de domínio falha na entrada, não a jusante.
+        self.V0 = exigir_positivo("V0", self.V0, unidade="m/s")
+        self.S1 = exigir_positivo("S1", self.S1)
+        self.S3 = exigir_positivo("S3", self.S3)
+        self.L  = exigir_positivo("L", self.L, unidade="m")
+        self.h  = exigir_positivo("h", self.h, unidade="m")
+        self.dist_portico = exigir_positivo(
+            "dist_portico", self.dist_portico, unidade="m")
+        # H1 = h_ap − h0 pode ser nula (cobertura plana), mas nunca negativa
+        # (inverteria a água) nem não finita.
+        self.H1 = exigir_nao_negativo("H1", self.H1, unidade="m")
+        if self.l2 is not None:
+            self.l2 = exigir_positivo("l2", self.l2, unidade="m")
+        self.n_tramos = exigir_inteiro_minimo("n_tramos", self.n_tramos, minimo=1)
+
     @property
     def coef_atrito(self) -> float:
         """Coeficiente de atrito adotado para θ=0° — F-13."""
