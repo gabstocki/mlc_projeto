@@ -275,6 +275,43 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
 })
 
 
+#: Fatores de MAJORAÇÃO da resistência que o EC5 permite e que este projeto NÃO
+#: aplica (achado A6). Omiti-los é conservador — e por isso passam despercebidos
+#: numa auditoria de segurança. Mas um memorial que não os declara deixa o leitor
+#: sem saber se foram descartados por decisão ou por esquecimento, e essa é uma
+#: diferença que só o autor pode resolver. Ficam escritos, com o ganho perdido.
+OMISSOES_CONSERVADORAS: Mapping[str, str] = MappingProxyType({
+    "k_h": (
+        "EN 1995-1-1 §3.3 Eq. (3.2) — para MLC com h < 600 mm, "
+        "k_h = min((600/h)^0,1 ; 1,1) majora f_m,k e f_t,0,k. NÃO implementado. "
+        "Aplicar-se-ia às terças (h = 580 mm → k_h = 1,003): ganho de 0,3 %."
+    ),
+    "k_sys": (
+        "EN 1995-1-1 §6.6 — k_sys ≤ 1,1 para elementos contínuos com "
+        "distribuição transversal de carga garantida. NÃO aplicado: a telha "
+        "metálica não constitui distribuição transversal garantida no sentido "
+        "da cláusula. Omissão correta para o caso, e não só conservadora."
+    ),
+    "k_c_90": (
+        "EN 1995-1-1 §6.1.5(4) — para MLC sobre apoio descontínuo, k_c,90 pode "
+        "chegar a 1,75, majorando f_c,90,d. NÃO aplicado (k_c,90 = 1,0). "
+        "É a verificação de apoio que governa em η = 0,266."
+    ),
+    "psi_M_N": (
+        "EN 1992-4:2018 Fórmula (7.7) — ψ_M,N é favorável e foi adotado 1,0."
+    ),
+    "k8_pryout": (
+        "EN 1992-4:2018 Fórmula (7.39a) — k8 é remetido ao ETA; adotado o "
+        "valor conservador 1,0."
+    ),
+    "A_c1_sobre_A_c0": (
+        "EN 1992-1-1 §6.7 — o confinamento sob a chaveta pode chegar a "
+        "√(A_c1/A_c0) ≤ 3,0. Adotado 1,0: elevá-lo exige a geometria da "
+        "sapata, fora de escopo."
+    ),
+})
+
+
 def parametros_ndp() -> dict[str, ParametroNormativo]:
     """Só os parâmetros que um Anexo Nacional poderia alterar."""
     return {k: v for k, v in NDP_SOURCE.items() if v.e_ndp}

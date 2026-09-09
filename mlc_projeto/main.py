@@ -32,6 +32,7 @@ from mlc_projeto.core.wind       import ParametrosVento
 from mlc_projeto.core.loads      import carregamentos_com_vento, peso_proprio_gk
 from mlc_projeto.core.normativo  import (
     NDP_SOURCE, CONFIG_NORMATIVA, parametros_a_confirmar,
+    OMISSOES_CONSERVADORAS,
 )
 
 from mlc_projeto.predim.predim   import pre_dimensionar, relatorio
@@ -657,6 +658,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"    · {CONFIG_NORMATIVA.aviso_hibrido()}")
     # Achado B1 — decisões de classificação por tomar. Enquanto existirem, o
     # memorial não pode afirmar a classe de fiabilidade nem o tempo de fogo.
+    # Achado A6 — fatores de majoração que o EC5 permite e o projeto NÃO usa.
+    # Omitir é conservador, e por isso passa despercebido; não declarar deixa o
+    # leitor sem saber se foi decisão ou esquecimento.
+    print(f"    · {len(OMISSOES_CONSERVADORAS)} majorações NÃO aplicadas "
+          f"(conservador, declarado): "
+          + ", ".join(sorted(OMISSOES_CONSERVADORAS)))
     _pend = parametros_a_confirmar()
     if _pend:
         print(f"    · {len(_pend)} PARÂMETRO(S) A CONFIRMAR PELO PROJETISTA: "

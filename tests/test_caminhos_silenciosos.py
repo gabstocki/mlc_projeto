@@ -213,3 +213,19 @@ def _modelo():
         params_vento=vento, empuxo_desenvolve=False,
     )
     return geo, mat, load
+
+
+# ── [A6] as majorações que o EC5 permite e o projeto não usa ────────────────
+
+def test_omissoes_conservadoras_estao_declaradas_com_a_clausula():
+    """
+    Omitir k_h, k_sys, k_c,90 é conservador — e por isso passa despercebido
+    numa auditoria de segurança. Sem declaração, o leitor não sabe se foram
+    descartados por decisão ou por esquecimento.
+    """
+    from mlc_projeto.core.normativo import OMISSOES_CONSERVADORAS
+    assert {"k_h", "k_sys", "k_c_90"} <= set(OMISSOES_CONSERVADORAS)
+    for chave, texto in OMISSOES_CONSERVADORAS.items():
+        assert "§" in texto or "Fórmula" in texto, (
+            f"{chave} não cita a cláusula que permite a majoração")
+        assert "NÃO" in texto or "Adotado" in texto or "adotado" in texto
