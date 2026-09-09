@@ -160,10 +160,30 @@ def test_requisito_da_manilha_e_declarado_e_nao_inventado(
     assert "fabricante" in r["nota_manilha"]
 
 
-def test_recusa_quando_nenhum_detalhe_comercial_serve():
-    with pytest.raises(ValueError, match="Nenhuma combinação"):
-        LD.dimensionar_ligacao_diagonal(
-            N_Ed_kN=8000.0, N_barra_Rd_kN=9000.0, d_barra_mm=60)
+def test_quando_nada_serve_reprova_em_vez_de_lancar():
+    """
+    Regra 5 das convenções do projeto: η > 1 REGISTA-SE, não se lança. Um
+    detalhe inexequível tem de reprovar a linha do memorial — se levantasse,
+    rebentava o pipeline e a estrutura mal dimensionada a montante nunca
+    chegava a ser reprovada (foi o que aconteceu com o cenário de 2 painéis
+    do F-13).
+    """
+    r = LD.dimensionar_ligacao_diagonal(
+        N_Ed_kN=8000.0, N_barra_Rd_kN=9000.0, d_barra_mm=60)
+    assert r["alvo_atingido"] is False
+    assert r["ok"] is False
+    assert r["eta"] > 1.0
+    assert "motivo" in r
+
+
+def test_pino_impossivel_e_declarado_e_reprova():
+    """Barra maior que qualquer pino de catálogo: o detalhe não é exequível."""
+    d_max = LD.D_PINO_COMERCIAL_MM[-1]
+    r = LD.dimensionar_ligacao_diagonal(
+        N_Ed_kN=667.5, N_barra_Rd_kN=693.6, d_barra_mm=d_max + 4)
+    assert r["pino_menor_que_barra"] is True
+    assert r["ok"] is False
+    assert "pino comercial" in r["motivo"]
 
 
 # ── Integração com o memorial ────────────────────────────────────────────────

@@ -359,9 +359,21 @@ def dimensionar_ligacao_diagonal(
     # o que o projeto controla. Regra de detalhe corrente: t_fork ≈ 0,6·t_eye,
     # de modo que 2·t_fork ≥ t_eye (as duas abas juntas nunca são mais fracas
     # que a chapa interior).
-    for d_p in D_PINO_COMERCIAL_MM:
-        if d_p < float(d_barra_mm):
-            continue
+    #
+    # A varredura NÃO levanta exceção quando nada serve (regra 5 das convenções
+    # do projeto: η > 1 regista-se, não se lança). Devolve o MELHOR detalhe
+    # comercial com `alvo_atingido = False` — o memorial reprova a linha em vez
+    # de rebentar o pipeline, que é o comportamento certo quando a estrutura a
+    # montante é que está mal dimensionada.
+    pinos = [d for d in D_PINO_COMERCIAL_MM if d >= float(d_barra_mm)]
+    pino_menor_que_barra = not pinos
+    if pino_menor_que_barra:
+        # Nenhum pino comercial chega ao diâmetro da barra. Usa-se o maior e
+        # declara-se: é um defeito do detalhe, não um resultado ausente.
+        pinos = [D_PINO_COMERCIAL_MM[-1]]
+
+    melhor = None
+    for d_p in pinos:
         for t_eye in T_CHAPA_COMERCIAL_MM:
             t_fork = max(T_CHAPA_COMERCIAL_MM[0], round(0.6 * t_eye))
             d_0 = d_p + FOLGA_FURO_PINO_MM
@@ -377,43 +389,85 @@ def dimensionar_ligacao_diagonal(
             for a_w in A_SOLDA_COMERCIAL_MM:
                 if a_w > t_eye * 0.7:      # garganta não excede 0,7·t da chapa
                     continue
-                r = verificar_ligacao_diagonal(
+                r_cap = verificar_ligacao_diagonal(
                     N_proj, d_p, t_eye, t_fork, a_b, c_b, a_w, l_w,
                     aco_chapa=aco_chapa, aco_pino=aco_pino, nome=nome,
                 )
-                if r["eta"] <= eta_alvo:
-                    # A linha do memorial tem de ser comparável às outras: η é
-                    # E_d/R_d sob o ESFORÇO REAL, como em todas as verificações.
-                    # A sobre-resistência de capacidade fica ao lado, com o seu
-                    # próprio η — e o `ok` exige AMBOS ≤ 1, senão o critério de
-                    # capacidade seria decorativo.
-                    r_cap = r
-                    r = verificar_ligacao_diagonal(
-                        abs(float(N_Ed_kN)), d_p, t_eye, t_fork, a_b, c_b,
-                        a_w, l_w, aco_chapa=aco_chapa, aco_pino=aco_pino,
-                        nome=nome,
+                cand = (r_cap["eta"], d_p, t_eye, t_fork, a_b, c_b, a_w, l_w)
+                if melhor is None or cand[0] < melhor[0]:
+                    melhor = cand
+                if r_cap["eta"] <= eta_alvo:
+                    return _montar_saida(
+                        melhor=cand, N_Ed_kN=N_Ed_kN, N_proj=N_proj,
+                        N_barra_Rd_kN=N_barra_Rd_kN, criterio=criterio,
+                        aco_chapa=aco_chapa, aco_pino=aco_pino, nome=nome,
+                        alvo_atingido=True, eta_alvo=eta_alvo,
+                        pino_menor_que_barra=pino_menor_que_barra,
+                        r_cap=r_cap,
                     )
-                    r["criterio"] = criterio
-                    r["N_Ed_real_kN"] = round(abs(float(N_Ed_kN)), 3)
-                    r["N_dimensionamento_kN"] = round(N_proj, 3)
-                    r["N_barra_Rd_kN"] = round(float(N_barra_Rd_kN), 3)
-                    r["sobre_resistencia"] = round(
-                        N_proj / max(abs(float(N_Ed_kN)), 1e-9), 3)
-                    r["eta_capacidade"] = r_cap["eta"]
-                    r["etas_capacidade"] = r_cap["etas"]
-                    r["modo_gov_capacidade"] = r_cap["modo_gov"]
-                    r["ok"] = bool(r["eta"] <= 1.0 and r_cap["eta"] <= 1.0)
-                    r["requisito_manilha_kN"] = round(N_proj, 3)
-                    r["nota_manilha"] = (
-                        "A manilha/forquilha e a rosca de extremidade são peças "
-                        "de catálogo: especificar com resistência de cálculo à "
-                        f"tração ≥ {N_proj:.1f} kN, certificada pelo fabricante. "
-                        "Não são dimensionadas neste memorial."
-                    )
-                    return r
 
-    raise ValueError(
-        f"Nenhuma combinação de pino/chapa/solda das listas comerciais atinge "
-        f"η ≤ {eta_alvo} para N = {N_proj:.1f} kN. Reveja o detalhe "
-        f"(chapa mais espessa, pino maior ou cordão mais longo)."
+    # Nada atinge o alvo: devolve-se o melhor, declarado.
+    return _montar_saida(
+        melhor=melhor, N_Ed_kN=N_Ed_kN, N_proj=N_proj,
+        N_barra_Rd_kN=N_barra_Rd_kN, criterio=criterio,
+        aco_chapa=aco_chapa, aco_pino=aco_pino, nome=nome,
+        alvo_atingido=False, eta_alvo=eta_alvo,
+        pino_menor_que_barra=pino_menor_que_barra, r_cap=None,
     )
+
+
+def _montar_saida(
+    *, melhor, N_Ed_kN, N_proj, N_barra_Rd_kN, criterio, aco_chapa, aco_pino,
+    nome, alvo_atingido, eta_alvo, pino_menor_que_barra, r_cap,
+):
+    """
+    Monta o resultado do dimensionamento a partir do detalhe escolhido.
+
+    A linha do memorial tem de ser comparável às outras: `eta` é E_d/R_d sob o
+    ESFORÇO REAL, como em todas as verificações. O η sob a capacidade da barra
+    fica ao lado, com o seu próprio modo governante — e o `ok` exige AMBOS ≤ 1,
+    senão o critério de capacidade seria decorativo.
+    """
+    _, d_p, t_eye, t_fork, a_b, c_b, a_w, l_w = melhor
+    if r_cap is None:
+        r_cap = verificar_ligacao_diagonal(
+            N_proj, d_p, t_eye, t_fork, a_b, c_b, a_w, l_w,
+            aco_chapa=aco_chapa, aco_pino=aco_pino, nome=nome,
+        )
+    r = verificar_ligacao_diagonal(
+        abs(float(N_Ed_kN)), d_p, t_eye, t_fork, a_b, c_b, a_w, l_w,
+        aco_chapa=aco_chapa, aco_pino=aco_pino, nome=nome,
+    )
+    r["criterio"] = criterio
+    r["N_Ed_real_kN"] = round(abs(float(N_Ed_kN)), 3)
+    r["N_dimensionamento_kN"] = round(N_proj, 3)
+    r["N_barra_Rd_kN"] = round(float(N_barra_Rd_kN), 3)
+    r["sobre_resistencia"] = round(N_proj / max(abs(float(N_Ed_kN)), 1e-9), 3)
+    r["eta_capacidade"] = r_cap["eta"]
+    r["etas_capacidade"] = r_cap["etas"]
+    r["modo_gov_capacidade"] = r_cap["modo_gov"]
+    r["alvo_atingido"] = bool(alvo_atingido)
+    r["eta_alvo"] = float(eta_alvo)
+    r["pino_menor_que_barra"] = bool(pino_menor_que_barra)
+    r["ok"] = bool(
+        r["eta"] <= 1.0 and r_cap["eta"] <= 1.0 and not pino_menor_que_barra
+    )
+    r["requisito_manilha_kN"] = round(N_proj, 3)
+    r["nota_manilha"] = (
+        "A manilha/forquilha e a rosca de extremidade são peças de catálogo: "
+        f"especificar com resistência de cálculo à tração ≥ {N_proj:.1f} kN, "
+        "certificada pelo fabricante. Não são dimensionadas neste memorial."
+    )
+    if pino_menor_que_barra:
+        r["motivo"] = (
+            f"Nenhum pino comercial atinge o diâmetro da barra "
+            f"(máx {D_PINO_COMERCIAL_MM[-1]} mm). O detalhe não é exequível "
+            f"como está: rever a barra ou adotar pino fora de catálogo."
+        )
+    elif not alvo_atingido:
+        r["motivo"] = (
+            f"Nenhum detalhe comercial atinge η ≤ {eta_alvo} para "
+            f"N = {N_proj:.1f} kN; devolve-se o melhor (η = {r_cap['eta']}). "
+            f"Rever chapa, pino ou comprimento de cordão."
+        )
+    return r
