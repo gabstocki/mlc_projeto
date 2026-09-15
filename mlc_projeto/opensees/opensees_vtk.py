@@ -42,36 +42,74 @@ import pyvista as pv
 import openseespy.opensees as ops
 
 # ── Parâmetros do projeto ─────────────────────────────────────────────────────
+#
+# Os parâmetros NÃO são fixados aqui: derivam de `mlc_projeto.main`, que é a
+# fonte única da geometria e das cargas do projeto. Antes desta alteração o
+# módulo carregava uma cópia manual (h0=0,60 m, α=4,5°, pilar 0,20×0,20 m) que
+# divergira da geometria adotada, e os .vtk em output/vtk/ representavam uma
+# estrutura que o projeto já havia descartado. Importando de `main`, qualquer
+# mudança de geometria propaga-se para cá.
 
-L        = 20.25
-H_PIL    = 7.0
-h0       = 0.60
-h_ap     = 1.397
-ALPHA    = math.radians(4.5)
-B_V      = 0.26
-B_PIL    = 0.20
-E        = 11.5e6
-F_MD     = 17.28
+from mlc_projeto.main import (                                    # noqa: E402
+    GEO_PARAMS, MAT_CURTA,
+    B_PILAR, H_PILAR, H_PILAR_ALT,
+    B_TERCA, H_TERCA, S, L_T as L_TERCA,
+    L_COMP_GALPAO, Q_AREA, G_TELHA_KNM2, G_INSTALACOES_KNM2,
+    EMPUXO_DESENVOLVE,
+)
+from mlc_projeto.core.geometry import GeometriaViga               # noqa: E402
+from mlc_projeto.core.materials import GlulamMaterial             # noqa: E402
+
+_geo = GeometriaViga(**GEO_PARAMS)
+# Duração «média»: a combinação que governa o momento é 1,35G + 1,5Q
+# (categoria H, sem vento concomitante) — ver capítulo de modelagem.
+_mat = GlulamMaterial(**{**MAT_CURTA, "duracao": "media"})
+
+L        = _geo.L
+H_PIL    = H_PILAR_ALT
+h0       = _geo.h0
+h_ap     = _geo.h_ap
+ALPHA    = _geo.alpha_rad
+B_V      = _geo.b
+B_PIL     = B_PILAR      # largura do pilar (paralela à largura da viga)
+H_PIL_SEC = H_PILAR      # profundidade do pilar no plano do pórtico
+E        = _mat.E0_mean / 1e6          # MPa → kN/m² na convenção do módulo
+F_MD     = _mat.f_m_d / 1e6            # MPa
 N_V      = 40
 
-B_T      = 0.20
-H_T      = 0.58
-S_TERCA  = 2.53
-L_T      = 5.75
+B_T      = B_TERCA
+H_T      = H_TERCA
+S_TERCA  = S
+L_T      = L_TERCA
 N_T      = 20
 
-N_PORT   = 9
-DIST_MOD = 5.75
-N_X      = 2
+DIST_MOD = L_TERCA
+N_PORT   = round(L_COMP_GALPAO / DIST_MOD) + 1
+N_X      = 2                            # dois vãos por pórtico
 
 UP = np.array([0.0, 0.0, 1.0])
 
-COMBOS = {
-    "ELU_C2": 9.6634,
-    "ELS_S1": 6.2660,
-    "ELS_S3": 4.3125,
-    "G_only": 3.0187,
-}
+# Cargas lineares sobre a viga (kN/m), na área tributária de um pórtico
+# intermediário. ψ₂ da sobrecarga é nulo na categoria H, pelo que a combinação
+# quase permanente coincide com a ação permanente isolada.
+def _cargas_lineares() -> dict[str, float]:
+    from mlc_projeto.core.loads import peso_proprio_gk
+    pp = peso_proprio_gk(
+        geo=_geo, mat=_mat, L_t=L_TERCA,
+        b_terca=B_TERCA, h_terca=H_TERCA, s_terca=S,
+        g_telha_kNm2=G_TELHA_KNM2, g_instalacoes_kNm2=G_INSTALACOES_KNM2,
+    )
+    g = pp["g_k_viga_kNm2"] * L_TERCA
+    q = Q_AREA * L_TERCA
+    return {
+        "ELU_C2": 1.35 * g + 1.50 * q,   # ELU governante
+        "ELS_S1": g + q,                 # combinação característica
+        "ELS_S3": g,                     # quase permanente (ψ₂ = 0)
+        "G_only": g,                     # ação permanente isolada
+    }
+
+
+COMBOS = _cargas_lineares()
 
 OUTPUT_DIR = Path(__file__).parent.parent.parent / "output" / "vtk"
 
@@ -153,7 +191,14 @@ def analisar_viga(q: float) -> dict:
     for i, x in enumerate(xn):
         ops.node(i+1, x, z_centro(x))        # eixo no centroide (intr. horizontal)
 
-    ops.fix(1,      1, 1, 0)                  # rótula do apoio (Rz livre)
+    # Condição de contorno horizontal no apoio: segue a mesma decisão de modelo
+    # do pipeline (main.EMPUXO_DESENVOLVE). Na Opção B adotada o pilar
+    # biarticulado não restringe o afastamento, o grau de liberdade horizontal
+    # fica livre e nenhum empuxo se desenvolve; a viga trabalha como biapoiada.
+    # Prender esse grau de liberdade produziria o modelo de arco, que a análise
+    # de rigidez relativa refutou.
+    _fix_x = 1 if EMPUXO_DESENVOLVE else 0
+    ops.fix(1,      _fix_x, 1, 0)             # rótula do apoio (Rz livre)
     ops.fix(N_V+1,  1, 0, 1)                  # SIMETRIA de peça contínua: Rz FIXO
 
     ops.geomTransf('Linear', 1)
@@ -302,16 +347,22 @@ def construir_malha(rv: dict, rt: dict, q: float) -> pv.UnstructuredGrid:
                         M_viga(xm,Ry,H,q), V_viga(xm,Ry,H,q),
                         N_viga(xm,Ry,H,q), sm, sm/F_MD)
 
-    # Pilares
-    for ix in range(N_X):
-        x_off = ix*L
+    # Pilares — uma peça por posição. O laço anterior percorria os dois vãos e
+    # criava DUAS células coincidentes no apoio partilhado (x = L): além de
+    # inflar a malha, os hexaedros sobrepostos anulavam-se na renderização e o
+    # pilar central desaparecia das figuras. As posições são desduplicadas.
+    x_pilares = sorted({ix*L + xp for ix in range(N_X) for xp in (0.0, L)})
+    for x_pil in x_pilares:
+        # O pilar central recebe a reação dos dois vãos; os de extremidade, de um.
+        n_vaos = 2 if 0.0 < x_pil < N_X*L else 1
+        Np = n_vaos * abs(Ry)
+        sp = Np / (B_PIL*H_PIL_SEC) * 1e-3
         for iy in range(N_PORT):
-            y=iy*DIST_MOD; Np=abs(Ry); sp=Np/(B_PIL**2)*1e-3
-            for x_pil in [0.0, L]:
-                add_hex([x_off+x_pil,y,0.0],
-                        [x_off+x_pil,y,H_PIL],
-                        B_PIL, B_PIL, B_PIL,
-                        0.0, abs(H), Np, sp, sp/F_MD, up=up_pil)
+            y = iy*DIST_MOD
+            add_hex([x_pil, y, 0.0],
+                    [x_pil, y, H_PIL],
+                    B_PIL, H_PIL_SEC, H_PIL_SEC,
+                    0.0, abs(H), Np, sp, sp/F_MD, up=up_pil)
 
     # Terças
     yn = rt['yn']
@@ -352,7 +403,7 @@ def gerar_vtk() -> None:
     print("=" * 64)
     print(f"\n  Viga:  L={L}m | H={H_PIL}m | h0={h0}m | "
           f"alfa={math.degrees(ALPHA):.1f}graus | b={B_V}m")
-    print(f"  Pilar: {B_PIL}x{B_PIL}m  |  Terca: {B_T}x{H_T}m")
+    print(f"  Pilar: {B_PIL}x{H_PIL_SEC}m  |  Terca: {B_T}x{H_T}m")
     print(f"  Porticos: {N_PORT}xY x {N_X}xX  |  "
           f"Tercas: {len(posicoes_tercas())} por modulo")
     print(f"  Saida: {OUTPUT_DIR}\n")
@@ -367,14 +418,21 @@ def gerar_vtk() -> None:
         arq = OUTPUT_DIR / f"portico_{nome}.vtk"
         malha.save(str(arq))
 
+        # Aferição do FEM contra a solução analítica do MESMO modelo de apoio.
+        # Comparar com o empuxo do arco quando se roda a Opção B (H≡0) produziria
+        # sempre 100% de erro, o que não afere coisa nenhuma.
         from mlc_projeto.core.loads import analisar_biarticulada
-        H_an  = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V,
-                                      desenvolve_empuxo=True)["H_kN"]  # AUD-018
-        err   = abs(rv['H']-H_an) / H_an * 100
+        ref = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V,
+                                    desenvolve_empuxo=EMPUXO_DESENVOLVE)
+        if EMPUXO_DESENVOLVE:
+            grandeza, obtido, esperado = "H", rv["H"], ref["H_kN"]
+        else:
+            grandeza, obtido, esperado = "Rv", abs(rv["Ry"]), q * L / 2
+        err   = abs(abs(obtido) - esperado) / esperado * 100 if esperado else 0.0
         eta_m = float(np.max(np.abs(malha.cell_data['eta_M'])))
 
         print(f"OK | Ry={rv['Ry']:.2f} H={rv['H']:.2f} kN "
-              f"err={err:.3f}% | {malha.n_cells} hex | "
+              f"err({grandeza})={err:.3f}% | {malha.n_cells} hex | "
               f"eta_max={eta_m:.4f} | {arq.stat().st_size//1024} KB")
 
     print(f"\n  ParaView: File -> Open -> portico_ELU_C2.vtk -> Apply -> R")
