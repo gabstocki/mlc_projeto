@@ -9,9 +9,9 @@ O memorial apresentado nos capítulos \autoref{cap:predimensionamento} a
 desenvolvido para este trabalho. Este apêndice descreve a sua arquitetura, o
 fluxo de execução, o ambiente de reprodução e a forma de acesso ao código.
 
-Optou-se por não reproduzir aqui a listagem integral. O pacote reúne 21.504
-linhas distribuídas por cinquenta arquivos, volume que ocuparia cerca de cinco
-vezes a extensão do texto e cuja leitura sequencial em papel não é praticável. O
+Optou-se por não reproduzir aqui a listagem integral. O pacote reúne 23.814
+linhas distribuídas por cinquenta e cinco arquivos, volume que ocuparia cerca de
+cinco vezes a extensão do texto e cuja leitura sequencial em papel não é praticável. O
 código está publicamente disponível, conforme a
 \autoref{sec:ap-disponibilidade}, em forma navegável e com o histórico completo
 de alterações.
@@ -29,16 +29,16 @@ cálculo. O \autoref{qua:ap-modulos} descreve a divisão.
 {\footnotesize
 \begin{tabular}{|l|c|r|p{5.6cm}|}\hline
     \textbf{Pacote} & \textbf{Arq.} & \textbf{Linhas} & \textbf{Responsabilidade} \\\hline
-    \texttt{core}          &  7 &  3.053 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\\hline
-    \texttt{predim}        &  3 &    640 & Varredura paramétrica do espaço de geometrias \\\hline
-    \texttt{checks/elu}    & 22 &  8.532 & Verificações de estado-limite último de elementos e sistemas \\\hline
+    \texttt{core}          &  7 &  3.270 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\\hline
+    \texttt{predim}        &  3 &    705 & Varredura paramétrica do espaço de geometrias \\\hline
+    \texttt{checks/elu}    & 23 &  9.213 & Verificações de estado-limite último de elementos e sistemas \\\hline
     \texttt{checks/els}    &  3 &    846 & Verificações de estado-limite de serviço, com fluência \\\hline
-    \texttt{connections}   &  6 &  2.990 & Ligações, chapas metálicas e ancoragem \\\hline
-    \texttt{output}        &  4 &  2.702 & Memorial, planilha, figuras e cargas de fundação \\\hline
-    \texttt{opensees}      &  3 &    659 & Validação por elementos finitos \\\hline
+    \texttt{connections}   &  7 &  3.884 & Ligações, chapas metálicas e ancoragem \\\hline
+    \texttt{output}        &  5 &  2.938 & Memorial, planilha, figuras e cargas de fundação \\\hline
+    \texttt{opensees}      &  3 &    717 & Validação por elementos finitos \\\hline
     \texttt{visualization} &  1 &    517 & Visualização tridimensional do modelo \\\hline
-    \texttt{main.py}       &  1 &  1.563 & Orquestração do pipeline e dados de projeto \\\hline
-    \textbf{Total}         & \textbf{50} & \textbf{21.504} & \\\hline
+    \texttt{main.py}       &  1 &  1.722 & Orquestração do pipeline e dados de projeto \\\hline
+    \textbf{Total}         & \textbf{55} & \textbf{23.814} & \\\hline
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {ap-modulos}
@@ -120,8 +120,8 @@ def I(self, x: float | NDArray) -> float | NDArray:
 
 \section{VERIFICAÇÃO POR TESTES AUTOMATIZADOS}\label{sec:ap-testes}
 
-O programa é acompanhado de suíte de 558 testes automatizados, distribuídos por
-sessenta e um arquivos. A suíte cobre três categorias de asserção.
+O programa é acompanhado de suíte de 651 testes automatizados, distribuídos por
+sessenta e cinco arquivos. A suíte cobre três categorias de asserção.
 
 A primeira compara resultados com valores calculados manualmente ou obtidos de
 exemplos da literatura normativa, verificando a implementação de cada expressão.

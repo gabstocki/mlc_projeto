@@ -11,7 +11,8 @@ estrutura do galpão em madeira lamelada colada foi dimensionada e verificada
 segundo a EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de programa de cálculo
 automatizado, e o memorial resultante consta dos capítulos
 \autoref{cap:dimensionamento} e \autoref{cap:detalhamento}. O conjunto de
-quarenta verificações é atendido, com taxa de utilização máxima de 0,7902.
+quarenta e quatro verificações é atendido, com taxa de utilização máxima de
+0,7902.
 
 Os objetivos específicos foram cumpridos nos termos seguintes. A caracterização
 do material e das exigências de durabilidade consta da
@@ -22,7 +23,7 @@ por varredura paramétrica de 1.391 candidatas, apresentada na
 elementos, dos sistemas de contraventamento e da estabilidade global constam do
 \autoref{cap:dimensionamento}, e as de serviço, da \autoref{sec:verif-els}. As
 ligações e a ancoragem constam do \autoref{cap:detalhamento}. O programa,
-submetido a suíte de 558 testes automatizados, é reproduzido no
+submetido a suíte de 651 testes automatizados, é reproduzido no
 \autoref{ap:codigo-fonte}.
 
 \section{PRINCIPAIS RESULTADOS}\label{sec:principais-resultados}
@@ -78,7 +79,7 @@ A contribuição principal do trabalho não está em nenhum dos resultados
 numéricos, e sim no procedimento que os produziu.
 
 A automação da cadeia de verificação permitiu submeter 1.391 geometrias ao mesmo
-conjunto de quarenta verificações que produz o memorial final. Essa equivalência
+conjunto de quarenta e quatro verificações que produz o memorial final. Essa equivalência
 foi verificada: o mecanismo de varredura reproduz, sobre a geometria adotada, as
 taxas do memorial sem divergência na quarta casa decimal. Não se trata de
 avaliar candidatas por modelo simplificado e depois verificar a escolhida pelo
@@ -92,7 +93,7 @@ metade do volume de madeira da adotada, e a
 Sem a varredura, a margem existiria do mesmo modo, porém sem que se soubesse da
 sua existência nem da sua dimensão.
 
-A suíte de 558 testes automatizados constitui contribuição de mesma natureza.
+A suíte de 651 testes automatizados constitui contribuição de mesma natureza.
 Ela impede que uma alteração em qualquer módulo altere silenciosamente
 resultados de outro, risco real em uma cadeia de verificações mutuamente
 dependentes.
@@ -111,14 +112,15 @@ materiais e os limites de deformação, que incidem diretamente sobre as taxas d
 utilização. Submetida sob um anexo nacional concreto, a estrutura deve ser
 reverificada.
 
-\subsection{Verificações de ancoragem incompletas}\label{ssec:lim-ancoragem}
+\subsection{Ancoragem sem validação por ensaio}\label{ssec:lim-ancoragem}
 
-Três modos de ruptura do concreto previstos na EN 1992-4 \cite{EN1992-4:2018}
-não foram avaliados: o fendilhamento do concreto, o arrancamento lateral e a
-ruptura de borda sob cortante. Os dois primeiros dependem das dimensões
-definitivas do bloco e da sua armadura, que não integram o escopo. Acresce que
-as resistências apresentadas decorrem de formulação normativa, e não de ensaio
-do produto efetivamente especificado.
+Os modos de ruptura do concreto previstos na EN 1992-4 \cite{EN1992-4:2018}
+estão todos tratados, seja por verificação, seja por dispensa fundamentada na
+própria norma, conforme a \autoref{ssec:ancoragem-pendencias}. Permanece,
+contudo, que as resistências apresentadas decorrem de formulação normativa e não
+de avaliação técnica do produto efetivamente especificado. A ancoragem entre
+chumbador e concreto só se considera validada mediante dados certificados do
+fabricante.
 
 \subsection{Dados dependentes de confirmação}\label{ssec:lim-dados}
 
@@ -133,20 +135,22 @@ catálogo, e governa a verificação mais solicitada da cobertura.
 \subsection{Escopo não coberto}\label{ssec:lim-escopo}
 
 A fundação não é dimensionada, por inexistir sondagem; entregam-se os esforços
-por base, conforme a \autoref{tab:cargas-fundacao}. A resistência ao fogo não é
-verificada. Não integram o escopo o projeto de instalações, o detalhamento de
-vedações, o plano de montagem e a análise de custos.
+por base, conforme a \autoref{tab:cargas-fundacao}. A resistência ao fogo é
+verificada, porém o tempo requerido é declaração de projeto e não prescrição do
+Eurocódigo, conforme a \autoref{sec:delimitacao}. Não integram o escopo o projeto
+de instalações, o detalhamento de vedações, o plano de montagem e a análise de
+custos.
 
 \section{RECOMENDAÇÕES PARA TRABALHOS FUTUROS}\label{sec:recomendacoes}
 
 Decorrem das limitações expostas, e de resultados que o trabalho produziu sem
 esgotar, as seguintes linhas de continuidade.
 
-A primeira é completar as verificações de ancoragem da
-EN 1992-4 \cite{EN1992-4:2018}, em conjunto com o dimensionamento do bloco de
-fundação, uma vez disponível a investigação geotécnica. É a lacuna mais
-imediata, por afetar um elemento já verificado como o mais solicitado do caminho
-de carga.
+A primeira é a validação da ancoragem por dados certificados de produto, em
+conjunto com o dimensionamento do bloco de fundação, uma vez disponível a
+investigação geotécnica. É a lacuna mais imediata, por afetar um elemento do
+caminho de carga cuja resistência hoje se apoia apenas em formulação
+normativa.
 
 A segunda é a otimização conjunta da viga e dos sistemas de estabilização. A
 varredura conduzida tratou a seção da viga como variável e os sistemas de

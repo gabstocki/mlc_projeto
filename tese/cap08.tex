@@ -195,16 +195,25 @@ concreto que o envolve, segundo a EN 1992-4 \cite{EN1992-4:2018}. A
     \multicolumn{4}{l}{\textit{Resistência do concreto}} \\
     Cone de arrancamento        &   527,41 & kN & 0,526 \\
     Extração pela cabeça        & 1.781    & kN & \\
+    Fendilhamento               &   527,41 & kN & 0,526 \\
+    Esmagamento sob a chaveta   &   266,67 & kN & 0,596 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-canto}{Aço conforme a tabela 3.4 e o item 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005},
 com $\gamma_{Ms} = 1{,}5$. Concreto C25/30 conforme as fórmulas (7.1) a (7.12) da
 EN 1992-4 \cite{EN1992-4:2018}, com profundidade efetiva de 400 mm,
-afastamento de borda de 600 mm e espaçamento de 400 mm.}{}
+afastamento de borda de 600 mm e espaçamento de 400 mm. O esmagamento sob a
+chaveta segue o item 6.7 da EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas
+parcialmente carregadas.}{}
 
 O cortante de 159,01 kN não solicita os chumbadores. Ele é transmitido ao bloco
 por chaveta de cisalhamento soldada sob a chapa de base, solução que evita
 submeter os chumbadores a esforço combinado e que é usual em bases sujeitas a
-força horizontal relevante.
+força horizontal relevante. A chaveta, de 200 mm de comprimento e 80 mm de
+embutimento, transfere esse cortante ao concreto por compressão localizada:
+verificada como área parcialmente carregada, resulta em resistência de
+266,67 kN e taxa de 0,596. Adotou-se fator de confinamento unitário, isto é, sem
+o ganho que a norma permitiria, por depender a razão entre as áreas carregada e
+de distribuição da geometria da sapata, fora do escopo.
 
 A verificação do concreto é governada pelo cone de arrancamento, com 527,41 kN
 de resistência de cálculo contra 1.781 kN da extração pela cabeça, resultando em
@@ -212,23 +221,24 @@ taxa de 0,526. Para que essa resistência se verifique, o bloco de fundação de
 garantir afastamento de borda não inferior a 600 mm em torno do grupo, o que
 corresponde a dimensões aproximadas de 1,60 por 2,00 m em planta.
 
-\subsection{Verificações pendentes}\label{ssec:ancoragem-pendencias}
+\subsection{Modos dispensados e limitação remanescente}\label{ssec:ancoragem-pendencias}
 
-A verificação da ancoragem não está completa, e a limitação deve ser declarada.
-Três modos de ruptura do concreto previstos na EN 1992-4 \cite{EN1992-4:2018}
-não foram avaliados: o fendilhamento do concreto, o arrancamento lateral e a
-ruptura de borda sob cortante.
+Dos demais modos de ruptura do concreto previstos na
+EN 1992-4 \cite{EN1992-4:2018}, dois são dispensados por critério da própria
+norma e o terceiro é verificado.
 
-%% TODO: dado ausente — verificações da EN 1992-4 ainda não implementadas:
-%% fendilhamento do concreto (§7.2.1.7), arrancamento lateral (§7.2.1.8) e
-%% ruptura de borda sob cortante (§7.2.2.5). As duas primeiras dependem das
-%% dimensões definitivas do bloco e da armadura, e a terceira é dispensável
-%% enquanto o cortante for transmitido por chaveta.
+O arrancamento lateral é dispensado pelo item 7.2.1.9, por ser o afastamento de
+borda de 600 mm superior a metade da profundidade efetiva, que vale 200 mm. A
+ruptura de borda sob cortante é dispensada por não haver cortante nos
+chumbadores, transmitido que é pela chaveta. O fendilhamento do concreto,
+esse, é aplicável e foi verificado pela fórmula (7.26), com afastamento crítico
+de 1.200 mm, resultando na mesma resistência de cálculo do cone, que permanece o
+modo governante.
 
-Acresce que a ancoragem entre chumbador e concreto permanece não validada
-enquanto não houver dados certificados do produto efetivamente especificado. Os
-valores apresentados correspondem a chumbador moldado com cabeça, cujas
-resistências decorrem de formulação normativa, e não de ensaio de produto.
+Resta uma limitação, e ela deve ser declarada. A ancoragem entre chumbador e
+concreto não está validada por ensaio: os valores apresentados correspondem a
+chumbador moldado com cabeça e decorrem de formulação normativa, não de
+avaliação técnica do produto efetivamente especificado.
 
 \section{CONTRAVENTAMENTO}\label{sec:detalhe-contraventamento}
 
@@ -241,12 +251,47 @@ O contraventamento vertical emprega oito painéis de cruz distribuídos pelas du
 fachadas longitudinais, com diagonais de 36 mm no mesmo aço. O contraventamento
 transversal, nos frontões, emprega diagonais de 27 mm.
 
+\subsection{Ligações de extremidade das diagonais}\label{ssec:lig-diagonais}
+
+As diagonais terminam em olhal com pino, conforme o item 3.13 da
+EN 1993-1-8 \cite{EN1993-1-8:2005}. Essas ligações não são dimensionadas para o
+esforço solicitante, e sim por capacidade, isto é, para a resistência de cálculo
+da própria barra. O critério assegura que, num evento que exceda a previsão, o
+escoamento se dê na barra, que é dúctil e avisa, e não no olhal.
+
+Na diagonal vertical, o esforço solicitante é de 166,88 kN e a resistência da
+barra, de 211,69 kN, do que resulta sobre-resistência de 1,27. O
+dimensionamento adota este último valor. O \autoref{qua:lig-diagonais} reúne as
+duas ligações.
+
+\qquadro
+{Ligações de extremidade das diagonais de contraventamento}
+{\footnotesize
+\begin{tabular}{|l|c|c|c|c|}\hline
+    \textbf{Diagonal} & \textbf{Barra} & \textbf{Pino} & \textbf{Modo governante} & \textbf{$\eta$} \\\hline
+    Vertical    & $\varnothing$ 36 mm & $\varnothing$ 36 mm & Geometria do olhal & 0,7713 \\\hline
+    Transversal & $\varnothing$ 27 mm & $\varnothing$ 27 mm & Geometria do olhal & 0,7633 \\\hline
+\end{tabular}}
+{Elaborado pelo autor (2026)}
+{lig-diagonais}
+{Conforme o item 3.13 e o item 4.5.3.3 da EN 1993-1-8 \cite{EN1993-1-8:2005}.
+Chapa do olhal em aço S235 e pino em S355. As taxas referem-se ao esforço de
+capacidade da barra, superior ao solicitante.}
+{}
+
+A manilha e a rosca de extremidade são peças de catálogo e não são
+dimensionadas neste trabalho.
+
+%% TODO: dado ausente — especificar manilha e rosca com resistência de cálculo
+%% à tração certificada pelo fabricante, não inferior a 211,7 kN na diagonal
+%% vertical e a 119,1 kN na transversal.
+
 A corda do diafragma merece registro construtivo. A terça de beiral acumula a
 função de corda, recebendo esforço normal de 15,1 kN em ambos os sentidos, e sua
 continuidade ao longo dos 46,0 m é condição para que o diafragma funcione. São
 necessárias três emendas, e cada uma deve ser capaz de transmitir os 15,1 kN. A
 omissão dessas emendas invalidaria o modelo de diafragma adotado, ainda que a
-taxa de utilização da corda seja de apenas 0,0553.
+taxa de utilização da corda seja de apenas 0,0656.
 
 \section{PROTEÇÃO CONSTRUTIVA}\label{sec:protecao-construtiva}
 

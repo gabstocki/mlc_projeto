@@ -89,11 +89,15 @@ para o projeto geotécnico, executado em etapa posterior e a partir de sondagem
 específica do terreno.
 
 Também não integram o escopo o projeto de instalações, o detalhamento de
-fechamentos e vedações, o plano de montagem e a análise de custos. A
-verificação de resistência ao fogo não é realizada neste trabalho.
+fechamentos e vedações, o plano de montagem e a análise de custos.
 
-%% TODO: dado ausente — a dispensa (ou não) da verificação de resistência ao
-%% fogo depende da classificação de ocupação e da exigência da Instrução
-%% Técnica do Corpo de Bombeiros aplicável, que não consta dos dados de
-%% entrada do programa. Caso exigida, acrescentar a verificação pela
-%% EN 1995-1-2 (método da seção transversal reduzida).
+A resistência ao fogo é verificada, porém sob uma limitação que se declara. O
+tempo requerido de resistência não é fixado pelo Eurocódigo: decorre do
+regulamento nacional de segurança contra incêndio, isto é, da
+ABNT NBR 14432 \cite{NBR14432:2001} e da instrução técnica do corpo de bombeiros estadual
+aplicável à ocupação. O valor adotado é, portanto, uma declaração de projeto, e
+a verificação vale sob essa declaração.
+
+%% TODO: dado ausente — confirmar o tempo requerido de resistência ao fogo
+%% junto ao regulamento aplicável à ocupação e à área da edificação. O valor
+%% em uso está declarado como parâmetro de origem PROJETO em core/normativo.py.

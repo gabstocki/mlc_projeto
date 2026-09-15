@@ -20,7 +20,7 @@ pré-dimensionamento. Em vez de avaliar as candidatas por um modelo simplificado
 mais rápido porém distinto daquele que produz o memorial, construiu-se um
 mecanismo que executa, para cada ponto da grade, exatamente o mesmo pipeline de
 verificação empregado no dimensionamento final. Cada geometria é avaliada pelas
-quarenta verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
+quarenta e quatro verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
 modelo estrutural, o mesmo gerador de combinações e os mesmos integradores.
 
 Essa equivalência é verificável e foi verificada. Executando o mecanismo de
@@ -81,10 +81,10 @@ de menor volume compatível com diferentes políticas de margem na viga.
     \textbf{na viga} & \textbf{(graus)} & \textbf{(m)} & \textbf{(m)} &
     \textbf{(m\textsuperscript{3})} & \textbf{governante} & \textbf{vertical} & \textbf{de canto} \\
 \midrule
-    $\eta \leq 1{,}00$ & 8,5 & 0,50 & 0,24 & 109,9 & Borda inclinada & 0,767 & 0,859 \\
-    $\eta \leq 0{,}90$ & 8,0 & 0,55 & 0,24 & 110,4 & Borda inclinada & 0,765 & 0,845 \\
-    $\eta \leq 0{,}75$ & 7,5 & 0,65 & 0,24 & 115,2 & Cisalhamento    & 0,898 & 0,831 \\
-    $\eta \leq 0{,}60$ & 6,5 & 0,75 & 0,24 & 116,1 & Cisalhamento    & 0,893 & 0,806 \\
+    $\eta \leq 1{,}00$ & 8,5 & 0,50 & 0,24 & 109,9 & Borda inclinada & 0,768 & 0,861 \\
+    $\eta \leq 0{,}90$ & 8,0 & 0,55 & 0,24 & 110,4 & Borda inclinada & 0,765 & 0,847 \\
+    $\eta \leq 0{,}75$ & 7,5 & 0,65 & 0,24 & 115,2 & Cisalhamento    & 0,899 & 0,833 \\
+    $\eta \leq 0{,}60$ & 6,5 & 0,75 & 0,24 & 116,1 & Cisalhamento    & 0,894 & 0,807 \\
     $\eta \leq 0{,}50$ & 6,0 & 0,80 & 0,28 & 136,0 & Cisalhamento    & 0,899 & 0,526 \\
     $\eta \leq 0{,}40$ & 8,0 & 1,05 & 0,28 & 179,8 & Cisalhamento    & 0,773 & 0,560 \\
 \midrule
@@ -113,7 +113,7 @@ A segunda é que a madeira adicional da geometria adotada não compra margem na
 viga, e sim nos sistemas. As duas últimas colunas da
 \autoref{tab:fronteira-volume} mostram que as geometrias de menor volume
 transferem solicitação para o contraventamento vertical, que sobe a cerca de
-0,90, e para o pilar de canto, que sobe a cerca de 0,83. Na geometria adotada,
+0,90, e para o pilar de canto, que sobe a cerca de 0,85. Na geometria adotada,
 esses valores são 0,788 e 0,428. Reduzir a seção da viga eleva a altura relativa
 do centro de pressões e concentra maior parcela da força lateral nos elementos
 que a conduzem à fundação.
@@ -137,7 +137,7 @@ razões, que a própria varredura permite sustentar.
 
 A primeira é a margem nos sistemas laterais, já exposta. A geometria adotada
 mantém o contraventamento vertical em 0,788 e o pilar de canto em 0,428, ao
-passo que as geometrias de menor volume os levam a 0,90 e 0,83. Como esses
+passo que as geometrias de menor volume os levam a 0,90 e 0,86. Como esses
 elementos concentram o caminho das forças horizontais até a fundação, e como o
 seu dimensionamento depende de uma ação de vento determinada por prescrição
 envolvente, preservar margem neles é decisão deliberada.
