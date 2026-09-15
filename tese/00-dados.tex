@@ -1,0 +1,214 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Arquivo de entrada de dados da parte pré-textual
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Tipo do trabalho
+%-----------------------------------------------------------------------------
+\tipotrabalho{Trabalho de Conclusão de Curso}
+
+% Elementos que compõem o documento
+%-----------------------------------------------------------------------------
+ \providecommand{\terCapa}{Sim}
+ \providecommand{\terFolhaRosto}{Sim}
+ \providecommand{\terTermoAprovacao}{Sim}
+ \providecommand{\terDedicatoria}{Nao}
+ \providecommand{\terFichaCatalografica}{Nao}
+ \providecommand{\terEpigrafe}{Nao}
+ \providecommand{\terAgradecimentos}{Sim}
+ \providecommand{\terErrata}{Nao}
+ \providecommand{\terListaFiguras}{Sim}
+ \providecommand{\terListaQuadros}{Sim}
+ \providecommand{\terListaTabelas}{Sim}
+ \providecommand{\terSiglasAbrev}{Sim}
+ \providecommand{\terSimbolos}{Nao}
+ \providecommand{\terResumos}{Sim}
+ \providecommand{\terSumario}{Sim}
+ \providecommand{\terAnexo}{Nao}
+ \providecommand{\terApendice}{Sim}
+ \providecommand{\terIndiceR}{Nao}
+%-----------------------------------------------------------------------------
+
+%% TODO: dado ausente — a ficha catalográfica é emitida pelo Sistema de
+%% Bibliotecas da UFPR. Enquanto não for emitida, \terFichaCatalografica
+%% permanece em "Nao"; ao recebê-la, gravar o arquivo como
+%% metadados/FichaC.pdf e alterar a marca para "Sim".
+
+% Identificação
+%-----------------------------------------------------------------------------
+\titulo{Dimensionamento automatizado de galpão em madeira lamelada colada
+segundo o Eurocódigo 5}
+
+\autor{Gabriel Goes Stocki}
+\local{Curitiba}
+\data{2026} % Apenas ano, 4 dígitos
+
+% Orientação
+%-----------------------------------------------------------------------------
+% Preenche-se apenas o comando correspondente. Havendo os dois, prevalece o
+% feminino; por isso \orientadora permanece vazio.
+\orientador{Prof. Elvidio Gavassoni Neto}
+\orientadora{}
+
+%% TODO: dado ausente — confirmar a titulação do orientador (Dr., DSc, PhD) e
+%% acrescentá-la após o nome, no formato do modelo: "Prof. Fulano de Tal, DSc".
+
+% Não há coorientação neste trabalho.
+\coorientador{}
+\coorientadora{}
+\scoorientador{}
+\scoorientadora{}
+
+% ----------------------------------------------------------
+\addbibresource{referencias.bib}
+
+% Instituição
+%-----------------------------------------------------------------------------
+\instituicao{%
+Universidade Federal do Paraná}
+
+\def \ImprimirSetor{Setor de Tecnologia}
+
+\def \ImprimirProgramaPos{}
+
+\def \ImprimirCurso{Curso de Engenharia Civil}
+
+\preambulo{%
+Trabalho de Conclusão de Curso apresentado como requisito parcial à obtenção do
+título de Bacharel em Engenharia Civil, Curso de Engenharia Civil, Setor de
+Tecnologia, Universidade Federal do Paraná}
+
+%% TODO: verificar — confirmar a denominação exata do curso e do setor junto à
+%% coordenação, bem como a redação do preâmbulo exigida pelo regulamento de
+%% trabalho de conclusão de curso.
+
+%-----------------------------------------------------------------------------
+\newcommand{\imprimirCurso}{}
+
+\newcommand{\imprimirDataDefesa}{%
+\sugest{[data da defesa]}}
+
+%% TODO: dado ausente — data da defesa.
+
+\newcommand{\imprimircdu}{%
+\sugest{[CDU]}}
+
+%% TODO: dado ausente — a CDU é atribuída pelo Sistema de Bibliotecas da UFPR
+%% no momento da emissão da ficha catalográfica.
+
+% ----------------------------------------------------------
+\newcommand{\imprimirerrata}{}
+
+% Comandos de dados — Data da apresentação
+\providecommand{\imprimirdataapresentacaoRotulo}{}
+\providecommand{\imprimirdataapresentacao}{}
+\newcommand{\dataapresentacao}[2][\dataapresentacaoname]{\renewcommand{\dataapresentacao}{#2}}
+
+% Comandos de dados — Nome do Curso
+\providecommand{\imprimirnomedocursoRotulo}{}
+\providecommand{\imprimirnomedocurso}{}
+\newcommand{\nomedocurso}[2][\nomedocursoname]
+  {\renewcommand{\imprimirnomedocursoRotulo}{#1}
+\renewcommand{\imprimirnomedocurso}{#2}}
+
+% Banca examinadora — termo de aprovação
+%-----------------------------------------------------------------------------
+%% TODO: dado ausente — substituir os marcadores pelos nomes e pelas
+%% instituições dos membros da banca examinadora.
+\newcommand{\AssinaAprovacao}{
+
+% A assinatura do orientador é emitida automaticamente por \insereAprovacao;
+% aqui entram apenas os demais membros da banca.
+\assinatura{\sugest{[Nome do segundo membro]} \\ \sugest{[Instituição]}}
+   \assinatura{\sugest{[Nome do terceiro membro]} \\ \sugest{[Instituição]}}
+
+   \begin{center}
+    \vspace*{0.5cm}
+    \imprimirlocal, \imprimirDataDefesa.
+    \vspace*{1cm}
+  \end{center}
+  }
+
+% Epígrafe
+%-----------------------------------------------------------------------------
+\newcommand{\EpigrafeTexto}{}
+
+% Resumo e palavras-chave
+%-----------------------------------------------------------------------------
+\newcommand{\ResumoTexto}{%
+Este trabalho apresenta o dimensionamento e a verificação estrutural de um
+galpão em madeira lamelada colada destinado a estacionamento, com 40,5 m por
+46,0 m em planta, composto por nove pórticos de duas vigas de duplo-bisel de
+20,25 m de vão apoiadas sobre três pilares. O dimensionamento segue a
+EN 1995-1-1, complementada pela EN 1990 e pela EN 14080, com as forças devidas
+ao vento determinadas pela ABNT NBR 6123. A cadeia de quarenta verificações foi
+implementada em programa de computador submetido a suíte de 558 testes
+automatizados, o que permitiu avaliar 1.391 geometrias candidatas pelo mesmo
+conjunto de verificações que produz o memorial final, assegurando equivalência
+entre a fase de concepção e a de verificação. A análise da rigidez relativa
+entre a viga e os seus apoios demonstrou que o empuxo de arco não se
+desenvolve, o que elevou o momento de projeto em 71,4\% em relação ao modelo de
+arco e dispensou o tirante de base. Os resultados indicam que nenhuma
+verificação da viga governa o dimensionamento: a maior taxa de utilização da
+seção é de 0,3814, por cisalhamento, enquanto o conjunto é governado pelo
+contraventamento da cobertura, com 0,7902. A parcela de atrito do vento
+paralelo à cumeeira, prescrita pela norma brasileira, mostrou-se determinante
+para todo o sistema de estabilização longitudinal. O fendilhamento das ligações
+entre viga e pilar exigiu reforço perpendicular às fibras para atender ao
+limite de projeto adotado para modos de ruptura frágeis. Conclui-se que, em
+edificações abertas de cobertura leve, a estabilização determina o
+dimensionamento mais do que a resistência dos elementos, e que a automação da
+cadeia de verificação permite conhecer a posição da solução adotada no espaço
+de soluções viáveis.
+}
+
+\newcommand{\PalavraschaveTexto}{%
+Madeira lamelada colada; Eurocódigo 5; dimensionamento estrutural; varredura
+paramétrica; contraventamento.}
+
+% Abstract and keywords
+%-----------------------------------------------------------------------------
+\newcommand{\AbstractTexto}{%
+This work presents the structural design and verification of a glued laminated
+timber shed intended for vehicle parking, measuring 40.5 m by 46.0 m in plan
+and comprising nine frames of two double-tapered beams spanning 20.25 m each,
+supported on three columns. The design follows EN 1995-1-1, complemented by
+EN 1990 and EN 14080, with wind actions determined according to the Brazilian
+standard ABNT NBR 6123. The chain of forty verifications was implemented in a
+computer program subjected to a suite of 558 automated tests, which made it
+possible to assess 1,391 candidate geometries using the same set of
+verifications that produces the final design report, thereby ensuring
+equivalence between the conceptual and the verification stages. Analysis of the
+relative stiffness between the beam and its supports showed that arch thrust
+does not develop, which raised the design bending moment by 71.4\% with respect
+to the arch model and rendered the base tie unnecessary. The results indicate
+that no beam verification governs the design: the highest utilisation ratio of
+the cross section is 0.3814, due to shear, whereas the assembly is governed by
+the roof bracing, at 0.7902. The wind friction component parallel to the ridge,
+prescribed by the Brazilian standard, proved decisive for the entire
+longitudinal stabilisation system. Splitting at the beam-to-column connections
+required reinforcement perpendicular to the grain in order to meet the design
+limit adopted for brittle failure modes. It is concluded that, in open
+buildings with lightweight roofs, stabilisation governs the design more than
+member resistance, and that automating the verification chain makes it possible
+to locate the adopted solution within the space of feasible solutions.
+}
+
+\newcommand{\KeywordsTexto}{%
+Glued laminated timber; Eurocode 5; structural design; parametric sweep;
+bracing.}
+
+% ----------------------------------------------------------
+\newcommand{\Resume}{}
+\newcommand{\Motscles}{}
+\newcommand{\Resumen}{}
+\newcommand{\Palabrasclave}{}
+
+% Agradecimentos
+%-----------------------------------------------------------------------------
+\newcommand{\AgradecimentosTexto}{%
+Agradeço a Deus, a minha família e a minha futura esposa.
+}
+
+% Dedicatória
+%-----------------------------------------------------------------------------
+\newcommand{\DedicatoriaTexto}{}

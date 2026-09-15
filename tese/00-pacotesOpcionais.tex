@@ -1,0 +1,378 @@
+\usepackage{color}		    	% Controle das cores
+\usepackage{graphicx}			% Inclusão de gráficos
+\usepackage{lipsum}				% para geração de dummy text
+\usepackage{csquotes}
+
+%\usepackage[style=long]{glossaries}
+%\usepackage{abntex2glossaries}
+
+\usepackage{cancel} 		% permite representar o cancelamento de termos em texto ou equacoes	
+\usepackage{xcolor} 		% cores extendidas	
+\usepackage{smartdiagram}   	% gera diagramas a partir de listas
+%\usepackage{float} 		% Para a figura ficar na posição correta	    
+\usepackage{textcomp} 		% supporte para fontes da Text Companion 
+\usepackage{longtable}		% uso de longtable
+% ----------------------------------------------------------
+% Traços de tabela conforme a normalização do IBGE adotada pela ABNT:
+% a tabela é ABERTA nas laterais e usa traços horizontais apenas no topo,
+% sob o cabeçalho e no rodapé. O quadro, esse sim, é fechado nos quatro lados.
+% ----------------------------------------------------------
+\usepackage{booktabs}
+\setlength{\heavyrulewidth}{0.9pt}
+\setlength{\lightrulewidth}{0.5pt}
+\setlength{\aboverulesep}{0.5ex}
+\setlength{\belowrulesep}{0.5ex}
+% Respiro entre colunas e entre linhas, comum a tabelas e quadros.
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.25}
+
+\usepackage{lscape}		% páginas em paisagem
+\usepackage{multicol}		% mescla de colunas em tabelas
+\usepackage{multirow}		% mescla de linhas em tabelas
+\usepackage{newfloat} 		% criação do indice de quadros
+%\usepackage{caption} 		% configura legenda 
+%[format=plain]
+%\renewcommand\caption[1]{%
+	%\captionsetup{font=small}	% tamanho da fonte 10pt
+	%,format=hang
+	% \caption{#1}}
+%\captionsetup{width=0.8\textwidth}
+\captiondelim{-- }
+\captiontitlefont{\small}
+\captionnamefont{\small}
+
+
+% uso do tikz e pgfplots
+% ----------------------------------------------------------
+%\usetikzlibrary{external}
+\usetikzlibrary{arrows,calc,patterns,angles,quotes}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+
+% Define o comando para citação de fontes em elementos gráficos (figuras, imagens,...).
+% ----------------------------------------------------------
+%  AUTOR(ano)
+%
+% parâmetro é a bibkey da fonte
+
+\newcommand{\citefig}[2]{~\Citeauthor*{#1}\citeyear{#1}}
+
+% Define os operadores matemáticos em portugues
+% ----------------------------------------------------------
+%
+
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\sen}{sen}
+\DeclareMathOperator{\senh}{senh}
+%\DeclareMathOperator{\tag}{tag}
+\DeclareMathOperator{\tg}{tg}
+\DeclareMathOperator{\tagh}{tagh}
+\DeclareMathOperator{\tgh}{tgh}
+\DeclareMathOperator{\cossec}{cossec}
+%\DeclareMathOperator{\sen}{sen}
+
+% Para fazer a listagem de codigos LaTeX na documentação
+% ----------------------------------------------------------
+\usepackage{listings}
+
+% ----------------------------------------------------------
+% CONFIGURACAO DO listings PARA O CODIGO-FONTE EM PYTHON (Apendice A)
+% O template original carrega o pacote mas nao o configura; esta secao
+% define o estilo, a numeracao de linhas e o mapeamento de caracteres
+% acentuados/matematicos usados nos comentarios do programa.
+% ----------------------------------------------------------
+\definecolor{corComentario}{rgb}{0.35,0.35,0.35}
+\definecolor{corPalavra}{rgb}{0.00,0.00,0.60}
+\definecolor{corTexto}{rgb}{0.55,0.10,0.10}
+\definecolor{corFundo}{rgb}{0.97,0.97,0.97}
+\definecolor{corNumero}{rgb}{0.50,0.50,0.50}
+
+\lstdefinestyle{pythonUFPR}{
+  language        = Python,
+  basicstyle      = \ttfamily\scriptsize,
+  keywordstyle    = \color{corPalavra}\bfseries,
+  commentstyle    = \color{corComentario}\itshape,
+  stringstyle     = \color{corTexto},
+  numberstyle     = \ttfamily\tiny\color{corNumero},
+  backgroundcolor = \color{corFundo},
+  numbers         = left,
+  numbersep       = 8pt,
+  stepnumber      = 1,
+  showstringspaces= false,
+  breaklines      = true,
+  breakatwhitespace = true,
+  postbreak       = \mbox{\textcolor{corNumero}{$\hookrightarrow$}\space},
+  tabsize         = 4,
+  frame           = single,
+  rulecolor       = \color{corNumero},
+  captionpos      = b,
+  extendedchars   = true,
+  inputencoding   = utf8,
+  upquote         = true,
+  % Mapeamento dos caracteres nao-ASCII presentes no codigo-fonte.
+  literate =
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {à}{{\`a}}1 {À}{{\`A}}1
+    {â}{{\^a}}1 {ê}{{\^e}}1 {ô}{{\^o}}1
+    {Â}{{\^A}}1 {Ê}{{\^E}}1 {Ô}{{\^O}}1
+    {ã}{{\~a}}1 {õ}{{\~o}}1 {Ã}{{\~A}}1 {Õ}{{\~O}}1
+    {ç}{{\c c}}1 {Ç}{{\c C}}1
+    {º}{{\textordmasculine}}1 {ª}{{\textordfeminine}}1
+    {°}{{\textdegree}}1 {±}{{$\pm$}}1 {×}{{$\times$}}1 {·}{{$\cdot$}}1
+    {≤}{{$\leq$}}1 {≥}{{$\geq$}}1 {≈}{{$\approx$}}1 {≠}{{$\neq$}}1
+    {→}{{$\rightarrow$}}1 {←}{{$\leftarrow$}}1 {↳}{{$\hookrightarrow$}}1
+    {²}{{$^{2}$}}1 {³}{{$^{3}$}}1 {⁴}{{$^{4}$}}1 {½}{{$1/2$}}1
+    {α}{{$\alpha$}}1 {β}{{$\beta$}}1 {γ}{{$\gamma$}}1 {δ}{{$\delta$}}1
+    {Δ}{{$\Delta$}}1 {ε}{{$\varepsilon$}}1 {η}{{$\eta$}}1 {θ}{{$\theta$}}1
+    {λ}{{$\lambda$}}1 {μ}{{$\mu$}}1 {ν}{{$\nu$}}1 {ρ}{{$\rho$}}1
+    {σ}{{$\sigma$}}1 {τ}{{$\tau$}}1 {φ}{{$\varphi$}}1 {ψ}{{$\psi$}}1
+    {ø}{{$\varnothing$}}1 {∅}{{$\varnothing$}}1 {Ø}{{$\varnothing$}}1
+    {∑}{{$\sum$}}1 {√}{{$\sqrt{\ }$}}1 {∞}{{$\infty$}}1
+    {─}{{-}}1 {━}{{-}}1 {│}{{|}}1 {┌}{{+}}1 {┐}{{+}}1 {└}{{+}}1 {┘}{{+}}1
+    {├}{{+}}1 {┤}{{+}}1 {╭}{{+}}1 {╮}{{+}}1 {╰}{{+}}1 {╯}{{+}}1
+    {✓}{{$\checkmark$}}1 {✗}{{$\times$}}1 {⚠}{{!}}1 {«}{{\guillemotleft}}1
+    {»}{{\guillemotright}}1 {–}{{--}}1 {—}{{---}}1 {…}{{\ldots}}1
+}
+
+\lstset{style=pythonUFPR}
+\renewcommand{\lstlistingname}{LISTAGEM}
+
+% Comando para fazer 
+%    a citação de documentos não publicados e informais e 
+%    colocar as referências nas notas de rodapé
+% ----------------------------------------------------------
+
+\newcommand{\citenp}[1]{
+	\cite{#1}\footnote{\fullcite{#1}}}
+
+\newcommand{\textcitenp}[1]{
+	\textcite{#1}\footnote{\fullcite{#1}}}
+
+
+% para comentarios e sugestões
+% ----------------------------------------------------------
+\newcommand{\sugest}[1]{\textcolor{red!40}{#1}}
+
+
+% simplificação para colocar figuras
+% ----------------------------------------------------------
+%   Parametros
+%    1 caption
+%    2 percent textwidth
+%    3 arquivo da figura
+%    4 fonte
+%    5 fig:label
+%    6 nota
+%    7 legenda
+
+\newcommand{\figura}[7]{
+  {\centering
+   \footnotesize
+   \begin{figure}[!ht]
+   \centering
+        \caption{\uppercase{#1}}
+        \includegraphics[width=#2\textwidth]{#3}
+        \label{fig:#5}
+    
+    %ajustado p/ a largura da imagem
+    \begin{minipage}{#2\textwidth} 
+        \vspace{2mm}\centering
+        %\begin{flushleft}
+            \par FONTE:~#4
+            \ifthenelse{\equal{#6}{}}{}
+            { \par\hangindent=14mm NOTA: #6 }
+            
+            \ifthenelse{\equal{#7}{}}{}
+            { \par\hangindent=14mm LEGENDA: #7 }
+        %\end{flushleft}
+    \end{minipage}
+    \end{figure}
+    }
+}
+
+
+% simplificação para colocar figuras cortadas
+% ----------------------------------------------------------
+%   Parametros
+%    1 caption
+%    2 percent textwidth
+%    3 arquivo da figura
+%    4 fonte
+%    5 fig:label
+%    6 nota
+%    7 legenda
+%    8 recorte esquerda direita em mm
+%    9 recorte inferior superior em mm
+
+\newcommand{\figurac}[9]{
+ \centering\footnotesize
+    \begin{figure}[!ht]
+    {\centering
+        \caption{\uppercase{#1}}
+        \includegraphics[width=#2\textwidth, trim={#8mm #9 #8 #9},clip]{#3}
+        \label{fig:#5}
+        
+    %ajustado p/ a largura da imagem
+    \begin{minipage}{#2\textwidth} 
+        \vspace{2mm}\centering
+        %\begin{flushleft}
+            \par FONTE:~#4
+            \ifthenelse{\equal{#6}{}}{}
+            {\par \hangindent=14mm NOTA: #6 }
+          
+            \ifthenelse{\equal{#7}{}}{}
+            {\par \hangindent=14mm   LEGENDA: #7 }
+        %\end{flushleft}
+    \end{minipage}
+    }
+    \end{figure}
+ 
+}
+
+% simplificação para colocar imagens
+% ----------------------------------------------------------
+%   Parametros
+%    1 caption
+%    2 imagem
+%    3 fonte
+%    4 tab:label
+%    5 nota
+%    6 legenda
+
+\newsavebox{\myboxa}
+\newlength{\myboxlena}
+
+\newcommand{\imagem}[6]{
+	{
+	\centering\footnotesize
+  	    \sbox{\myboxa}{#2}
+		\settowidth{\myboxlena}{\usebox{\myboxa}}
+		\noindent
+		\begin{figure}[!ht]
+			\centering
+			\caption{\uppercase{#1}}
+			#2
+			\label{fig:#4}
+			
+			%ajustado p/ a largura da imagem
+			\begin{minipage}{\myboxlena} \footnotesize
+				\vspace{2mm}\centering
+				%\begin{flushleft}
+				\par FONTE:~#3
+				\ifthenelse{\equal{#5}{}}{}
+				{ \par\hangindent=14mm NOTA: #5 }
+				
+				\ifthenelse{\equal{#6}{}}{}
+				{ \par\hangindent=14mm LEGENDA: #6 }
+				%\end{flushleft}
+			\end{minipage}
+		\end{figure}
+	}
+}
+
+% simplificação para colocar tabelas
+% ----------------------------------------------------------
+%   Parametros
+%    1 caption
+%    2 tabela
+%    3 fonte
+%    4 tab:label
+%    5 nota
+%    6 legenda
+
+\newsavebox{\mybox}
+\newlength{\myboxlen}
+
+\newcommand{\tabela}[6]
+{
+  \sbox{\mybox}{#2}
+  \settowidth{\myboxlen}{\usebox{\mybox}}
+  \noindent
+  %\rule{\myboxlen}{1pt}\\
+  \begin{table}[!ht]
+    \centering\footnotesize
+    \par\caption{\uppercase{#1}}
+    
+    \par  #2
+ 
+    \label{tab:#4}
+ 
+     \begin{minipage}{.95\myboxlen} 
+        \vspace{2mm}\footnotesize
+        %\begin{flushleft}
+            FONTE:~#3
+            
+            \ifthenelse{\equal{#5}{}}{}
+            {\hangindent=14mm NOTA: #5 }
+            
+            \ifthenelse{\equal{#6}{}}{}
+            {\hangindent=14mm LEGENDA: #6}
+        %\end{flushleft}
+    \end{minipage}
+\end{table}
+  % \centering
+  % \usebox{\mybox}
+  % box size: \the\myboxlen.
+}
+
+% Ambiente e lista de quadros
+% ----------------------------------------------------------
+\newfloat{quadro}{quadros}{QUADRO}
+\newlistof{listofquadros}{quadros}{Lista de Quadros}
+\newlistentry{quadro}{quadros}{0}
+\cftsetindents{quadro}{0mm}{13mm}
+
+%\PrepareListOf{quadro}{%
+\renewcommand{\cftquadropresnum}{\normalsize{QUADRO}~}
+\setlength{\cftquadronumwidth}{28mm}
+%\renewcommand{\cftquadroname}{\quadroname\space} 
+\renewcommand*{\cftquadroaftersnum}{\hfill--\hfill}
+%}
+
+\newsavebox{\myboxq}
+\newlength{\myboxlenq}
+
+% ----------------------------------------------------------
+%   Parametros
+%    1 caption
+%    2 tabela/quadro
+%    3 fonte
+%    4 qua:label
+%    5 nota
+%    6 legenda
+
+\newcommand{\qquadro}[6]
+  {
+   
+   %\begin{center}
+   \sbox{\myboxq}{#2}
+   \settowidth{\myboxlenq}{\usebox{\myboxq}}
+   \begin{quadro} \footnotesize
+        \caption{\uppercase{#1}}
+	
+        \noindent 
+        
+        #2 %placed inside the environment
+	
+   			
+        %ajustado p/ a largura da tabela (quadro) se menor que 30mm a largura é ajustada para .5\linewidth
+	 
+        \ifdimcomp {\myboxlenq}{<}{30mm}{\settowidth{\myboxlenq}{\hspace{.5\linewidth}}}{}
+    	
+	\begin{minipage}{\myboxlenq} \footnotesize
+    	    \vspace{2mm}\centering
+    		%\begin{flushleft}
+    		\par FONTE:~#3
+    		\ifthenelse{\equal{#5}{}}{}
+    		{ \par\hangindent=14mm NOTA: #5 }
+    				
+    		\ifthenelse{\equal{#6}{}}{}
+    		{ \par\hangindent=14mm LEGENDA: #6 }
+    		%\end{flushleft}
+    	\end{minipage}
+    %\end{center}
+    \label{qua:#4}
+  \end{quadro}
+  } 

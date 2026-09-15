@@ -1,0 +1,91 @@
+% =============================================================================
+% cap01.tex — INTRODUCAO
+% =============================================================================
+
+\chapter{INTRODUÇÃO}\label{cap:introducao}
+
+A \criarsigla*{MLC}{madeira lamelada colada} é um
+produto estrutural obtido pela colagem de lamelas de madeira serrada com as
+fibras orientadas paralelamente ao eixo longitudinal da peça. O processo de
+laminação dissocia a dimensão da peça acabada da dimensão da tora de origem e
+permite, ao mesmo tempo, a remoção seletiva dos defeitos das lamelas antes da
+colagem. Disso decorrem as duas características que sustentam o emprego
+estrutural do material: a possibilidade de produzir elementos de grande vão e
+de seção variável, e uma dispersão de resistência menor do que a da madeira
+serrada de mesma espécie, o que se traduz em valores característicos mais
+elevados.
+
+Essas características tornam a MLC competitiva justamente na faixa de
+aplicação em que a madeira serrada não alcança e em que as soluções em aço ou
+concreto se tornam onerosas: coberturas de grande vão livre, com carregamento
+predominantemente permanente e sobrecarga reduzida. Galpões industriais,
+pavilhões, centros de distribuição e edifícios-garagem constituem o campo
+típico dessa aplicação.
+
+%% TODO: referência — inserir citação de literatura sobre o desenvolvimento
+%% histórico e o mercado da MLC (ex.: Porteous \& Kermani; Herzog et al.;
+%% Zangiácomo \& Rocco Lahr). Chaves a criar em referencias.bib.
+
+\section{CONTEXTO NORMATIVO}\label{sec:contexto-normativo}
+
+O projeto de estruturas de madeira no Brasil é regido pela ABNT NBR 7190-1
+\cite{NBR7190-1:2022}, cuja revisão de 2022 aproximou o texto brasileiro do
+formato dos estados-limites já consagrado nos Eurocódigos. A norma brasileira,
+entretanto, trata a madeira lamelada colada de forma sucinta e não reproduz o
+conjunto de verificações específicas dessa tipologia, entre elas as tensões
+transversais em vigas de seção variável, o comportamento das bordas inclinadas
+e as regras de estabilização de sistemas de contraventamento.
+
+A EN 1995-1-1 \cite{EN1995-1-1:2004}, o Eurocódigo 5, cobre essas verificações
+de maneira explícita e é complementada por um conjunto normativo coerente: a
+EN 14080 \cite{EN14080:2013}, que define as classes de resistência e as propriedades
+características da MLC; a EN 1990 \cite{EN1990:2002}, que estabelece as combinações
+de ações; e as partes pertinentes da EN 1991 para os carregamentos. Por esse
+motivo, o presente trabalho adota o Eurocódigo 5 como base de dimensionamento,
+recorrendo à ABNT NBR 6123 \cite{NBR6123:2023} para a determinação das forças devidas ao
+vento, por ser esta a norma que descreve as condições meteorológicas do sítio
+brasileiro.
+
+Essa composição normativa não é neutra e introduz uma dificuldade prática: as
+verificações do Eurocódigo 5 dependem de parâmetros de determinação nacional,
+os \criarsigla*{NDP}{parâmetros de determinação nacional}, que deveriam ser
+fixados por um Anexo Nacional inexistente no Brasil. O tratamento dado a essa
+lacuna é discutido adiante, no \autoref{cap:definicao-problema}.
+
+\section{JUSTIFICATIVA}\label{sec:justificativa}
+
+A verificação de um pórtico de MLC segundo o Eurocódigo 5 não se resume ao
+dimensionamento da viga principal. Um galpão completo exige, além da flexão e
+do cisalhamento da viga, a verificação das tensões na cumeeira e na borda
+inclinada, da estabilidade lateral, dos pilares, das terças, da fixação da
+telha sob sucção, do contraventamento horizontal e vertical, da estabilidade
+global, das ligações e da ancoragem à fundação. Cada uma dessas verificações
+depende de resultados das demais, e uma alteração em qualquer variável
+geométrica propaga-se por todo o conjunto.
+
+Executada manualmente, essa cadeia de verificações é lenta o bastante para
+inviabilizar o estudo de alternativas: na prática, adota-se a primeira
+geometria que atende a todos os critérios, sem que se saiba a que distância ela
+está de uma solução eficiente. A automação do memorial de cálculo remove essa
+restrição, pois permite varrer o espaço de geometrias viáveis, identificar qual
+verificação governa em cada região desse espaço e submeter cada etapa a testes
+automatizados que impedem a propagação silenciosa de erros.
+
+\section{ESTRUTURA DO TRABALHO}\label{sec:estrutura-trabalho}
+
+O texto está organizado em nove partes. Após esta introdução, o
+\autoref{cap:objetivos} enuncia os objetivos geral e específicos, e o
+\autoref{cap:revisao} reúne a revisão bibliográfica, com o comportamento
+mecânico da MLC e as prescrições normativas aplicáveis. A edificação, as
+premissas de projeto e as reservas normativas assumidas aparecem no
+\autoref{cap:definicao-problema}.
+
+A partir daí, a exposição acompanha a sequência do próprio programa de cálculo.
+O \autoref{cap:predimensionamento} trata da varredura paramétrica que conduziu
+à geometria adotada; o \autoref{cap:modelagem}, do modelo estrutural, das ações,
+das combinações e dos esforços solicitantes; e o \autoref{cap:dimensionamento},
+das verificações de estado-limite último e de serviço, com as respectivas taxas
+de utilização. Segue-se o \autoref{cap:detalhamento}, sobre as ligações, o
+contraventamento e a ancoragem. O \autoref{cap:consideracoes} encerra o texto
+com as considerações finais e as recomendações para desenvolvimentos futuros. O
+\autoref{ap:codigo-fonte} reproduz o código-fonte do programa.

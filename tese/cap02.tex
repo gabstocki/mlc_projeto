@@ -1,0 +1,99 @@
+% =============================================================================
+% cap02.tex — OBJETIVOS
+% =============================================================================
+
+\chapter{OBJETIVOS}\label{cap:objetivos}
+
+O trabalho tem por escopo a verificação estrutural completa de uma edificação
+em madeira lamelada colada, desde a caracterização do material até o
+detalhamento das ligações e da ancoragem, executada por meio de um programa de
+cálculo desenvolvido especificamente para essa finalidade.
+
+\section{OBJETIVO GERAL}\label{sec:objetivo-geral}
+
+Dimensionar e verificar a estrutura de um galpão em madeira lamelada colada com
+pórticos de vigas de duplo-bisel, segundo a EN 1995-1-1 \cite{EN1995-1-1:2004},
+implementando a cadeia de verificações em um programa de cálculo automatizado e
+reprodutível, e apresentando o memorial resultante.
+
+\section{OBJETIVOS ESPECÍFICOS}\label{sec:objetivos-especificos}
+
+Para alcançar o objetivo geral, foram estabelecidos os seguintes objetivos
+específicos:
+
+\begin{alineas}
+    \item caracterizar o material segundo a EN 14080 \cite{EN14080:2013},
+    definindo a classe de resistência, a classe de serviço e os coeficientes
+    de modificação e de fluência dela decorrentes;
+
+    \item levantar as ações permanentes e variáveis atuantes na edificação,
+    determinando as forças devidas ao vento pela ABNT NBR 6123
+    \cite{NBR6123:2023} e
+    organizando as combinações de estado-limite último e de serviço conforme
+    a EN 1990 \cite{EN1990:2002};
+
+    \item estabelecer a geometria da viga de duplo-bisel por varredura
+    paramétrica do espaço de soluções viáveis, identificando a verificação
+    que governa cada região desse espaço;
+
+    \item verificar os estados-limites últimos dos elementos de madeira,
+    ou seja, viga principal, pilares e terças, quanto à flexão, ao cisalhamento, às
+    tensões na cumeeira e na borda inclinada, à estabilidade lateral e à
+    flexo-compressão;
+
+    \item verificar o sistema de contraventamento horizontal e vertical e a
+    estabilidade global da edificação, incluindo o caminho das forças
+    laterais até a fundação;
+
+    \item verificar os estados-limites de serviço, considerando a fluência da
+    madeira na classe de serviço adotada;
+
+    \item dimensionar as ligações metálicas e a ancoragem à fundação,
+    aplicando critérios distintos de utilização para modos de ruptura frágeis
+    e dúcteis;
+
+    \item implementar o conjunto de verificações em programa de código aberto,
+    submetido a uma suíte de testes automatizados, capaz de gerar o memorial
+    de cálculo a partir dos dados de entrada.
+\end{alineas}
+
+O \autoref{qua:objetivos-capitulos} relaciona cada objetivo específico ao
+capítulo em que é desenvolvido.
+
+\qquadro
+{Correspondência entre os objetivos específicos e os capítulos}
+{\footnotesize
+\begin{tabular}{|c|p{8.6cm}|c|}\hline
+    \textbf{Alínea} & \textbf{Objetivo específico} & \textbf{Desenvolvido em} \\\hline
+    a) & Caracterização do material              & \autoref{cap:definicao-problema} \\\hline
+    b) & Ações e combinações                     & \autoref{cap:modelagem} \\\hline
+    c) & Geometria por varredura paramétrica     & \autoref{cap:predimensionamento} \\\hline
+    d) & Estados-limites últimos dos elementos   & \autoref{cap:dimensionamento} \\\hline
+    e) & Contraventamento e estabilidade global  & \autoref{cap:dimensionamento} \\\hline
+    f) & Estados-limites de serviço              & \autoref{cap:dimensionamento} \\\hline
+    g) & Ligações e ancoragem                    & \autoref{cap:detalhamento} \\\hline
+    h) & Implementação e testes automatizados    & \autoref{ap:codigo-fonte} \\\hline
+\end{tabular}}
+{Elaborado pelo autor (2026)}
+{objetivos-capitulos}
+{A numeração das alíneas corresponde à do \autoref{sec:objetivos-especificos}.}
+{}
+
+\section{DELIMITAÇÃO DO TRABALHO}\label{sec:delimitacao}
+
+O trabalho delimita-se à superestrutura em madeira lamelada colada e aos seus
+elementos de ligação. A fundação não é dimensionada: o programa entrega os
+esforços característicos e de cálculo em cada base, a saber, reação vertical,
+força horizontal e esforço de arrancamento, que constituem os dados de entrada
+para o projeto geotécnico, executado em etapa posterior e a partir de sondagem
+específica do terreno.
+
+Também não integram o escopo o projeto de instalações, o detalhamento de
+fechamentos e vedações, o plano de montagem e a análise de custos. A
+verificação de resistência ao fogo não é realizada neste trabalho.
+
+%% TODO: dado ausente — a dispensa (ou não) da verificação de resistência ao
+%% fogo depende da classificação de ocupação e da exigência da Instrução
+%% Técnica do Corpo de Bombeiros aplicável, que não consta dos dados de
+%% entrada do programa. Caso exigida, acrescentar a verificação pela
+%% EN 1995-1-2 (método da seção transversal reduzida).

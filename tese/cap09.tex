@@ -1,0 +1,176 @@
+% =============================================================================
+% cap09.tex — CONSIDERACOES FINAIS
+% =============================================================================
+
+\chapter{CONSIDERAÇÕES FINAIS}\label{cap:consideracoes}
+
+\section{QUANTO AOS OBJETIVOS}\label{sec:quanto-objetivos}
+
+O objetivo geral enunciado na \autoref{sec:objetivo-geral} foi alcançado. A
+estrutura do galpão em madeira lamelada colada foi dimensionada e verificada
+segundo a EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de programa de cálculo
+automatizado, e o memorial resultante consta dos capítulos
+\autoref{cap:dimensionamento} e \autoref{cap:detalhamento}. O conjunto de
+quarenta verificações é atendido, com taxa de utilização máxima de 0,7902.
+
+Os objetivos específicos foram cumpridos nos termos seguintes. A caracterização
+do material e das exigências de durabilidade consta da
+\autoref{sec:materiais}. As ações e as combinações constam da
+\autoref{sec:acoes} e da \autoref{sec:combinacoes}. A geometria foi estabelecida
+por varredura paramétrica de 1.391 candidatas, apresentada na
+\autoref{sec:varredura-global}. As verificações de estado-limite último dos
+elementos, dos sistemas de contraventamento e da estabilidade global constam do
+\autoref{cap:dimensionamento}, e as de serviço, da \autoref{sec:verif-els}. As
+ligações e a ancoragem constam do \autoref{cap:detalhamento}. O programa,
+submetido a suíte de 558 testes automatizados, é reproduzido no
+\autoref{ap:codigo-fonte}.
+
+\section{PRINCIPAIS RESULTADOS}\label{sec:principais-resultados}
+
+Sete resultados merecem destaque, por contrariarem expectativas correntes ou por
+terem determinado decisões de projeto.
+
+O primeiro é o modelo de apoio horizontal. A verificação da rigidez relativa
+entre a viga, que se opõe ao afastamento com 208.462 kN/m, e o pilar que a
+apoia, que oferece rigidez nula por ser articulado, demonstrou que o empuxo não
+se desenvolve. A viga trabalha como biapoiada, e o momento de projeto é 71,4\%
+superior ao que o modelo de arco indicaria. A consequência favorável é que não
+há esforço horizontal por efeito de arco a transmitir à fundação.
+
+O segundo é que nenhuma verificação da viga governa o dimensionamento. A mais
+solicitada, o cisalhamento, atinge 0,3814. O que governa é o contraventamento da
+cobertura, com 0,7902, cuja solicitação responde à área exposta ao vento e é
+praticamente insensível à seção da viga. Em uma edificação aberta e de cobertura
+leve, a estabilização determina o projeto mais do que a resistência dos
+elementos.
+
+O terceiro é que a combinação governante em momento é a gravitacional, e não a
+de vento. Ainda que a sucção produza carga de módulo comparável, ela atua em
+sentido oposto ao peso próprio e é parcialmente cancelada. A sucção permanece
+determinante para o arrancamento e para a ancoragem.
+
+O quarto é o peso próprio. Calculado por parcelas a partir da geometria,
+resultou em 0,8229 kN/m\textsuperscript{2}, cerca de metade do valor que uma
+estimativa global usual atribuiria. Adotar valor único de tabela teria
+sobrecarregado o modelo em aproximadamente oitenta por cento e mascarado a
+leveza própria da solução em madeira.
+
+O quinto é a força longitudinal de vento. A parcela de atrito sobre a cobertura,
+de 776,8 kN, equivale a 2,35 vezes o arrasto de bloqueio da silhueta e governa
+todo o dimensionamento do contraventamento longitudinal, dos pilares de canto e
+das respectivas ancoragens. A prescrição é envolvente por construção, e a ordem
+de grandeza é característica dela.
+
+O sexto é o fendilhamento nas ligações. Por ser a resultante quase perpendicular
+às fibras, a taxa sem reforço atinge 0,961. O valor atende ao limite normativo,
+porém excede o limite de projeto de 0,75 adotado para modos frágeis, o que
+determinou a adoção de reforço perpendicular às fibras. Foi o único ponto em que
+o critério de margem adicional alterou efetivamente o detalhe construtivo.
+
+O sétimo é a parcela de cisalhamento na flecha, de 21,2\% do total. Em peças de
+madeira, cuja razão entre os módulos de elasticidade e de cisalhamento é da
+ordem de dezessete, essa parcela não é desprezável, e desprezá-la subestimaria a
+deformação em mais de um quinto.
+
+\section{CONTRIBUIÇÕES}\label{sec:contribuicoes}
+
+A contribuição principal do trabalho não está em nenhum dos resultados
+numéricos, e sim no procedimento que os produziu.
+
+A automação da cadeia de verificação permitiu submeter 1.391 geometrias ao mesmo
+conjunto de quarenta verificações que produz o memorial final. Essa equivalência
+foi verificada: o mecanismo de varredura reproduz, sobre a geometria adotada, as
+taxas do memorial sem divergência na quarta casa decimal. Não se trata de
+avaliar candidatas por modelo simplificado e depois verificar a escolhida pelo
+modelo completo, prática que introduz descontinuidade entre a fase de concepção
+e a de verificação.
+
+A consequência prática é que o projeto sabe onde está no espaço de soluções. A
+\autoref{tab:fronteira-volume} mostra que existem geometrias aprovadas com
+metade do volume de madeira da adotada, e a
+\autoref{ssec:o-que-governa} explica por que a seção mais robusta foi mantida.
+Sem a varredura, a margem existiria do mesmo modo, porém sem que se soubesse da
+sua existência nem da sua dimensão.
+
+A suíte de 558 testes automatizados constitui contribuição de mesma natureza.
+Ela impede que uma alteração em qualquer módulo altere silenciosamente
+resultados de outro, risco real em uma cadeia de verificações mutuamente
+dependentes.
+
+\section{LIMITAÇÕES}\label{sec:limitacoes}
+
+O trabalho apresenta limitações que condicionam a aplicação direta dos seus
+resultados e que se declaram a seguir.
+
+\subsection{Dependência de anexo nacional}\label{ssec:lim-ndp}
+
+Dezenove parâmetros de determinação nacional adotam o valor recomendado pelo
+respectivo Eurocódigo, por inexistir anexo nacional brasileiro, conforme
+registrado no \autoref{qua:ndp}. Entre eles figuram os coeficientes parciais dos
+materiais e os limites de deformação, que incidem diretamente sobre as taxas de
+utilização. Submetida sob um anexo nacional concreto, a estrutura deve ser
+reverificada.
+
+\subsection{Verificações de ancoragem incompletas}\label{ssec:lim-ancoragem}
+
+Três modos de ruptura do concreto previstos na EN 1992-4 \cite{EN1992-4:2018}
+não foram avaliados: o fendilhamento do concreto, o arrancamento lateral e a
+ruptura de borda sob cortante. Os dois primeiros dependem das dimensões
+definitivas do bloco e da sua armadura, que não integram o escopo. Acresce que
+as resistências apresentadas decorrem de formulação normativa, e não de ensaio
+do produto efetivamente especificado.
+
+\subsection{Dados dependentes de confirmação}\label{ssec:lim-dados}
+
+Quatro valores adotados como dados de entrada carecem de confirmação documental.
+A velocidade básica do vento e o fator estatístico não estão amarrados à
+isopleta e ao grupo de classificação do endereço definitivo da obra. As cargas
+de impacto de veículo correspondem a prática europeia, ela própria dependente de
+anexo nacional. Os pesos da telha e das instalações são valores declarados, não
+extraídos de ficha técnica. A resistência do fixador da telha é valor típico de
+catálogo, e governa a verificação mais solicitada da cobertura.
+
+\subsection{Escopo não coberto}\label{ssec:lim-escopo}
+
+A fundação não é dimensionada, por inexistir sondagem; entregam-se os esforços
+por base, conforme a \autoref{tab:cargas-fundacao}. A resistência ao fogo não é
+verificada. Não integram o escopo o projeto de instalações, o detalhamento de
+vedações, o plano de montagem e a análise de custos.
+
+\section{RECOMENDAÇÕES PARA TRABALHOS FUTUROS}\label{sec:recomendacoes}
+
+Decorrem das limitações expostas, e de resultados que o trabalho produziu sem
+esgotar, as seguintes linhas de continuidade.
+
+A primeira é completar as verificações de ancoragem da
+EN 1992-4 \cite{EN1992-4:2018}, em conjunto com o dimensionamento do bloco de
+fundação, uma vez disponível a investigação geotécnica. É a lacuna mais
+imediata, por afetar um elemento já verificado como o mais solicitado do caminho
+de carga.
+
+A segunda é a otimização conjunta da viga e dos sistemas de estabilização. A
+varredura conduzida tratou a seção da viga como variável e os sistemas de
+contraventamento como fixos. Como se demonstrou que estes últimos é que governam
+o projeto, o ótimo do conjunto não coincide necessariamente com o obtido, e uma
+varredura que inclua o número de painéis e os diâmetros das diagonais como
+variáveis produziria resposta mais bem fundamentada.
+
+A terceira é a comparação sistemática com a ABNT NBR 7190-1
+\cite{NBR7190-1:2022}. A norma brasileira, revista em 2022, aproximou-se do
+formato dos Eurocódigos, e uma verificação paralela permitiria quantificar a
+divergência entre os dois conjuntos normativos para esta tipologia, contribuindo
+para a discussão sobre a suficiência do texto brasileiro quanto à madeira
+lamelada colada.
+
+A quarta é a validação experimental ou numérica independente do modelo de apoio
+horizontal, cuja consequência sobre o momento de projeto é de 71,4\%. Ainda que
+a análise de rigidez relativa seja conclusiva, a verificação por modelo de
+elementos finitos ou por medição em protótipo consolidaria o resultado.
+
+A quinta é a análise de custo. A \autoref{tab:fronteira-volume} quantifica o
+volume de madeira de cada solução, porém o custo total depende também das
+ligações, do aço de contraventamento e da montagem, cujos comportamentos com a
+geometria são distintos. A varredura do número de painéis, na
+\autoref{tab:varredura-paineis}, já sugere que a intuição de custo pode
+enganar: o peso de aço mostrou-se praticamente independente do número de
+painéis.

@@ -1,0 +1,297 @@
+% =============================================================================
+% cap05.tex — PRE-DIMENSIONAMENTO
+% =============================================================================
+
+\chapter{PRÉ-DIMENSIONAMENTO}\label{cap:predimensionamento}
+
+\section{MÉTODO ADOTADO}\label{sec:metodo-predim}
+
+O pré-dimensionamento de uma estrutura como a deste trabalho não se resolve por
+uma sequência fechada de fórmulas. As dimensões da viga condicionam o peso
+próprio, que realimenta os esforços; a largura da seção condiciona a largura do
+pilar e o espaço disponível para a ligação de base; e o espaçamento das terças
+condiciona o comprimento efetivo de flambagem lateral da viga. O problema é
+circular, e a via praticável é a varredura: percorre-se um conjunto de
+geometrias candidatas, submete-se cada uma à cadeia completa de verificações e
+observa-se o que governa em cada região do espaço de soluções.
+
+O procedimento adotado difere, num ponto essencial, do que é usual em
+pré-dimensionamento. Em vez de avaliar as candidatas por um modelo simplificado,
+mais rápido porém distinto daquele que produz o memorial, construiu-se um
+mecanismo que executa, para cada ponto da grade, exatamente o mesmo pipeline de
+verificação empregado no dimensionamento final. Cada geometria é avaliada pelas
+quarenta verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
+modelo estrutural, o mesmo gerador de combinações e os mesmos integradores.
+
+Essa equivalência é verificável e foi verificada. Executando o mecanismo de
+varredura sobre a geometria efetivamente adotada, as dez taxas de utilização que
+o memorial reporta são reproduzidas sem divergência na quarta casa decimal. A
+varredura e o dimensionamento são, portanto, o mesmo cálculo, aplicado a
+geometrias diferentes.
+
+\section{VARREDURA GLOBAL DA VIGA}\label{sec:varredura-global}
+
+\subsection{Grade percorrida}\label{ssec:grade}
+
+Percorreram-se as três variáveis que definem a conformação da viga de
+duplo-bisel: a inclinação do extradorso, entre 6,0$^{\circ}$ e 16,0$^{\circ}$ em
+incrementos de 0,5$^{\circ}$; a altura no apoio, entre 0,40 m e 1,20 m em
+incrementos de 0,05 m; e a largura da seção, entre 0,20 m e 0,36 m em
+incrementos de 0,02 m. A largura dos pilares acompanha a da viga em cada ponto,
+por decisão de projeto quanto ao alinhamento do apoio, de modo que a varredura
+não avalia estruturas que o projeto não construiria.
+
+Resultaram 1.391 geometrias, das quais 1.104 foram aprovadas em todas as
+verificações e 287 reprovadas. As reprovações concentram-se nas alturas no apoio
+inferiores a 0,60 m e decorrem, conforme a região, da estabilidade global, do
+cisalhamento, das tensões na borda inclinada, da flecha e da flexão.
+
+\subsection{Resultado}\label{ssec:resultado-varredura}
+
+A \autoref{fig:varredura-global} apresenta o espaço percorrido, com o volume de
+madeira lamelada colada das vigas principais no eixo das abscissas e, no eixo
+das ordenadas, a maior taxa de utilização entre as verificações que dependem da
+seção da viga.
+
+\figura
+{Espaço de geometrias percorrido na varredura}
+{0.98}
+{fig/varredura_global.pdf}
+{Elaborado pelo autor (2026)}
+{varredura-global}
+{Cada ponto corresponde a uma execução completa do pipeline de verificação. A
+taxa representada é a maior entre cisalhamento, flexo-compressão, cumeeira,
+borda inclinada, flambagem lateral, apoio e estado-limite de serviço. O volume
+refere-se às dezoito vigas principais da edificação.}
+{}
+
+A figura torna visível o resultado central desta etapa: em toda a região
+aprovada, a viga opera com folga considerável. A geometria adotada situa-se em
+um patamar da curva no qual o acréscimo de madeira já quase não reduz a taxa de
+utilização, porque esta deixou de ser governada pela seção.
+
+A \autoref{tab:fronteira-volume} quantifica esse patamar, indicando a geometria
+de menor volume compatível com diferentes políticas de margem na viga.
+
+\tabela{Geometria de menor volume para cada política de margem na viga}{\footnotesize
+\begin{tabular}{ccccrccc}
+\toprule
+    \textbf{Margem} & \textbf{$\alpha$} & \textbf{$h_0$} & \textbf{$b$} &
+    \textbf{Volume} & \textbf{Verificação} & \textbf{Contrav.} & \textbf{Pilar} \\
+    \textbf{na viga} & \textbf{(graus)} & \textbf{(m)} & \textbf{(m)} &
+    \textbf{(m\textsuperscript{3})} & \textbf{governante} & \textbf{vertical} & \textbf{de canto} \\
+\midrule
+    $\eta \leq 1{,}00$ & 8,5 & 0,50 & 0,24 & 109,9 & Borda inclinada & 0,767 & 0,859 \\
+    $\eta \leq 0{,}90$ & 8,0 & 0,55 & 0,24 & 110,4 & Borda inclinada & 0,765 & 0,845 \\
+    $\eta \leq 0{,}75$ & 7,5 & 0,65 & 0,24 & 115,2 & Cisalhamento    & 0,898 & 0,831 \\
+    $\eta \leq 0{,}60$ & 6,5 & 0,75 & 0,24 & 116,1 & Cisalhamento    & 0,893 & 0,806 \\
+    $\eta \leq 0{,}50$ & 6,0 & 0,80 & 0,28 & 136,0 & Cisalhamento    & 0,899 & 0,526 \\
+    $\eta \leq 0{,}40$ & 8,0 & 1,05 & 0,28 & 179,8 & Cisalhamento    & 0,773 & 0,560 \\
+\midrule
+    \textbf{Adotada} & \textbf{10,0} & \textbf{1,00} & \textbf{0,32} &
+    \textbf{220,8} & \textbf{Cisalhamento} & \textbf{0,788} & \textbf{0,428} \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{fronteira-volume}{Cada linha é a geometria de menor volume, entre as 1.104 aprovadas, cuja maior
+taxa de utilização na viga não excede a margem indicada. As duas últimas colunas
+registram as taxas do contraventamento vertical e do pilar de canto na mesma
+geometria, obtidas pela EN 1995-1-1 \cite{EN1995-1-1:2004} e pela
+EN 1992-4 \cite{EN1992-4:2018}.}{}
+
+\subsection{O que governa o dimensionamento}\label{ssec:o-que-governa}
+
+A leitura conjunta da figura e da tabela conduz a três constatações.
+
+A primeira é que nenhuma verificação da viga governa o projeto. Na geometria
+adotada, a maior taxa entre as verificações da seção é o cisalhamento, com
+0,3814, seguido das tensões na zona de cumeeira, com 0,3526, e das tensões na
+borda inclinada, com 0,3140. A flexo-compressão da viga fica em 0,1672 e a
+flambagem lateral em 0,1039. O que governa o conjunto é o contraventamento da
+cobertura, com 0,7902, cuja solicitação responde à área exposta ao vento e é
+praticamente insensível à altura no apoio e à largura da seção.
+
+A segunda é que a madeira adicional da geometria adotada não compra margem na
+viga, e sim nos sistemas. As duas últimas colunas da
+\autoref{tab:fronteira-volume} mostram que as geometrias de menor volume
+transferem solicitação para o contraventamento vertical, que sobe a cerca de
+0,90, e para o pilar de canto, que sobe a cerca de 0,83. Na geometria adotada,
+esses valores são 0,788 e 0,428. Reduzir a seção da viga eleva a altura relativa
+do centro de pressões e concentra maior parcela da força lateral nos elementos
+que a conduzem à fundação.
+
+A terceira é que a relação entre volume e segurança é fortemente não linear. Na
+faixa acima de aproximadamente 180 m\textsuperscript{3}, acrescentar madeira
+praticamente não reduz a taxa de utilização, porque o critério que governa já
+não é a seção. Abaixo de aproximadamente 130 m\textsuperscript{3}, pequenas
+reduções de seção elevam abruptamente as taxas e a fronteira de reprovação é
+alcançada com rapidez.
+
+\section{GEOMETRIA ADOTADA}\label{sec:geometria-adotada}
+
+Adotou-se $\alpha = 10{,}0^{\circ}$, $h_0 = 1{,}00$ m e $b = 0{,}32$ m, do que resulta
+altura na cumeeira de 2,785 m e volume de 220,8 m\textsuperscript{3} de madeira
+lamelada colada nas vigas principais.
+
+A varredura mostra que existem geometrias aprovadas com metade desse volume. A
+adoção de uma seção mais robusta que o mínimo normativo apoia-se em três
+razões, que a própria varredura permite sustentar.
+
+A primeira é a margem nos sistemas laterais, já exposta. A geometria adotada
+mantém o contraventamento vertical em 0,788 e o pilar de canto em 0,428, ao
+passo que as geometrias de menor volume os levam a 0,90 e 0,83. Como esses
+elementos concentram o caminho das forças horizontais até a fundação, e como o
+seu dimensionamento depende de uma ação de vento determinada por prescrição
+envolvente, preservar margem neles é decisão deliberada.
+
+A segunda é a largura da seção. A largura de 0,32 m acompanha a do pilar, o que
+elimina excentricidade na transferência da reação vertical, e oferece à ligação
+de base a espessura necessária para acomodar o grupo de pinos com as distâncias
+mínimas exigidas. As geometrias de menor volume convergem para 0,24 m de
+largura, valor que estreita o encaixe da chapa e agrava a sensibilidade ao
+fendilhamento, modo de ruptura frágil.
+
+A terceira é a altura no apoio. O valor de 1,00 m fornece altura suficiente para
+a ligação de base e mantém a altura na cumeeira em 2,785 m, compatível com o
+transporte rodoviário da peça inteira. As geometrias de menor volume operam com
+alturas no apoio entre 0,50 m e 0,65 m, faixa em que a ligação passa a competir
+por espaço com a própria seção.
+
+Registre-se, por fim, que a inclinação de 10,0$^{\circ}$ não é a de menor
+volume. Inclinações menores reduzem a altura na cumeeira e o volume, mas
+aproximam a peça de uma viga de altura constante e elevam as tensões na borda
+inclinada, que passa a governar nas geometrias mais econômicas da
+\autoref{tab:fronteira-volume}.
+
+\section{PILARES}\label{sec:predim-pilares}
+
+Os pilares laterais e o central receberam seção única de
+0,32 $\times$ 0,27 m. A largura acompanha a da viga, pelo motivo já exposto de
+alinhamento do apoio. A profundidade no plano do pórtico é governada pelo pilar
+central, que recebe a reação de duas vigas e portanto o dobro do esforço normal
+dos laterais: sua taxa de utilização é 0,4151, contra 0,2075 do lateral.
+
+O pilar de canto constitui exceção e recebeu seção própria de
+0,32 $\times$ 0,32 m. Ele acumula três solicitações que não coincidem nos
+demais: a reação de gravidade da viga, o esforço descendente transmitido pelo
+painel de contraventamento longitudinal e o esforço descendente transmitido pelo
+frontão transversal. A justificativa quantitativa desse engrossamento aparece na
+\autoref{sec:predim-contraventamento}, por depender do número de painéis
+adotado.
+
+\section{DIAGONAIS DE CONTRAVENTAMENTO}\label{sec:predim-contraventamento}
+
+\subsection{Contraventamento da cobertura}\label{ssec:predim-cv-cobertura}
+
+As diagonais do contraventamento horizontal da cobertura cumprem duas funções
+simultâneas: resistem à força de estabilização prescrita no item 9.2.5 da
+EN 1995-1-1 \cite{EN1995-1-1:2004} e validam as terças como pontos de contenção
+lateral da viga. Essa segunda função é a mais restritiva, porque dela depende o
+comprimento efetivo de flambagem lateral: se o sistema de cobertura não for
+capaz de estabilizar, o comprimento efetivo salta do espaçamento entre terças,
+de 2,53 m, para o comprimento total de 46,0 m.
+
+A varredura do diâmetro da diagonal, mantido o arranjo de duas baías rígidas nas
+extremidades, consta da \autoref{tab:varredura-diagonal-cobertura}.
+
+\tabela{Varredura do diâmetro da diagonal do contraventamento da cobertura}{\footnotesize
+\begin{tabular}{cccl}
+\toprule
+    \textbf{Diâmetro} & \textbf{$\eta$ da diagonal} & \textbf{Estabiliza} & \textbf{Situação} \\
+    \textbf{(mm)} & & \textbf{a cobertura} & \\
+\midrule
+    22 & 1,280 & Não  & Reprova \\
+    25 & 0,991 & Sim  & Aprova sem margem \\
+    28 & 0,790 & Sim  & \textbf{Adotado} \\
+    30 & 0,688 & Sim  & Sobredimensionado \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{varredura-diagonal-cobertura}{Verificação conforme o item 9.2.5 da EN 1995-1-1 \cite{EN1995-1-1:2004}. A
+coluna de estabilização indica se as terças permanecem válidas como contenção
+lateral da viga. Barras redondas em aço S235.}{}
+
+O diâmetro de 25 mm atende à verificação, porém sem margem, e foi descartado por
+isso. Adotou-se 28 mm.
+
+Um aspecto contraintuitivo orientou o arranjo. O coeficiente $k_{\ell}$ da
+\autoref{eq:k-ell} cresce quando o vão entre baías rígidas diminui, de modo que
+multiplicar as baías contraventadas pode aumentar a força por baía em vez de
+reduzi-la. Manteve-se, por isso, o arranjo de apenas duas baías rígidas, situadas
+nas extremidades.
+
+\subsection{Contraventamento vertical}\label{ssec:predim-cv-vertical}
+
+Os painéis de contraventamento vertical conduzem a força longitudinal de vento
+do nível da cobertura até a fundação. O número de painéis é a variável de
+projeto, e sua escolha não é um problema de resistência da diagonal apenas: cada
+painel adicional reduz o esforço descendente no montante, e com ele a solicitação
+do pilar de canto e da respectiva ancoragem, mas ocupa uma baía que, em um
+estacionamento aberto, deixaria de permitir a circulação de veículos.
+
+O pipeline foi executado para números de painéis entre 2 e 16, com a diagonal
+dimensionada automaticamente para taxa de utilização não superior a 0,90. Os
+resultados constam da \autoref{tab:varredura-paineis}.
+
+\tabela{Varredura do número de painéis de contraventamento vertical}{\scriptsize
+\begin{tabular}{ccrrcrccr}
+\toprule
+    \textbf{$n$} & \textbf{$\varnothing$} & \textbf{$V$ por} & \textbf{Esforço} & \textbf{$\eta$ do} & \textbf{$N$ na} & \textbf{$\eta$ da} & \textbf{$\eta$} & \textbf{Aço} \\
+    & \textbf{(mm)} & \textbf{painel (kN)} & \textbf{desc. (kN)} & \textbf{canto} & \textbf{anc. (kN)} & \textbf{anc.} & \textbf{máx.} & \textbf{(kg)} \\
+\midrule
+     2 & 64 & 423,7 & 580,4 & 0,936 & 664,3 & 1,260 & 1,3840 &  915 \\
+     4 & 45 & 211,9 & 322,5 & 0,598 & 406,4 & 0,771 & 0,8930 &  905 \\
+     6 & 39 & 141,2 & 236,6 & 0,485 & 320,5 & 0,608 & 0,7926 & 1.019 \\
+     8 & 33 & 105,9 & 193,6 & 0,428 & 277,5 & 0,526 & 0,8303 &  973 \\
+    10 & 30 &  84,7 & 167,8 & 0,394 & 251,7 & 0,477 & 0,8037 & 1.005 \\
+    16 & 24 &  53,0 & 129,1 & 0,344 & 213,0 & 0,404 & 0,7902 & 1.029 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{varredura-paineis}{Diagonal dimensionada automaticamente para $\eta \leq 0{,}90$, aço S235.
+Verificação do montante conforme os itens 6.2.3 e 6.3.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004} e da ancoragem conforme a
+EN 1992-4 \cite{EN1992-4:2018}. O arranjo com dois painéis reprova.}{}
+
+A varredura revela um resultado que inverte a intuição corrente: o peso total de
+aço é praticamente independente do número de painéis, permanecendo entre 905 e
+1.029 kg em toda a faixa examinada. Painéis mais numerosos com barras mais finas
+custam o mesmo aço que poucos painéis com barras grossas. O que o aumento de $n$
+efetivamente compra é margem no caminho de carga, isto é, no esforço descendente
+sobre o montante, na ancoragem e no bloco de fundação. O que custa são baías de
+circulação.
+
+Com 8 baías por alinhamento e duas fachadas longitudinais disponíveis, há
+16 baías candidatas. Adotou-se $n = 8$, distribuídos pelas duas fachadas, o que
+deixa 8 baías livres para circulação. Em relação ao arranjo com quatro painéis,
+o esforço descendente sobre o pilar de canto cai de 322,5 kN para 193,6 kN, e a
+taxa de utilização da ancoragem, de 0,771 para 0,526, ao mesmo peso de aço.
+Acima de aproximadamente seis painéis, a taxa de utilização máxima do conjunto
+deixa de ser governada por este sistema e passa ao contraventamento da
+cobertura.
+
+%% TODO: verificar — a varredura registra diâmetro de 33 mm para n = 8, ao passo
+%% que a execução do pipeline com a diagonal em dimensionamento automático
+%% resulta em 36 mm. A diferença não altera a decisão sobre n, mas o valor
+%% adotado em projeto deve ser o da execução consolidada.
+
+\section{SÍNTESE}\label{sec:geometria-resultante}
+
+O \autoref{qua:criterios-predim} sintetiza as dimensões estabelecidas nesta
+etapa e o critério que governou cada uma. As verificações que as confirmam
+constam do \autoref{cap:dimensionamento}.
+
+\qquadro
+{Dimensões adotadas e critério governante de cada uma}
+{\footnotesize
+\begin{tabular}{|l|l|p{5.8cm}|}\hline
+    \textbf{Elemento} & \textbf{Dimensão} & \textbf{Critério governante} \\\hline
+    Inclinação do extradorso & 10,0$^{\circ}$ & Tensões na borda inclinada e altura de transporte \\\hline
+    Altura da viga no apoio & 1,00 m & Espaço para a ligação de base e altura na cumeeira \\\hline
+    Largura da viga & 0,32 m & Alinhamento com o pilar e encaixe da chapa de ligação \\\hline
+    Pilares lateral e central & 0,32 $\times$ 0,27 m & Esforço normal do pilar central \\\hline
+    Pilar de canto & 0,32 $\times$ 0,32 m & Acúmulo de esforço descendente dos dois sistemas de contraventamento \\\hline
+    Diagonal da cobertura & $\varnothing$ 28 mm & Estabilização das terças como contenção lateral \\\hline
+    Painéis de contraventamento vertical & 8 & Margem no caminho de carga e baías livres para circulação \\\hline
+\end{tabular}}
+{Elaborado pelo autor (2026)}
+{criterios-predim}
+{Nenhuma das dimensões da viga é governada por verificação de resistência da
+própria viga, conforme demonstrado na \autoref{ssec:o-que-governa}. As seções
+das terças e o respectivo espaçamento foram fixados como dado de entrada e
+verificados no \autoref{cap:dimensionamento}.}
+{}
