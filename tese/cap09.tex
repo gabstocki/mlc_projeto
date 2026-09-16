@@ -138,8 +138,7 @@ A fundação não é dimensionada, por inexistir sondagem; entregam-se os esfor�
 por base, conforme a \autoref{tab:cargas-fundacao}. A resistência ao fogo é
 verificada, porém o tempo requerido é declaração de projeto e não prescrição do
 Eurocódigo, conforme a \autoref{sec:delimitacao}. Não integram o escopo o projeto
-de instalações, o detalhamento de vedações, o plano de montagem e a análise de
-custos.
+de instalações, o detalhamento de vedações e o plano de montagem.
 
 \section{RECOMENDAÇÕES PARA TRABALHOS FUTUROS}\label{sec:recomendacoes}
 
@@ -171,10 +170,13 @@ horizontal, cuja consequência sobre o momento de projeto é de 71,4\%. Ainda qu
 a análise de rigidez relativa seja conclusiva, a verificação por modelo de
 elementos finitos ou por medição em protótipo consolidaria o resultado.
 
-A quinta é a análise de custo. A \autoref{tab:fronteira-volume} quantifica o
-volume de madeira de cada solução, porém o custo total depende também das
-ligações, do aço de contraventamento e da montagem, cujos comportamentos com a
-geometria são distintos. A varredura do número de painéis, na
-\autoref{tab:varredura-paineis}, já sugere que a intuição de custo pode
-enganar: o peso de aço mostrou-se praticamente independente do número de
-painéis.
+A quinta é a extensão da varredura ao custo. A
+\autoref{sec:estimativa-custo} estima o custo da estrutura, porém de forma
+estática: precifica a geometria adotada, e não o espaço de soluções. Levar a
+composição de custo para dentro do mecanismo de varredura converteria a
+fronteira de volume da \autoref{tab:fronteira-volume} em fronteira de custo. A
+dificuldade está em que as parcelas respondem à geometria de modos distintos,
+como a \autoref{tab:varredura-paineis} já indica ao mostrar que o peso de aço é
+praticamente independente do número de painéis, e em que a amplitude do preço
+unitário, exposta na \autoref{ssec:custo-sensibilidade}, exigiria apresentar o
+resultado como faixa, e não como valor.

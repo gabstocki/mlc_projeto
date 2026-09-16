@@ -345,3 +345,159 @@ o momento, a tensão admissível do solo, as dimensões da sapata em planta, o
 deslizamento, o tombamento, o recalque e a armadura. A única exigência
 geométrica que este trabalho impõe ao bloco é a decorrente da ancoragem de
 canto, exposta na \autoref{ssec:ancoragem-canto}.
+
+\section{ESTIMATIVA PRELIMINAR DE CUSTO}\label{sec:estimativa-custo}
+
+As quantidades apuradas ao longo dos capítulos anteriores permitem compor uma
+estimativa de custo da estrutura. Trata-se de estimativa de anteprojeto,
+destinada a situar a ordem de grandeza do investimento e a comparar
+alternativas, e não de orçamento executivo: as parcelas que não decorrem
+diretamente das quantidades calculadas são percentuais declarados, e os preços
+unitários são valores de mercado que exigem cotação formal de fornecedor antes
+de qualquer uso contratual.
+
+\subsection{Quantidades}\label{ssec:custo-quantidades}
+
+O volume de madeira lamelada colada distribui-se pelos três tipos de elemento
+conforme a \autoref{tab:custo-quantidades}. O volume das vigas é o apurado na
+\autoref{sec:geometria-adotada}, por integração da seção ao longo do vão. O dos
+pilares decorre das seções e das quantidades da
+\autoref{tab:geometria-edificacao} e da \autoref{tab:arrancamento}, com os
+7,0 m de altura. O das terças decorre da seção de 0,20 por 0,58 m e do
+espaçamento de 2,53 m aplicados à área de 1.863 m\textsuperscript{2} em planta,
+relação que reproduz a parcela de 0,1889 kN/m\textsuperscript{2} registrada na
+\autoref{tab:peso-proprio}.
+
+\tabela{Quantidades de madeira lamelada colada e de aço de contraventamento}{\footnotesize
+\begin{tabular}{llrr}
+\toprule
+    \textbf{Material} & \textbf{Elemento} & \textbf{Quantidade} & \textbf{Unidade} \\
+\midrule
+    MLC GL24h & Vigas principais (18)      & 220,8 & m\textsuperscript{3} \\
+              & Terças                     &  85,4 & m\textsuperscript{3} \\
+              & Pilares (27)               &  16,8 & m\textsuperscript{3} \\
+\addlinespace
+    \textbf{Subtotal MLC} & & \textbf{323,0} & \textbf{m\textsuperscript{3}} \\
+\midrule
+    Aço S235 & Contraventamento vertical, $\varnothing$ 36 mm    & 1.158,1 & kg \\
+             & Contraventamento da cobertura, $\varnothing$ 28 mm &   485,8 & kg \\
+             & Contraventamento transversal, $\varnothing$ 27 mm  &   162,9 & kg \\
+\addlinespace
+    \textbf{Subtotal aço} & & \textbf{1.806,8} & \textbf{kg} \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{custo-quantidades}{}{}
+
+As massas de aço não são estimadas por percentual: decorrem do comprimento
+total de barra de cada sistema, obtido da geometria dos painéis, multiplicado
+pela área da seção circular e pela massa específica de 7.850 kg/m\textsuperscript{3}.
+A massa do contraventamento da cobertura, de 485,8 kg, é a mesma registrada na
+\autoref{sec:detalhe-contraventamento}. A do contraventamento vertical
+corresponde ao diâmetro de 36 mm da execução consolidada, e não ao de 33 mm
+registrado na \autoref{tab:varredura-paineis}, cuja divergência já consta
+daquela seção.
+
+\subsection{Preços unitários adotados}\label{ssec:custo-unitarios}
+
+O mercado brasileiro pratica dois patamares distintos para a madeira lamelada
+colada. O primeiro, entre R\$ 2.000 e R\$ 2.800 por metro cúbico, corresponde à
+peça trabalhada em oficina, sem montagem, e representa o custo de produção
+interno de um fabricante. O segundo, entre R\$ 4.000 e R\$ 6.400 por metro
+cúbico, corresponde ao preço de venda comercial do produto estrutural acabado,
+já incluída a margem do fabricante.
+
+Adotou-se o segundo patamar, com valor central de R\$ 5.200 por metro cúbico.
+A razão é que a estimativa se coloca na posição do projetista ou da construtora
+que adquire a estrutura, e não na de quem a fabrica: o custo relevante é o de
+aquisição, não o de produção. O intervalo completo é examinado adiante, na
+\autoref{ssec:custo-sensibilidade}.
+
+Duas ressalvas incidem sobre esse valor. A primeira é que os preços de mercado
+reunidos referem-se a setembro de 2026 e variam com a região, o fornecedor e o
+volume contratado, de modo que a estimativa envelhece. A segunda é de natureza
+técnica: a classe GL24h especificada no \autoref{cap:definicao-problema} decorre
+da EN 14080 \cite{EN14080:2013}, ao passo que os preços praticados no Brasil
+correspondem a madeira lamelada colada de pinus ou de eucalipto, cuja
+certificação segue outra referência. A equivalência entre ambas é hipótese de
+orçamento assumida aqui, e não resultado do dimensionamento.
+
+%% TODO: referência — inserir em referencias.bib a fonte dos preços de mercado
+%% da MLC (gerador de preços de construção civil ou tabela de fabricante
+%% nacional), com data de coleta, e substituir a menção genérica por \cite{}.
+
+%% TODO: dado ausente — o preço unitário do aço S235 em barra redonda,
+%% fabricada e montada, de R$ 18,00/kg, é valor declarado de ordem de grandeza e
+%% não decorre de cotação. Confirmar com fornecedor antes da entrega.
+
+%% TODO: verificar — confirmar junto a fabricante nacional de MLC se a classe
+%% GL24h da EN 14080 é fornecida no Brasil, e a que preço, ou identificar a
+%% classe equivalente na ABNT NBR 7190-1 e o seu preço de mercado.
+
+\subsection{Composição do custo}\label{ssec:custo-composicao}
+
+A \autoref{tab:custo-composicao} compõe o custo em cinco parcelas. As duas
+primeiras decorrem das quantidades apuradas e dos preços unitários. A terceira,
+relativa às chapas, pinos e chumbadores das ligações, adota quinze por cento do
+custo da madeira, percentual de ordem usual em estruturas de madeira lamelada
+colada com ligações por chapa metálica embutida, e não foi apurada peça a peça.
+A quarta cobre a mão de obra de montagem, que não está incluída no preço de
+venda do produto acabado, e adota doze por cento do subtotal de materiais. A
+quinta corresponde aos \criarsigla*{BDI}{benefícios e despesas indiretas},
+adotados em vinte e cinco por cento, dentro da faixa usual de orçamento de
+edificações.
+
+\tabela{Composição do custo estimado da estrutura}{\footnotesize
+\begin{tabular}{llr}
+\toprule
+    \textbf{Parcela} & \textbf{Critério} & \textbf{Valor (R\$)} \\
+\midrule
+    Material MLC        & 323,0 m\textsuperscript{3} $\times$ R\$ 5.200/m\textsuperscript{3} & 1.679.600 \\
+    Aço de contraventamento & 1.806,8 kg $\times$ R\$ 18,00/kg                                &    32.522 \\
+    Ligações e ferragens    & 15\% do material MLC                                            &   251.940 \\
+    Montagem                & 12\% do subtotal de materiais                                   &   235.687 \\
+\addlinespace
+    \textbf{Subtotal direto} & & \textbf{2.199.750} \\
+\midrule
+    BDI                     & 25\% do subtotal direto                                         &   549.937 \\
+\addlinespace
+    \textbf{Total estimado} & & \textbf{2.749.687} \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{custo-composicao}{}{}
+
+O total corresponde a R\$ 1.476 por metro quadrado de área coberta, tomada a
+projeção em planta de 1.863 m\textsuperscript{2}. A madeira responde por
+sessenta e um por cento do total, e o aço de contraventamento, apesar de
+governar o dimensionamento com a taxa de 0,7902 da
+\autoref{tab:verif-contraventamento}, responde por pouco mais de um por cento.
+
+%% TODO: verificar — os percentuais de 15\% para ligações, 12\% para montagem e
+%% 25\% para BDI são valores declarados de prática usual e não decorrem de
+%% composição de custo unitário. Confirmar com referência de orçamento (CUB,
+%% CBIC ou tabela de composições) e registrar a fonte em referencias.bib.
+
+\subsection{Sensibilidade ao preço unitário}\label{ssec:custo-sensibilidade}
+
+A incerteza dominante não está nas quantidades, que decorrem do dimensionamento,
+e sim no preço unitário da madeira. A \autoref{tab:custo-sensibilidade} percorre
+o intervalo de mercado, mantidas as quantidades e os percentuais.
+
+\tabela{Custo total estimado em função do preço unitário da MLC}{\footnotesize
+\begin{tabular}{lrrr}
+\toprule
+    \textbf{Cenário} & \textbf{R\$/m\textsuperscript{3}} & \textbf{Total (R\$)} & \textbf{R\$/m\textsuperscript{2}} \\
+\midrule
+    Limite inferior de mercado & 4.000 & 2.125.651 & 1.141 \\
+    \textbf{Adotado}           & \textbf{5.200} & \textbf{2.749.687} & \textbf{1.476} \\
+    Limite superior de mercado & 6.400 & 3.373.723 & 1.811 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{custo-sensibilidade}{}{}
+
+A amplitude é de cinquenta e nove por cento entre os extremos, o que dimensiona
+a precisão desta estimativa: ela distingue ordens de grandeza e ordena
+alternativas, mas não substitui cotação. Uma consequência de projeto decorre
+dessa faixa. A varredura da \autoref{sec:varredura-global} identificou
+geometrias aprovadas com cerca de metade do volume de madeira da adotada, o que
+corresponde, aos preços aqui empregados, a uma diferença da ordem de meio
+milhão de reais no material. As razões que sustentaram a geometria mais robusta,
+expostas na \autoref{ssec:o-que-governa}, são de margem nos sistemas de
+estabilização e de construtibilidade, e é contra essa ordem de grandeza que
+devem ser pesadas.
