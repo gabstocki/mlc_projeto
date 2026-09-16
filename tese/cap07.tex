@@ -33,7 +33,9 @@ ligações e da ancoragem constam do \autoref{cap:detalhamento}.
 \section{VIGA PRINCIPAL}\label{sec:verif-viga}
 
 A \autoref{tab:verif-viga} reúne as verificações de estado-limite último da viga
-de duplo-bisel.
+de duplo-bisel, segundo as cláusulas da EN 1995-1-1 \cite{EN1995-1-1:2004} e com
+os esforços de cálculo da \autoref{tab:esforcos-governantes}. O material é GL24h
+em classe de serviço 3, com $k_{mod} = 0{,}65$ para ações de duração média.
 
 \tabela{Verificações de estado-limite último da viga principal}{\footnotesize
 \begin{tabular}{llcc}
@@ -47,9 +49,7 @@ de duplo-bisel.
     Flexo-compressão                & EC5 6.3.2 e 6.3.3  & 0,1672 & Atende \\
     Flambagem lateral por torção    & EC5 6.3.3          & 0,1039 & Atende \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{verif-viga}{Cláusulas da EN 1995-1-1 \cite{EN1995-1-1:2004}. Esforços de cálculo conforme a
-\autoref{tab:esforcos-governantes}. Material GL24h em classe de serviço 3, com
-$k_{mod} = 0{,}65$ para ações de duração média.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-viga}{}{}
 
 O cisalhamento é a verificação mais solicitada da viga, com $\eta = 0{,}3814$.
 Sua relevância decorre da redução da largura efetiva da seção pelo coeficiente
@@ -75,7 +75,9 @@ edificação, e esta seria a verificação governante em vez da menos solicitada
 \section{PILARES}\label{sec:verif-pilares}
 
 As verificações dos três tipos de pilar, em cada situação de carregamento
-pertinente, constam da \autoref{tab:verif-pilares}.
+pertinente, constam da \autoref{tab:verif-pilares}, segundo as cláusulas da
+EN 1995-1-1 \cite{EN1995-1-1:2004}. A seção é de 0,32 $\times$ 0,27 m nos pilares
+lateral e central, e de 0,32 $\times$ 0,32 m no de canto.
 
 \tabela{Verificações de estado-limite último dos pilares}{\footnotesize
 \begin{tabular}{llcc}
@@ -88,9 +90,7 @@ pertinente, constam da \autoref{tab:verif-pilares}.
     Lateral, vento paralelo à cumeeira       & EC5 6.3.2         & 0,2433 & Atende \\
     Lateral, flexo-compressão                & EC5 6.3.2         & 0,2075 & Atende \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{verif-pilares}{Cláusulas da EN 1995-1-1 \cite{EN1995-1-1:2004}. Seção de
-0,32 $\times$ 0,27 m nos pilares lateral e central, e de 0,32 $\times$ 0,32 m no
-de canto.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-pilares}{}{}
 
 O pilar central recebe esforço normal de cálculo de 199,2 kN, correspondente à
 soma das reações de duas vigas, e opera com coeficiente de instabilidade
@@ -108,7 +108,11 @@ tratada no \autoref{cap:detalhamento}.
 \section{TERÇAS E COBERTURA}\label{sec:verif-tercas}
 
 A \autoref{tab:verif-tercas} reúne as verificações das terças e dos elementos de
-cobertura por elas suportados.
+cobertura por elas suportados. As terças são de 0,20 $\times$ 0,58 m em GL24h,
+espaçadas de 2,53 m. A verificação da fixação segue a
+ABNT NBR 6123 \cite{NBR6123:2023}, com coeficiente de pressão local de
+$\pm 2{,}0$; as demais, a EN 1995-1-1 \cite{EN1995-1-1:2004} e a
+EN 1991-1-1 \cite{EN1991-1-1:2002}.
 
 \tabela{Verificações de estado-limite último das terças e da cobertura}{\footnotesize
 \begin{tabular}{llcc}
@@ -120,10 +124,7 @@ cobertura por elas suportados.
     Terça à flexão                 & EC5 6.1.6 e 6.1.7  & 0,0979 & Atende \\
     Terça sob carga concentrada    & EN 1991-1-1 6.3.4.2 & 0,0546 & Atende \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{verif-tercas}{Terças de 0,20 $\times$ 0,58 m em GL24h, espaçadas de 2,53 m. A verificação da
-fixação segue a ABNT NBR 6123 \cite{NBR6123:2023}, com coeficiente de pressão
-local de $\pm 2{,}0$; as demais, a EN 1995-1-1 \cite{EN1995-1-1:2004} e a
-EN 1991-1-1 \cite{EN1991-1-1:2002}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-tercas}{}{}
 
 A terça acumula duas funções, e a segunda é a mais exigente. Além de resistir à
 flexão devida ao carregamento da cobertura, com taxa de apenas 0,0979, ela
@@ -147,7 +148,11 @@ que a taxa não exceda a unidade é de 0,29 m.
 \section{CONTRAVENTAMENTO E ESTABILIDADE GLOBAL}\label{sec:verif-contraventamento}
 
 Os sistemas que estabilizam a edificação e conduzem as forças horizontais à
-fundação são verificados na \autoref{tab:verif-contraventamento}.
+fundação são verificados na \autoref{tab:verif-contraventamento}, segundo as
+cláusulas da EN 1995-1-1 \cite{EN1995-1-1:2004}, da
+EN 1993-1-1 \cite{EN1993-1-1:2005} e da EN 1993-1-8 \cite{EN1993-1-8:2005}. As
+diagonais são em aço S235, e as suas ligações de extremidade são detalhadas na
+\autoref{sec:detalhe-contraventamento}.
 
 \tabela{Verificações dos sistemas de contraventamento e da estabilidade global}{\footnotesize
 \begin{tabular}{llcc}
@@ -162,10 +167,7 @@ fundação são verificados na \autoref{tab:verif-contraventamento}.
     Estabilidade global             & EN 1993-1-1 5.2.1   & 0,4790 & Atende \\
     Corda do diafragma no beiral    & EC5 6.2.3 e 6.3.2   & 0,0656 & Atende \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{verif-contraventamento}{Cláusulas da EN 1995-1-1 \cite{EN1995-1-1:2004}, da
-EN 1993-1-1 \cite{EN1993-1-1:2005} e da EN 1993-1-8 \cite{EN1993-1-8:2005}.
-Diagonais em aço S235; as ligações de extremidade das diagonais são detalhadas
-no \autoref{sec:detalhe-contraventamento}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-contraventamento}{}{}
 
 O contraventamento da cobertura, com $\eta = 0{,}7902$, é a verificação que
 governa todo o projeto. Sua diagonal de 28 mm recebe esforço de 114,3 kN e
@@ -184,7 +186,7 @@ As ligações de extremidade das diagonais figuram entre as mais solicitadas do
 conjunto, com 0,7713 na diagonal vertical e 0,7633 na transversal. Elas são
 dimensionadas por capacidade, isto é, para a resistência da própria barra e não
 para o esforço solicitante, de modo que a ruptura, se ocorrer, se dê na barra e
-não no seu olhal. O detalhamento consta do \autoref{sec:detalhe-contraventamento}.
+não no seu olhal. O detalhamento consta da \autoref{sec:detalhe-contraventamento}.
 
 A estabilidade global apresenta $\eta = 0{,}4790$, valor que traduz a folga do
 fator $\alpha_{cr}$ discutido na \autoref{sec:ordem-analise} em relação ao
@@ -224,7 +226,10 @@ projeto, e não prescrição do Eurocódigo.
 
 A verificação de deformação considera a fluência por meio de $k_{def} = 2{,}00$,
 correspondente à classe de serviço 3. A \autoref{tab:verif-els} apresenta os
-resultados.
+resultados, obtidos conforme o item 2.3.2.2 e a tabela 7.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, com combinações da
+EN 1990 \cite{EN1990:2002}. Os limites são parâmetros de determinação nacional,
+registrados na \autoref{tab:ndp}.
 
 \tabela{Verificações de estado-limite de serviço}{\footnotesize
 \begin{tabular}{lrrcc}
@@ -235,9 +240,7 @@ resultados.
     Flecha instantânea          &  6,56 mm & 67,5 mm ($L/300$) & 0,0972 & Atende \\
     Abertura entre apoios       &  2,56 mm & 40,5 mm ($L/500$) & 0,0632 & Atende \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{verif-els}{Conforme o item 2.3.2.2 e a tabela 7.2 da EN 1995-1-1 \cite{EN1995-1-1:2004},
-com combinações da EN 1990 \cite{EN1990:2002}. Os limites são parâmetros de
-determinação nacional, registrados no \autoref{qua:ndp}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-els}{}{}
 
 Três observações decorrem desses resultados.
 
@@ -267,7 +270,11 @@ conjunto é de 0,7902, correspondente ao contraventamento da cobertura, e o
 veredito global do dimensionamento é de aprovação.
 
 A \autoref{fig:modelo-eta} ilustra a distribuição da taxa de utilização em
-flexão ao longo das vigas principais.
+flexão ao longo das vigas principais, obtida da tensão normal do modelo de
+elementos finitos dividida pela resistência de cálculo à flexão. Ela não
+substitui as verificações da \autoref{tab:verif-viga}, que incorporam os
+coeficientes de instabilidade e de borda inclinada do Eurocódigo 5 e são as que
+governam o dimensionamento.
 
 \figura
 {Distribuição da taxa de utilização em flexão nas vigas principais}
@@ -275,11 +282,7 @@ flexão ao longo das vigas principais.
 {fig/modelo_eta.png}
 {Elaborado pelo autor (2026)}
 {modelo-eta}
-{A figura mostra a distribuição ao longo das peças, obtida da tensão normal do
-modelo de elementos finitos dividida pela resistência de cálculo à flexão. Não
-substitui as verificações da \autoref{tab:verif-viga}, que incorporam os
-coeficientes de instabilidade e de borda inclinada do Eurocódigo 5 e são as que
-governam o dimensionamento.}
+{}
 {}
 
 A distribuição das taxas revela um dimensionamento governado pelos sistemas de

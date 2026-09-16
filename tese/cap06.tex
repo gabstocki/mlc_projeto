@@ -42,7 +42,10 @@ ser articulado na base, e ainda que fosse engastado ofereceria apenas
 medida em que a restrição é comparável à rigidez do arco, e não é o caso.
 
 A \autoref{tab:rigidez-apoio} apresenta a varredura da rigidez do apoio, do
-engastamento perfeito à liberdade total.
+engastamento perfeito à liberdade total, obtida pelo método das forças conforme
+o item 5.4 da EN 1995-1-1 \cite{EN1995-1-1:2004} e o item 5.2.1 da
+EN 1993-1-1 \cite{EN1993-1-1:2005}. Os valores devem ser lidos contra os
+208.462 kN/m da rigidez do arco.
 
 \tabela{Empuxo desenvolvido e momento na viga em função da rigidez do apoio}{\footnotesize
 \begin{tabular}{rrrl}
@@ -57,10 +60,7 @@ engastamento perfeito à liberdade total.
 \midrule
     \textbf{0}    &   \textbf{0,00} & \textbf{504,3} & \textbf{Pilar articulado, adotado} \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{rigidez-apoio}{Análise pelo método das forças, conforme o item 5.4 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} e o item 5.2.1 da
-EN 1993-1-1 \cite{EN1993-1-1:2005}. A rigidez do arco, para comparação, é de
-208.462 kN/m.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{rigidez-apoio}{}{}
 
 A leitura da tabela é inequívoca. Mesmo no limite generoso da base engastada,
 desenvolve-se 0,0\% do empuxo rígido, isto é, 0,07 kN de um total possível de
@@ -86,7 +86,11 @@ não atrai o empuxo.
 O peso próprio não foi arbitrado por valor único de área. Cada parcela é
 calculada a partir da geometria e da massa específica média do material, de modo
 que uma alteração de seção se propague automaticamente ao carregamento. A
-\autoref{tab:peso-proprio} apresenta a decomposição.
+\autoref{tab:peso-proprio} apresenta a decomposição, conforme o item 4.1 da
+EN 1991-1-1 \cite{EN1991-1-1:2002}, com massa específica da
+EN 14080 \cite{EN14080:2013}. A área tributária de um pórtico intermediário é de
+5,75 m, igual ao espaçamento entre pórticos, e as parcelas declaradas constam da
+\autoref{tab:valores-declarados}.
 
 \tabela{Decomposição da ação permanente característica}{\footnotesize
 \begin{tabular}{lrll}
@@ -104,10 +108,7 @@ que uma alteração de seção se propague automaticamente ao carregamento. A
     \textbf{Total sobre a viga}   & \textbf{0,8229} & \textbf{kN/m\textsuperscript{2}} & \\
     Total sobre a terça           & 0,3889 & kN/m\textsuperscript{2} & \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{peso-proprio}{Conforme o item 4.1 da EN 1991-1-1 \cite{EN1991-1-1:2002}, com massa específica
-da EN 14080 \cite{EN14080:2013}. A área tributária de um pórtico intermediário é
-de 5,75 m, igual ao espaçamento entre pórticos. As parcelas declaradas constam
-da \autoref{tab:valores-declarados}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{peso-proprio}{}{}
 
 A distinção entre parcelas calculadas e declaradas importa. O total de
 0,8229 kN/m\textsuperscript{2} é cerca de metade do valor de
@@ -124,7 +125,7 @@ sobrecarga distribuída de 0,40 kN/m\textsuperscript{2} e carga concentrada de
 
 O enquadramento na categoria H tem efeito determinante nas combinações: os
 coeficientes de combinação $\psi_0$, $\psi_1$ e $\psi_2$ da sobrecarga são
-nulos, conforme registrado no \autoref{qua:ndp}. Disso resulta que a sobrecarga
+nulos, conforme registrado na \autoref{tab:ndp}. Disso resulta que a sobrecarga
 e o vento nunca atuam simultaneamente, e que cada um deles governa combinações
 próprias.
 
@@ -143,7 +144,10 @@ priori por julgamento de qual seria o mais desfavorável.
 
 Para o vento paralelo à cumeeira, a edificação aberta não oferece superfície de
 barlavento, e a ação resulta do arrasto nos pilares somado ao atrito sobre a
-cobertura. A \autoref{tab:acoes-vento} resume as duas direções.
+cobertura. A \autoref{tab:acoes-vento} resume as duas direções, com os valores
+obtidos conforme a ABNT NBR 6123 \cite{NBR6123:2023} e a parcela de atrito
+calculada pelo item 7.2.2, com $a \times b = 1.863$ m\textsuperscript{2} em
+planta.
 
 \tabela{Ações de vento por direção de incidência}{\footnotesize
 \begin{tabular}{lrll}
@@ -161,9 +165,7 @@ cobertura. A \autoref{tab:acoes-vento} resume as duas direções.
     \textbf{Força longitudinal total} & \textbf{837,3} & \textbf{kN} & \\
     Força distribuída equivalente & 18,202 & kN/m & \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{acoes-vento}{Conforme a ABNT NBR 6123 \cite{NBR6123:2023}. A parcela de atrito segue o item
-7.2.2, com $a \times b = 1.863$ m\textsuperscript{2} em planta, e engloba em um
-único termo a ação sobre as duas faces da cobertura.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{acoes-vento}{}{}
 
 A parcela de atrito merece comentário, por ser a que governa todo o
 dimensionamento do contraventamento longitudinal. Ela equivale a 2,35 vezes o
@@ -176,28 +178,31 @@ e foi mantida por ser a que a norma determina.
 \section{COMBINAÇÕES DE AÇÕES}\label{sec:combinacoes}
 
 As combinações seguem a EN 1990 \cite{EN1990:2002}, com os coeficientes parciais
-e de combinação registrados no \autoref{qua:ndp}. O
-\autoref{qua:combinacoes} descreve os grupos considerados.
+e de combinação registrados na \autoref{tab:ndp}. A
+\autoref{tab:combinacoes} descreve os grupos considerados. Não há termo de
+sobrecarga nas combinações com vento, nem termo de vento nas combinações com
+sobrecarga, por serem nulos os coeficientes $\psi$ da categoria H. A combinação
+de sucção adota o coeficiente favorável de 0,9 para a ação permanente, conforme
+a tabela A1.2(A), para verificações de equilíbrio.
 
-\qquadro
+\tabela
 {Grupos de combinações de ações considerados}
 {\footnotesize
-\begin{tabular}{|l|l|p{5.4cm}|}\hline
-    \textbf{Grupo} & \textbf{Expressão} & \textbf{Finalidade} \\\hline
-    Sobrecarga dominante & $1{,}35\,G + 1{,}5\,Q$ & Momento e cortante máximos na viga \\\hline
-    Vento de pressão     & $1{,}35\,G + 1{,}5\,W$ & Flexão com vento descendente \\\hline
-    Vento de sucção      & $0{,}9\,G + 1{,}5\,W$  & Arrancamento, ancoragem e estabilidade \\\hline
-    Acidental            & $G + A_d$          & Impacto de veículo em pilar \\\hline
-    Execução             & $\gamma_G\,\varphi_{dyn}\,G$ & Içamento da viga na montagem \\\hline
-    Serviço              & Característica e quase permanente & Flecha instantânea e final \\\hline
+\begin{tabular}{llp{5.4cm}}
+\toprule
+    \textbf{Grupo} & \textbf{Expressão} & \textbf{Finalidade} \\
+\midrule
+    Sobrecarga dominante & $1{,}35\,G + 1{,}5\,Q$ & Momento e cortante máximos na viga \\
+    Vento de pressão     & $1{,}35\,G + 1{,}5\,W$ & Flexão com vento descendente \\
+    Vento de sucção      & $0{,}9\,G + 1{,}5\,W$  & Arrancamento, ancoragem e estabilidade \\
+    Acidental            & $G + A_d$          & Impacto de veículo em pilar \\
+    Execução             & $\gamma_G\,\varphi_{dyn}\,G$ & Içamento da viga na montagem \\
+    Serviço              & Característica e quase permanente & Flecha instantânea e final \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {combinacoes}
-{Conforme a EN 1990 \cite{EN1990:2002}. Não há termo de sobrecarga nas
-combinações com vento, nem termo de vento nas combinações com sobrecarga, por
-serem nulos os coeficientes $\psi$ da categoria H. A combinação de sucção adota
-o coeficiente favorável de 0,9 para a ação permanente, conforme a tabela A1.2(A)
-para verificações de equilíbrio.}
+{}
 {}
 
 Os oito padrões de coeficientes de pressão geram, cada um, uma combinação de
@@ -207,7 +212,9 @@ dezessete combinações de estado-limite último, todas efetivamente avaliadas.
 \section{ESFORÇOS SOLICITANTES}\label{sec:esforcos}
 
 A \autoref{tab:esforcos-governantes} apresenta os esforços de cálculo que
-governam o dimensionamento da viga.
+governam o dimensionamento da viga, nas combinações da
+EN 1990 \cite{EN1990:2002}. O esforço normal reduzido decorre do modelo
+biapoiado, discutido na \autoref{ssec:modelo-apoio}.
 
 \tabela{Esforços de cálculo governantes na viga}{\footnotesize
 \begin{tabular}{lcrl}
@@ -220,11 +227,14 @@ governam o dimensionamento da viga.
     Esforço horizontal na base & $H_{Ed}$ &   0,00 kN         & Modelo biapoiado \\
     Carga de sucção            & $q_{Ed}$ & $-7{,}61$ kN/m      & $0{,}9\,G + 1{,}5\,W$ \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{esforcos-governantes}{Combinações conforme a EN 1990 \cite{EN1990:2002}. O esforço normal reduzido
-decorre do modelo biapoiado, discutido na \autoref{ssec:modelo-apoio}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{esforcos-governantes}{}{}
 
 A \autoref{fig:modelo-momento} apresenta a distribuição do momento fletor ao
-longo das vigas, na combinação governante.
+longo das vigas, na combinação governante, em escala de kN$\cdot$m. Terças e
+pilares aparecem em cinza, por não ser o momento a grandeza que os dimensiona. O
+modelo de elementos finitos reproduz a condição de apoio adotada, sem restrição
+horizontal, e devolve momento máximo de 504,2 kN$\cdot$m contra os
+504,26 kN$\cdot$m da solução analítica.
 
 \figura
 {Momento fletor nas vigas principais na combinação governante de estado-limite último}
@@ -232,10 +242,7 @@ longo das vigas, na combinação governante.
 {fig/modelo_momento.png}
 {Elaborado pelo autor (2026)}
 {modelo-momento}
-{Escala em kN$\cdot$m. Terças e pilares em cinza, por não ser o momento a
-grandeza que os dimensiona. O modelo de elementos finitos reproduz a condição de
-apoio adotada, sem restrição horizontal, e devolve momento máximo de
-504,2 kN$\cdot$m contra os 504,26 kN$\cdot$m da solução analítica.}
+{}
 {}
 
 Registre-se um resultado que contraria a expectativa usual para coberturas

@@ -4,7 +4,7 @@
 
 \chapter{PROGRAMA DE CÁLCULO}\label{ap:codigo-fonte}
 
-O memorial apresentado nos capítulos \autoref{cap:predimensionamento} a
+O memorial apresentado do \autoref{cap:predimensionamento} ao
 \autoref{cap:detalhamento} foi integralmente produzido por um programa
 desenvolvido para este trabalho. Este apêndice descreve a sua arquitetura, o
 fluxo de execução, o ambiente de reprodução e a forma de acesso ao código.
@@ -22,28 +22,33 @@ O programa está organizado em pacotes de responsabilidade única. Os dados de
 entrada e as grandezas derivadas concentram-se em um pacote; cada família de
 verificações ocupa o seu; e a geração de saídas é isolada do cálculo. Nenhum
 módulo de verificação escreve arquivos, e nenhum módulo de saída executa
-cálculo. O \autoref{qua:ap-modulos} descreve a divisão.
+cálculo. A \autoref{tab:ap-modulos} descreve a divisão. A contagem de linhas
+inclui comentários e documentação embutida, que representam parcela expressiva
+do total, por registrarem a proveniência normativa de cada valor.
 
-\qquadro
+\tabela
 {Pacotes do programa e respectivas responsabilidades}
 {\footnotesize
-\begin{tabular}{|l|c|r|p{5.6cm}|}\hline
-    \textbf{Pacote} & \textbf{Arq.} & \textbf{Linhas} & \textbf{Responsabilidade} \\\hline
-    \texttt{core}          &  7 &  3.270 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\\hline
-    \texttt{predim}        &  3 &    705 & Varredura paramétrica do espaço de geometrias \\\hline
-    \texttt{checks/elu}    & 23 &  9.213 & Verificações de estado-limite último de elementos e sistemas \\\hline
-    \texttt{checks/els}    &  3 &    846 & Verificações de estado-limite de serviço, com fluência \\\hline
-    \texttt{connections}   &  7 &  3.884 & Ligações, chapas metálicas e ancoragem \\\hline
-    \texttt{output}        &  5 &  2.938 & Memorial, planilha, figuras e cargas de fundação \\\hline
-    \texttt{opensees}      &  3 &    717 & Validação por elementos finitos \\\hline
-    \texttt{visualization} &  1 &    517 & Visualização tridimensional do modelo \\\hline
-    \texttt{main.py}       &  1 &  1.722 & Orquestração do pipeline e dados de projeto \\\hline
-    \textbf{Total}         & \textbf{55} & \textbf{23.814} & \\\hline
+\begin{tabular}{lcrp{5.6cm}}
+\toprule
+    \textbf{Pacote} & \textbf{Arq.} & \textbf{Linhas} & \textbf{Responsabilidade} \\
+\midrule
+    \texttt{core}          &  7 &  3.270 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\
+    \texttt{predim}        &  3 &    705 & Varredura paramétrica do espaço de geometrias \\
+    \texttt{checks/elu}    & 23 &  9.213 & Verificações de estado-limite último de elementos e sistemas \\
+    \texttt{checks/els}    &  3 &    846 & Verificações de estado-limite de serviço, com fluência \\
+    \texttt{connections}   &  7 &  3.884 & Ligações, chapas metálicas e ancoragem \\
+    \texttt{output}        &  5 &  2.938 & Memorial, planilha, figuras e cargas de fundação \\
+    \texttt{opensees}      &  3 &    717 & Validação por elementos finitos \\
+    \texttt{visualization} &  1 &    517 & Visualização tridimensional do modelo \\
+    \texttt{main.py}       &  1 &  1.722 & Orquestração do \textit{pipeline} e dados de projeto \\
+\midrule
+    \textbf{Total}         & \textbf{55} & \textbf{23.814} & \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {ap-modulos}
-{A contagem inclui comentários e documentação embutida, que representam parcela
-expressiva do total, por registrarem a proveniência normativa de cada valor.}
+{}
 {}
 
 Três módulos do pacote \texttt{core} merecem menção, por sustentarem decisões
@@ -52,37 +57,40 @@ inércia e módulo resistente em qualquer posição do vão, de modo que uma
 alteração de seção se propague a todo o carregamento e a todas as verificações.
 O módulo de proveniência normativa registra, para cada parâmetro, a cláusula de
 origem e a natureza, e é dele que decorre a declaração dos dezenove parâmetros
-de determinação nacional do \autoref{qua:ndp}. O módulo de validação impõe
+de determinação nacional da \autoref{tab:ndp}. O módulo de validação impõe
 pré-condições de domínio anteriores a qualquer verificação, impedindo que uma
 geometria sem sentido físico produza taxa de utilização e veredito de aprovação.
 
 \section{FLUXO DE EXECUÇÃO}\label{sec:ap-fluxo}
 
 A execução percorre fases sucessivas, cada uma consumindo os resultados da
-anterior, conforme o \autoref{qua:ap-fases}.
+anterior, conforme a \autoref{tab:ap-fases}. As fases 1 e 6 são opcionais e não
+integram a execução padrão, e a fase 4 inclui a auditoria de coerência do modelo
+de apoio horizontal, cujo resultado consta da \autoref{tab:rigidez-apoio}.
 
-\qquadro
+\tabela
 {Fases da execução do programa}
 {\footnotesize
-\begin{tabular}{|l|p{8.4cm}|}\hline
-    \textbf{Fase} & \textbf{Conteúdo} \\\hline
-    0 & Dados de entrada: geometria, material, durabilidade, peso próprio por parcelas, ações de vento e combinações \\\hline
-    1 & Varredura paramétrica, quando solicitada \\\hline
-    2 & Estados-limites últimos: viga, pilares, terças, contraventamentos, estabilidade global, impacto e içamento \\\hline
-    3 & Estados-limites de serviço \\\hline
-    4 & Ligações, ruptura de bloco, fendilhamento, chapas metálicas, sucção e ancoragem \\\hline
-    5 & Memorial em LaTeX, planilha e figuras \\\hline
-    6 & Visualização tridimensional, quando solicitada \\\hline
+\begin{tabular}{lp{8.4cm}}
+\toprule
+    \textbf{Fase} & \textbf{Conteúdo} \\
+\midrule
+    0 & Dados de entrada: geometria, material, durabilidade, peso próprio por parcelas, ações de vento e combinações \\
+    1 & Varredura paramétrica, quando solicitada \\
+    2 & Estados-limites últimos: viga, pilares, terças, contraventamentos, estabilidade global, impacto e içamento \\
+    3 & Estados-limites de serviço \\
+    4 & Ligações, ruptura de bloco, fendilhamento, chapas metálicas, sucção e ancoragem \\
+    5 & Memorial em LaTeX, planilha e figuras \\
+    6 & Visualização tridimensional, quando solicitada \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {ap-fases}
-{As fases 1 e 6 são opcionais e não integram a execução padrão. A fase 4 inclui
-a auditoria de coerência do modelo de apoio horizontal, cujo resultado consta da
-\autoref{tab:rigidez-apoio}.}
+{}
 {}
 
 A varredura global apresentada na \autoref{sec:varredura-global} não constitui
-fase do pipeline, e sim um invólucro que o executa repetidamente. Para cada
+fase do \textit{pipeline}, e sim um invólucro que o executa repetidamente. Para cada
 ponto da grade, substitui a geometria e chama a mesma rotina que produz o
 memorial, o que assegura a equivalência entre a avaliação das candidatas e a
 verificação da solução adotada.
@@ -139,25 +147,27 @@ visível.
 
 O programa exige Python em versão 3.12 ou superior. As dependências são
 declaradas com limites superiores explícitos, e a suíte de testes foi executada
-com sucesso em duas combinações de versões, a fim de assegurar que os resultados
-não dependam de particularidades de uma delas. O \autoref{qua:ap-ambiente}
-registra ambas.
+com sucesso em duas combinações de versões, assentadas em linhas de versão
+distintas de NumPy, a fim de assegurar que os resultados não dependam de
+particularidades de uma delas. A \autoref{tab:ap-ambiente} registra ambas.
 
-\qquadro
+\tabela
 {Combinações de versões em que a suíte foi executada}
 {\footnotesize
-\begin{tabular}{|l|l|l|}\hline
-    \textbf{Componente} & \textbf{Combinação A} & \textbf{Combinação B} \\\hline
-    Python     & 3.12.7  & 3.12.7  \\\hline
-    NumPy      & 1.26.4  & 2.4.6   \\\hline
-    SciPy      & 1.15.3  & 1.17.1  \\\hline
-    Pandas     & 2.2.2   & 3.0.3   \\\hline
-    Matplotlib & 3.9.2   & 3.11.0  \\\hline
+\begin{tabular}{lll}
+\toprule
+    \textbf{Componente} & \textbf{Combinação A} & \textbf{Combinação B} \\
+\midrule
+    Python     & 3.12.7  & 3.12.7  \\
+    NumPy      & 1.26.4  & 2.4.6   \\
+    SciPy      & 1.15.3  & 1.17.1  \\
+    Pandas     & 2.2.2   & 3.0.3   \\
+    Matplotlib & 3.9.2   & 3.11.0  \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {ap-ambiente}
-{A execução em duas linhas de versão distintas de NumPy verifica que os
-resultados não dependem de comportamento específico de uma delas.}
+{}
 {}
 
 \section{DISPONIBILIDADE}\label{sec:ap-disponibilidade}
@@ -172,7 +182,7 @@ seguir.
 \url{https://github.com/gabstocki/mlc_projeto}
 \vspace{\onelineskip}
 
-A execução completa do pipeline é obtida pelo comando
+A execução completa do \textit{pipeline} é obtida pelo comando
 \texttt{python -m mlc\_projeto.main}, e a varredura paramétrica pelo comando
 \texttt{python -m mlc\_projeto.predim.varredura\_global}. O memorial, a planilha
 de resultados e as figuras são gravados no diretório de saída.

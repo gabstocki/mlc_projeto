@@ -26,7 +26,11 @@ A opção por dois vãos de 20,25 m em vez de um único vão livre de 40,5 m dec
 do uso previsto: em um estacionamento, uma linha de pilares intermediários é
 compatível com o arranjo das vagas e da circulação, e evita a altura de viga
 que um vão livre dessa ordem exigiria. A \autoref{fig:modelo-3d} apresenta o
-conjunto e a \autoref{fig:portico-elevacao}, a elevação de um pórtico.
+conjunto e a \autoref{fig:portico-elevacao}, a elevação de um pórtico. Ambas
+provêm do modelo de elementos finitos com seção transversal real, gerado a
+partir da geometria de projeto, em que vigas, pilares e terças são de madeira
+lamelada colada; os sistemas de contraventamento e a telha não são
+representados.
 
 \figura
 {Vista geral do modelo tridimensional da edificação}
@@ -34,13 +38,14 @@ conjunto e a \autoref{fig:portico-elevacao}, a elevação de um pórtico.
 {fig/modelo_3d.png}
 {Elaborado pelo autor (2026)}
 {modelo-3d}
-{Modelo de elementos finitos com seção transversal real, gerado a partir da
-geometria de projeto. Vigas, pilares e terças em madeira lamelada colada; os
-sistemas de contraventamento e a telha não são representados.}
+{}
 {}
 
 A disposição das duas águas duplas lado a lado, com a calha central sobre a
-linha de pilares intermediários, aparece com clareza na elevação.
+linha de pilares intermediários, aparece com clareza na elevação: são dois vãos
+de 20,25 m sobre três pilares de 7,0 m, com a altura da viga crescendo de
+1,00 m no apoio a 2,785 m na cumeeira de cada vão, e as peças menores sobre o
+extradorso são as terças.
 
 \figura
 {Elevação de um pórtico transversal}
@@ -48,12 +53,11 @@ linha de pilares intermediários, aparece com clareza na elevação.
 {fig/portico_elevacao.png}
 {Elaborado pelo autor (2026)}
 {portico-elevacao}
-{Dois vãos de 20,25 m sobre três pilares de 7,0 m. A altura da viga cresce de
-1,00 m no apoio a 2,785 m na cumeeira de cada vão. As peças menores sobre o
-extradorso são as terças.}
+{}
 {}
 
-A \autoref{tab:geometria-edificacao} reúne os dados geométricos.
+A \autoref{tab:geometria-edificacao} reúne os dados geométricos. A altura na
+cumeeira é derivada das demais, conforme $h_{ap} = h_0 + (L/2)\tan\alpha$.
 
 \tabela{Dados geométricos da edificação}{\footnotesize
 \begin{tabular}{lrl}
@@ -76,8 +80,7 @@ A \autoref{tab:geometria-edificacao} reúne os dados geométricos.
     Seção das terças                     & 0,20 $\times$ 0,58 & m \\
     Espaçamento entre terças             &  2,53 & m \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{geometria-edificacao}{A altura na cumeeira é derivada das demais, conforme
-$h_{ap} = h_0 + (L/2)\tan\alpha$.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{geometria-edificacao}{}{}
 
 \section{MATERIAIS}\label{sec:materiais}
 
@@ -85,7 +88,9 @@ $h_{ap} = h_0 + (L/2)\tan\alpha$.}{}
 
 Adotou-se a classe GL24h, de composição homogênea, conforme a
 EN 14080 \cite{EN14080:2013}. A \autoref{tab:gl24h} apresenta as propriedades
-características empregadas no dimensionamento.
+características empregadas no dimensionamento. A massa específica média é a
+empregada no cálculo do peso próprio; a característica, nas verificações de
+ligação.
 
 \tabela{Propriedades características da classe GL24h}{\footnotesize
 \begin{tabular}{lcrl}
@@ -104,8 +109,7 @@ características empregadas no dimensionamento.
     Massa específica característica           & $\rho_k$     &    385 & kg/m\textsuperscript{3} \\
     Massa específica média                    & $\rho_{mean}$&    420 & kg/m\textsuperscript{3} \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026) com base na EN 14080 \cite{EN14080:2013}}{gl24h}{A massa específica média é a empregada no cálculo do peso próprio; a
-característica, nas verificações de ligação.}{}
+\end{tabular}}{Elaborado pelo autor (2026) com base na EN 14080 \cite{EN14080:2013}}{gl24h}{}{}
 
 A resistência à tração perpendicular às fibras, de apenas 0,5 MPa, corresponde
 a cerca de dois por cento da resistência à flexão. É essa desproporção que
@@ -122,28 +126,31 @@ na \autoref{eq:valor-calculo}, os coeficientes $k_{mod}$ caem para a faixa de
 0,50 a 0,90, conforme a duração da ação, e o coeficiente de fluência assume
 $k_{def} = 2{,}00$, o maior previsto na norma.
 
-Essa classificação também determina as exigências de durabilidade. O
-\autoref{qua:materiais-complementares} reúne as decisões correspondentes e os
-demais materiais empregados.
+Essa classificação também determina as exigências de durabilidade. A
+\autoref{tab:materiais-complementares} reúne as decisões correspondentes e os
+demais materiais empregados. O adesivo Tipo I é o único admitido para peças em
+classe de serviço 3, e o tratamento preservativo não dispensa o detalhamento de
+proteção construtiva, tratado no \autoref{cap:detalhamento}.
 
-\qquadro
+\tabela
 {Materiais complementares e exigências de durabilidade}
 {\footnotesize
-\begin{tabular}{|l|l|l|}\hline
-    \textbf{Item} & \textbf{Especificação} & \textbf{Referência} \\\hline
-    Classe de uso da madeira      & UC 3.1                 & EN 335 \cite{EN335:2013} \\\hline
-    Adesivo estrutural            & Tipo I                 & EN 301 \cite{EN301:2017} \\\hline
-    Tratamento preservativo       & Exigido                & EN 351-1 \cite{EN351-1:2007} \\\hline
-    Aço das barras de contraventamento & S235              & EN 1993-1-1 \cite{EN1993-1-1:2005} \\\hline
-    Aço das chapas de ligação     & S275                   & EN 1993-1-1 \cite{EN1993-1-1:2005} \\\hline
-    Aço dos chumbadores           & Classe 8.8             & EN 1993-1-8 \cite{EN1993-1-8:2005} \\\hline
-    Concreto da fundação          & C25/30                 & EN 1992-4 \cite{EN1992-4:2018} \\\hline
+\begin{tabular}{lll}
+\toprule
+    \textbf{Item} & \textbf{Especificação} & \textbf{Referência} \\
+\midrule
+    Classe de uso da madeira           & UC 3.1     & EN 335 \cite{EN335:2013} \\
+    Adesivo estrutural                 & Tipo I     & EN 301 \cite{EN301:2017} \\
+    Tratamento preservativo            & Exigido    & EN 351-1 \cite{EN351-1:2007} \\
+    Aço das barras de contraventamento & S235       & EN 1993-1-1 \cite{EN1993-1-1:2005} \\
+    Aço das chapas de ligação          & S275       & EN 1993-1-1 \cite{EN1993-1-1:2005} \\
+    Aço dos chumbadores                & Classe 8.8 & EN 1993-1-8 \cite{EN1993-1-8:2005} \\
+    Concreto da fundação               & C25/30     & EN 1992-4 \cite{EN1992-4:2018} \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {materiais-complementares}
-{O adesivo Tipo I é o único admitido para peças em classe de serviço 3.
-O tratamento preservativo não dispensa o detalhamento de proteção construtiva,
-tratado no \autoref{cap:detalhamento}.}
+{}
 {}
 
 \section{VALORES CARACTERÍSTICOS DECLARADOS}\label{sec:valores-declarados}
@@ -153,7 +160,9 @@ declarados como premissa. Os primeiros, entre eles o peso próprio da estrutura,
 são obtidos por integração da geometria e apresentados no
 \autoref{cap:modelagem}. Os segundos constam da
 \autoref{tab:valores-declarados} e dependem de confirmação em ficha técnica de
-fornecedor ou de definição em etapa posterior de projeto.
+fornecedor ou de definição em etapa posterior de projeto. A sobrecarga
+corresponde à categoria H, de coberturas não acessíveis salvo para manutenção, e
+a carga concentrada não é concomitante com a distribuída nem com o vento.
 
 \tabela{Valores característicos declarados como dados de entrada}{\footnotesize
 \begin{tabular}{lrll}
@@ -172,9 +181,7 @@ fornecedor ou de definição em etapa posterior de projeto.
     Força de impacto de veículo, frontal & 50,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
     Força de impacto de veículo, lateral & 25,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{valores-declarados}{A sobrecarga corresponde à categoria H, de coberturas não acessíveis salvo
-para manutenção. A carga concentrada não é concomitante com a distribuída nem
-com o vento.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{valores-declarados}{}{}
 
 %% TODO: dado ausente — a velocidade básica $V_0 = 45$ m/s e o fator estatístico
 %% $S_3 = 1{,}0$ constam como valores adotados no programa, mas a leitura da
@@ -196,38 +203,41 @@ anexo nacional brasileiro. Diversos parâmetros desses documentos são deixados 
 determinação de cada país, e o texto do próprio Eurocódigo apenas recomenda um
 valor. Na ausência de anexo, o projeto adota integralmente os valores
 recomendados, e essa escolha é declarada de forma explícita em toda saída de
-cálculo, conforme reproduzido no \autoref{qua:ndp}.
+cálculo, conforme reproduzido na \autoref{tab:ndp}. São dezenove ao todo, e
+caso a obra venha a ser submetida sob um anexo nacional concreto, todos devem
+ser revistos.
 
-\qquadro
+\tabela
 {Parâmetros de determinação nacional adotados}
 {\scriptsize
-\begin{tabular}{|l|r|l|}\hline
-    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Cláusula de origem} \\\hline
-    $\gamma_G$ desfavorável            & 1,35  & EN 1990, tab. A1.2(B) \\\hline
-    $\gamma_G$ favorável               & 1,00  & EN 1990, tab. A1.2(B) \\\hline
-    $\gamma_G$ estabilizante, EQU      & 0,90  & EN 1990, tab. A1.2(A) \\\hline
-    $\gamma_G$ desestabilizante, EQU   & 1,10  & EN 1990, tab. A1.2(A) \\\hline
-    $\gamma_Q$                         & 1,50  & EN 1990, tab. A1.2(B) \\\hline
-    $\psi_0$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\\hline
-    $\psi_1$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\\hline
-    $\psi_2$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\\hline
-    $\psi_0$ vento                     & 0,60  & EN 1990, tab. A1.1 \\\hline
-    $\psi_2$ vento                     & 0,00  & EN 1990, tab. A1.1 \\\hline
-    $\gamma_M$ madeira                 & 1,25  & EN 1995-1-1, tab. 2.3 \\\hline
-    $\gamma_M$ ligação                 & 1,30  & EN 1995-1-1, tab. 2.3 \\\hline
-    $k_{cr}$                           & 0,67  & EN 1995-1-1, item 6.1.7 \\\hline
-    Limite de flecha instantânea       & $L/300$ & EN 1995-1-1, tab. 7.2 \\\hline
-    Limite de flecha final líquida     & $L/250$ & EN 1995-1-1, tab. 7.2 \\\hline
-    $\alpha_{cc}$                      & 1,00  & EN 1992-1-1, item 3.1.6(1) \\\hline
-    $\gamma_C$                         & 1,50  & EN 1992-1-1, tab. 2.1N \\\hline
-    $\alpha_{cr}$ mínimo               & 10,0  & EN 1993-1-1, item 5.2.1(3) \\\hline
-    $\phi_0$                           & 0,005 & EN 1993-1-1, item 5.3.2 \\\hline
+\begin{tabular}{lrl}
+\toprule
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Cláusula de origem} \\
+\midrule
+    $\gamma_G$ desfavorável            & 1,35  & EN 1990, tab. A1.2(B) \\
+    $\gamma_G$ favorável               & 1,00  & EN 1990, tab. A1.2(B) \\
+    $\gamma_G$ estabilizante, EQU      & 0,90  & EN 1990, tab. A1.2(A) \\
+    $\gamma_G$ desestabilizante, EQU   & 1,10  & EN 1990, tab. A1.2(A) \\
+    $\gamma_Q$                         & 1,50  & EN 1990, tab. A1.2(B) \\
+    $\psi_0$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
+    $\psi_1$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
+    $\psi_2$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
+    $\psi_0$ vento                     & 0,60  & EN 1990, tab. A1.1 \\
+    $\psi_2$ vento                     & 0,00  & EN 1990, tab. A1.1 \\
+    $\gamma_M$ madeira                 & 1,25  & EN 1995-1-1, tab. 2.3 \\
+    $\gamma_M$ ligação                 & 1,30  & EN 1995-1-1, tab. 2.3 \\
+    $k_{cr}$                           & 0,67  & EN 1995-1-1, item 6.1.7 \\
+    Limite de flecha instantânea       & $L/300$ & EN 1995-1-1, tab. 7.2 \\
+    Limite de flecha final líquida     & $L/250$ & EN 1995-1-1, tab. 7.2 \\
+    $\alpha_{cc}$                      & 1,00  & EN 1992-1-1, item 3.1.6(1) \\
+    $\gamma_C$                         & 1,50  & EN 1992-1-1, tab. 2.1N \\
+    $\alpha_{cr}$ mínimo               & 10,0  & EN 1993-1-1, item 5.2.1(3) \\
+    $\phi_0$                           & 0,005 & EN 1993-1-1, item 5.3.2 \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {ndp}
-{Os dezenove parâmetros adotam o valor recomendado pelo respectivo Eurocódigo.
-Caso a obra venha a ser submetida sob um anexo nacional concreto, todos devem
-ser revistos.}
+{}
 {}
 
 Essa reserva não é formalidade. Coeficientes como $\gamma_M$ e os limites de
@@ -260,7 +270,7 @@ por cento a resistência mobilizável nas combinações governadas pelo vento.
 
 \subsection{Escopo entregue à fundação}\label{ssec:escopo-fundacao}
 
-Conforme delimitado no \autoref{sec:delimitacao}, a fundação não é
+Conforme delimitado na \autoref{sec:delimitacao}, a fundação não é
 dimensionada. O programa encerra a cadeia de verificações na interface entre a
 superestrutura e o bloco de fundação, entregando por base os esforços de
 cálculo e as exigências geométricas mínimas decorrentes da ancoragem. Esses

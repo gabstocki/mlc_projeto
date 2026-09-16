@@ -18,8 +18,8 @@ observa-se o que governa em cada região do espaço de soluções.
 O procedimento adotado difere, num ponto essencial, do que é usual em
 pré-dimensionamento. Em vez de avaliar as candidatas por um modelo simplificado,
 mais rápido porém distinto daquele que produz o memorial, construiu-se um
-mecanismo que executa, para cada ponto da grade, exatamente o mesmo pipeline de
-verificação empregado no dimensionamento final. Cada geometria é avaliada pelas
+mecanismo que executa, para cada ponto da grade, exatamente o mesmo
+\textit{pipeline} de verificação empregado no dimensionamento final. Cada geometria é avaliada pelas
 quarenta e quatro verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
 modelo estrutural, o mesmo gerador de combinações e os mesmos integradores.
 
@@ -51,7 +51,11 @@ cisalhamento, das tensões na borda inclinada, da flecha e da flexão.
 A \autoref{fig:varredura-global} apresenta o espaço percorrido, com o volume de
 madeira lamelada colada das vigas principais no eixo das abscissas e, no eixo
 das ordenadas, a maior taxa de utilização entre as verificações que dependem da
-seção da viga.
+seção da viga. Cada ponto corresponde a uma execução completa do
+\textit{pipeline} de verificação; a taxa representada é a maior entre
+cisalhamento, flexo-compressão, cumeeira, borda inclinada, flambagem lateral,
+apoio e estado-limite de serviço, e o volume refere-se às dezoito vigas
+principais da edificação.
 
 \figura
 {Espaço de geometrias percorrido na varredura}
@@ -59,10 +63,7 @@ seção da viga.
 {fig/varredura_global.pdf}
 {Elaborado pelo autor (2026)}
 {varredura-global}
-{Cada ponto corresponde a uma execução completa do pipeline de verificação. A
-taxa representada é a maior entre cisalhamento, flexo-compressão, cumeeira,
-borda inclinada, flambagem lateral, apoio e estado-limite de serviço. O volume
-refere-se às dezoito vigas principais da edificação.}
+{}
 {}
 
 A figura torna visível o resultado central desta etapa: em toda a região
@@ -70,8 +71,12 @@ aprovada, a viga opera com folga considerável. A geometria adotada situa-se em
 um patamar da curva no qual o acréscimo de madeira já quase não reduz a taxa de
 utilização, porque esta deixou de ser governada pela seção.
 
-A \autoref{tab:fronteira-volume} quantifica esse patamar, indicando a geometria
-de menor volume compatível com diferentes políticas de margem na viga.
+A \autoref{tab:fronteira-volume} quantifica esse patamar. Cada linha é a
+geometria de menor volume, entre as 1.104 aprovadas, cuja maior taxa de
+utilização na viga não excede a margem indicada. As duas últimas colunas
+registram as taxas do contraventamento vertical e do pilar de canto na mesma
+geometria, obtidas pela EN 1995-1-1 \cite{EN1995-1-1:2004} e pela
+EN 1992-4 \cite{EN1992-4:2018}.
 
 \tabela{Geometria de menor volume para cada política de margem na viga}{\footnotesize
 \begin{tabular}{ccccrccc}
@@ -91,11 +96,7 @@ de menor volume compatível com diferentes políticas de margem na viga.
     \textbf{Adotada} & \textbf{10,0} & \textbf{1,00} & \textbf{0,32} &
     \textbf{220,8} & \textbf{Cisalhamento} & \textbf{0,788} & \textbf{0,428} \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{fronteira-volume}{Cada linha é a geometria de menor volume, entre as 1.104 aprovadas, cuja maior
-taxa de utilização na viga não excede a margem indicada. As duas últimas colunas
-registram as taxas do contraventamento vertical e do pilar de canto na mesma
-geometria, obtidas pela EN 1995-1-1 \cite{EN1995-1-1:2004} e pela
-EN 1992-4 \cite{EN1992-4:2018}.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{fronteira-volume}{}{}
 
 \subsection{O que governa o dimensionamento}\label{ssec:o-que-governa}
 
@@ -190,7 +191,10 @@ capaz de estabilizar, o comprimento efetivo salta do espaçamento entre terças,
 de 2,53 m, para o comprimento total de 46,0 m.
 
 A varredura do diâmetro da diagonal, mantido o arranjo de duas baías rígidas nas
-extremidades, consta da \autoref{tab:varredura-diagonal-cobertura}.
+extremidades, consta da \autoref{tab:varredura-diagonal-cobertura}. A
+verificação segue o item 9.2.5 da EN 1995-1-1 \cite{EN1995-1-1:2004}, as barras
+são redondas em aço S235, e a coluna de estabilização indica se as terças
+permanecem válidas como contenção lateral da viga.
 
 \tabela{Varredura do diâmetro da diagonal do contraventamento da cobertura}{\footnotesize
 \begin{tabular}{cccl}
@@ -203,9 +207,7 @@ extremidades, consta da \autoref{tab:varredura-diagonal-cobertura}.
     28 & 0,790 & Sim  & \textbf{Adotado} \\
     30 & 0,688 & Sim  & Sobredimensionado \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{varredura-diagonal-cobertura}{Verificação conforme o item 9.2.5 da EN 1995-1-1 \cite{EN1995-1-1:2004}. A
-coluna de estabilização indica se as terças permanecem válidas como contenção
-lateral da viga. Barras redondas em aço S235.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{varredura-diagonal-cobertura}{}{}
 
 O diâmetro de 25 mm atende à verificação, porém sem margem, e foi descartado por
 isso. Adotou-se 28 mm.
@@ -225,9 +227,12 @@ painel adicional reduz o esforço descendente no montante, e com ele a solicita�
 do pilar de canto e da respectiva ancoragem, mas ocupa uma baía que, em um
 estacionamento aberto, deixaria de permitir a circulação de veículos.
 
-O pipeline foi executado para números de painéis entre 2 e 16, com a diagonal
-dimensionada automaticamente para taxa de utilização não superior a 0,90. Os
-resultados constam da \autoref{tab:varredura-paineis}.
+O \textit{pipeline} foi executado para números de painéis entre 2 e 16, com a
+diagonal dimensionada automaticamente para taxa de utilização não superior a
+0,90, em aço S235. Os resultados constam da \autoref{tab:varredura-paineis}, em
+que o montante é verificado conforme os itens 6.2.3 e 6.3.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004} e a ancoragem conforme a
+EN 1992-4 \cite{EN1992-4:2018}. O arranjo com dois painéis reprova.
 
 \tabela{Varredura do número de painéis de contraventamento vertical}{\scriptsize
 \begin{tabular}{ccrrcrccr}
@@ -242,10 +247,7 @@ resultados constam da \autoref{tab:varredura-paineis}.
     10 & 30 &  84,7 & 167,8 & 0,394 & 251,7 & 0,477 & 0,8037 & 1.005 \\
     16 & 24 &  53,0 & 129,1 & 0,344 & 213,0 & 0,404 & 0,7902 & 1.029 \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{varredura-paineis}{Diagonal dimensionada automaticamente para $\eta \leq 0{,}90$, aço S235.
-Verificação do montante conforme os itens 6.2.3 e 6.3.2 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} e da ancoragem conforme a
-EN 1992-4 \cite{EN1992-4:2018}. O arranjo com dois painéis reprova.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{varredura-paineis}{}{}
 
 A varredura revela um resultado que inverte a intuição corrente: o peso total de
 aço é praticamente independente do número de painéis, permanecendo entre 905 e
@@ -271,27 +273,30 @@ cobertura.
 
 \section{SÍNTESE}\label{sec:geometria-resultante}
 
-O \autoref{qua:criterios-predim} sintetiza as dimensões estabelecidas nesta
-etapa e o critério que governou cada uma. As verificações que as confirmam
-constam do \autoref{cap:dimensionamento}.
+A \autoref{tab:criterios-predim} sintetiza as dimensões estabelecidas nesta
+etapa e o critério que governou cada uma. Nenhuma das dimensões da viga é
+governada por verificação de resistência da própria viga, conforme demonstrado
+na \autoref{ssec:o-que-governa}. As seções das terças e o respectivo
+espaçamento foram fixados como dado de entrada. As verificações que confirmam
+todas elas constam do \autoref{cap:dimensionamento}.
 
-\qquadro
+\tabela
 {Dimensões adotadas e critério governante de cada uma}
 {\footnotesize
-\begin{tabular}{|l|l|p{5.8cm}|}\hline
-    \textbf{Elemento} & \textbf{Dimensão} & \textbf{Critério governante} \\\hline
-    Inclinação do extradorso & 10,0$^{\circ}$ & Tensões na borda inclinada e altura de transporte \\\hline
-    Altura da viga no apoio & 1,00 m & Espaço para a ligação de base e altura na cumeeira \\\hline
-    Largura da viga & 0,32 m & Alinhamento com o pilar e encaixe da chapa de ligação \\\hline
-    Pilares lateral e central & 0,32 $\times$ 0,27 m & Esforço normal do pilar central \\\hline
-    Pilar de canto & 0,32 $\times$ 0,32 m & Acúmulo de esforço descendente dos dois sistemas de contraventamento \\\hline
-    Diagonal da cobertura & $\varnothing$ 28 mm & Estabilização das terças como contenção lateral \\\hline
-    Painéis de contraventamento vertical & 8 & Margem no caminho de carga e baías livres para circulação \\\hline
+\begin{tabular}{llp{5.8cm}}
+\toprule
+    \textbf{Elemento} & \textbf{Dimensão} & \textbf{Critério governante} \\
+\midrule
+    Inclinação do extradorso & 10,0$^{\circ}$ & Tensões na borda inclinada e altura de transporte \\
+    Altura da viga no apoio & 1,00 m & Espaço para a ligação de base e altura na cumeeira \\
+    Largura da viga & 0,32 m & Alinhamento com o pilar e encaixe da chapa de ligação \\
+    Pilares lateral e central & 0,32 $\times$ 0,27 m & Esforço normal do pilar central \\
+    Pilar de canto & 0,32 $\times$ 0,32 m & Acúmulo de esforço descendente dos dois sistemas de contraventamento \\
+    Diagonal da cobertura & $\varnothing$ 28 mm & Estabilização das terças como contenção lateral \\
+    Painéis de contraventamento vertical & 8 & Margem no caminho de carga e baías livres para circulação \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {criterios-predim}
-{Nenhuma das dimensões da viga é governada por verificação de resistência da
-própria viga, conforme demonstrado na \autoref{ssec:o-que-governa}. As seções
-das terças e o respectivo espaçamento foram fixados como dado de entrada e
-verificados no \autoref{cap:dimensionamento}.}
+{}
 {}

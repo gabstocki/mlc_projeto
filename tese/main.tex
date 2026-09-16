@@ -104,6 +104,10 @@
 \renewcommand{\subsectionautorefname}{subse\c{c}\~ao}
 \renewcommand{\subsubsectionautorefname}{subse\c{c}\~ao}
 \newcommand{\lstlistingautorefname}{LISTAGEM}
+% A \^ancora que o hyperref gera para um cap\'itulo de ap\^endice \'e
+% "appendix.A", e n\~ao "chapter.A": o r\'otulo vem da\'i, em ingl\^es.
+\providecommand{\appendixautorefname}{}
+\renewcommand{\appendixautorefname}{Ap\^endice}
 
 % Para ajustar o tamanho da fonte do número da primeira página do capítulo
 \aliaspagestyle{chapter}{chapfirst}% customizing chapter pagestyle

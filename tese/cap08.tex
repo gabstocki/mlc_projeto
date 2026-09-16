@@ -14,31 +14,34 @@ fendilhamento da madeira rompe de forma súbita, sem aviso e sem redistribuiçã
 Adotou-se, por isso, limite de projeto de $\eta \leq 0{,}75$ para os modos
 frágeis, mantendo-se $\eta \leq 1{,}00$ para os dúcteis. A margem adicional de
 vinte e cinco por cento não decorre de prescrição normativa, e sim de decisão de
-projeto justificada pelo uso público da edificação. O
-\autoref{qua:modos-margem} apresenta a classificação aplicada e o resultado de
-cada modo.
+projeto justificada pelo uso público da edificação. A
+\autoref{tab:modos-margem} apresenta a classificação aplicada e o resultado de
+cada modo, segundo a \autoref{tab:modos-ruptura}. As exceções admitidas ao
+limite de 0,75 são a compressão no concreto e na madeira e o escoamento do aço,
+por serem modos dúcteis com capacidade de redistribuição.
 
-\qquadro
+\tabela
 {Classificação dos modos de ruptura das ligações e taxas obtidas}
 {\footnotesize
-\begin{tabular}{|l|l|c|c|c|}\hline
-    \textbf{Modo de ruptura} & \textbf{Natureza} & \textbf{Limite} & \textbf{$\eta$} & \textbf{Situação} \\\hline
-    Fendilhamento em L1          & Frágil & 0,75 & 0,7222 & Atende \\\hline
-    Fendilhamento em L1c         & Frágil & 0,75 & 0,7222 & Atende \\\hline
-    Pinos de L1                  & Frágil & 0,75 & 0,6634 & Atende \\\hline
-    Pinos de L1c                 & Frágil & 0,75 & 0,6634 & Atende \\\hline
-    Ruptura de bloco em L1       & Frágil & 0,75 & 0,0051 & Atende \\\hline
-    Ruptura de bloco em L1c      & Frágil & 0,75 & 0,0051 & Atende \\\hline
-    Chumbadores de L3            & Frágil & 0,75 & 0,0000 & Atende \\\hline
-    Chapa metálica de L1         & Dúctil & 1,00 & 0,0956 & Atende \\\hline
-    Chapa metálica de L1c        & Dúctil & 1,00 & 0,0956 & Atende \\\hline
-    Apoio da base central L3c    & Dúctil & 1,00 & 0,1328 & Atende \\\hline
+\begin{tabular}{llccc}
+\toprule
+    \textbf{Modo de ruptura} & \textbf{Natureza} & \textbf{Limite} & \textbf{$\eta$} & \textbf{Situação} \\
+\midrule
+    Fendilhamento em L1          & Frágil & 0,75 & 0,7222 & Atende \\
+    Fendilhamento em L1c         & Frágil & 0,75 & 0,7222 & Atende \\
+    Pinos de L1                  & Frágil & 0,75 & 0,6634 & Atende \\
+    Pinos de L1c                 & Frágil & 0,75 & 0,6634 & Atende \\
+    Ruptura de bloco em L1       & Frágil & 0,75 & 0,0051 & Atende \\
+    Ruptura de bloco em L1c      & Frágil & 0,75 & 0,0051 & Atende \\
+    Chumbadores de L3            & Frágil & 0,75 & 0,0000 & Atende \\
+    Chapa metálica de L1         & Dúctil & 1,00 & 0,0956 & Atende \\
+    Chapa metálica de L1c        & Dúctil & 1,00 & 0,0956 & Atende \\
+    Apoio da base central L3c    & Dúctil & 1,00 & 0,1328 & Atende \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {modos-margem}
-{Classificação conforme a \autoref{qua:modos-ruptura}. As exceções admitidas ao
-limite de 0,75 são a compressão no concreto e na madeira e o escoamento do aço,
-por serem modos dúcteis com capacidade de redistribuição.}
+{}
 {}
 
 Todos os modos frágeis situam-se abaixo de 0,75, e os dois mais solicitados são
@@ -54,7 +57,10 @@ apresenta duas vantagens em relação a chapas externas aparafusadas: a chapa fi
 protegida da intempérie pela própria madeira, o que importa em classe de serviço
 3, e a ligação trabalha em corte duplo, com dois planos de corte por pino.
 
-A \autoref{tab:ligacao-l1} apresenta o dimensionamento.
+A \autoref{tab:ligacao-l1} apresenta o dimensionamento, conforme os itens 8.2,
+8.5.1.1 e 8.6 da EN 1995-1-1 \cite{EN1995-1-1:2004}, com $\gamma_M = 1{,}30$ e
+$k_{mod} = 0{,}65$. O diâmetro situa-se na faixa de 6 a 30 mm exigida pela norma,
+e a chapa é em aço S275 de 25 mm de espessura.
 
 \tabela{Dimensionamento da ligação entre viga e pilar}{\footnotesize
 \begin{tabular}{lrl}
@@ -74,9 +80,7 @@ A \autoref{tab:ligacao-l1} apresenta o dimensionamento.
     Altura ocupada pela ligação        & 551,6  & mm \\
     Altura disponível na seção         & 1.000  & mm \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1}{Conforme os itens 8.2, 8.5.1.1 e 8.6 da EN 1995-1-1 \cite{EN1995-1-1:2004},
-com $\gamma_M = 1{,}30$ e $k_{mod} = 0{,}65$. O diâmetro situa-se na faixa de 6 a
-30 mm exigida pela norma. Chapa em aço S275 de 25 mm de espessura.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1}{}{}
 
 \subsection{Modo de ruptura governante}\label{ssec:modo-governante-l1}
 
@@ -154,7 +158,10 @@ disponibilidade comercial.
 
 A sucção do vento inverte a reação vertical nas bases, e o arrancamento
 resultante depende da posição da base na edificação. A
-\autoref{tab:arrancamento} apresenta os valores.
+\autoref{tab:arrancamento} apresenta os valores, na combinação de sucção da
+EN 1990 \cite{EN1990:2002}. A base de canto acumula o arrancamento de sucção, de
+83,9 kN, com o esforço descendente dos dois painéis de contraventamento, de
+193,6 kN, invertido sob a mesma combinação.
 
 \tabela{Esforço de arrancamento por posição de base}{\footnotesize
 \begin{tabular}{lcrc}
@@ -165,9 +172,7 @@ resultante depende da posição da base na edificação. A
     Central     &  9 & 151,8 & 0,474 \\
     Canto       &  4 & 277,5 & 0,578 \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{arrancamento}{Combinação de sucção conforme a EN 1990 \cite{EN1990:2002}. A base de canto
-acumula o arrancamento de sucção, de 83,9 kN, com o esforço descendente dos dois
-painéis de contraventamento, de 193,6 kN, invertido sob a mesma combinação.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{arrancamento}{}{}
 
 A base de canto é a mais solicitada, por acumular efeitos que não coincidem nas
 demais, e é ela que determina a ancoragem.
@@ -178,7 +183,12 @@ Adotaram-se seis chumbadores moldados com cabeça, de 24 mm e classe 8.8. A
 verificação divide-se em duas partes independentes: a resistência do aço do
 chumbador, segundo a EN 1993-1-8 \cite{EN1993-1-8:2005}, e a resistência do
 concreto que o envolve, segundo a EN 1992-4 \cite{EN1992-4:2018}. A
-\autoref{tab:ancoragem-canto} apresenta ambas.
+\autoref{tab:ancoragem-canto} apresenta ambas. O aço segue a tabela 3.4 e o item
+3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, com $\gamma_{Ms} = 1{,}5$; o concreto
+C25/30 segue as fórmulas (7.1) a (7.12) da EN 1992-4 \cite{EN1992-4:2018}, com
+profundidade efetiva de 400 mm, afastamento de borda de 600 mm e espaçamento de
+400 mm; e o esmagamento sob a chaveta segue o item 6.7 da
+EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas parcialmente carregadas.
 
 \tabela{Verificação da ancoragem da base de canto}{\footnotesize
 \begin{tabular}{lrlc}
@@ -198,12 +208,7 @@ concreto que o envolve, segundo a EN 1992-4 \cite{EN1992-4:2018}. A
     Fendilhamento               &   527,41 & kN & 0,526 \\
     Esmagamento sob a chaveta   &   266,67 & kN & 0,596 \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-canto}{Aço conforme a tabela 3.4 e o item 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005},
-com $\gamma_{Ms} = 1{,}5$. Concreto C25/30 conforme as fórmulas (7.1) a (7.12) da
-EN 1992-4 \cite{EN1992-4:2018}, com profundidade efetiva de 400 mm,
-afastamento de borda de 600 mm e espaçamento de 400 mm. O esmagamento sob a
-chaveta segue o item 6.7 da EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas
-parcialmente carregadas.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-canto}{}{}
 
 O cortante de 159,01 kN não solicita os chumbadores. Ele é transmitido ao bloco
 por chaveta de cisalhamento soldada sob a chapa de base, solução que evita
@@ -261,22 +266,26 @@ escoamento se dê na barra, que é dúctil e avisa, e não no olhal.
 
 Na diagonal vertical, o esforço solicitante é de 166,88 kN e a resistência da
 barra, de 211,69 kN, do que resulta sobre-resistência de 1,27. O
-dimensionamento adota este último valor. O \autoref{qua:lig-diagonais} reúne as
-duas ligações.
+dimensionamento adota este último valor. A \autoref{tab:lig-diagonais} reúne as
+duas ligações, conforme o item 3.13 e o item 4.5.3.3 da
+EN 1993-1-8 \cite{EN1993-1-8:2005}, com chapa do olhal em aço S235 e pino em
+S355. As taxas referem-se ao esforço de capacidade da barra, superior ao
+solicitante.
 
-\qquadro
+\tabela
 {Ligações de extremidade das diagonais de contraventamento}
 {\footnotesize
-\begin{tabular}{|l|c|c|c|c|}\hline
-    \textbf{Diagonal} & \textbf{Barra} & \textbf{Pino} & \textbf{Modo governante} & \textbf{$\eta$} \\\hline
-    Vertical    & $\varnothing$ 36 mm & $\varnothing$ 36 mm & Geometria do olhal & 0,7713 \\\hline
-    Transversal & $\varnothing$ 27 mm & $\varnothing$ 27 mm & Geometria do olhal & 0,7633 \\\hline
+\begin{tabular}{lcccc}
+\toprule
+    \textbf{Diagonal} & \textbf{Barra} & \textbf{Pino} & \textbf{Modo governante} & \textbf{$\eta$} \\
+\midrule
+    Vertical    & $\varnothing$ 36 mm & $\varnothing$ 36 mm & Geometria do olhal & 0,7713 \\
+    Transversal & $\varnothing$ 27 mm & $\varnothing$ 27 mm & Geometria do olhal & 0,7633 \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
 {lig-diagonais}
-{Conforme o item 3.13 e o item 4.5.3.3 da EN 1993-1-8 \cite{EN1993-1-8:2005}.
-Chapa do olhal em aço S235 e pino em S355. As taxas referem-se ao esforço de
-capacidade da barra, superior ao solicitante.}
+{}
 {}
 
 A manilha e a rosca de extremidade são peças de catálogo e não são
@@ -313,7 +322,11 @@ chapas embutidas, para que não retenham umidade.
 Conforme delimitado na \autoref{sec:delimitacao}, a fundação não é dimensionada
 neste trabalho. O programa encerra a cadeia de verificações entregando, por
 base, os esforços de cálculo que constituem dado de entrada para o projeto
-geotécnico. A \autoref{tab:cargas-fundacao} os reúne.
+geotécnico. A \autoref{tab:cargas-fundacao} os reúne, nos valores de cálculo das
+combinações governantes de cada efeito, conforme a EN 1990 \cite{EN1990:2002}. A
+tração corresponde a arrancamento, sem desconto do peso próprio da sapata nem do
+solo sobrejacente, e a força horizontal total transmitida é de 847,4 kN na
+direção longitudinal e de 53,1 kN na transversal.
 
 \tabela{Esforços de cálculo entregues ao projeto de fundação}{\footnotesize
 \begin{tabular}{lcrrr}
@@ -325,10 +338,7 @@ geotécnico. A \autoref{tab:cargas-fundacao} os reúne.
     Central     &   9 & 199,2 & 151,8 &   0,0 \\
     Canto       &   4 & 293,2 & 277,5 & 159,0 \\
 \bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{cargas-fundacao}{Valores de cálculo nas combinações governantes de cada efeito, conforme a
-EN 1990 \cite{EN1990:2002}. A tração corresponde a arrancamento, sem desconto do
-peso próprio da sapata nem do solo sobrejacente. A força horizontal total
-transmitida é de 847,4 kN na direção longitudinal e de 53,1 kN na transversal.}{}
+\end{tabular}}{Elaborado pelo autor (2026)}{cargas-fundacao}{}{}
 
 Não estão verificados, por dependerem de investigação geotécnica inexistente até
 o momento, a tensão admissível do solo, as dimensões da sapata em planta, o

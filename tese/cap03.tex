@@ -65,22 +65,27 @@ ambientes cobertos porém não aquecidos, com umidade até cerca de 20\%; e a
 classe 3, a condições mais severas que as anteriores, típicas de peças expostas
 à intempérie ou em edificações abertas. A duração é tratada por cinco
 categorias, que vão da ação permanente, superior a dez anos, à ação
-instantânea. O \autoref{qua:kmod-kdef} reúne os valores aplicáveis à MLC.
+instantânea. A \autoref{tab:kmod-kdef} apresenta os valores aplicáveis à MLC.
+Quando a combinação reúne ações de durações distintas, adota-se o $k_{mod}$ da
+ação de menor duração entre as presentes.
 
-\qquadro
+\tabela
 {Coeficientes de modificação e de fluência para madeira lamelada colada}
 {\footnotesize
-\begin{tabular}{|c|c|c|c|c|c|c|}\hline
-    \textbf{Classe de} & \multicolumn{5}{c|}{\textbf{$k_{mod}$ por classe de duração da ação}} & \textbf{$k_{def}$} \\\cline{2-6}
-    \textbf{serviço} & Permanente & Longa & Média & Curta & Instantânea & \\\hline
-    1 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,60 \\\hline
-    2 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,80 \\\hline
-    3 & 0,50 & 0,55 & 0,65 & 0,70 & 0,90 & 2,00 \\\hline
+\begin{tabular}{ccccccc}
+\toprule
+    \textbf{Classe de} & \multicolumn{5}{c}{\textbf{$k_{mod}$ por classe de duração da ação}} & \textbf{$k_{def}$} \\
+\cmidrule(lr){2-6}
+    \textbf{serviço} & Permanente & Longa & Média & Curta & Instantânea & \\
+\midrule
+    1 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,60 \\
+    2 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,80 \\
+    3 & 0,50 & 0,55 & 0,65 & 0,70 & 0,90 & 2,00 \\
+\bottomrule
 \end{tabular}}
 {Adaptado da EN 1995-1-1 \cite{EN1995-1-1:2004}, tabelas 3.1 e 3.2}
 {kmod-kdef}
-{Quando a combinação reúne ações de durações distintas, adota-se o $k_{mod}$ da
-ação de menor duração entre as presentes.}
+{}
 {}
 
 O coeficiente $k_{def}$ quantifica a fluência e é empregado nas verificações de
@@ -172,24 +177,28 @@ provocado por componentes de força perpendiculares às fibras, e o anexo A trat
 da ruptura de bloco, em que um volume de madeira delimitado pelo grupo de pinos
 se destaca da peça. O item 8.1.2 introduz ainda o número efetivo de pinos
 $n_{ef}$, inferior ao número real quando os pinos se alinham paralelamente às
-fibras, reconhecendo que a distribuição de carga entre eles não é uniforme. O
-\autoref{qua:modos-ruptura} resume essa classificação.
+fibras, reconhecendo que a distribuição de carga entre eles não é uniforme. A
+\autoref{tab:modos-ruptura} resume essa classificação, que orienta a adoção de
+taxas de utilização máximas distintas para cada natureza, conforme exposto no
+\autoref{cap:detalhamento}.
 
-\qquadro
+\tabela
 {Classificação dos modos de ruptura em ligações de madeira}
 {\footnotesize
-\begin{tabular}{|l|p{5.4cm}|p{4.4cm}|}\hline
-    \textbf{Natureza} & \textbf{Modo de ruptura} & \textbf{Prescrição} \\\hline
-    Dúctil  & Plastificação do pino com esmagamento da madeira & Item 8.2 \\\hline
-    Dúctil  & Escoamento da chapa metálica                     & EN 1993-1-8 \\\hline
-    Frágil  & Esmagamento localizado sem plastificação do pino  & Item 8.2 \\\hline
-    Frágil  & Fendilhamento por tração perpendicular às fibras  & Item 8.1.4 \\\hline
-    Frágil  & Ruptura de bloco no grupo de pinos                & Anexo A \\\hline
+\begin{tabular}{lll}
+\toprule
+    \textbf{Natureza} & \textbf{Modo de ruptura} & \textbf{Prescrição} \\
+\midrule
+    Dúctil  & Plastificação do pino com esmagamento da madeira & Item 8.2 \\
+    Dúctil  & Escoamento da chapa metálica                     & EN 1993-1-8 \\
+    Frágil  & Esmagamento localizado sem plastificação do pino  & Item 8.2 \\
+    Frágil  & Fendilhamento por tração perpendicular às fibras  & Item 8.1.4 \\
+    Frágil  & Ruptura de bloco no grupo de pinos                & Anexo A \\
+\bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026) com base na EN 1995-1-1 \cite{EN1995-1-1:2004}}
 {modos-ruptura}
-{A distinção orienta a adoção de taxas de utilização máximas distintas para
-cada natureza, conforme exposto no \autoref{cap:detalhamento}.}
+{}
 {}
 
 \section{AÇÕES E COMBINAÇÕES}\label{sec:acoes-revisao}
