@@ -13,8 +13,8 @@ no topo, de modo que não transmitem momento à fundação nem à viga.
 
 A estabilidade lateral não é, portanto, obtida por continuidade de nós, e sim
 pelos sistemas de contraventamento: o diafragma de cobertura conduz as forças
-transversais aos frontões, e os painéis de cruz nas fachadas longitudinais
-conduzem as forças longitudinais à fundação. Essa separação entre função
+transversais aos frontões, e os painéis de cruz nas fachadas longitudinais e no
+alinhamento central de pilares conduzem as forças longitudinais à fundação. Essa separação entre função
 gravitacional e função de estabilização é a que permite manter os pilares
 articulados e com seção reduzida.
 
@@ -27,12 +27,6 @@ horizontalmente, a peça trabalha como arco abatido: desenvolve empuxo e o
 momento fletor é aliviado pelo efeito de arco. Se puderem afastar livremente, a
 peça trabalha como viga biapoiada, sem empuxo, e o momento é integralmente
 resistido por flexão.
-
-A distinção não é acadêmica. Entre um extremo e outro o momento na cumeeira
-varia em mais de setenta por cento, e o esforço horizontal transmitido à
-fundação varia de zero a algumas centenas de quilonewtons. Adotar o modelo
-errado conduz ou a subdimensionar a viga, ou a dimensionar uma fundação para um
-esforço que não existe.
 
 O comportamento efetivo é determinado pela rigidez relativa entre o mecanismo
 que gera o empuxo e o que o restringe. A viga, como arco, opõe-se ao afastamento
@@ -62,7 +56,7 @@ EN 1993-1-1 \cite{EN1993-1-1:2005}. Os valores devem ser lidos contra os
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{rigidez-apoio}{}{}
 
-A leitura da tabela é inequívoca. Mesmo no limite generoso da base engastada,
+Mesmo no limite generoso da base engastada,
 desenvolve-se 0,0\% do empuxo rígido, isto é, 0,07 kN de um total possível de
 266,85 kN. A restrição oferecida pela base não alcança o apoio da viga, porque
 o pilar se deforma por flexão em série com ela.
@@ -70,7 +64,7 @@ o pilar se deforma por flexão em série com ela.
 Adotou-se, em consequência, o modelo de viga biapoiada, com empuxo nulo. O
 momento de projeto na cumeeira passa de 294,2 kN$\cdot$m, que o modelo de arco
 indicaria, para 504,3 kN$\cdot$m, um acréscimo de 71,4\%. Trata-se do modelo
-conservador quanto à flexão, e é também o fisicamente correto.
+conservador quanto à flexão.
 
 Duas consequências de projeto decorrem dessa decisão. A primeira é que não há
 esforço horizontal a transmitir à fundação por efeito de arco, o que dispensa
@@ -92,7 +86,7 @@ EN 14080 \cite{EN14080:2013}. A área tributária de um pórtico intermediário 
 5,75 m, igual ao espaçamento entre pórticos, e as parcelas declaradas constam da
 \autoref{tab:valores-declarados}.
 
-\tabela{Decomposição da ação permanente característica}{\footnotesize
+\tabela{Ação permanente característica calculada}{\footnotesize
 \begin{tabular}{lrll}
 \toprule
     \textbf{Parcela} & \textbf{Valor} & \textbf{Unidade} & \textbf{Obtenção} \\
@@ -102,8 +96,7 @@ EN 14080 \cite{EN14080:2013}. A área tributária de um pórtico intermediário 
     Peso linear da viga           & 2,4954 & kN/m & Calculado \\
     Viga, por área de cobertura   & 0,4340 & kN/m\textsuperscript{2} & Calculado \\
     Terças, por área de cobertura & 0,1889 & kN/m\textsuperscript{2} & Calculado \\
-    Telha metálica                & 0,1000 & kN/m\textsuperscript{2} & Declarado \\
-    Instalações e serviços        & 0,1000 & kN/m\textsuperscript{2} & Declarado \\
+    Telha e instalações           & 0,2000 & kN/m\textsuperscript{2} & \autoref{tab:valores-declarados} \\
 \midrule
     \textbf{Total sobre a viga}   & \textbf{0,8229} & \textbf{kN/m\textsuperscript{2}} & \\
     Total sobre a terça           & 0,3889 & kN/m\textsuperscript{2} & \\
@@ -123,40 +116,59 @@ que abrange coberturas não acessíveis salvo para manutenção e reparo. Adotou
 sobrecarga distribuída de 0,40 kN/m\textsuperscript{2} e carga concentrada de
 1,00 kN, esta última aplicada apenas na verificação local das terças e da telha.
 
-O enquadramento na categoria H tem efeito determinante nas combinações: os
-coeficientes de combinação $\psi_0$, $\psi_1$ e $\psi_2$ da sobrecarga são
-nulos, conforme registrado na \autoref{tab:ndp}. Disso resulta que a sobrecarga
-e o vento nunca atuam simultaneamente, e que cada um deles governa combinações
-próprias.
+O enquadramento na categoria H tem efeito determinante nas combinações, por dois
+motivos distintos. O primeiro é que os coeficientes $\psi_0$, $\psi_1$ e
+$\psi_2$ da sobrecarga são nulos, conforme registrado na \autoref{tab:ndp}, o
+que elimina a sobrecarga como ação acompanhante do vento. Esses coeficientes,
+porém, nada dizem sobre o vento como ação acompanhante da sobrecarga, para o qual
+$\psi_{0,W} = 0{,}6$. A dispensa dessa segunda concomitância vem do item
+3.3.2(1) da EN 1991-1-1 \cite{EN1991-1-1:2002}, na redação da errata de 2009:
+em coberturas, em particular nas de categoria H, a sobrecarga não precisa ser
+combinada com a neve nem com o vento. A sobrecarga e o vento são, assim, ações
+variáveis alternativas, e cada uma governa combinações próprias.
 
 \subsection{Ação do vento}\label{ssec:acao-vento}
 
-Conforme exposto na \autoref{ssec:rota-vento}, a cobertura não se enquadra como
-cobertura isolada, por ser telhado múltiplo e por haver obstrução permanente sob
-ela. Aplicou-se a rota de edificação com coeficientes de pressão externa e
-interna da ABNT NBR 6123 \cite{NBR6123:2023}.
+Conforme exposto na \autoref{ssec:rota-vento}, a estrutura é uma cobertura
+isolada cuja geometria, com $h = 7{,}00$ m inferior a $0{,}5\,\ell_2$, está fora do
+domínio da tabela 25 da ABNT NBR 6123 \cite{NBR6123:2023}, e sob a qual há
+obstrução por veículos. Aplica-se o último parágrafo do item 7.2.1: a cobertura
+é calculada, em toda a sua extensão, que é a zona de obstrução, como edificação
+fechada de mesma cobertura, com os coeficientes de pressão externa da tabela 10,
+de telhados múltiplos simétricos de tramos iguais, e com $c_{pi} = +0{,}8$ ou
+$c_{pi} = -0{,}3$ conforme a obstrução esteja a sotavento ou a barlavento. O
+coeficiente líquido de cada água é $c_{net} = c_{pe} - c_{pi}$.
 
-Para o vento perpendicular à cumeeira, foram varridos oito padrões de
-coeficientes, combinando os dois tramos da cobertura, as duas direções de
-incidência e os dois valores admissíveis de coeficiente de pressão interna,
-$+0{,}8$ e $-0{,}3$. A varredura é completa, isto é, nenhum padrão foi descartado a
-priori por julgamento de qual seria o mais desfavorável.
+Para o vento perpendicular às cumeeiras ($\alpha = 0^{\circ}$ na tabela 10, com
+$\theta = 10^{\circ}$), foram varridos oito padrões, combinando os dois tramos da
+cobertura, com as zonas $a^*/b^*$ e $c^*/d^*$, as duas direções de incidência e
+os dois valores de $c_{pi}$. Para o vento paralelo às cumeeiras
+($\alpha = 90^{\circ}$), a tabela dá coeficientes uniformes nas duas águas, por
+faixas ao longo do comprimento a partir do frontão de barlavento: $-0{,}8$ na
+faixa $b_1$, $-0{,}6$ na faixa $b_2$, ambas de largura $h = 7{,}00$ m, e $-0{,}2$ na
+faixa $b_3$, no restante. Como cada pórtico é dimensionado para qualquer posição,
+varreram-se as três faixas com os dois $c_{pi}$, em seis padrões adicionais. São
+quatorze padrões ao todo, e nenhum foi descartado a priori. O mais severo dos
+paralelos, $c_{net} = -0{,}8 - 0{,}8 = -1{,}6$ na faixa $b_1$, não supera os
+padrões assimétricos perpendiculares às cumeeiras, que continuam a governar a
+sucção. As faixas de borda da tabela 10, com $c_{pe}$ médio de $-1{,}5$ e $-2{,}0$,
+dizem respeito a elementos localizados; para a vedação aplicou-se o item 7.2.6,
+com $c_p = \pm 2{,}0$.
 
-Para o vento paralelo à cumeeira, a edificação aberta não oferece superfície de
-barlavento, e a ação resulta do arrasto nos pilares somado ao atrito sobre a
-cobertura. A \autoref{tab:acoes-vento} resume as duas direções, com os valores
+A força horizontal com vento paralelo à cumeeira resulta do arrasto nos pilares
+somado ao atrito sobre a cobertura. A nota da tabela 10 remete esse atrito ao
+item 6.1.5, de edificações fechadas; adotou-se o item 7.2.2, próprio das
+coberturas isoladas, coerente com o enquadramento da estrutura e mais severo. A \autoref{tab:acoes-vento} resume as duas direções, com os valores
 obtidos conforme a ABNT NBR 6123 \cite{NBR6123:2023} e a parcela de atrito
 calculada pelo item 7.2.2, com $a \times b = 1.863$ m\textsuperscript{2} em
 planta.
 
-\tabela{Ações de vento por direção de incidência}{\footnotesize
+\tabela{Ações de vento resultantes por direção de incidência}{\footnotesize
 \begin{tabular}{lrll}
 \toprule
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} & \textbf{Observação} \\
 \midrule
-    \multicolumn{4}{l}{\textit{Vento perpendicular à cumeeira}} \\
-    Padrões de coeficientes varridos & 8 & & Dois tramos, duas direções, dois $c_{pi}$ \\
-    Combinações de ELU com vento & 17 & & Varredura completa \\
+    \multicolumn{4}{l}{\textit{Vento na cobertura, 14 padrões da tabela 10}} \\
     Sucção governante & $-7{,}609$ & kN/m & Padrão com $c_{pi} = +0{,}8$ \\
 \addlinespace
     \multicolumn{4}{l}{\textit{Vento paralelo à cumeeira}} \\
@@ -167,8 +179,8 @@ planta.
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{acoes-vento}{}{}
 
-A parcela de atrito merece comentário, por ser a que governa todo o
-dimensionamento do contraventamento longitudinal. Ela equivale a 2,35 vezes o
+A parcela de atrito, por ser a que governa todo o
+dimensionamento do contraventamento longitudinal, equivale a 2,35 vezes o
 arrasto que se obteria pelo bloqueio da silhueta da edificação, o que à primeira
 vista sugere erro de cálculo. Não é o caso: a prescrição do item 7.2.2 é
 envolvente por construção, pois reúne em uma só expressão a ação sobre ambas as
@@ -180,8 +192,10 @@ e foi mantida por ser a que a norma determina.
 As combinações seguem a EN 1990 \cite{EN1990:2002}, com os coeficientes parciais
 e de combinação registrados na \autoref{tab:ndp}. A
 \autoref{tab:combinacoes} descreve os grupos considerados. Não há termo de
-sobrecarga nas combinações com vento, nem termo de vento nas combinações com
-sobrecarga, por serem nulos os coeficientes $\psi$ da categoria H. A combinação
+sobrecarga nas combinações com vento, por serem nulos os coeficientes $\psi$ da
+categoria H, nem termo de vento nas combinações com sobrecarga, pela dispensa do
+item 3.3.2(1) da EN 1991-1-1 \cite{EN1991-1-1:2002}, discutida na
+\autoref{ssec:sobrecarga}. A combinação
 de sucção adota o coeficiente favorável de 0,9 para a ação permanente, conforme
 a tabela A1.2(A), para verificações de equilíbrio.
 
@@ -205,16 +219,43 @@ a tabela A1.2(A), para verificações de equilíbrio.
 {}
 {}
 
-Os oito padrões de coeficientes de pressão geram, cada um, uma combinação de
+Os quatorze padrões de coeficientes de pressão geram, cada um, uma combinação de
 pressão e uma de sucção. Somadas à combinação de sobrecarga dominante, resultam
-dezessete combinações de estado-limite último, todas efetivamente avaliadas.
+vinte e nove combinações de estado-limite último, todas efetivamente avaliadas.
+
+A dispensa não altera o dimensionamento, e isso foi verificado. A combinação que
+ela permite omitir é
+
+\begin{equation}
+    E_d = 1{,}35\,G + 1{,}5\,Q + 1{,}5 \cdot 0{,}6\,W . \label{eq:comb-q-w}
+\end{equation}
+
+\noindent
+Em treze dos quatorze padrões a cobertura está sob sucção, e o vento é
+favorável à flexão da viga; uma ação variável favorável entra com coeficiente
+nulo, conforme a tabela A1.2(B) da EN 1990 \cite{EN1990:2002}. O único padrão de
+pressão é o da faixa $b_3$ com $c_{pi} = -0{,}3$, em que
+$c_{net} = -0{,}2 + 0{,}3 = +0{,}1$. Com ele, a \autoref{eq:comb-q-w} dá momento de
+526,4 kN$\cdot$m, 4,4\% acima dos 504,3 kN$\cdot$m de $1{,}35\,G + 1{,}5\,Q$. A
+inclusão do vento, porém, torna a combinação de curta duração, com
+$k_{mod} = 0{,}70$ na classe de serviço 3, contra $k_{mod} = 0{,}65$ da sobrecarga,
+de média duração, pelo item 3.1.3 da EN 1995-1-1 \cite{EN1995-1-1:2004}. A
+utilização relativa resulta em
+$(526{,}4/0{,}70)/(504{,}3/0{,}65) = 0{,}97 < 1$, e a omissão permanece a favor da
+segurança.
+Nos pilares, o vento solicita por flexão lateral e pelo esforço descendente dos
+painéis de contraventamento. Essas verificações somam a maior reação vertical,
+que é a da combinação com sobrecarga, ao vento integral com coeficiente 1,5, e
+essa envoltória cobre a parcela de $0{,}9\,W$ da \autoref{eq:comb-q-w}.
 
 \section{ESFORÇOS SOLICITANTES}\label{sec:esforcos}
 
 A \autoref{tab:esforcos-governantes} apresenta os esforços de cálculo que
 governam o dimensionamento da viga, nas combinações da
 EN 1990 \cite{EN1990:2002}. O esforço normal reduzido decorre do modelo
-biapoiado, discutido na \autoref{ssec:modelo-apoio}.
+biapoiado, discutido na \autoref{ssec:modelo-apoio}. Os diagramas de esforços e
+os esforços de cada uma das vinte e nove combinações constam do
+\autoref{ap:analise-estatica}.
 
 \tabela{Esforços de cálculo governantes na viga}{\footnotesize
 \begin{tabular}{lcrl}
@@ -256,26 +297,64 @@ determinante, porém, para o arrancamento e para a ancoragem, tratados no
 O esforço normal na viga, de apenas 8,75 kN, é consequência direta do modelo de
 apoio adotado. Sob o modelo de arco, esse valor seria de ordem de grandeza
 superior, e a verificação de flexo-compressão teria peso bem maior no
-dimensionamento.
+dimensionamento. Com empuxo nulo, o esforço normal decorre apenas da inclinação
+do eixo baricêntrico. Sendo o intradorso horizontal e o extradorso inclinado de
+$\alpha = 10^{\circ}$, o eixo baricêntrico, a meia altura, inclina-se de
+$\theta = \operatorname{arctg}(\operatorname{tg}\alpha/2) = 5{,}04^{\circ}$,
+praticamente $\alpha/2$. Projetando o cortante vertical $S(x)$ no eixo da peça,
+
+\begin{equation}
+    N(x) = S(x)\,\operatorname{sen}\theta , \qquad
+    N_{max} = 99{,}61 \times \operatorname{sen} 5{,}04^{\circ} = 8{,}75~\text{kN},
+    \label{eq:normal-analitico}
+\end{equation}
+
+\noindent
+no apoio, decrescendo linearmente até praticamente zero na cumeeira, onde o
+cortante se anula. O modelo de elementos finitos confirma a expressão: a razão
+entre o esforço normal e o cortante no eixo local vale
+$\operatorname{tg}\theta = 0{,}0882$ em todos os elementos da viga. Na
+verificação de flexo-compressão da cumeeira adotou-se, por simplicidade, o valor
+máximo de 8,75 kN, o que é conservador, pois na cumeeira o esforço normal é quase
+nulo.
 
 \section{ORDEM DA ANÁLISE E ESTABILIDADE GLOBAL}\label{sec:ordem-analise}
 
 Resta estabelecer se a análise de primeira ordem é suficiente ou se os efeitos
-de segunda ordem devem ser incorporados. O critério é o fator $\alpha_{cr}$,
-razão entre a carga crítica elástica e a carga de cálculo, com limite de 10
-conforme o item 5.2.1 da EN 1993-1-1 \cite{EN1993-1-1:2005}.
+de segunda ordem devem ser incorporados. A EN 1995-1-1 \cite{EN1995-1-1:2004}
+remete essa decisão à análise estrutural, mas não fixa um limiar numérico para
+dispensar a segunda ordem. Empregou-se, por analogia, o critério do item 5.2.1
+da EN 1993-1-1 \cite{EN1993-1-1:2005}: o fator $\alpha_{cr}$, razão entre a
+carga crítica elástica e a carga de cálculo, deve ser ao menos 10 para que a
+análise elástica de primeira ordem seja suficiente.
 
-Na direção longitudinal, obteve-se $\alpha_{cr} = 148{,}47$. Na direção
+Na direção longitudinal, obteve-se $\alpha_{cr} = 124{,}75$. Na direção
 transversal, mais flexível por depender do diafragma de cobertura e dos
-frontões, obteve-se $\alpha_{cr} = 20{,}88$. O menor dos dois, 20,88, supera o
-limite com folga superior ao dobro, de modo que o sistema é indeslocável nas
-duas direções e a análise de primeira ordem é suficiente. O fator de
-amplificação calculado, de 1,0503, não foi aplicado.
+frontões, obteve-se $\alpha_{cr} = 16{,}50$. O menor dos dois, 16,50, supera o
+limite de 10, de modo que o sistema é indeslocável nas duas direções e a análise
+de primeira ordem é suficiente. O fator de amplificação calculado, de 1,0645,
+não foi aplicado.
 
-As imperfeições geométricas foram consideradas por força horizontal equivalente,
-com $\phi_0 = 0{,}005$, do que resulta excentricidade inicial de 22,91 mm e
-momento de 2,2821 kN$\cdot$m nos pilares, correspondente a taxa de utilização de
-0,047. Os efeitos de segunda ordem ao nível de barra, por sua vez, não são
-desprezados: permanecem incorporados pelos coeficientes $k_c$ das verificações
-de flexo-compressão, conforme o item 6.3.2 da
-EN 1995-1-1 \cite{EN1995-1-1:2004}.
+As imperfeições geométricas seguem o item 5.4.4 da EN 1995-1-1
+\cite{EN1995-1-1:2004}, que tem prescrição própria para estruturas de madeira.
+A inclinação inicial vale
+
+\begin{equation}
+    \phi = 0{,}005\sqrt{\frac{5}{h}} = 0{,}005\sqrt{\frac{5}{7{,}0}} = 0{,}00423
+    \quad (h > 5~\text{m}), \label{eq:phi-ec5}
+\end{equation}
+
+\noindent
+com $h = 7{,}0$ m, o pé-direito. A \autoref{eq:phi-ec5} não prevê a redução
+pelo número de colunas que a EN 1993-1-1 aplica, e resulta cerca de 30\% maior
+que o valor daquela norma para o mesmo pórtico. A inclinação é introduzida como
+força horizontal equivalente $H_{imp} = \phi\,V_{Ed}$, somada às ações
+laterais dos três sistemas de contraventamento: com a carga vertical do
+edifício, vale 15,2 kN. Nos pilares, resulta excentricidade inicial de 29,58 mm
+e momento de 2,95 kN$\cdot$m, correspondente a taxa de utilização de 0,06.
+
+A curvatura inicial das barras, $e = 0{,}0025\,\ell$, também prescrita pelo item
+5.4.4, não é somada à análise, por já estar incorporada aos coeficientes $k_c$
+das verificações de flexo-compressão, conforme o item 6.3.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}. É por meio deles que os efeitos de segunda
+ordem ao nível de barra são considerados.

@@ -141,3 +141,38 @@ def test_estabilidade_contravento_reprovado():
     assert res["non_sway_transv"] is False
     assert res["ok"] is False
     assert res["metodo_analise"] == "instavel_lateralmente"
+
+
+# ── Issue 46 — imperfeições pela EN 1995-1-1 §5.4.4 ───────────────────────────
+
+def test_inclinacao_inicial_ec5_eq_5_1():
+    """φ = 0,005 para h ≤ 5 m; φ = 0,005·√(5/h) para h > 5 m."""
+    from mlc_projeto.checks.elu.estabilidade_global import inclinacao_inicial_ec5
+    import math
+    assert inclinacao_inicial_ec5(3.0) == pytest.approx(0.005)
+    assert inclinacao_inicial_ec5(5.0) == pytest.approx(0.005)
+    assert inclinacao_inicial_ec5(7.0) == pytest.approx(0.005 * math.sqrt(5 / 7))
+    assert inclinacao_inicial_ec5(7.0) == pytest.approx(0.00423, abs=1e-5)
+
+
+def test_curvatura_inicial_ec5_eq_5_2():
+    from mlc_projeto.checks.elu.estabilidade_global import curvatura_inicial_ec5
+    assert curvatura_inicial_ec5(7.0) == pytest.approx(0.0175)
+
+
+def test_forca_nocional_usa_ec5_sem_reducao_por_colunas():
+    """O EC5 não reduz φ pelo número de colunas (ao contrário do α_m da
+    EN 1993-1-1 §5.3.2, que fica só como comparação)."""
+    r2 = forca_nocional(V_Ed_kN=1000.0, h_m=7.0, m_colunas=2)
+    r9 = forca_nocional(V_Ed_kN=1000.0, h_m=7.0, m_colunas=9)
+    assert r2["phi"] == r9["phi"] == pytest.approx(0.004226, abs=1e-6)
+    assert "5.4.4" in r2["norma"]
+    assert r2["phi"] > r2["phi_en1993_comparacao"]
+
+
+def test_contraventamento_vertical_usa_a_mesma_fonte():
+    from mlc_projeto.checks.elu.contraventamento_vertical import (
+        forca_nocional as fn_cv,
+    )
+    assert fn_cv(1000.0, 7.0, 9)["H_imp_kN"] == pytest.approx(
+        forca_nocional(1000.0, 7.0, 9)["H_imp_kN"])

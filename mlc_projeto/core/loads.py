@@ -77,7 +77,10 @@ PSI_0_Q     = 0.00   # categoria H (era 0,70 — categorias A–D)
 PSI_1_Q     = 0.00   # categoria H (era 0,50 — categorias A–D); issue 5
 PSI_2_Q     = 0.00
 # Vento: ψ0,W=0,6 (EN 1990 Tab. A1.1). Não se aplica como acompanhante da
-# sobrecarga aqui, pois Q (cat. H) e W não são concomitantes.
+# sobrecarga: o ψ0,Q=0 da cat. H só elimina Q como ACOMPANHANTE; quem dispensa
+# o vento acompanhando Q dominante é a EN 1991-1-1:2002/AC:2009 §3.3.2(1)
+# (issue 45). Demonstração de que a dispensa não altera a viga:
+# Carregamentos.combinacao_Q_com_vento_acompanhante().
 PSI_0_W     = 0.60
 PSI_2_W     = 0.00
 
@@ -865,10 +868,10 @@ class Carregamentos:
         """
         Tabela COMPLETA das combinações ELU por padrão de vento (issue 28).
 
-        Para cada um dos 8 padrões Cpe da Tab.25 (C1/C2 × asim/rev/unif.bv/unif.st)
-        há 2 combinações: ELU_W (1,35G+1,5W, pressão) e ELU_S (0,9G+1,5W, sucção);
-        mais ELU_Q (1,35G+1,5Q, sem vento). Total 8×2+1 = 17 (a cat. H reduziu de
-        24 → 17 ao tornar Q e vento não concomitantes — issue 3).
+        Para cada padrão de C_pe (rota do §7.2.1: Tab. 10 α=0° — 8 padrões — e
+        α=90° — 6 padrões, issue 39) há 2 combinações: ELU_W (1,35G+1,5W) e
+        ELU_S (0,9G+1,5W); mais ELU_Q (1,35G+1,5Q, sem vento). Total 14×2+1 = 29
+        (Q e vento não concomitantes — issue 3/45).
 
         Cada linha traz: id do padrão, caso Tab.25, Cpb/Cps (C_esq/C_dir),
         q_esq/q_dir, M_max, H, duração e a marcação da(s) governante(s).
@@ -953,6 +956,68 @@ class Carregamentos:
             "ELU_C4", self.combinacao_ELU_governante()
         )
 
+    def combinacao_Q_com_vento_acompanhante(self, mat=None) -> dict:
+        """
+        Combinação com sobrecarga dominante e vento acompanhante — issue 45.
+
+            1,35·G + 1,5·Q + 1,5·ψ0,W·W      (EN 1990 Eq. 6.10, Tab. A1.1)
+
+        O projeto NÃO a adota: a EN 1991-1-1:2002/AC:2009 §3.3.2(1) dispensa a
+        concomitância da sobrecarga de cobertura (em particular a de cat. H)
+        com vento e neve. Esta função demonstra que a dispensa não altera o
+        dimensionamento da viga: para cada padrão de vento θ=90°, a parcela de
+        vento entra só se for DESFAVORÁVEL (pressão, w > 0); a sucção é
+        favorável e, por EN 1990 Tab. A1.2(B), ação variável favorável entra
+        com γ = 0. Se nenhum padrão for de pressão, a combinação coincide com
+        ELU_Q.
+
+        Com `mat`, compara-se também a UTILIZAÇÃO (M/k_mod): incluir o vento
+        torna a combinação de curta duração (EC5 §3.1.3), com k_mod maior que o
+        da sobrecarga (média). A dispensa só altera o dimensionamento se
+        M_QW/k_mod,curta > M_Q/k_mod,média (issue 39: a faixa b3 com c_pi = −0,3
+        da Tab. 10 α = 90° é de pressão leve).
+        """
+        g, q, A = self.g_k, self.q_k, self._area_trib
+        c_q = self.combinacoes_ELU()["ELU_Q"]
+        linhas = []
+        for p in self.padroes_vento:
+            we = max(0.0, p["w_esq_kNm2"]) * A        # só a parcela desfavorável
+            wd = max(0.0, p["w_dir_kNm2"]) * A
+            q_e = GAMMA_G_sup * g + GAMMA_Q * q + GAMMA_Q * PSI_0_W * we
+            q_d = GAMMA_G_sup * g + GAMMA_Q * q + GAMMA_Q * PSI_0_W * wd
+            r = self._analisar(q_esq=q_e, q_dir=q_d)
+            linhas.append({
+                "padrao": p["id"],
+                "w_esq_kNm2": p["w_esq_kNm2"], "w_dir_kNm2": p["w_dir_kNm2"],
+                "vento_desfavoravel": we > 0.0 or wd > 0.0,
+                "M_max_kNm": float(r["M_max_kNm"]),
+                "R_v_kN": float(r.get("R_v_gov_kN", abs(r["R_v_kN"]))),
+            })
+        M_QW = max(abs(l["M_max_kNm"]) for l in linhas)
+        R_QW = max(l["R_v_kN"] for l in linhas)
+        n_press = sum(l["vento_desfavoravel"] for l in linhas)
+        M_Q = abs(c_q.M_max_kNm)
+        k_q = k_w = None
+        razao_util = M_QW / M_Q if M_Q else 1.0
+        if mat is not None:
+            k_q = mat.com_duracao(c_q.duracao).k_mod
+            k_w = mat.com_duracao("curta").k_mod
+            razao_util = (M_QW / k_w) / (M_Q / k_q) if M_Q else 1.0
+        return {
+            "expressao": "1,35G + 1,5Q + 1,5·0,6·W (W só se desfavorável)",
+            "norma_dispensa": "EN 1991-1-1:2002/AC:2009 §3.3.2(1)",
+            "linhas": linhas,
+            "n_padroes_pressao": n_press,
+            "M_QW_kNm": round(M_QW, 2),
+            "R_QW_kN": round(R_QW, 2),
+            "M_ELU_Q_kNm": round(abs(c_q.M_max_kNm), 2),
+            "R_ELU_Q_kN": round(abs(c_q.V_max_kN), 2),
+            "razao_M": round(M_QW / M_Q, 4) if M_Q else 1.0,
+            "k_mod_Q": k_q, "k_mod_QW": k_w,
+            "razao_utilizacao": round(razao_util, 4),
+            "altera_dimensionamento": razao_util > 1.0 + 1e-9,
+        }
+
     # ── Interface de compatibilidade com módulos existentes ──
 
     def M_max_ELU(self) -> float:
@@ -1021,10 +1086,11 @@ class Carregamentos:
         r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
         return r["M_x"]
 
-    def diagramas_MVN_ELU(self) -> dict:
+    def diagramas_MVN_ELU(self, comb: Combinacao | None = None) -> dict:
         """
-        Diagramas M(x), V(x) e N(x) da combinação ELU governante — derivação
-        rigorosa no eixo da peça (issue 27, coerente com a issue 12).
+        Diagramas M(x), V(x) e N(x) de uma combinação ELU (por omissão, a
+        governante) — derivação rigorosa no eixo da peça (issue 27, coerente
+        com a issue 12). Com `comb`, serve ao anexo de análise (issue 51).
 
         Da análise biarticulada:
             M(x)  = M_0(x) − H·y_c(x)            (momento fletor)
@@ -1036,7 +1102,7 @@ class Carregamentos:
 
         Coincide, nos apoios, com N_apoio/V_apoio de `analisar_biarticulada`.
         """
-        gov = self.combinacao_ELU_governante()
+        gov = comb if comb is not None else self.combinacao_ELU_governante()
         r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
         x   = np.asarray(r["x"], dtype=float)
         M   = np.asarray(r["M_x"], dtype=float)
@@ -1054,6 +1120,7 @@ class Carregamentos:
         return {
             "x": x, "M": M, "V": V, "N": N, "S": S,
             "H_kN": H, "comb": gov.nome,
+            "R_A_kN": float(r["R_A_kN"]), "R_B_kN": float(r["R_B_kN"]),
             "M_max_kNm": float(M[np.argmax(np.abs(M))]),
             "V_max_kN":  float(V[np.argmax(np.abs(V))]),
             "N_max_kN":  float(N[np.argmax(np.abs(N))]),

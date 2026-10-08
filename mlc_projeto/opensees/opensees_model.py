@@ -151,9 +151,17 @@ def analisar_fem(q: float, L: float, h0: float, h_ap: float,
     # Força axial no elemento do apoio (kN)
     N_ax = abs(ops.eleForce(1)[0])
 
+    # Issue 40 — razão N/V no eixo local de cada elemento. Com H = 0 o normal
+    # vem só da inclinação do eixo centroidal: N/V = tg θ, tg θ = tg α / 2.
+    N_V = []
+    for i in range(n_v):
+        lf = ops.eleResponse(i + 1, "localForce")   # [N1, V1, M1, N2, V2, M2]
+        if abs(lf[1]) > 1e-6:
+            N_V.append(abs(lf[0]) / abs(lf[1]))
+
     ops.wipe()
     return dict(
-        Ry=round(Ry,4), H=round(H,4), N=round(N_ax,4),
+        Ry=round(Ry,4), H=round(H,4), N=round(N_ax,4), razao_N_V=N_V,
         Mmax=round(Mmax,4), xMmax=round(xMmax,4),
         wmax=round(w_max,4), xwmax=round(xwmax,4),
         xnodes=xnodes, wnodes=w_vals, Meq=Meq,

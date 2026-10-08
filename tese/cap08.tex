@@ -6,6 +6,9 @@
 
 \section{CRITÉRIO DE MARGEM DAS LIGAÇÕES}\label{sec:criterio-ligacoes}
 
+As verificações governantes das ligações e da ancoragem são desenvolvidas em
+equações no \autoref{ap:memoria-calculo}.
+
 As ligações recebem tratamento distinto do dispensado aos elementos. A razão
 está na natureza da ruptura. Uma viga que atinge a resistência à flexão escoa
 progressivamente e redistribui esforço; um grupo de pinos que provoca o
@@ -27,15 +30,16 @@ por serem modos dúcteis com capacidade de redistribuição.
 \toprule
     \textbf{Modo de ruptura} & \textbf{Natureza} & \textbf{Limite} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    Fendilhamento em L1          & Frágil & 0,75 & 0,7222 & Atende \\
-    Fendilhamento em L1c         & Frágil & 0,75 & 0,7222 & Atende \\
-    Pinos de L1                  & Frágil & 0,75 & 0,6634 & Atende \\
-    Pinos de L1c                 & Frágil & 0,75 & 0,6634 & Atende \\
-    Ruptura de bloco em L1       & Frágil & 0,75 & 0,0051 & Atende \\
-    Ruptura de bloco em L1c      & Frágil & 0,75 & 0,0051 & Atende \\
-    Chumbadores de L3            & Frágil & 0,75 & 0,0000 & Atende \\
-    Chapa metálica de L1         & Dúctil & 1,00 & 0,0956 & Atende \\
-    Chapa metálica de L1c        & Dúctil & 1,00 & 0,0956 & Atende \\
+    Pinos de L1                  & Frágil & 0,75 & 0,6914 & Atende \\
+    Pinos de L1c                 & Frágil & 0,75 & 0,6914 & Atende \\
+    Fendilhamento em L1          & Frágil & 0,75 & 0,3387 & Atende \\
+    Fendilhamento em L1c         & Frágil & 0,75 & 0,3387 & Atende \\
+    Ruptura de bloco em L1       & Frágil & 0,75 & 0,0063 & Atende \\
+    Ruptura de bloco em L1c      & Frágil & 0,75 & 0,0063 & Atende \\
+    Ancoragem de L3              & Frágil & 0,75 & 0,3322 & Atende \\
+    Ancoragem de L3c             & Frágil & 0,75 & 0,3599 & Atende \\
+    Chapa metálica de L1         & Dúctil & 1,00 & 0,0997 & Atende \\
+    Chapa metálica de L1c        & Dúctil & 1,00 & 0,0997 & Atende \\
     Apoio da base central L3c    & Dúctil & 1,00 & 0,1328 & Atende \\
 \bottomrule
 \end{tabular}}
@@ -45,107 +49,197 @@ por serem modos dúcteis com capacidade de redistribuição.
 {}
 
 Todos os modos frágeis situam-se abaixo de 0,75, e os dois mais solicitados são
-o fendilhamento das ligações viga-pilar, com 0,7222.
+os pinos das ligações viga-pilar, com 0,6914.
 
 \section{LIGAÇÃO ENTRE VIGA E PILAR}\label{sec:ligacao-viga-pilar}
 
 \subsection{Concepção}\label{ssec:concepcao-l1}
 
-A ligação entre a viga e o pilar é materializada por chapa metálica embutida em
-rasgo central da peça de madeira, atravessada por pinos passantes. A solução
-apresenta duas vantagens em relação a chapas externas aparafusadas: a chapa fica
-protegida da intempérie pela própria madeira, o que importa em classe de serviço
-3, e a ligação trabalha em corte duplo, com dois planos de corte por pino.
+A ligação entre a viga e o pilar separa as duas funções que lhe cabem. A reação
+vertical de gravidade é transmitida por contato direto: a viga apoia-se sobre a
+chapa de topo do pilar lateral (L1) e, no pilar central, sobre uma sela metálica
+que recebe as duas vigas (L1c). Os pinos passantes, em chapa metálica embutida
+em rasgo central da viga, recebem apenas o arrancamento de sucção e o pequeno
+esforço axial. Para que a gravidade não passe pelos pinos, os furos da chapa são
+ovalizados na vertical.
 
-A \autoref{tab:ligacao-l1} apresenta o dimensionamento, conforme os itens 8.2,
-8.5.1.1 e 8.6 da EN 1995-1-1 \cite{EN1995-1-1:2004}, com $\gamma_M = 1{,}30$ e
-$k_{mod} = 0{,}65$. O diâmetro situa-se na faixa de 6 a 30 mm exigida pela norma,
-e a chapa é em aço S275 de 25 mm de espessura.
+A separação tem uma razão precisa. Transmitida pelos pinos, a reação de
+gravidade, de 99,6 kN, atua a 85$^{\circ}$ das fibras e tende a separá-las. Era
+essa a solicitação que levava o fendilhamento, verificado pelo item 8.1.4 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, a 0,961, acima do limite de projeto de 0,75
+para modos frágeis, e que exigia reforço com oito parafusos autoperfurantes.
+Por contato, a mesma reação comprime a madeira perpendicularmente às fibras,
+modo dúctil e de verificação direta.
 
-\tabela{Dimensionamento da ligação entre viga e pilar}{\footnotesize
+\subsection{Apoio por contato}\label{ssec:apoio-contato}
+
+A compressão perpendicular às fibras segue o item 6.1.5 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}. O comprimento de apoio no pilar lateral é a
+própria dimensão do pilar no plano do pórtico, 0,27 m. Ao lado do vão acrescentam-se
+30 mm, e do lado da extremidade nada, porque a viga termina sobre o pilar.
+Para madeira lamelada colada sobre apoio discreto com comprimento até 400 mm,
+$k_{c,90} = 1{,}75$:
+
+\begin{equation}
+    \sigma_{c,90,d} = \frac{R_d}{b\,\ell_{ef}}
+    = \frac{99{,}6}{0{,}32 \times 0{,}30} = 1{,}04~\text{MPa}
+    \;\leq\; k_{c,90}\,f_{c,90,d} = 1{,}75 \times 1{,}30 = 2{,}28~\text{MPa},
+    \label{eq:apoio-l1}
+\end{equation}
+
+\noindent
+com $\eta = 0{,}46$, ou 0,80 sem o benefício de $k_{c,90}$. O valor anterior,
+de 0,266, decorria de um comprimento de apoio de 0,90 m, maior que o pilar, e
+não correspondia à geometria construída.
+
+No pilar central, os 0,27 m teriam de ser divididos entre as duas vigas, e cada
+uma disporia de cerca de 0,13 m, com taxa de 1,50 sem $k_{c,90}$. Por isso o
+pilar central recebe uma sela metálica de 520 mm, com 250 mm de apoio para cada
+viga e 20 mm de folga entre elas. A compressão resulta em 1,11 MPa e
+$\eta = 0{,}49$, ou 0,86 sem $k_{c,90}$. A sela balança 125 mm além de cada face do
+pilar; verificada como placa em balanço sob a pressão de contato, exige 13,8 mm,
+e adotou-se chapa de 16 mm em aço S275, com $\eta = 0{,}74$. A
+\autoref{fig:ligacao-l1c} apresenta a ligação L1c.
+
+\figura
+{Ligação L1c entre as vigas e o pilar central}
+{0.95}
+{fig/ligacao_L1c.png}
+{Elaborado pelo autor (2026)}
+{ligacao-l1c}
+{}
+{}
+
+\subsection{Pinos e arrancamento}\label{ssec:pinos-l1}
+
+Os pinos são dimensionados para a maior reação de arrancamento, de 86,1 kN, na
+combinação de sucção, conforme os itens 8.2, 8.5.1.1 e 8.6 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, com $\gamma_M = 1{,}30$. A
+\autoref{tab:ligacao-l1-arranjo} apresenta o arranjo adotado, e a
+\autoref{tab:ligacao-l1} o resultado da verificação. O diâmetro situa-se na faixa de
+6 a 30 mm exigida pela norma, e a chapa embutida é em aço S275 de 25 mm de
+espessura.
+
+\tabela{Arranjo adotado dos pinos da ligação entre viga e pilar}{\footnotesize
 \begin{tabular}{lrl}
 \toprule
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} \\
 \midrule
-    Força resultante de cálculo        &  99,61 & kN \\
-    Ângulo da resultante com as fibras &  84,96 & graus \\
     Diâmetro do pino                   &  24    & mm \\
-    Número de pinos                    &   6    & \\
+    Número de pinos                    &   5    & \\
     Número de planos de corte por pino &   2    & \\
-    Resistência por pino e plano       &  25,03 & kN \\
-    Resistência total da ligação       & 150,15 & kN \\
-    Espaçamento entre pinos            &  76,2  & mm \\
-    Distância à extremidade carregada  & 168,0  & mm \\
-    Comprimento ocupado pela ligação   & 240,0  & mm \\
-    Altura ocupada pela ligação        & 551,6  & mm \\
+    Espaçamento entre pinos, $a_2$     &  72   & mm \\
+    Distância à extremidade, $a_{3,t}$ & 168   & mm \\
+    Distância à borda superior, $a_{4,c}$ & 72 & mm \\
     Altura disponível na seção         & 1.000  & mm \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1-arranjo}{}{}
+
+\tabela{Verificação dos pinos da ligação entre viga e pilar}{\footnotesize
+\begin{tabular}{lrl}
+\toprule
+    \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} \\
+\midrule
+    Força resultante de cálculo (arrancamento e axial) &  86,6 & kN \\
+    Ângulo da resultante com as fibras &  84,2 & graus \\
+    Resistência de cálculo por pino, dois planos de corte & 25,0 & kN \\
+    Resistência total da ligação       & 125   & kN \\
+    Taxa de utilização, $\eta$         & 0,6914 & \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1}{}{}
 
-\subsection{Modo de ruptura governante}\label{ssec:modo-governante-l1}
+A força nos pinos permanece quase perpendicular às fibras, agora dirigida para
+baixo. O coeficiente $k_{90}$ vale 1,71, e a resistência ao embutimento cai de
+23,99 MPa na direção paralela para 14,09 MPa na direção da força. A teoria de
+Johansen resulta governada pelo modo com uma rótula plástica no pino, com
+12,5 kN de cálculo por plano de corte, ou 25,0 kN por pino nos dois planos, e
+a ligação apresenta $\eta = 0{,}69$.
 
-O aspecto determinante desta ligação é o ângulo da força resultante em relação
-às fibras, de 84,96$^{\circ}$. Como o modelo biapoiado anula o esforço
-horizontal, a resultante é praticamente vertical, isto é, quase perpendicular às
-fibras da viga. Disso decorrem duas consequências.
+O fendilhamento continua a ser verificado, mas em condição muito mais
+favorável. Sob arrancamento, a borda carregada é a inferior, e os pinos estão no
+terço superior da viga, com a fileira mais alta a 72 mm do topo. A altura
+efetiva é, então, $h_e = 1.000 - 72 = 928$ mm, e
 
-A primeira é a redução da resistência ao embutimento. O coeficiente $k_{90}$
-assume o valor 1,71, e a resistência ao embutimento cai de 23,99 MPa na direção
-paralela para 14,08 MPa na direção efetiva da força. A verificação segundo a
-teoria de Johansen resulta governada pelo modo que combina o embutimento da
-madeira com a formação de duas rótulas plásticas no pino, conduzindo a 25,03 kN
-por pino e plano de corte, contra 50,00 kN do modo de embutimento puro.
+\begin{equation}
+    F_{90,Rd} = \frac{k_{mod}}{\gamma_M}\, 14\, b\, w \sqrt{\frac{h_e}{1 - h_e/h}}
+    = \frac{0{,}65}{1{,}30} \times 14 \times 320 \times \sqrt{\frac{928}{1 - 0{,}928}}
+    = 254~\text{kN},
+    \label{eq:fendilhamento-l1}
+\end{equation}
 
-A segunda, e mais relevante, é o fendilhamento. Uma força perpendicular às
-fibras tende a separá-las, e essa é a solicitação que o item 8.1.4 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} verifica. Com a força de 99 kN aplicada a
-altura efetiva de 680 mm, correspondente a 0,68 da altura da seção, a
-resistência ao fendilhamento da madeira não reforçada é de 103 kN, do que
-resulta taxa de 0,961.
-
-Esse valor atende ao limite normativo, porém excede em muito o limite de projeto
-de 0,75 estabelecido para modos frágeis. Adotou-se, por isso, reforço
-perpendicular às fibras conforme o item 8.7.2 da mesma norma, com oito
-parafusos autoperfurantes de 10 mm e comprimento efetivo de 400 mm, dispostos na
-região da ligação. Com o reforço, a taxa cai para 0,7222, governada pelo
-arrancamento dos parafusos, com 0,72, e não pela resistência do seu aço, com
-0,50.
-
-A ligação da viga sobre o pilar central, designada L1c, difere apenas por
-empregar duas chapas, uma para cada viga, e apresenta resultados idênticos.
+\noindent
+contra 86,1 kN solicitantes, com $\eta = 0{,}34$ e sem necessidade de reforço.
 
 \subsection{Modos verificados e não governantes}\label{ssec:modos-nao-governantes}
 
-A ruptura de bloco, verificada conforme o anexo A, apresenta taxa de 0,0051. A
-resistência característica é de 3.318 kN, governada pela parcela de tração, mais
-de trinta vezes superior à solicitação. O arranjo em linha única de seis pinos,
-com apenas um pino por fileira paralela às fibras, é o responsável por essa
-folga: não há volume de madeira delimitado por um grupo capaz de se destacar.
-
-Esse mesmo arranjo explica o número efetivo de pinos. Com uma única coluna de
-pinos na direção das fibras, o coeficiente de redução por fileira vale a
-unidade, e o número efetivo iguala o número real, seis. Fosse o arranjo em
-matriz, a redução seria significativa.
+A ruptura de bloco, verificada conforme o anexo A, apresenta taxa de 0,0063, com
+resistência característica de 2.654 kN, governada pela parcela de tração. O
+arranjo em linha única de cinco pinos, com apenas um pino por fileira paralela
+às fibras, é o responsável por essa folga, e é também o que faz o número efetivo
+de pinos igualar o real.
 
 A chapa metálica, verificada conforme a EN 1993-1-8 \cite{EN1993-1-8:2005},
-apresenta taxa de 0,0956, governada pelo cisalhamento do pino. As verificações
-de pressão de contato, de seção líquida e de solda resultam em 0,040, 0,021 e
-0,048. A espessura de 25 mm não decorre dessas verificações, e sim da exigência
-de que a chapa central seja rígida o bastante para que o pino forme rótula
-plástica, o que requer espessura não inferior ao seu diâmetro.
+apresenta taxa de 0,0997, governada pelo cisalhamento do pino. A espessura de
+25 mm decorre da exigência de que a chapa central seja rígida o bastante para
+que o pino forme rótula plástica, o que requer espessura não inferior ao seu
+diâmetro.
 
 O deslizamento da ligação em serviço e a alternância de esforços foram
-verificados conforme os itens 2.4, 7.1 e 8.1.5, resultando em taxas de 0,0472 e
-0,7333.
+verificados conforme os itens 2.4, 7.1 e 8.1.5. Com a gravidade por contato, os
+pinos só recebem em serviço o esforço axial, e o deslizamento resulta em taxa de
+0,0050; a alternância limita-se ao arrancamento, sem compressão a alternar com
+ele, com taxa de 0,6914.
 
 \section{LIGAÇÃO ENTRE PILAR E FUNDAÇÃO}\label{sec:ligacao-base}
 
-A base dos pilares emprega chapa metálica soldada a chumbadores. Nas bases de
-extremidade, designadas L3, o esforço horizontal transmitido é nulo, em
-consequência do modelo adotado, e os quatro chumbadores correspondem a mínimo
-construtivo, com taxa nula. Nas bases centrais, designadas L3c, o esforço normal
-de 199,2 kN produz tensão de contato de 2,213 MPa no concreto, com taxa de
-0,1328.
+A base dos pilares emprega chapa metálica soldada a quatro chumbadores moldados
+com cabeça, de 24 mm e classe 8.8. Nas bases correntes, de extremidade (L3) e
+centrais (L3c), o empuxo de arco é nulo, em consequência do modelo adotado, mas
+isso não dispensa a verificação da ancoragem. Ela é solicitada em duas
+situações de projeto que não ocorrem simultaneamente, conforme a EN 1990
+\cite{EN1990:2002}.
+
+A primeira é persistente: a combinação de sucção arranca a base, com 83,9 kN em
+L3 e 151,8 kN em L3c, e o vento no próprio pilar leva à base metade do seu
+arrasto, 1,7 kN. A segunda é acidental: o choque de veículo, com força de 50 kN
+aplicada a 0,50 m do piso, conforme a EN 1991-1-7 \cite{EN1991-1-7:2006}, chega à
+base do pilar birrotulado como
+
+\begin{equation}
+    V_{Ed} = F\,\frac{H - h_{imp}}{H}
+           = 50 \times \frac{7{,}0 - 0{,}5}{7{,}0} = 46{,}4~\text{kN}.
+    \label{eq:corte-impacto}
+\end{equation}
+
+\noindent
+As bases correntes não têm chaveta, de modo que esse cortante vai aos
+chumbadores. Não se credita o atrito sob a chapa, que a compressão do peso
+próprio mobilizaria na situação acidental, e mantêm-se nela os coeficientes
+parciais da situação persistente, ambos a favor da segurança. A
+\autoref{tab:ancoragem-bases-correntes} resume a verificação do aço, pela
+tabela 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, e do concreto, pela
+EN 1992-4 \cite{EN1992-4:2018}, com a mesma geometria de bloco das demais bases.
+
+\tabela{Verificação da ancoragem das bases correntes}{\footnotesize
+\begin{tabular}{llrrcc}
+\toprule
+    \textbf{Base} & \textbf{Situação} & \textbf{$N_{Ed}$ (kN)} & \textbf{$V_{Ed}$ (kN)} & \textbf{$\eta$ aço} & \textbf{$\eta$ concreto} \\
+\midrule
+    L3  & Persistente, sucção & 83,9  & 1,7  & 0,124 & 0,199 \\
+    L3  & Acidental, impacto  & 0,0   & 46,4 & 0,086 & 0,332 \\
+    L3c & Persistente, sucção & 151,8 & 1,7  & 0,224 & 0,360 \\
+    L3c & Acidental, impacto  & 0,0   & 46,4 & 0,086 & 0,332 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-bases-correntes}{}{}
+
+No impacto governa a ruptura da borda de concreto sob cortante, com resistência
+de 139,8 kN, e no arrancamento governa o cone, com 421,9 kN. A taxa da ligação
+é a maior entre a ancoragem e a compressão do concreto sob a chapa, que vale
+0,0664 em L3 e 0,1328 em L3c, sob o esforço normal de 199,2 kN. Resultam 0,3322
+em L3 e 0,3599 em L3c, ambas abaixo do limite de 0,75 dos modos frágeis. As
+bases de canto e central montante, que já dispõem de chaveta e de seis
+chumbadores para o cortante dos painéis de contraventamento, absorvem o choque
+com folga maior.
 
 As chapas de base medem 400 por 400 mm. A espessura de 8 mm nas bases de
 extremidade corresponde ao mínimo construtivo; nas centrais, a verificação da
@@ -161,7 +255,9 @@ resultante depende da posição da base na edificação. A
 \autoref{tab:arrancamento} apresenta os valores, na combinação de sucção da
 EN 1990 \cite{EN1990:2002}. A base de canto acumula o arrancamento de sucção, de
 83,9 kN, com o esforço descendente dos dois painéis de contraventamento, de
-193,6 kN, invertido sob a mesma combinação.
+197,4 kN, invertido sob a mesma combinação. A base central montante soma o
+arrancamento de sucção das duas vigas, de 151,8 kN, ao esforço do painel do
+alinhamento central, de 129,7 kN, e recebe ainda o cortante de 106,6 kN.
 
 \tabela{Esforço de arrancamento por posição de base}{\footnotesize
 \begin{tabular}{lcrc}
@@ -169,13 +265,16 @@ EN 1990 \cite{EN1990:2002}. A base de canto acumula o arrancamento de sucção, 
     \textbf{Posição da base} & \textbf{Quantidade} & \textbf{Arrancamento (kN)} & \textbf{$\eta$} \\
 \midrule
     Extremidade & 14 &  83,9 & 0,262 \\
-    Central     &  9 & 151,8 & 0,474 \\
-    Canto       &  4 & 277,5 & 0,578 \\
+    Central     &  3 & 151,8 & 0,474 \\
+    Central montante & 6 & 281,6 & 0,587 \\
+    Canto       &  4 & 281,3 & 0,586 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{arrancamento}{}{}
 
-A base de canto é a mais solicitada, por acumular efeitos que não coincidem nas
-demais, e é ela que determina a ancoragem.
+As bases de canto e central montante são as mais solicitadas, por acumularem
+efeitos que não coincidem nas demais. Ambas recebem a mesma ancoragem, com seis
+chumbadores e chaveta de cisalhamento. A verificação é apresentada para a base de
+canto, que tem o maior cortante.
 
 \subsection{Verificação da ancoragem de canto}\label{ssec:ancoragem-canto}
 
@@ -196,35 +295,41 @@ EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas parcialmente carregadas.
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} & \textbf{$\eta$} \\
 \midrule
     \multicolumn{4}{l}{\textit{Resistência do aço}} \\
-    Tração solicitante          &   277,48 & kN & \\
-    Tração resistente do grupo  & 1.016,64 & kN & 0,273 \\
-    Cortante solicitante        &   159,01 & kN & \\
+    Tração solicitante          &   281,33 & kN & \\
+    Tração resistente do grupo  & 1.016,64 & kN & 0,277 \\
+    Cortante solicitante        &   162,17 & kN & \\
     Cortante nos chumbadores    &     0,00 & kN & 0,000 \\
-    Interação                   &          &    & 0,195 \\
+    Interação                   &          &    & 0,198 \\
 \addlinespace
     \multicolumn{4}{l}{\textit{Resistência do concreto}} \\
-    Cone de arrancamento        &   527,41 & kN & 0,526 \\
+    Cone de arrancamento        &   527,41 & kN & 0,533 \\
     Extração pela cabeça        & 1.781    & kN & \\
-    Fendilhamento               &   527,41 & kN & 0,526 \\
-    Esmagamento sob a chaveta   &   266,67 & kN & 0,596 \\
+    Fendilhamento               &   527,41 & kN & 0,533 \\
+    Esmagamento sob a chaveta   &   266,67 & kN & 0,608 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-canto}{}{}
 
-O cortante de 159,01 kN não solicita os chumbadores. Ele é transmitido ao bloco
+O cortante de 162,17 kN não solicita os chumbadores. Ele é transmitido ao bloco
 por chaveta de cisalhamento soldada sob a chapa de base, solução que evita
 submeter os chumbadores a esforço combinado e que é usual em bases sujeitas a
 força horizontal relevante. A chaveta, de 200 mm de comprimento e 80 mm de
 embutimento, transfere esse cortante ao concreto por compressão localizada:
 verificada como área parcialmente carregada, resulta em resistência de
-266,67 kN e taxa de 0,596. Adotou-se fator de confinamento unitário, isto é, sem
+266,67 kN e taxa de 0,608. Adotou-se fator de confinamento unitário, isto é, sem
 o ganho que a norma permitiria, por depender a razão entre as áreas carregada e
 de distribuição da geometria da sapata, fora do escopo.
 
 A verificação do concreto é governada pelo cone de arrancamento, com 527,41 kN
 de resistência de cálculo contra 1.781 kN da extração pela cabeça, resultando em
-taxa de 0,526. Para que essa resistência se verifique, o bloco de fundação deve
+taxa de 0,533. Para que essa resistência se verifique, o bloco de fundação deve
 garantir afastamento de borda não inferior a 600 mm em torno do grupo, o que
 corresponde a dimensões aproximadas de 1,60 por 2,00 m em planta.
+
+A base central montante emprega a mesma ancoragem. Sob tração de 281,6 kN e
+cortante de 106,6 kN, transmitido pela chaveta, resultam taxas de 0,277 na
+tração do aço, de 0,534 no cone de arrancamento e de 0,400 no esmagamento sob a
+chaveta. O bloco de fundação dessas seis bases deve atender às mesmas exigências
+de afastamento de borda.
 
 \subsection{Modos dispensados e limitação remanescente}\label{ssec:ancoragem-pendencias}
 
@@ -248,24 +353,94 @@ avaliação técnica do produto efetivamente especificado.
 \section{CONTRAVENTAMENTO}\label{sec:detalhe-contraventamento}
 
 O contraventamento da cobertura emprega cruzes de Santo André em barras redondas
-de 28 mm em aço S235, dispostas apenas nas duas baías de extremidade, pelas
-razões expostas na \autoref{ssec:predim-cv-cobertura}. O peso de aço do sistema
-é de aproximadamente 486 kg.
+de 28 mm em aço S235, dispostas nas duas baías de extremidade, pelas razões
+expostas na \autoref{ssec:predim-cv-cobertura}. Em cada baía e em cada água, as
+cruzes ocupam os oito painéis entre terças ao longo do vão da viga, de modo que
+o conjunto forma uma treliça de 20,25 m de vão apoiada no beiral e na linha
+central. São 64 barras de 6,28 m, e o peso de aço do sistema é de
+aproximadamente 1.943 kg.
 
-O contraventamento vertical emprega oito painéis de cruz distribuídos pelas duas
-fachadas longitudinais, com diagonais de 36 mm no mesmo aço. O contraventamento
-transversal, nos frontões, emprega diagonais de 27 mm.
+O contraventamento vertical emprega oito painéis de cruz com diagonais de 33 mm no
+mesmo aço: quatro nas fachadas, um em cada extremidade de cada fachada, e quatro
+no alinhamento central, dois contíguos em cada extremidade, conforme a
+\autoref{ssec:predim-cv-vertical}. Os painéis do alinhamento central recebem as
+reações que as treliças da cobertura entregam à linha central, por meio da
+escora longitudinal descrita na \autoref{ssec:no-topo}. O contraventamento
+transversal, nos frontões, emprega diagonais de 24 mm.
+
+Todas as diagonais têm extremidades recalcadas, isto é, a rosca é aberta numa
+extremidade de diâmetro maior que o da barra: M30 na diagonal de 28 mm da
+cobertura, M36 na de 33 mm e M27 na de 24 mm. A medida é necessária para que a
+barra seja dúctil. Com rosca cortada no próprio diâmetro, a área resistente da
+rosca é cerca de 81\% da bruta, e a ruptura na rosca precede o escoamento: para
+uma barra de 36 mm, a resistência da rosca, de $0{,}9 f_u A_s/\gamma_{M2} =
+0{,}9 \times 360 \times 817 / 1{,}25 = 211{,}7$ kN, seria inferior à de
+escoamento da seção bruta, de $A f_y/\gamma_{M0} = 1.018 \times 235 = 239{,}2$ kN
+\cite{EN1993-1-8:2005}. A extremidade recalcada é escolhida como a menor rosca
+métrica que satisfaz o item 6.2.3(3) da EN 1993-1-1 \cite{EN1993-1-1:2005},
+
+\begin{equation}
+    N_{u,Rd} = \frac{0{,}9\,A_s\,f_u}{\gamma_{M2}} \;\geq\;
+    N_{pl,Rd} = \frac{A\,f_y}{\gamma_{M0}} ,
+    \label{eq:rosca-recalcada}
+\end{equation}
+
+\noindent
+o que, para o aço S235, exige $A_s \geq 0{,}907\,A$. Na diagonal de 33 mm, a
+rosca M36 resiste a 211,7 kN, acima dos 201,0 kN de escoamento da barra. Todas as
+diagonais são, assim, verificadas pelo mesmo critério,
+$N_{t,Rd} = \min(N_{pl,Rd};\, N_{u,Rd})$, que nelas resulta igual a $N_{pl,Rd}$.
+
+\subsection{Nó de topo das baías contraventadas}\label{ssec:no-topo}
+
+Nas baías rígidas, a treliça de contraventamento da cobertura entrega em cada
+apoio uma força longitudinal, perpendicular ao plano do pórtico. Essa força não
+passa pela ligação entre viga e pilar, cuja chapa embutida trabalha no plano do
+pórtico. O caminho adotado é outro: a terça situada sobre o apoio, que é ao
+mesmo tempo o montante de extremidade da treliça e o banzo superior do painel
+vertical, funciona como escora e conduz a força a um nó metálico no topo do
+pilar. Nesse nó, uma chapa soldada à chapa de topo do pilar lateral, ou à sela
+do pilar central, recebe a escora, a diagonal da cobertura e a diagonal do painel
+vertical.
+
+A força na escora de beiral é o cortante do painel da fachada, de 106,6 kN. No
+alinhamento central, a escora entre os dois painéis contíguos de cada
+extremidade recebe as reações das duas águas e alimenta os dois painéis, e
+adota-se, como envoltória, 213,1 kN. As escoras são terças de 0,20 por 0,58 m,
+verificadas como peças flexo-axiais pelos itens 6.2.3 e 6.3.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, com a flexão da cobertura concomitante,
+resultando em 0,225 no beiral e 0,450 na linha central.
+
+A ligação de cada escora ao nó emprega cavilhas de 20 mm em chapa embutida,
+com a força paralela às fibras. Cada cavilha resiste, em corte duplo, a 25,0 kN,
+e o número efetivo segue o item 8.5.1.1. A \autoref{tab:no-topo} resume o
+resultado; a ruptura de bloco, pelo anexo A, não governa.
+
+\tabela{Ligações das escoras ao nó de topo}{\footnotesize
+\begin{tabular}{lcccccc}
+\toprule
+    \textbf{Escora} & \textbf{$N_{Ed}$ (kN)} & \textbf{Cavilhas} & \textbf{Arranjo} & \textbf{$R_d$ (kN)} & \textbf{$\eta$ bloco} & \textbf{$\eta$} \\
+\midrule
+    Beiral        & 106,6 &  6 $\times \varnothing$ 20 & $1 \times 6$ & 150 & 0,115 & 0,710 \\
+    Linha central & 213,1 & 16 $\times \varnothing$ 20 & $2 \times 8$ & 294 & 0,164 & 0,725 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{no-topo}{}{}
+
+Ambas atendem ao limite de 0,75 dos modos frágeis. As cavilhas dispõem-se em
+fileiras com espaçamento de 60 mm na altura da terça e 100 mm ao longo das
+fibras, a 140 mm da extremidade carregada.
 
 \subsection{Ligações de extremidade das diagonais}\label{ssec:lig-diagonais}
 
 As diagonais terminam em olhal com pino, conforme o item 3.13 da
 EN 1993-1-8 \cite{EN1993-1-8:2005}. Essas ligações não são dimensionadas para o
 esforço solicitante, e sim por capacidade, isto é, para a resistência de cálculo
-da própria barra. O critério assegura que, num evento que exceda a previsão, o
-escoamento se dê na barra, que é dúctil e avisa, e não no olhal.
+da própria barra. Como as extremidades são recalcadas, essa resistência é a de
+escoamento da seção bruta, e o critério assegura que, num evento que exceda a
+previsão, a barra escoe antes que a rosca, o olhal ou o pino rompam.
 
-Na diagonal vertical, o esforço solicitante é de 166,88 kN e a resistência da
-barra, de 211,69 kN, do que resulta sobre-resistência de 1,27. O
+Na diagonal vertical, o esforço solicitante é de 167,9 kN e a resistência da
+barra, de 201,0 kN, do que resulta sobre-resistência de 1,20. O
 dimensionamento adota este último valor. A \autoref{tab:lig-diagonais} reúne as
 duas ligações, conforme o item 3.13 e o item 4.5.3.3 da
 EN 1993-1-8 \cite{EN1993-1-8:2005}, com chapa do olhal em aço S235 e pino em
@@ -279,8 +454,8 @@ solicitante.
 \toprule
     \textbf{Diagonal} & \textbf{Barra} & \textbf{Pino} & \textbf{Modo governante} & \textbf{$\eta$} \\
 \midrule
-    Vertical    & $\varnothing$ 36 mm & $\varnothing$ 36 mm & Geometria do olhal & 0,7713 \\
-    Transversal & $\varnothing$ 27 mm & $\varnothing$ 27 mm & Geometria do olhal & 0,7633 \\
+    Vertical    & $\varnothing$ 33 mm & $\varnothing$ 33 mm & Geometria do olhal & 0,8105 \\
+    Transversal & $\varnothing$ 24 mm & $\varnothing$ 24 mm & Geometria do olhal & 0,8091 \\
 \bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
@@ -292,13 +467,13 @@ A manilha e a rosca de extremidade são peças de catálogo e não são
 dimensionadas neste trabalho.
 
 %% TODO: dado ausente — especificar manilha e rosca com resistência de cálculo
-%% à tração certificada pelo fabricante, não inferior a 211,7 kN na diagonal
-%% vertical e a 119,1 kN na transversal.
+%% à tração certificada pelo fabricante, não inferior a 201,0 kN na diagonal
+%% vertical e a 106,3 kN na transversal (resistência de escoamento da barra).
 
 A corda do diafragma merece registro construtivo. A terça de beiral acumula a
-função de corda, recebendo esforço normal de 15,1 kN em ambos os sentidos, e sua
+função de corda, recebendo esforço normal de 15,8 kN em ambos os sentidos, e sua
 continuidade ao longo dos 46,0 m é condição para que o diafragma funcione. São
-necessárias três emendas, e cada uma deve ser capaz de transmitir os 15,1 kN. A
+necessárias três emendas, e cada uma deve ser capaz de transmitir os 15,8 kN. A
 omissão dessas emendas invalidaria o modelo de diafragma adotado, ainda que a
 taxa de utilização da corda seja de apenas 0,0656.
 
@@ -325,8 +500,8 @@ base, os esforços de cálculo que constituem dado de entrada para o projeto
 geotécnico. A \autoref{tab:cargas-fundacao} os reúne, nos valores de cálculo das
 combinações governantes de cada efeito, conforme a EN 1990 \cite{EN1990:2002}. A
 tração corresponde a arrancamento, sem desconto do peso próprio da sapata nem do
-solo sobrejacente, e a força horizontal total transmitida é de 847,4 kN na
-direção longitudinal e de 53,1 kN na transversal.
+solo sobrejacente, e a força horizontal total transmitida é de 852,5 kN na
+direção longitudinal e de 55,6 kN na transversal.
 
 \tabela{Esforços de cálculo entregues ao projeto de fundação}{\footnotesize
 \begin{tabular}{lcrrr}
@@ -334,17 +509,22 @@ direção longitudinal e de 53,1 kN na transversal.
     \textbf{Base} & \textbf{Quantidade} & \textbf{Compressão} & \textbf{Tração} & \textbf{Horizontal} \\
     & & \textbf{(kN)} & \textbf{(kN)} & \textbf{(kN)} \\
 \midrule
-    Extremidade &  14 &  99,6 &  83,9 &   0,0 \\
-    Central     &   9 & 199,2 & 151,8 &   0,0 \\
-    Canto       &   4 & 293,2 & 277,5 & 159,0 \\
+    Extremidade &  14 &  99,6 &  83,9 &  46,4 \\
+    Central     &   3 & 199,2 & 151,8 &  46,4 \\
+    Central montante & 6 & 328,9 & 281,6 & 106,6 \\
+    Canto       &   4 & 297,0 & 281,3 & 162,2 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{cargas-fundacao}{}{}
+
+O cortante das bases correntes é o do choque de veículo, de 46,4 kN, e
+corresponde à situação acidental. Ele não se combina com a tração da sucção,
+que é de situação persistente.
 
 Não estão verificados, por dependerem de investigação geotécnica inexistente até
 o momento, a tensão admissível do solo, as dimensões da sapata em planta, o
 deslizamento, o tombamento, o recalque e a armadura. A única exigência
-geométrica que este trabalho impõe ao bloco é a decorrente da ancoragem de
-canto, exposta na \autoref{ssec:ancoragem-canto}.
+geométrica que este trabalho impõe ao bloco é a decorrente da ancoragem das bases
+de canto e central montante, exposta na \autoref{ssec:ancoragem-canto}.
 
 \section{ESTIMATIVA PRELIMINAR DE CUSTO}\label{sec:estimativa-custo}
 
@@ -353,16 +533,30 @@ estimativa de custo da estrutura. Trata-se de estimativa de anteprojeto,
 destinada a situar a ordem de grandeza do investimento e a comparar
 alternativas, e não de orçamento executivo: as parcelas que não decorrem
 diretamente das quantidades calculadas são percentuais declarados, e os preços
-unitários são valores de mercado que exigem cotação formal de fornecedor antes
-de qualquer uso contratual.
+unitários são valores de mercado que exigem cotação formal de fornecedor. A
+\autoref{tab:custo-entrada} reúne esses dados de entrada, que não decorrem do
+cálculo estrutural.
+
+\tabela{Preços unitários e percentuais adotados como dados de entrada}{\footnotesize
+\begin{tabular}{lrl}
+\toprule
+    \textbf{Item} & \textbf{Valor} & \textbf{Base} \\
+\midrule
+    Madeira lamelada colada GL24h, posta na obra & R\$ 5.200/m\textsuperscript{3} & Valor de mercado \\
+    Aço S235 em barra redonda, fabricado e montado & R\$ 18,00/kg & Valor de mercado \\
+    Ligações e ferragens & 15\% & Do custo da madeira \\
+    Montagem & 12\% & Do subtotal de materiais \\
+    BDI & 25\% & Do subtotal direto \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{custo-entrada}{}{}
 
 \subsection{Quantidades}\label{ssec:custo-quantidades}
 
 O volume de madeira lamelada colada distribui-se pelos três tipos de elemento
 conforme a \autoref{tab:custo-quantidades}. O volume das vigas é o apurado na
 \autoref{sec:geometria-adotada}, por integração da seção ao longo do vão. O dos
-pilares decorre das seções e das quantidades da
-\autoref{tab:geometria-edificacao} e da \autoref{tab:arrancamento}, com os
+pilares decorre das seções da \autoref{tab:criterios-predim} e das quantidades
+da \autoref{tab:arrancamento}, com os
 7,0 m de altura. O das terças decorre da seção de 0,20 por 0,58 m e do
 espaçamento de 2,53 m aplicados à área de 1.863 m\textsuperscript{2} em planta,
 relação que reproduz a parcela de 0,1889 kN/m\textsuperscript{2} registrada na
@@ -379,22 +573,22 @@ relação que reproduz a parcela de 0,1889 kN/m\textsuperscript{2} registrada na
 \addlinespace
     \textbf{Subtotal MLC} & & \textbf{323,0} & \textbf{m\textsuperscript{3}} \\
 \midrule
-    Aço S235 & Contraventamento vertical, $\varnothing$ 36 mm    & 1.158,1 & kg \\
-             & Contraventamento da cobertura, $\varnothing$ 28 mm &   485,8 & kg \\
-             & Contraventamento transversal, $\varnothing$ 27 mm  &   162,9 & kg \\
+    Aço S235 & Contraventamento vertical, $\varnothing$ 33 mm    &   973,2 & kg \\
+             & Contraventamento da cobertura, $\varnothing$ 28 mm & 1.943,4 & kg \\
+             & Contraventamento transversal, $\varnothing$ 24 mm  &   128,7 & kg \\
 \addlinespace
-    \textbf{Subtotal aço} & & \textbf{1.806,8} & \textbf{kg} \\
+    \textbf{Subtotal aço} & & \textbf{3.045,3} & \textbf{kg} \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{custo-quantidades}{}{}
 
 As massas de aço não são estimadas por percentual: decorrem do comprimento
 total de barra de cada sistema, obtido da geometria dos painéis, multiplicado
 pela área da seção circular e pela massa específica de 7.850 kg/m\textsuperscript{3}.
-A massa do contraventamento da cobertura, de 485,8 kg, é a mesma registrada na
+A massa do contraventamento da cobertura, de 1.943,4 kg, é a mesma registrada na
 \autoref{sec:detalhe-contraventamento}. A do contraventamento vertical
-corresponde ao diâmetro de 36 mm da execução consolidada, e não ao de 33 mm
-registrado na \autoref{tab:varredura-paineis}, cuja divergência já consta
-daquela seção.
+corresponde ao diâmetro de 33 mm, com resistência de escoamento da seção bruta
+graças às extremidades recalcadas; o acréscimo de aço das extremidades é
+desprezável nesta estimativa.
 
 \subsection{Preços unitários adotados}\label{ssec:custo-unitarios}
 
@@ -434,7 +628,8 @@ orçamento assumida aqui, e não resultado do dimensionamento.
 
 \subsection{Composição do custo}\label{ssec:custo-composicao}
 
-A \autoref{tab:custo-composicao} compõe o custo em cinco parcelas. As duas
+A \autoref{tab:custo-composicao} compõe o custo em cinco parcelas, aplicando os
+dados da \autoref{tab:custo-entrada}. As duas
 primeiras decorrem das quantidades apuradas e dos preços unitários. A terceira,
 relativa às chapas, pinos e chumbadores das ligações, adota quinze por cento do
 custo da madeira, percentual de ordem usual em estruturas de madeira lamelada
@@ -448,26 +643,26 @@ edificações.
 \tabela{Composição do custo estimado da estrutura}{\footnotesize
 \begin{tabular}{llr}
 \toprule
-    \textbf{Parcela} & \textbf{Critério} & \textbf{Valor (R\$)} \\
+    \textbf{Parcela} & \textbf{Origem} & \textbf{Valor (R\$)} \\
 \midrule
-    Material MLC        & 323,0 m\textsuperscript{3} $\times$ R\$ 5.200/m\textsuperscript{3} & 1.679.600 \\
-    Aço de contraventamento & 1.806,8 kg $\times$ R\$ 18,00/kg                                &    32.522 \\
-    Ligações e ferragens    & 15\% do material MLC                                            &   251.940 \\
-    Montagem                & 12\% do subtotal de materiais                                   &   235.687 \\
+    Material MLC            & \autoref{tab:custo-quantidades} & 1.679.600 \\
+    Aço de contraventamento & \autoref{tab:custo-quantidades} &    54.815 \\
+    Ligações e ferragens    & Percentual                      &   251.940 \\
+    Montagem                & Percentual                      &   238.363 \\
 \addlinespace
-    \textbf{Subtotal direto} & & \textbf{2.199.750} \\
+    \textbf{Subtotal direto} & & \textbf{2.224.718} \\
 \midrule
-    BDI                     & 25\% do subtotal direto                                         &   549.937 \\
+    BDI                     & Percentual                      &   556.180 \\
 \addlinespace
-    \textbf{Total estimado} & & \textbf{2.749.687} \\
+    \textbf{Total estimado} & & \textbf{2.780.898} \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{custo-composicao}{}{}
 
-O total corresponde a R\$ 1.476 por metro quadrado de área coberta, tomada a
+O total corresponde a R\$ 1.493 por metro quadrado de área coberta, tomada a
 projeção em planta de 1.863 m\textsuperscript{2}. A madeira responde por
-sessenta e um por cento do total, e o aço de contraventamento, apesar de
-governar o dimensionamento com a taxa de 0,7902 da
-\autoref{tab:verif-contraventamento}, responde por pouco mais de um por cento.
+sessenta por cento do total, e o aço de contraventamento, apesar de
+governar o dimensionamento com as taxas de 0,8352 e 0,8009 da
+\autoref{tab:verif-contraventamento}, responde por cerca de dois por cento.
 
 %% TODO: verificar — os percentuais de 15\% para ligações, 12\% para montagem e
 %% 25\% para BDI são valores declarados de prática usual e não decorrem de
@@ -485,16 +680,13 @@ o intervalo de mercado, mantidas as quantidades e os percentuais.
 \toprule
     \textbf{Cenário} & \textbf{R\$/m\textsuperscript{3}} & \textbf{Total (R\$)} & \textbf{R\$/m\textsuperscript{2}} \\
 \midrule
-    Limite inferior de mercado & 4.000 & 2.125.651 & 1.141 \\
-    \textbf{Adotado}           & \textbf{5.200} & \textbf{2.749.687} & \textbf{1.476} \\
-    Limite superior de mercado & 6.400 & 3.373.723 & 1.811 \\
+    Limite inferior de mercado & 4.000 & 2.156.862 & 1.158 \\
+    \textbf{Adotado}           & \textbf{5.200} & \textbf{2.780.898} & \textbf{1.493} \\
+    Limite superior de mercado & 6.400 & 3.404.934 & 1.828 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{custo-sensibilidade}{}{}
 
-A amplitude é de cinquenta e nove por cento entre os extremos, o que dimensiona
-a precisão desta estimativa: ela distingue ordens de grandeza e ordena
-alternativas, mas não substitui cotação. Uma consequência de projeto decorre
-dessa faixa. A varredura da \autoref{sec:varredura-global} identificou
+A varredura da \autoref{sec:varredura-global} identificou
 geometrias aprovadas com cerca de metade do volume de madeira da adotada, o que
 corresponde, aos preços aqui empregados, a uma diferença da ordem de meio
 milhão de reais no material. As razões que sustentaram a geometria mais robusta,

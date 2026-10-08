@@ -39,9 +39,11 @@ def test_vento_nbr6123_incluido_no_caracteristico():
     geometria não pode usar.
     """
     r = _res()
-    assert r["n_padroes_vento"] == 8
+    assert r["n_padroes_vento"] == 14    # + 6 de α=90° (issue 39)
     assert r["w_W_suc_mm"] < 0          # vento sucção → flecha ↑
-    assert r["w_W_press_mm"] <= 0       # não há caso de pressão descendente
+    # Issue 39: a faixa b3 da Tab. 10 α=90° com c_pi=−0,3 dá C_net=+0,1 —
+    # pressão descendente leve; a flecha correspondente é pequena.
+    assert 0 <= r["w_W_press_mm"] < 1.0
 
 
 def test_caracteristico_e_o_governante_entre_Q_e_vento():

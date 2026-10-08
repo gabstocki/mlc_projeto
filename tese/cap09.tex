@@ -11,8 +11,8 @@ estrutura do galpão em madeira lamelada colada foi dimensionada e verificada
 segundo a EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de programa de cálculo
 automatizado, e o memorial resultante consta do
 \autoref{cap:dimensionamento} e do \autoref{cap:detalhamento}. O conjunto de
-quarenta e quatro verificações é atendido, com taxa de utilização máxima de
-0,7902.
+cinquenta e cinco verificações é atendido, com taxa de utilização máxima de
+0,8352.
 
 Os objetivos específicos foram cumpridos nos termos seguintes. A caracterização
 do material e das exigências de durabilidade consta da
@@ -23,7 +23,7 @@ por varredura paramétrica de 1.391 candidatas, apresentada na
 elementos, dos sistemas de contraventamento e da estabilidade global constam do
 \autoref{cap:dimensionamento}, e as de serviço, da \autoref{sec:verif-els}. As
 ligações e a ancoragem constam do \autoref{cap:detalhamento}. O programa,
-submetido a suíte de 651 testes automatizados, é reproduzido no
+submetido a suíte de 698 testes automatizados, é reproduzido no
 \autoref{ap:codigo-fonte}.
 
 \section{PRINCIPAIS RESULTADOS}\label{sec:principais-resultados}
@@ -39,8 +39,8 @@ superior ao que o modelo de arco indicaria. A consequência favorável é que n�
 há esforço horizontal por efeito de arco a transmitir à fundação.
 
 O segundo é que nenhuma verificação da viga governa o dimensionamento. A mais
-solicitada, o cisalhamento, atinge 0,3814. O que governa é o contraventamento da
-cobertura, com 0,7902, cuja solicitação responde à área exposta ao vento e é
+solicitada, o cisalhamento, atinge 0,3814. O que governa são os
+contraventamentos vertical e da cobertura, com 0,8352 e 0,8009, cuja solicitação responde à área exposta ao vento e é
 praticamente insensível à seção da viga. Em uma edificação aberta e de cobertura
 leve, a estabilização determina o projeto mais do que a resistência dos
 elementos.
@@ -58,15 +58,18 @@ leveza própria da solução em madeira.
 
 O quinto é a força longitudinal de vento. A parcela de atrito sobre a cobertura,
 de 776,8 kN, equivale a 2,35 vezes o arrasto de bloqueio da silhueta e governa
-todo o dimensionamento do contraventamento longitudinal, dos pilares de canto e
+todo o dimensionamento do contraventamento longitudinal, dos pilares de canto e centrais montantes e
 das respectivas ancoragens. A prescrição é envolvente por construção, e a ordem
 de grandeza é característica dela.
 
-O sexto é o fendilhamento nas ligações. Por ser a resultante quase perpendicular
-às fibras, a taxa sem reforço atinge 0,961. O valor atende ao limite normativo,
-porém excede o limite de projeto de 0,75 adotado para modos frágeis, o que
-determinou a adoção de reforço perpendicular às fibras. Foi o único ponto em que
-o critério de margem adicional alterou efetivamente o detalhe construtivo.
+O sexto é o caminho da reação de apoio. Transmitida por pinos, a reação de
+gravidade atuaria quase perpendicularmente às fibras, e o fendilhamento chegaria
+a 0,961, acima do limite de projeto de 0,75 para modos frágeis, exigindo reforço
+com parafusos autoperfurantes. Apoiando a viga por contato direto sobre o pilar,
+e no pilar central sobre uma sela metálica, a gravidade deixa de passar pelos
+pinos, que ficam apenas para o arrancamento de sucção. O fendilhamento cai para
+0,339 sem reforço. Foi o ponto em que a concepção do detalhe, e não o
+dimensionamento, mais alterou o resultado.
 
 O sétimo é a parcela de cisalhamento na flecha, de 21,2\% do total. Em peças de
 madeira, cuja razão entre os módulos de elasticidade e de cisalhamento é da
@@ -79,7 +82,7 @@ A contribuição principal do trabalho não está em nenhum dos resultados
 numéricos, e sim no procedimento que os produziu.
 
 A automação da cadeia de verificação permitiu submeter 1.391 geometrias ao mesmo
-conjunto de quarenta e quatro verificações que produz o memorial final. Essa equivalência
+conjunto de cinquenta e cinco verificações que produz o memorial final. Essa equivalência
 foi verificada: o mecanismo de varredura reproduz, sobre a geometria adotada, as
 taxas do memorial sem divergência na quarta casa decimal. Não se trata de
 avaliar candidatas por modelo simplificado e depois verificar a escolhida pelo
@@ -93,7 +96,7 @@ metade do volume de madeira da adotada, e a
 Sem a varredura, a margem existiria do mesmo modo, porém sem que se soubesse da
 sua existência nem da sua dimensão.
 
-A suíte de 651 testes automatizados constitui contribuição de mesma natureza.
+A suíte de 698 testes automatizados constitui contribuição de mesma natureza.
 Ela impede que uma alteração em qualquer módulo altere silenciosamente
 resultados de outro, risco real em uma cadeia de verificações mutuamente
 dependentes.
@@ -121,16 +124,6 @@ contudo, que as resistências apresentadas decorrem de formulação normativa e 
 de avaliação técnica do produto efetivamente especificado. A ancoragem entre
 chumbador e concreto só se considera validada mediante dados certificados do
 fabricante.
-
-\subsection{Dados dependentes de confirmação}\label{ssec:lim-dados}
-
-Quatro valores adotados como dados de entrada carecem de confirmação documental.
-A velocidade básica do vento e o fator estatístico não estão amarrados à
-isopleta e ao grupo de classificação do endereço definitivo da obra. As cargas
-de impacto de veículo correspondem a prática europeia, ela própria dependente de
-anexo nacional. Os pesos da telha e das instalações são valores declarados, não
-extraídos de ficha técnica. A resistência do fixador da telha é valor típico de
-catálogo, e governa a verificação mais solicitada da cobertura.
 
 \subsection{Escopo não coberto}\label{ssec:lim-escopo}
 
@@ -164,19 +157,3 @@ formato dos Eurocódigos, e uma verificação paralela permitiria quantificar a
 divergência entre os dois conjuntos normativos para esta tipologia, contribuindo
 para a discussão sobre a suficiência do texto brasileiro quanto à madeira
 lamelada colada.
-
-A quarta é a validação experimental ou numérica independente do modelo de apoio
-horizontal, cuja consequência sobre o momento de projeto é de 71,4\%. Ainda que
-a análise de rigidez relativa seja conclusiva, a verificação por modelo de
-elementos finitos ou por medição em protótipo consolidaria o resultado.
-
-A quinta é a extensão da varredura ao custo. A
-\autoref{sec:estimativa-custo} estima o custo da estrutura, porém de forma
-estática: precifica a geometria adotada, e não o espaço de soluções. Levar a
-composição de custo para dentro do mecanismo de varredura converteria a
-fronteira de volume da \autoref{tab:fronteira-volume} em fronteira de custo. A
-dificuldade está em que as parcelas respondem à geometria de modos distintos,
-como a \autoref{tab:varredura-paineis} já indica ao mostrar que o peso de aço é
-praticamente independente do número de painéis, e em que a amplitude do preço
-unitário, exposta na \autoref{ssec:custo-sensibilidade}, exigiria apresentar o
-resultado como faixa, e não como valor.

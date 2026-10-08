@@ -126,6 +126,13 @@ def verificar_fadiga_deslizamento(
 
     # ── L1 base ───────────────────────────────────────────────
     L1 = res_lig["L1"]
+    # Issue 42 — apoio por CONTATO: a gravidade vai pela chapa de topo / sela;
+    # os pinos (furos ovalizados verticais) só veem o esforço axial em serviço
+    # e o arrancamento em ELU. Não há compressão alternando com tração nos pinos.
+    contato = bool(L1.get("apoio_por_contato"))
+    if contato:
+        F_S1 = abs(float(comb_s1.N_viga_kN))
+        F_S3 = abs(float(comb_s3.N_viga_kN))
     d_L1  = L1["d_mm"]
     n_L1  = L1["n_pinos"]
     np_L1 = 2
@@ -142,6 +149,9 @@ def verificar_fadiga_deslizamento(
     # §8.1.5: tração (sucção se houver) + compressão permanente
     F_t = F_suc
     F_c = F_S3
+    if contato:
+        F_t = float(L1["F_res_kN"])     # arrancamento + axial (ELU)
+        F_c = 0.0                        # gravidade por contato
     alt_L1 = verificar_forcas_alternadas(F_t, F_c, F_Rd_L1, "L1")
 
     resultados["L1"] = {
@@ -160,6 +170,7 @@ def verificar_fadiga_deslizamento(
         "eta_slip":      round(eta_slip_L1, 4),
         "slip_ok":       eta_slip_L1 <= 1.0,
         "alternada":     alt_L1,
+        "apoio_por_contato": contato,
         "fadiga_governa": False,
     }
 
@@ -193,6 +204,13 @@ def verificar_fadiga_deslizamento(
             "ok": F_S3_c / F_Rd_c <= 1.0 if F_Rd_c > 0 else True,
             "nota": "Pilar central: empuxos horizontais cancelam; sem tração de vento",
         }
+
+        if contato:
+            # cada chapa recebe o arrancamento da sua viga; sem compressão nos pinos
+            alt_c = verificar_forcas_alternadas(
+                float(L1c["F_res_kN"]), 0.0, float(L1c["R_total_kN"]), "L1c")
+            alt_c["nota"] = ("Apoio por contato (issue 42): gravidade pela sela; "
+                             "pinos de cada chapa só com o arrancamento da sua viga")
 
         resultados["L1c"] = {
             "descricao":     f"Base pilar central — 2×{L1c['n_pinos']} pinos d={d_c:.0f}mm",

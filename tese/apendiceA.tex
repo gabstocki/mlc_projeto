@@ -126,49 +126,6 @@ def I(self, x: float | NDArray) -> float | NDArray:
     return self.b * self.h(x) ** 3 / 12
 \end{lstlisting}
 
-\section{VERIFICAÇÃO POR TESTES AUTOMATIZADOS}\label{sec:ap-testes}
-
-O programa é acompanhado de suíte de 651 testes automatizados, distribuídos por
-sessenta e cinco arquivos. A suíte cobre três categorias de asserção.
-
-A primeira compara resultados com valores calculados manualmente ou obtidos de
-exemplos da literatura normativa, verificando a implementação de cada expressão.
-A segunda impõe pré-condições e verifica que entradas fora de domínio produzem
-erro explícito, e não resultado silenciosamente incorreto. A terceira fixa
-resultados de referência, de modo que qualquer alteração que modifique um valor
-já verificado provoque falha, e a modificação tenha de ser deliberada.
-
-Essa terceira categoria é a mais relevante em uma cadeia de verificações
-mutuamente dependentes como a deste trabalho, na qual a alteração de um
-coeficiente em um módulo pode propagar-se a dezenas de resultados sem sinal
-visível.
-
-\section{AMBIENTE DE REPRODUÇÃO}\label{sec:ap-ambiente}
-
-O programa exige Python em versão 3.12 ou superior. As dependências são
-declaradas com limites superiores explícitos, e a suíte de testes foi executada
-com sucesso em duas combinações de versões, assentadas em linhas de versão
-distintas de NumPy, a fim de assegurar que os resultados não dependam de
-particularidades de uma delas. A \autoref{tab:ap-ambiente} registra ambas.
-
-\tabela
-{Combinações de versões em que a suíte foi executada}
-{\footnotesize
-\begin{tabular}{lll}
-\toprule
-    \textbf{Componente} & \textbf{Combinação A} & \textbf{Combinação B} \\
-\midrule
-    Python     & 3.12.7  & 3.12.7  \\
-    NumPy      & 1.26.4  & 2.4.6   \\
-    SciPy      & 1.15.3  & 1.17.1  \\
-    Pandas     & 2.2.2   & 3.0.3   \\
-    Matplotlib & 3.9.2   & 3.11.0  \\
-\bottomrule
-\end{tabular}}
-{Elaborado pelo autor (2026)}
-{ap-ambiente}
-{}
-{}
 
 \section{DISPONIBILIDADE}\label{sec:ap-disponibilidade}
 
@@ -179,13 +136,8 @@ seguir.
 
 \vspace{\onelineskip}
 \noindent
-\url{https://github.com/gabstocki/mlc_projeto}
+\url{https://github.com/gabstocki/VALIDAR}
 \vspace{\onelineskip}
-
-A execução completa do \textit{pipeline} é obtida pelo comando
-\texttt{python -m mlc\_projeto.main}, e a varredura paramétrica pelo comando
-\texttt{python -m mlc\_projeto.predim.varredura\_global}. O memorial, a planilha
-de resultados e as figuras são gravados no diretório de saída.
 
 %% TODO: verificar — confirmar que o repositório está com visibilidade pública
 %% antes da entrega, e considerar a atribuição de um identificador persistente

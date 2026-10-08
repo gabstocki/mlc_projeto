@@ -283,6 +283,17 @@ TABELA_10_CE: dict[str, tuple[float, ...]] = {
 }
 
 
+# Tabela 10 — vento α = 90° (PARALELO às cumeeiras), qualquer θ ≤ 45°: faixas
+# ao longo da dimensão b (comprimento), a partir do frontão de barlavento,
+# b1 = b2 = h e b3 = restante (figura da Tabela 10). Lido no PDF da
+# NBR 6123:2023 (issue 39; fecha o item `tabela_10_alpha_90` do catálogo).
+# NOTA da tabela: para α = 90°, o atrito é determinado por 6.1.5 — o projeto
+# adota o §7.2.2 (atrito de cobertura isolada, envolvente), ver normativo.py.
+TABELA_10_ALPHA90: dict[str, float] = {"b1": -0.8, "b2": -0.6, "b3": -0.2}
+# c_pe médio das faixas de borda (elementos localizados) — y = mín(h; 0,1b)
+TABELA_10_CPE_MEDIO = (-1.5, -2.0)
+
+
 def coeficientes_tabela10(theta_deg: float) -> dict[str, float]:
     """
     Coeficientes externos Ce da Tabela 10 (α = 0°), interpolados em θ.
@@ -337,6 +348,11 @@ def padroes_cpe_edificacao_fechada(theta_deg: float, n_tramos: int) -> list[dict
     obstruções (veículos) podem estar tanto na borda de barlavento como na de
     sotavento. Varrem-se, portanto, todas as combinações
     tramo × sentido do vento × posição da obstrução.
+
+    Issue 39: acrescentam-se os padrões de vento PARALELO às cumeeiras
+    (Tab. 10, α = 90°): C_e uniforme nas duas águas, por faixa b1/b2/b3 ao
+    longo do comprimento; como o pórtico é dimensionado para qualquer posição,
+    varrem-se as três faixas, cada uma com os dois c_pi de obstrução.
     """
     ce = coeficientes_tabela10(theta_deg)
     zonas = zonas_por_tramo(n_tramos)
@@ -367,6 +383,26 @@ def padroes_cpe_edificacao_fechada(theta_deg: float, n_tramos: int) -> list[dict
                         f"c_pi={cpi:+.1f}"
                     ),
                 })
+
+    for zona, ce90 in TABELA_10_ALPHA90.items():
+        for rotulo_cpi, cpi in (
+            ("cpi+0.8", CPI_OBSTRUCAO_SOTAVENTO),
+            ("cpi-0.3", CPI_OBSTRUCAO_BARLAVENTO),
+        ):
+            padroes.append({
+                "id": f"T10_a90_{zona}_{rotulo_cpi}",
+                "caso_tab": f"Tab.10 α=90° faixa {zona}",
+                "tipo": "edificacao_fechada_com_cpi",
+                "C_esq": ce90 - cpi,
+                "C_dir": ce90 - cpi,
+                "c_pe_esq": ce90,
+                "c_pe_dir": ce90,
+                "c_pi": cpi,
+                "descricao": (
+                    f"§7.2.1 rota de edificação fechada — Tab.10 α=90° "
+                    f"(vento // cumeeiras), faixa {zona}, c_pi={cpi:+.1f}"
+                ),
+            })
     return padroes
 
 

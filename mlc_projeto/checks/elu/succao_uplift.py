@@ -70,6 +70,10 @@ def verificar_succao_uplift(
     n_chu_canto: int | None = None,
     V_brace_kN: float = 0.0,
     chaveta_cisalhamento: bool = False,
+    N_brace_anc_cen_kN: float = 0.0,
+    V_brace_cen_kN: float = 0.0,
+    n_chu_cen_cv: int | None = None,
+    chaveta_cen_cv: bool = False,
 ) -> dict:
     """
     Verifica a combinação de sucção: uplift na ancoragem e empuxo invertido
@@ -88,6 +92,11 @@ def verificar_succao_uplift(
                         chega à ancoragem do pilar de CANTO (montante de painel),
                         CONCOMITANTE ao uplift de sucção — mesmo evento de vento
                         (issue 36). Somada só na base de extremidade/canto.
+        N_brace_anc_cen_kN, V_brace_cen_kN: arrancamento e cortante do painel de
+                        contraventamento da LINHA CENTRAL na base do pilar
+                        central montante (issue 64), concomitantes ao uplift.
+        n_chu_cen_cv, chaveta_cen_cv: ancoragem PRÓPRIA dessa base e chaveta
+                        de cisalhamento (como no canto).
 
     Returns:
         dict com esforços de sucção, verificação da ancoragem (externa e central),
@@ -167,8 +176,20 @@ def verificar_succao_uplift(
     eta_N_canto = N_uplift_canto / R_anc_canto
     eta_canto = eta_N_canto + V_canto_nos_chumbadores / R_anc_canto
 
-    eta_gov = max(eta_ext, eta_cen, eta_canto)
-    if N_brace > 0.0 and eta_canto >= eta_ext and eta_canto >= eta_cen:
+    # Base CENTRAL montante do painel da linha central (issue 64): soma o
+    # arrancamento do painel ao uplift central; o cortante vai aos chumbadores.
+    N_brace_cen = max(0.0, float(N_brace_anc_cen_kN))
+    V_cen_cv = max(0.0, float(V_brace_cen_kN))
+    N_uplift_cen_cv = N_uplift_cen + N_brace_cen
+    _n_cen_cv = int(n_chu if n_chu_cen_cv is None else n_chu_cen_cv)
+    R_anc_cen_cv = max(1e-9, _n_cen_cv * F_chu_kN)
+    V_cen_cv_chu = 0.0 if chaveta_cen_cv else V_cen_cv
+    eta_cen_cv = N_uplift_cen_cv / R_anc_cen_cv + V_cen_cv_chu / R_anc_cen_cv
+
+    eta_gov = max(eta_ext, eta_cen, eta_canto, eta_cen_cv)
+    if N_brace_cen > 0.0 and eta_cen_cv >= max(eta_ext, eta_cen, eta_canto):
+        base_gov = "central (contraventada)"
+    elif N_brace > 0.0 and eta_canto >= eta_ext and eta_canto >= eta_cen:
         base_gov = "canto (contraventado)"
     elif eta_ext >= eta_cen:
         base_gov = "extremidade"
@@ -202,6 +223,13 @@ def verificar_succao_uplift(
         # Ancoragem — apoio central (governa o uplift, V≈0)
         "N_uplift_cen_kN": round(N_uplift_cen, 3),
         "eta_cen":         round(eta_cen, 4),
+        # Ancoragem — base central montante da linha central (issue 64)
+        "N_brace_anc_cen_kN": round(N_brace_cen, 3),
+        "N_uplift_cen_cv_kN": round(N_uplift_cen_cv, 3),
+        "V_cen_cv_kN":        round(V_cen_cv, 3),
+        "n_chu_cen_cv":       _n_cen_cv,
+        "chaveta_cen_cv":     bool(chaveta_cen_cv),
+        "eta_cen_cv":         round(eta_cen_cv, 4),
         # Ancoragem — base de CANTO (uplift sucção + download contravent., issue 36)
         "N_brace_anc_kN":     round(N_brace, 3),
         "N_uplift_canto_kN":  round(N_uplift_canto, 3),

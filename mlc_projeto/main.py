@@ -25,6 +25,7 @@ EC5 + EN 1990 + NBR 6123
 """
 
 import math
+from pathlib import Path
 from dataclasses import replace
 from mlc_projeto.core.geometry   import GeometriaViga
 from mlc_projeto.core.materials  import GlulamMaterial
@@ -39,16 +40,21 @@ from mlc_projeto.predim.predim   import pre_dimensionar, relatorio
 
 from mlc_projeto.checks.elu.cumeeira          import verifica_cumeeira
 from mlc_projeto.checks.elu.misula            import verifica_misula
-from mlc_projeto.checks.elu.flambagem_lateral import verifica_flambagem_lateral
+from mlc_projeto.checks.elu.flambagem_lateral import (
+    verifica_flambagem_lateral, verifica_flambagem_lateral_succao,
+)
 from mlc_projeto.checks.elu.flexao            import verifica_flexao
 from mlc_projeto.checks.elu.cisalhamento      import verifica_cisalhamento
-from mlc_projeto.checks.elu.apoio             import verifica_apoio
+from mlc_projeto.checks.elu.apoio             import (
+    reacao_arrancamento_max, verifica_apoio_contato, verifica_sela_central,
+)
 from mlc_projeto.checks.elu.flexo_compressao  import verifica_flexo_compressao
 from mlc_projeto.checks.els.deflection_els    import verificar_ELS
 
 from mlc_projeto.checks.elu.contraventamento  import verificar_contraventamento
 from mlc_projeto.checks.elu.contraventamento_vertical import (
     verificar_contraventamento_vertical,
+    reparticao_alinhamentos,
 )
 from mlc_projeto.checks.elu.contraventamento_transversal import (
     verificar_contraventamento_transversal,
@@ -80,6 +86,10 @@ from mlc_projeto.output.report                import (
     extrair_eta_ok, OUTPUT_DIR,
 )
 from mlc_projeto.visualization.viz_3d         import visualizar_galpao
+
+# Referência à função real: o apêndice de memória (issue 50) só é escrito quando
+# o relatório é gerado de fato — os testes substituem `gerar_relatorio`.
+_gerar_relatorio_real = gerar_relatorio
 
 import sys
 
@@ -238,23 +248,21 @@ E_FIX_TELHA_M = 0.20    # m — espaçamento de fixadores ao longo da terça
 R_FIX_K_KN    = 2.5     # kN — resistência característica do fixador (típico)
 
 # --- Contraventamento horizontal (EC5 §9.2.5) ---------------------------------
-# Layout otimizado: cruzes de St. André SÓ nas baías de EXTREMIDADE
-# (linha inicial + linha final ao longo do comprimento). NÃO é necessário
-# preencher todas as baías da linha frontal/traseira — isso aumenta aço e,
-# com k_ℓ = min(1,√(15/ℓ)), pode AGRAVAR a força por baía (ℓ menor → k_ℓ↑).
-#   n_modulos_cv = 2  → ℓ = L_comp = 46 m entre baías rígidas
+# Cruzes de St. André nas DUAS baías de extremidade, em TODOS os painéis do vão
+# (8 painéis de s=2,53 m por água): cada baía é uma treliça paralela às vigas
+# que vence ℓ = vão da viga = 20,25 m (EC5 §9.2.5.3, Fig. 9.10) — issue 41.
+# ℓ NÃO é o comprimento da edificação (46 m) nem a distância entre baías:
+# k_ℓ = min(1,√(15/20,25)) = 0,86. O número de baías rígidas só altera n
+# (vigas estabilizadas por sistema: ⌈9/2⌉ = 5), e mais baías reduzem a força.
 #
-# REDIMENSIONAMENTO (pós-Onda 2): com a ação longitudinal normativa (§7.2.2,
-# 6,7× a anterior) a Ø22 passou a reprovar com η_diag = 1,280 E deixou de
-# validar a restrição lateral das terças (l_1 da LTB saltava de s=2,53 m para
-# ℓ=46 m). Varredura de diâmetro, mantendo n_modulos_cv = 2:
-#   Ø22 → η=1,280, cobertura_ok=False   (reprovava)
-#   Ø25 → η=0,991, cobertura_ok=True    (sem margem)
-#   Ø28 → η=0,790, cobertura_ok=True    ← adotado
-#   Ø30 → η=0,688
-# Aumentar n_modulos_cv NÃO reduz F_diag (114,3 kN) e agrava η_δ — mantém-se 2.
+# A diagonal do painel extremo é governada pelo vento θ=0° (§7.2.2), não pela
+# estabilização (N_d pequeno no modelo biapoiado). Varredura de diâmetro:
+#   Ø22 → η=1,28, cobertura_ok=False   (reprova)
+#   Ø25 → η=0,99, cobertura_ok=True    (sem margem)
+#   Ø28 → η=0,79, cobertura_ok=True    ← adotado
+#   Ø30 → η=0,69
 L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
-N_MODULOS_CV    = 2       # baías com cruzes (extremos) — ver nota ell/k_ℓ (issue 15)
+N_MODULOS_CV    = 2       # baías rígidas (extremos) — define n por sistema (issue 41)
 D_BARRA_CV_MM   = 28.0    # mm — diagonal tracionada (redimensionada: 22 → 28)
 ACO_CV          = "S235"
 
@@ -306,7 +314,30 @@ ACO_CV          = "S235"
 # Nota: com n=8 a base de canto já passaria com 4 chumbadores (η_sucção 0,867 em
 # vez de 0,578); mantêm-se os 6 para não refazer o bloco de fundação já detalhado
 # (c=600, h_ef=400, ≈1,60×2,00 m) — ver N_CHU_CANTO.
-N_PAINEIS_CV_VERT = 8       # painéis de cruz que resistem à força longitudinal
+#
+# ── ISSUE 64 (Opção A) — linha central contraventada ─────────────────────────
+# As treliças da cobertura (issue 41) apoiam-se no beiral E no alinhamento
+# central, que não tinha caminho longitudinal à fundação. Agora a força
+# longitudinal reparte-se 1/2 fachadas (1/4 por beiral) + 1/2 linha central.
+# Varredura (pipeline real, diagonal auto η ≤ 0,90):
+#   fachada/central   η pilar central montante   η canto   status
+#        8 / 2              1,01                  0,34     REPROVA (Ø48 central)
+#        8 / 4              0,74                  0,34     aprova, 12 baías ocupadas
+#        4 / 4              0,74                  0,43     aprova, 8 baías ← adotado
+#        4 / 2              1,01                  0,43     REPROVA
+# Adota-se 4 + 4: as mesmas 8 baías ocupadas de antes e a mesma força por
+# painel (≈106 kN). Fachadas: 1 painel por extremidade em cada fachada, sob as
+# baías rígidas da cobertura. Linha central: 2 painéis por extremidade.
+N_PAINEIS_CV_VERT = 4       # painéis de cruz nas FACHADAS (força longitudinal)
+N_PAINEIS_CV_CENTRAL = 4    # painéis de cruz na LINHA CENTRAL (2 por extremidade)
+# Bases centrais montantes: somam o uplift central de sucção (2 vãos) ao
+# arrancamento do painel e recebem o cortante dele — ancoragem própria igual à
+# do canto (6 chumbadores M24 + chaveta), verificada pela EN 1992-4.
+N_CHU_CENTRAL_CV = 6
+# Escoras do nó de topo das baías contraventadas (issue 66): a terça sobre o
+# apoio (beiral / linha central) leva a reação longitudinal da treliça da
+# cobertura ao nó metálico do topo do pilar; ligação axial por cavilhas.
+D_ESCORA_MM = 20
 D_BARRA_CVV_MM    = None    # mm — None → auto (comercial, η ≤ ETA_CVV_ALVO)
 ACO_CVV           = "S235"
 ETA_CVV_ALVO      = 0.90    # margem de projeto na diagonal vertical
@@ -378,7 +409,16 @@ DADOS_ANCORAGEM = {
     "verificacao_en1992_4": "EN 1992-4:2018 §7.2.1.4/7.2.1.5/7.4.1.4/7.2.3",
 }
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
-L_AP        = 0.90     # m — comprimento da placa de apoio
+# --- Apoio da viga no pilar — CONTATO DIRETO (issue 42) ----------------------
+# A reação vertical de gravidade vai por contato (viga sobre chapa de topo do
+# pilar; no pilar central, sobre SELA metálica), não pelos pinos — elimina a
+# força ⊥ às fibras nos pinos que levava o fendilhamento a η≈0,96 e exigia
+# parafusos de reforço. Os pinos (furos ovalizados verticais na chapa) ficam só
+# para o arrancamento (sucção) e o esforço axial, no terço superior da viga.
+# (Antes: L_AP = 0,90 m — placa fictícia, maior que o pilar de 0,27 m.)
+L_AP            = H_PILAR   # m — apoio no pilar lateral = dimensão no plano (0,27)
+L_SELA_POR_VIGA = 0.25      # m — apoio de cada viga na sela do pilar central
+FOLGA_SELA_M    = 0.02      # m — folga entre as duas vigas sobre a sela
 
 # --- Componente metálico das ligações (EN 1993-1-8; issue 21) -----------------
 # Aço S275 (escolha do projeto). A ESPESSURA das chapas não é arbitrada: sai do
@@ -596,6 +636,10 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # k_mod da duração da combinação governante — EC5 §3.1.3
     mat_elu = mat_curta.com_duracao(gov.duracao)
 
+    # Issue 45 — sobrecarga dominante + vento acompanhante (ψ0,W=0,6) dispensada
+    # pela EN 1991-1-1:2002/AC:2009 §3.3.2(1); demonstra-se que não altera a viga.
+    comb_QW = load.combinacao_Q_com_vento_acompanhante(mat=mat_curta)
+
     print(f"  Geometria : L={geo.L}m | h0={geo.h0}m | "
           f"α={geo.alpha_deg}° | b={geo.b}m | h_ap={geo.h_ap:.3f}m")
     print(f"  Material  : {mat_elu.classe} | CS{mat_elu.classe_servico} | "
@@ -608,6 +652,11 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"(k_mod={mat_elu.com_duracao('curta').k_mod:.2f}; "
           f"instantânea permitida={mat_elu.com_duracao('instantanea').k_mod:.2f} "
           f"— não usada; critério conservador, EC5 §2.3.1.2)")
+    print(f"  Q+0,6W    : dispensada (EN 1991-1-1 §3.3.2(1)); {comb_QW['n_padroes_pressao']} "
+          f"padrões de pressão → M={comb_QW['M_QW_kNm']:.1f} vs ELU_Q "
+          f"{comb_QW['M_ELU_Q_kNm']:.1f} kN·m; M/k_mod relativo "
+          f"{comb_QW['razao_utilizacao']:.3f} (altera: "
+          f"{'SIM' if comb_QW['altera_dimensionamento'] else 'não'})")
     print(f"  ELU gov.  : {gov.nome} | padrao={gov.padrao_vento} | "
           f"M={gov.M_max_kNm:.2f} kN·m | "
           f"V={gov.V_max_kN:.2f} kN | N={gov.N_viga_kN:.2f} kN | "
@@ -712,10 +761,10 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # cumprir EC5 §9.2.5 (força + rigidez + terça-biela + δ ≤ ℓ/500).
     # Caso contrário l_1 é penalizado → LTB/flexão usam o valor efetivo.
     print("\n[FASE 2] Contraventamento — integridade da cobertura (§9.2.5)...")
-    print(f"  Layout: {N_MODULOS_CV} baías rígidas (extremos) | "
-          f"ℓ={L_COMP_GALPAO/(N_MODULOS_CV-1) if N_MODULOS_CV>1 else L_COMP_GALPAO:.1f} m | "
+    print(f"  Layout: {N_MODULOS_CV} baías rígidas (extremos), cruzes em todo o vão | "
+          f"ℓ = vão da viga = {geo.L:.2f} m | "
           f"diagonal ∅{D_BARRA_CV_MM:.0f} mm {ACO_CV}")
-    print("  Critério: estabilização EC5 §9.2.5 (não exige cruzes em todas as baías)")
+    print("  Critério: EC5 §9.2.5.3 — treliça paralela às vigas, ℓ = vão do sistema")
 
     res_elu["contraventamento"] = verificar_contraventamento(
         geo=geo, mat=mat_elu, load=load,
@@ -729,6 +778,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     cv0 = res_elu["contraventamento"]
     l_1_ltb = float(cv0["l_1_efetivo_m"])
     print(f"  → l_1 LTB = {l_1_ltb:.3f} m | {cv0['l_1_nota']}")
+    print(f"  → diagonal Ø{cv0['d_barra_mm']:.0f}, rosca recalcada M{cv0['d_rosca_mm']} "
+          f"(N_u={cv0['N_u_Rd_kN']:.1f} ≥ N_pl={cv0['N_pl_Rd_kN']:.1f} kN)")
     print(f"  → η_diag={cv0['eta_diag_N']:.3f} | η_δ={cv0['eta_delta']:.3f} | "
           f"η_terça={cv0['eta_terca']:.3f} | F_diag={cv0['F_diag_kN']:.1f} kN | "
           f"peso aço≈{cv0['peso_total_kg']:.0f} kg")
@@ -759,14 +810,42 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         )
         _print_eta("Flambagem §6.3.3 (recalc.)", res_elu["flambagem"])
 
+    # Issue 47 — sucção: momento negativo comprime o INTRADORSO, não contido
+    # pelas terças. l_1 = vão (contenção só nos apoios), varredura em x.
+    res_elu["flambagem_succao"] = verifica_flambagem_lateral_succao(geo, mat_elu, load)
+    _fs = res_elu["flambagem_succao"]
+    _print_eta("Flambagem §6.3.3 sucção (intradorso)", _fs)
+    if _fs.get("aplicavel"):
+        print(f"  · {_fs['comb_gov']} | x={_fs['x_m']:.2f} m, h={_fs['h_m']:.3f} m, "
+              f"M={_fs['M_d_kNm']:.1f} kN·m | l_ef={_fs['l_ef_m']:.2f} m (0,9·L) | "
+              f"λ_rel={_fs['lambda_rel_m']:.3f} k_crit={_fs['k_crit']:.3f}")
+
     res_elu["flexao"] = verifica_flexao(geo, mat_elu, load, s=l_1_ltb)
     _print_eta("Flexo-comp. §6.3.2+6.35", res_elu["flexao"])
 
     res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_elu, load)
     _print_eta("Cisalhamento §6.1.7", res_elu["cisalhamento"])
 
-    res_elu["apoio"] = verifica_apoio(geo, mat_elu, load, l_ap=L_AP)
-    _print_eta("Apoio §6.1.5", res_elu["apoio"])
+    res_elu["apoio"] = verifica_apoio_contato(
+        geo, mat_elu, load, l_apoio_m=L_AP, rotulo="L1 (pilar lateral)")
+    # Pilar central: duas vigas sobre a sela — cada uma com L_SELA_POR_VIGA
+    res_elu["apoio_central"] = verifica_apoio_contato(
+        geo, mat_elu, load, l_apoio_m=L_SELA_POR_VIGA, rotulo="L1c (sela central)")
+    res_elu["sela_central"] = verifica_sela_central(
+        sigma_contato_MPa=res_elu["apoio_central"]["sigma_c90d_MPa"],
+        l_apoio_viga_m=L_SELA_POR_VIGA, h_pilar_m=H_PILAR_C, folga_m=FOLGA_SELA_M)
+    _print_eta("Apoio L1 contato §6.1.5", res_elu["apoio"])
+    _print_eta("Apoio L1c sela §6.1.5", res_elu["apoio_central"])
+    _print_eta("Sela central (placa)", res_elu["sela_central"])
+    for _a in (res_elu["apoio"], res_elu["apoio_central"]):
+        print(f"  · {_a['rotulo']}: R={_a['R_d_kN']:.1f} kN | l={_a['l_apoio_m']:.3f} → "
+              f"l_ef={_a['l_ef_m']:.3f} m | σ={_a['sigma_c90d_MPa']:.3f} ≤ "
+              f"{_a['k_c90']:.2f}·{_a['f_c90d_MPa']:.2f} MPa | η={_a['eta']:.3f} "
+              f"(sem k_c,90: {_a['eta_sem_kc90']:.3f})")
+    _sl = res_elu["sela_central"]
+    print(f"  · Sela: {_sl['L_sela_m']:.2f} m sobre pilar {H_PILAR_C:.2f} m, balanço "
+          f"{_sl['balanco_m']:.3f} m → t_req={_sl['t_req_mm']:.1f} mm, adota "
+          f"{_sl['t_adot_mm']} mm S275")
 
     res_elu["flexo_comp"] = verifica_flexo_compressao(
         geo=geo, mat=mat_elu, load=load,
@@ -824,9 +903,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     if res_elu["contraventamento"].get("gov_forca"):
         print(f"  · Contraventamento: força governante = "
               f"{res_elu['contraventamento']['gov_forca']} | "
-              f"R_ext={res_elu['contraventamento'].get('R_ext_proj_kN', 0):.1f} kN "
+              f"R_apoio treliça={res_elu['contraventamento'].get('R_ext_proj_kN', 0):.1f} kN "
               f"(estab={res_elu['contraventamento'].get('R_ext_estab_kN', 0):.1f}, "
-              f"vento0/2={res_elu['contraventamento'].get('F_vento0_kN', 0)/2:.1f})")
+              f"vento0={res_elu['contraventamento'].get('R_vento0_kN', 0):.1f})")
 
     # Carga vertical de cálculo TOTAL do galpão — base do α_cr de sistema
     # (EN 1993-1-1 Eq. 5.2). Achado F-02 da auditoria adversarial v2.
@@ -835,6 +914,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     # Contraventamento VERTICAL — caminho de carga lateral até a fundação (issue 14)
     print("\n[FASE 2] Contraventamento vertical (força lateral → fundação)...")
+    # Issue 64 (Opção A): fachadas e linha central repartem a força longitudinal
+    # na proporção das reações das treliças da cobertura (1/2 + 1/2).
+    _rep_long = reparticao_alinhamentos(n_porticos=2)
     res_elu["contraventamento_vertical"] = verificar_contraventamento_vertical(
         geo=geo, load=load,
         H_pilar_m=H_PILAR_ALT,
@@ -845,20 +927,50 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         aco=ACO_CVV,
         d_mm=D_BARRA_CVV_MM,
         eta_alvo=ETA_CVV_ALVO,
-        R_ext_cobertura_kN=res_elu["contraventamento"].get("R_ext_proj_kN"),
+        # metade da força longitudinal coletada pelas treliças da cobertura
+        # (a função soma as duas extremidades)
+        R_ext_cobertura_kN=res_elu["contraventamento"].get("F_cobertura_total_kN", 0.0) / 2.0,
         V_Ed_total_kN=V_ED_TOTAL_KN,
+        fracao_demanda=_rep_long["fachadas"], alinhamento="fachadas",
     )
     cvv = res_elu["contraventamento_vertical"]
     _print_eta("Contravento vertical §5.4", cvv)
     print(f"  · F_vento0={cvv['F_vento0_kN']:.1f} kN + H_imp={cvv['H_imp_kN']:.1f} kN "
           f"→ V_lat={cvv['V_lat_total_kN']:.1f} kN / {cvv['n_paineis']} painéis")
-    print(f"  · Diagonal ∅{cvv['d_mm']:.0f} mm {cvv['aco']} (β={cvv['beta_deg']}°) | "
+    print(f"  · Diagonal ∅{cvv['d_mm']:.0f} mm {cvv['aco']}, extremidade recalcada "
+          f"M{cvv['d_rosca_mm']} (N_u={cvv['N_u_Rd_kN']:.1f} ≥ N_pl={cvv['N_pl_Rd_kN']:.1f} kN"
+          f" → {'dúctil' if cvv['ductil'] else 'FRÁGIL'}) | β={cvv['beta_deg']}° | "
           f"N_diag={cvv['N_diag_kN']:.1f} kN | η_N={cvv['eta_diag_N']:.3f} | "
           f"η_δ={cvv['eta_delta']:.3f}")
     print(f"  · Caminho à fundação: H_base={cvv['H_base_kN']:.1f} kN + "
           f"arrancamento N_uplift={cvv['N_uplift_kN']:.1f} kN")
     print(f"  · α_cr,long={cvv['alpha_cr']} ({cvv['regime_alpha_cr']}) | "
           f"K_lat={cvv['K_lat_kNpm']:.0f} kN/m | k_II={cvv['k_II']:.3f}")
+
+    # Linha CENTRAL — recebe a outra metade (issue 64, Opção A)
+    res_elu["contraventamento_vertical_central"] = verificar_contraventamento_vertical(
+        geo=geo, load=load,
+        H_pilar_m=H_PILAR_ALT,
+        dist_portico=L_T,
+        L_comp=L_COMP_GALPAO,
+        n_porticos=2,
+        n_paineis_long=N_PAINEIS_CV_CENTRAL,
+        aco=ACO_CVV,
+        d_mm=D_BARRA_CVV_MM,
+        eta_alvo=ETA_CVV_ALVO,
+        R_ext_cobertura_kN=res_elu["contraventamento"].get("F_cobertura_total_kN", 0.0) / 2.0,
+        V_Ed_total_kN=V_ED_TOTAL_KN,
+        fracao_demanda=_rep_long["internos"], alinhamento="central",
+    )
+    cvc = res_elu["contraventamento_vertical_central"]
+    _print_eta("Contravento vertical central", cvc)
+    print(f"  · {cvc['fracao_demanda']:.0%} da força longitudinal → "
+          f"V_lat={cvc['V_lat_total_kN']:.1f} kN / {cvc['n_paineis']} painéis")
+    print(f"  · Diagonal ∅{cvc['d_mm']:.0f} mm {cvc['aco']}, rosca recalcada M{cvc['d_rosca_mm']} | "
+          f"N_diag={cvc['N_diag_kN']:.1f} kN | η_N={cvc['eta_diag_N']:.3f} | "
+          f"η_δ={cvc['eta_delta']:.3f}")
+    print(f"  · Caminho à fundação: H_base={cvc['H_base_kN']:.1f} kN + "
+          f"download/arrancamento ±{cvc['N_uplift_kN']:.1f} kN no pilar central")
 
     # Contraventamento TRANSVERSAL — diafragma + frontões → fundação (issue 31)
     print("\n[FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...")
@@ -885,7 +997,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"({cvt['comb_H_cob']})")
     print(f"  · Diafragma: R_frontão={cvt['R_gable_kN']:.1f} kN | "
           f"N_corda={cvt['N_corda_kN']:.1f} kN (→ beiral)")
-    print(f"  · Frontão ∅{cvt['d_mm']:.0f} mm {cvt['aco']} (β={cvt['beta_deg']}°) | "
+    print(f"  · Frontão ∅{cvt['d_mm']:.0f} mm {cvt['aco']}, rosca recalcada M{cvt['d_rosca_mm']} (β={cvt['beta_deg']}°) | "
           f"N_diag={cvt['N_diag_kN']:.1f} kN | η_N={cvt['eta_diag_N']:.3f} | "
           f"η_δ={cvt['eta_delta']:.3f}")
     print(f"  · Caminho à fundação: H_base={cvt['H_base_kN']:.1f} kN + "
@@ -902,6 +1014,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print("\n[FASE 2] Ligações de extremidade das diagonais (EN 1993-1-8 §3.13)...")
     for _chave, _rot, _cv in (
         ("lig_diag_vertical",   "longitudinal", cvv),
+        ("lig_diag_vertical_central", "linha central", cvc),
         ("lig_diag_transversal", "frontão",     cvt),
     ):
         res_elu[_chave] = dimensionar_ligacao_diagonal(
@@ -962,6 +1075,20 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · Governa: {_pcv['regime']} | η={_pcv['eta']:.4f} "
           f"(vs pilar interno ~{res_elu['flexo_comp'].get('eta', 0):.3f})")
 
+    # Pilar CENTRAL montante do painel da linha central (issue 64, Opção A)
+    res_elu["pilar_central_contraventado"] = verifica_pilar_contraventado(
+        mat=mat_elu, b=B_PILAR_C, h=H_PILAR_C, H_pilar=H_PILAR_ALT,
+        N_grav_comp_kN=2.0 * _Rv_comp, N_grav_uplift_kN=2.0 * _Rv_min,
+        downloads_kN=[float(cvc["N_uplift_kN"])], eixo="min",
+        M_vento_kNm=_M_vento,
+    )
+    _pcc = res_elu["pilar_central_contraventado"]
+    _print_eta("Pilar central montante §6.2.3/§6.3.2", _pcc)
+    print(f"  · N={_pcc['N_comp_kN']:.1f} kN (2·R_v={2*_Rv_comp:.1f} + download "
+          f"{cvc['N_uplift_kN']:.1f}) | flexo-compr. η={_pcc['eta_comp']:.3f} | "
+          f"flexo-tração η={_pcc['eta_tracao']:.3f} | ancoragem "
+          f"{_pcc['N_ancoragem_kN']:.1f} kN")
+
     # Corda do diafragma — elemento de beiral verificado como membro (issue 32)
     print("\n[FASE 2] Corda do diafragma — elemento de beiral (issue 32)...")
     from mlc_projeto.checks.elu.corda_beiral import verificar_corda_beiral
@@ -984,6 +1111,37 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · Continuidade: {_cb['n_emendas']} emenda(s) × "
           f"{_cb['F_emenda_kN']:.1f} kN (obrigatória p/ o diafragma funcionar)")
 
+    # Nó de topo das baías contraventadas — escoras e ligações (issue 66)
+    from mlc_projeto.checks.elu.no_contraventamento import verificar_no_contraventamento
+
+    def _verificar_escora(N_kN: float, tipo: str) -> dict:
+        # terça como peça flexo-axial: de beiral (tributária s/2) ou sobre a
+        # linha central (tributária das duas águas, s)
+        return verificar_corda_beiral(
+            mat=mat_elu, N_corda_kN=N_kN, L_t=L_T,
+            s_eave=(S / 2.0 if tipo == "beiral" else S), b=B_TERCA, h=H_TERCA,
+            alpha_deg=GEO_PARAMS["alpha_deg"], g_k_m2=g_area_terca,
+            q_k_m2=Q_AREA, w_kNm2=_w_corda, L_comp=L_COMP_GALPAO,
+        )
+
+    res_elu["no_contraventamento"] = verificar_no_contraventamento(
+        mat_curta=mat_curta,
+        V_painel_fachada_kN=float(cvv["V_painel_kN"]),
+        V_painel_central_kN=float(cvc["V_painel_kN"]),
+        n_paineis_central_por_extremidade=max(1, N_PAINEIS_CV_CENTRAL // 2),
+        N_corda_diafragma_kN=float(cvt["N_corda_kN"]),
+        verificar_escora=_verificar_escora,
+        d_mm=float(D_ESCORA_MM), b_terca_m=B_TERCA, h_terca_m=H_TERCA,
+    )
+    _nc = res_elu["no_contraventamento"]
+    print("\n[FASE 2] Nó de topo das baías contraventadas (issue 66)...")
+    _print_eta("Nó contravent. (escoras+lig.)", _nc)
+    for _k, _rot in (("beiral", "beiral"), ("central", "central")):
+        _e, _l = _nc[f"escora_{_k}"], _nc[f"ligacao_escora_{_k}"]
+        print(f"  · Escora {_rot}: N={_nc[f'N_escora_{_k}_kN']:.1f} kN | "
+              f"flexo-axial η={_e['eta']:.3f} | ligação {_l['n_pinos']}×Ø{_l['d_mm']:.0f} "
+              f"({_l['n_horiz']}×{_l['n_vert']}, R_d={_l['R_d_kN']:.0f} kN) η={_l['eta']:.3f}")
+
     # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
     print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
     res_elu["estabilidade_global"] = verificar_estabilidade_global(
@@ -991,7 +1149,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         H_pilar_m=H_PILAR_ALT,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         m_colunas=2,
-        contravento_vertical_ok=cvv["lateral_estavel_long"],
+        contravento_vertical_ok=(cvv["lateral_estavel_long"]
+                                 and cvc["lateral_estavel_long"]),
         contravento_transversal_ok=cvt["lateral_estavel_transv"],
         # AUD-006/AUD-008: a força nocional (EN 1993-1-1 §5.3.2) entra como caso
         # de carga explícito na demanda do contraventamento transversal
@@ -1003,11 +1162,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         # F-02: α_cr de SISTEMA por direção, a partir da rigidez real dos
         # painéis de cruz (EN 1993-1-1 Eq. 5.2). Sem estes dados a verificação
         # recusa dispensar a 2.ª ordem — ausência de dado não é aprovação.
-        K_lat_long_kNpm=cvv.get("K_lat_kNpm"),
+        K_lat_long_kNpm=cvv.get("K_lat_kNpm", 0.0) + cvc.get("K_lat_kNpm", 0.0),
         K_lat_transv_kNpm=cvt.get("K_lat_kNpm"),
         V_Ed_total_kN=V_ED_TOTAL_KN,
         amplificacao_aplicada=bool(
-            cvv.get("amplificacao_aplicada") or cvt.get("amplificacao_aplicada")
+            cvv.get("amplificacao_aplicada") or cvc.get("amplificacao_aplicada")
+            or cvt.get("amplificacao_aplicada")
         ),
     )
     eg = res_elu["estabilidade_global"]
@@ -1275,7 +1435,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # ── Fase 4: Ligações ──────────────────────────────────────────────────────
     print(f"\n[FASE 4] Ligações (η_alvo = {ETA_LIG_ALVO:.2f} — uso público)...")
 
+    # Issue 42 — gravidade por contato; os pinos só recebem o arrancamento
+    _arr = reacao_arrancamento_max(load)
+    print(f"  · Apoio por contato (issue 42): pinos dimensionados para o "
+          f"arrancamento R_up={_arr['R_up_kN']:.1f} kN ({_arr['comb']})")
     res_lig = dimensionar_ligacoes(
+        V_pinos_kN=_arr["R_up_kN"],
         mat=mat_elu, load=load, geo=geo,
         d_base_mm=D_BASE_MM,
         F_chu_kN=F_CHU_KN,
@@ -1314,6 +1479,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"R={L3r.get('R_chu_kN', L3r['n_chumbadores']*L3r['F_chu_kN']):.0f} kN")
 
     res_lig_c = dimensionar_ligacoes_central(
+        V_pinos_kN=_arr["R_up_kN"],
         mat=mat_elu, load=load, geo=geo,
         b_pilar_c=B_PILAR_C,
         h_pilar_c=H_PILAR_C,
@@ -1376,6 +1542,19 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
                                          reforcar=True, eta_reforco_alvo=ETA_LIG_ALVO)
     res_elu["fendilhamento_L1"] = res_fend_L1
     res_elu["fendilhamento_L1c"] = res_fend_L1c
+
+    # Desenho da L1c (issue 42) — gerado dos parâmetros do dimensionamento
+    from mlc_projeto.output.figuras import plot_ligacao_L1c
+    _L1c = res_lig_c["L1c"]
+    plot_ligacao_L1c(
+        Path(__file__).resolve().parent.parent / "output" / "ligacao_L1c.png",
+        h_viga_m=geo.h0, b_viga_m=geo.b, h_pilar_m=H_PILAR_C,
+        l_apoio_viga_m=L_SELA_POR_VIGA, folga_m=FOLGA_SELA_M,
+        t_sela_mm=res_elu["sela_central"]["t_adot_mm"], t_chapa_mm=25.0,
+        d_pino_mm=float(D_BASE_MM), n_pinos=int(_L1c["n_pinos"]),
+        a2_mm=float(_L1c["a2_mm"]), a4c_mm=3.0 * D_BASE_MM,
+        a3_mm=float(_L1c["a3t_mm"]), alpha_deg=geo.alpha_deg,
+    )
     for lbl, rf in [("L1", res_fend_L1), ("L1c", res_fend_L1c)]:
         _print_eta(f"Fendilhamento {lbl} §8.1.4", rf)
         print(f"  · {lbl}: F_90,Ed=|V_d|={rf['F_90_Ed_kN']:.0f} kN | "
@@ -1486,6 +1665,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         # de vento que produz o arrancamento (antes não era verificado).
         V_brace_kN=float(cvv["H_base_kN"]) + float(cvt["H_base_kN"]),
         chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
+        # Base central montante do painel da linha central (issue 64)
+        N_brace_anc_cen_kN=float(
+            res_elu.get("contraventamento_vertical_central", {}).get("N_uplift_kN", 0.0)),
+        V_brace_cen_kN=float(
+            res_elu.get("contraventamento_vertical_central", {}).get("H_base_kN", 0.0)),
+        n_chu_cen_cv=N_CHU_CENTRAL_CV,
+        chaveta_cen_cv=CHAVETA_CISALHAMENTO_CANTO,
     )
     res_elu["succao_uplift"] = res_succao
     _print_eta("Sucção/uplift (ancoragem)", res_succao)
@@ -1497,13 +1683,53 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"(ancoragem {res_succao['n_chu']}×{res_succao['F_chu_kN']:.0f} kN)")
     print(f"  · Central: N_uplift={res_succao['N_uplift_cen_kN']:.1f} kN → "
           f"η_cen={res_succao['eta_cen']:.3f}")
+    print(f"  · Central montante (issue 64): N={res_succao['N_uplift_cen_kN']:.1f}+"
+          f"{res_succao['N_brace_anc_cen_kN']:.1f}={res_succao['N_uplift_cen_cv_kN']:.1f} kN"
+          f" + V={res_succao['V_cen_cv_kN']:.1f} kN → η={res_succao['eta_cen_cv']:.3f}")
     print(f"  · Canto (uplift+contravent., issue 36): "
           f"N={res_succao['N_uplift_ext_kN']:.1f}+{res_succao['N_brace_anc_kN']:.1f}="
           f"{res_succao['N_uplift_canto_kN']:.1f} kN → η_canto={res_succao['eta_canto']:.3f} "
           f"| governa: {res_succao['base_gov']}")
 
+    # ── Bases CORRENTES L3 / L3c — arrancamento + impacto (issue 48) ───────
+    # Antes, L3 só via o empuxo de arco (nulo na Opção B) e saía com η=0.
+    # Duas situações não concomitantes: persistente (sucção: N_t + vento no
+    # pilar) e acidental (choque de veículo: R_base nos chumbadores).
+    from mlc_projeto.connections.ancoragem import (
+        verificar_base_corrente, verificar_grupo_ancoragem,
+    )
+    _V_vento_base = 0.5 * max(float(res_elu["pilar_vento_0"]["F_d_kN"]),
+                              float(res_elu["pilar_vento_90"]["F_d_kN"]))
+    _V_impacto = max(float(c["R_base_kN"])
+                     for c in res_elu["impacto_veiculo"]["casos"])
+    for _chave, _rot, _Nt, _lig in (
+        ("ancoragem_L3", "L3 — base de extremidade",
+         res_succao["N_uplift_ext_kN"], res_lig["L3"]),
+        ("ancoragem_L3c", "L3c — base central",
+         res_succao["N_uplift_cen_kN"], res_lig_c["L3c"]),
+    ):
+        res_elu[_chave] = verificar_base_corrente(
+            rotulo=_rot, N_t_persistente_kN=float(_Nt),
+            V_persistente_kN=_V_vento_base, V_acidental_kN=_V_impacto,
+            n_chumbadores=int(_lig["n_chumbadores"]), d_mm=D_CHU_MM,
+            classe=CLASSE_CHU, layout=(2, 2), dados_concreto=DADOS_ANCORAGEM,
+        )
+        _ab = res_elu[_chave]
+        # A ligação passa a reportar o maior entre o concreto sob a chapa (η_N)
+        # e a ancoragem; a ancoragem no concreto é modo FRÁGIL (alvo 0,75).
+        _lig["eta_ancoragem"] = _ab["eta"]
+        _lig["caso_ancoragem_gov"] = _ab["caso_gov"]
+        _lig["eta"] = round(max(float(_lig.get("eta_N", 0.0)), _ab["eta"]), 4)
+        _lig["ok"] = bool(_lig.get("ok", True)) and _ab["ok"]
+        aplicar_criterio_eta(_lig, modo_fragil=_ab["eta"] >= float(_lig.get("eta_N", 0.0)),
+                             eta_alvo=ETA_LIG_ALVO)
+        print(f"\n[FASE 4c] {_rot}: {int(_lig['n_chumbadores'])}×M{D_CHU_MM} sem chaveta")
+        for _nc, _c in _ab["casos"].items():
+            print(f"  · {_nc}: N={_c['N_Ed_kN']:.1f} kN V={_c['V_Ed_kN']:.1f} kN → "
+                  f"η_aço={_c['eta_aco']:.3f} η_concreto={_c['eta_concreto']:.3f}")
+        _print_eta(f"{_rot.split(' —')[0]} (chapa + ancoragem)", _lig)
+
     # ── Ancoragem do canto — chumbadores moldados com cabeça ───────────────
-    from mlc_projeto.connections.ancoragem import verificar_grupo_ancoragem
     res_elu["ancoragem_canto"] = verificar_grupo_ancoragem(
         N_Ed_kN=float(res_succao["N_uplift_canto_kN"]),
         V_Ed_kN=float(res_succao["V_canto_kN"]),
@@ -1573,6 +1799,30 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"em torno do grupo (≈ {(S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f}×"
           f"{(2*S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f} m em planta)")
 
+    # ── Ancoragem da base central montante (issue 64) ──────────────────────
+    res_elu["ancoragem_central_cv"] = verificar_grupo_ancoragem(
+        N_Ed_kN=float(res_succao["N_uplift_cen_cv_kN"]),
+        V_Ed_kN=float(res_succao["V_cen_cv_kN"]),
+        n_chumbadores=N_CHU_CENTRAL_CV,
+        d_mm=D_CHU_MM, classe=CLASSE_CHU,
+        chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
+        layout=LAYOUT_CHU,
+        dados_concreto=DADOS_ANCORAGEM,
+    )
+    _ancc = res_elu["ancoragem_central_cv"]
+    print("\n[FASE 4d] Ancoragem da base central montante (issue 64)...")
+    _print_eta("Ancoragem central montante", _ancc)
+    print(f"  · {_ancc['n_chumbadores']}×M{_ancc['d_mm']} | N_Ed={_ancc['N_Ed_kN']:.1f} kN "
+          f"| V_Ed={_ancc['V_Ed_kN']:.1f} kN (chaveta) | η_aço={_ancc['eta_interacao']:.3f} "
+          f"| η_concreto={_ancc['eta_concreto']:.3f} ({_ancc['modo_concreto_gov']})")
+    res_elu["chaveta_concreto_central"] = esmagamento_chaveta(
+        V_Ed_kN=float(res_succao["V_cen_cv_kN"]),
+        l_chaveta_mm=CHAVETA_L_MM, h_embutida_mm=CHAVETA_H_MM,
+        classe_concreto=CLASSE_CONC_FUND,
+    )
+    _print_eta("Chaveta central — esmagamento §6.7",
+               res_elu["chaveta_concreto_central"])
+
     # ── Quadro de cargas para a fundação ───────────────────────────────────
     # O projeto NÃO dimensiona fundações (não há sondagem). O entregável é o
     # conjunto de esforços que chega a cada base, para o projeto de fundações.
@@ -1582,6 +1832,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     quadro_fund = montar_quadro_cargas_fundacao(
         load=load, res_succao=res_succao,
         cv_vertical=cvv, cv_transversal=cvt,
+        cv_vertical_central=cvc,
+        n_paineis_central=N_PAINEIS_CV_CENTRAL,
+        V_base_corrente_kN=max(_V_vento_base, _V_impacto),
         n_pilares_linha=n_pil_linha, n_linhas_portico=3,
         n_paineis_long=N_PAINEIS_CV_VERT,
         n_paineis_transv=N_PAINEIS_CV_TRANSV,
@@ -1626,6 +1879,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "g_area_terca": g_area_terca,
             "peso_proprio": pp,   # parcelas discriminadas (issue 1)
             "q_area": Q_AREA,
+            "combinacao_Q_W": comb_QW,   # issue 45 (informativa)
             "sistema": "biarticulada" + (" + tirante base" if TIRANTE_BASE else ""),
             "classe_servico": mat_elu.classe_servico,
             "eta_lig_alvo": ETA_LIG_ALVO,
@@ -1671,6 +1925,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         },
     }
 
+
     # Resumo unificado (terminal = Excel = memorial §12)
     resumo = _imprimir_resumo_export(
         todos_para_relatorio, load, todos_para_relatorio["meta"],
@@ -1681,6 +1936,18 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     # ── Fase 5: Relatório ─────────────────────────────────────────────────────
     print("\n[FASE 5] Export relatório (Excel + LaTeX/PDF)...")
+    # Memória de cálculo por equações (issue 50) → apêndice da monografia.
+    # Junto do relatório: só em execução real (os testes desligam
+    # gerar_relatorio e rodam cenários alterados de propósito).
+    if gerar_relatorio is _gerar_relatorio_real:
+        from mlc_projeto.output.memorial_equacoes import gerar_apendice_memoria
+        _tese = Path(__file__).resolve().parent.parent / "tese"
+        if _tese.is_dir():
+            gerar_apendice_memoria(todos_para_relatorio, _tese / "apendiceB.tex")
+            # Análise estática por combinação (issue 51) → apêndice C.
+            from mlc_projeto.output.apendice_analise import gerar_apendice_analise
+            gerar_apendice_analise(load, geo, _tese)
+
     gerar_relatorio(
         todos_para_relatorio,
         geo,

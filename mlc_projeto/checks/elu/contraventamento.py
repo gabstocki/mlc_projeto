@@ -13,9 +13,12 @@ Cadeia de forças (plano da cobertura)
        ↓  força de estabilização EC5 §9.2.5
   Terça como BIELA (compressão + flambagem)
        ↓  até baía rígida
-  Cruz de St. André (diagonal tracionada, aço)
+  Treliça de contraventamento da baía rígida (banzos = 2 vigas vizinhas,
+  montantes = terças, diagonais = cruzes de St. André em TODOS os painéis do
+  vão), que vence ℓ = vão da viga entre os seus apoios (EC5 Fig. 9.10)
        ↓
-  Pórtico de extremidade → fundação
+  Reações nos apoios da viga (beiral / linha central) → contraventamento
+  vertical das fachadas → fundação
 
 Verificações (EC5 + EN 1993)
 ----------------------------
@@ -28,7 +31,15 @@ Verificações (EC5 + EN 1993)
 Acoplamento ao resto do pipeline
 --------------------------------
   `restricao_lateral_valida`  → se True, LTB pode usar l_1 = s (terças)
-  se False, LTB deve usar l_1 penalizado (vão entre baías rígidas)
+  se False, LTB deve usar l_1 penalizado (vão da própria viga)
+
+Vão ℓ do sistema (issue 41, 3ª revisão do orientador)
+-----------------------------------------------------
+  ℓ em §9.2.5.3 é o vão do SISTEMA DE CONTRAVENTAMENTO, que é paralelo às
+  vigas estabilizadas (EC5 Fig. 9.10): ℓ = vão da viga (20,25 m), e NÃO o
+  comprimento da edificação (46,0 m) nem a distância entre baías rígidas.
+  O número de baías contraventadas entra apenas em n (vigas estabilizadas
+  por sistema), nunca em ℓ.
 
 Referências
 -----------
@@ -77,6 +88,7 @@ class LayoutContraventamento:
     """Geometria do sistema de contraventamento horizontal."""
 
     L_comp:       float = 46.0    # m — comprimento do galpão (eixo Y)
+    L_vao:        float = 20.25   # m — vão da viga = vão do sistema ℓ (§9.2.5.3)
     dist_portico: float = 5.75    # m — espaçamento entre pórticos = vão terça
     s_terca:      float = 2.53    # m — espaçamento entre terças (ao longo da viga)
     n_porticos:   int   = 2       # pórticos lado a lado (dois vãos de 20,25 m)
@@ -101,20 +113,30 @@ class LayoutContraventamento:
     @property
     def ell_m(self) -> float:
         """
-        Vão do sistema estabilizador ℓ (EC5 §9.2.5.3 Fig. 9.9).
-        Distância entre baías rígidas de contraventamento.
-        Com só extremos: ℓ = L_comp.
+        Vão do sistema de contraventamento ℓ (EC5 §9.2.5.3, Fig. 9.10).
 
-        Nota de projeto: aumentar n_modulos_cv (mais baías com cruzes)
-        reduz ℓ e sobe k_ℓ=min(1,√(15/ℓ)), o que **aumenta** a reação
-        R_ext = k_ℓ·n·N_d/(2·k_f3) enquanto k_ℓ < 1. Por isso encher
-        todas as baías da linha frontal/final **não** é, em geral, a
-        solução mais económica para §9.2.5 — preferir extremos +
-        diagonal dimensionada (e baía intermediária só se robustez/arquitectura).
+        A treliça de cada baía rígida é paralela às vigas e vence o vão
+        delas, entre os apoios (beiral e linha central): ℓ = L_vao. Não
+        depende de L_comp nem de n_modulos_cv (issue 41).
         """
-        if self.n_modulos_cv <= 1:
-            return self.L_comp
-        return self.L_comp / (self.n_modulos_cv - 1)
+        return self.L_vao
+
+    @property
+    def n_por_sistema(self) -> int:
+        """
+        Vigas estabilizadas por cada sistema (n da Eq. 9.37).
+
+        As n_vigas_por_linha vigas de um plano repartem-se pelas
+        n_modulos_cv baías rígidas; arredonda-se para cima. É por aqui —
+        e só por aqui — que mais baías contraventadas aliviam o sistema.
+        """
+        return math.ceil(self.n_vigas_por_linha / max(self.n_modulos_cv, 1))
+
+    @property
+    def n_paineis_vao(self) -> int:
+        """Painéis da treliça ao longo do vão ℓ (entre terças, passo s)."""
+        # tolerância: 20,25/2,53 = 8,004 são 8 painéis (s arredondado)
+        return max(1, math.ceil(self.L_vao / self.s_terca - 0.05))
 
     @property
     def a_restricao_m(self) -> float:
@@ -124,11 +146,12 @@ class LayoutContraventamento:
     @property
     def n_paineis_por_mod(self) -> int:
         """
-        Painéis de cruz por módulo extremo.
-        Por pórtico: dois painéis junto aos beirais (x≈0 e x≈L);
-        × n_porticos.
+        Painéis de cruz por baía rígida (todos os planos).
+
+        A treliça precisa de diagonais em TODOS os painéis do vão: com cruzes
+        só junto aos apoios, os painéis centrais formariam mecanismo.
         """
-        return 2 * self.n_porticos
+        return self.n_paineis_vao * self.n_porticos
 
     def diagonal(self) -> dict:
         L = self.dist_portico
@@ -248,7 +271,8 @@ def verifica_sistema_vigas(
 
         δ_lim = ℓ / 500
 
-    q_d em kN/m; reação por baía extrema (simétrica) R = q_d·ℓ/2.
+    ℓ = vão do sistema (paralelo às vigas); n = vigas por sistema.
+    q_d em kN/m; reação em cada apoio da treliça R = q_d·ℓ/2.
     """
     if ell_m <= 0:
         raise ValueError("ℓ (vão do sistema estabilizador) deve ser > 0")
@@ -343,7 +367,7 @@ def verificar_diagonal_aco(
     Diagonal tracionada — resistência EN 1993-1-1 §6.2.3
     e rigidez axial horizontal do painel.
 
-        N_t,Rd = A · f_y / γ_M0
+        N_t,Rd = min(A·f_y/γ_M0 ; 0,9·A_s·f_u/γ_M2)   (rosca recalcada, issue 44)
         C_h = (E·A / L) · cos²θ     (kN/m) — uma diagonal ativa
     """
     if aco not in ACO:
@@ -353,7 +377,13 @@ def verificar_diagonal_aco(
     A_mm2 = math.pi * d_mm**2 / 4
     A_m2  = A_mm2 * 1e-6
 
-    N_t_Rd = A_mm2 * f_y / GAMMA_M0 / 1e3          # kN
+    # Issue 44 — mesmo critério das diagonais verticais e dos frontões:
+    # min(N_pl bruta; N_u na rosca), com extremidade recalcada (dúctil).
+    from mlc_projeto.checks.elu.contraventamento_vertical import (
+        resistencia_tracao_diagonal,
+    )
+    tr = resistencia_tracao_diagonal(d_mm, aco)
+    N_t_Rd = tr["N_t_Rd_kN"]                        # kN
     eta_N  = F_diag_kN / N_t_Rd if N_t_Rd > 0 else 999.0
 
     # Rigidez axial da barra (kN/m)
@@ -374,6 +404,11 @@ def verificar_diagonal_aco(
         "f_y_MPa":     f_y,
         "A_mm2":       round(A_mm2, 2),
         "N_t_Rd_kN":   round(N_t_Rd, 4),
+        "N_pl_Rd_kN":  round(tr["N_pl_Rd_kN"], 4),
+        "N_u_Rd_kN":   round(tr["N_u_Rd_kN"], 4),
+        "A_net_mm2":   round(tr["A_net_mm2"], 1),
+        "d_rosca_mm":  tr["d_rosca_mm"],
+        "ductil":      tr["ductil"],
         "F_diag_kN":   round(F_diag_kN, 4),
         "eta_N":       round(eta_N, 4),
         "ok_N":        ok_N,
@@ -390,47 +425,38 @@ def verificar_diagonal_aco(
 # ── Flecha do sistema estabilizador ───────────────────────────────────────────
 
 def flecha_sistema_estabilizador(
-    q_d_kNpm:   float,
-    ell_m:      float,
-    C_h_kNpm:   float,
-    n_paineis:  int,
-    n_modulos_cv: int,
+    q_d_kNpm:      float,
+    ell_m:         float,
+    C_h_kNpm:      float,
+    s_painel_m:    float,
+    EA_banzo_kN:   float,
+    dist_banzos_m: float,
 ) -> dict:
     """
-    Estimativa da flecha horizontal do sistema de contraventamento.
-
-    Modelo: baías rígidas nas extremidades (molas em paralelo por painel);
-    o vão ℓ entre baías é estabilizado. A flecha admissível é ℓ/500
+    Flecha a meio-vão da treliça de contraventamento — limite ℓ/500
     (EC5 §9.2.5.3).
 
-    Aproximação conservadora:
-      • cada baía extrema tem n_paineis diagonais ativas em paralelo
-      • rigidez total de uma baía K_bay = n_paineis · C_h
-      • sistema simétrico: duas baías; deslocamento relativo sob carga
-        uniforme q_d modelado como flecha de viga biapoiada com
-        rigidez equivalente de treliça:
+    A treliça vence ℓ biapoiada, sob carga uniforme q. Duas parcelas:
 
-        δ ≈ (5/384) · q_d · ℓ⁴ / (EI)_eq   não aplicável directamente;
-
-      Alternativa (usada): reação R = q_d·ℓ/2 em cada baía;
-        δ_bay = R / K_bay
-        (deslocamento da baía de apoio — conservador se o “meio” se
-         desloca mais; para só 2 baías extremas o meio move-se com as
-         terças até as baías — δ_mid ≈ δ_bay em modelo de bielas rígidas
-         entre baías, OU maior se terças fletem).
-
-      Para terças rígidas axialmente face às diagonais, δ_gov ≈ δ_bay.
-      Limite: δ ≤ ℓ/500.
+      • cisalhamento dos painéis (diagonais): cada painel de comprimento s
+        tem rigidez ao corte C_h (uma diagonal ativa), logo GA_eq = C_h·s e
+            δ_V = q·ℓ² / (8·C_h·s)
+      • flexão da treliça (banzos = as duas vigas vizinhas, afastadas de e):
+            I_eq = 2·A·(e/2)²,   δ_M = 5·q·ℓ⁴ / (384·E·I_eq)
     """
-    K_bay = max(n_paineis, 1) * C_h_kNpm          # kN/m
-    R     = q_d_kNpm * ell_m / 2.0                # kN
-    delta = R / K_bay if K_bay > 0 else 1e9       # m
+    GA_eq = C_h_kNpm * s_painel_m                           # kN
+    dV = q_d_kNpm * ell_m**2 / (8.0 * GA_eq) if GA_eq > 0 else 1e9
+    EI_eq = 2.0 * EA_banzo_kN * (dist_banzos_m / 2.0) ** 2  # kN·m²
+    dM = 5.0 * q_d_kNpm * ell_m**4 / (384.0 * EI_eq) if EI_eq > 0 else 1e9
+    delta = dV + dM
     d_lim = ell_m / 500.0
     eta   = delta / d_lim if d_lim > 0 else 999.0
 
     return {
-        "K_bay_kNpm":   round(K_bay, 2),
-        "R_ext_kN":     round(R, 4),
+        "GA_eq_kN":     round(GA_eq, 1),
+        "R_ext_kN":     round(q_d_kNpm * ell_m / 2.0, 4),
+        "delta_V_mm":   round(dV * 1000, 3),
+        "delta_M_mm":   round(dM * 1000, 3),
         "delta_m":      round(delta, 6),
         "delta_mm":     round(delta * 1000, 3),
         "delta_lim_mm": round(d_lim * 1000, 2),
@@ -470,6 +496,7 @@ def verificar_contraventamento(
     """
     layout = LayoutContraventamento(
         L_comp=L_comp,
+        L_vao=geo.L,
         dist_portico=dist_portico,
         s_terca=s_terca,
         n_porticos=n_porticos,
@@ -491,24 +518,32 @@ def verificar_contraventamento(
     #    n_por_plano = n_vigas_por_linha vigas (≈9). NÃO é um sistema único de 18.
     #    Cada plano tem o seu próprio contraventamento (cruzes) → sem duplicação:
     #    a força de estabilização de um plano NÃO passa pelo outro.
+    #    Cada plano tem n_modulos_cv sistemas (baías rígidas); cada um
+    #    estabiliza n_por_sistema vigas e vence ℓ = vão da viga (issue 41).
     n_por_plano = layout.n_vigas_por_linha            # vigas por plano (≈9)
     n_planos    = layout.n_porticos                   # planos independentes (≈2)
-    sis = verifica_sistema_vigas(N_d, n_por_plano, layout.ell_m, k_f3=k_f3)
+    n_sis       = layout.n_por_sistema                # vigas por sistema (≈5)
+    sis = verifica_sistema_vigas(N_d, n_sis, layout.ell_m, k_f3=k_f3)
 
     # 4) Vento θ=0° (// cumeeira) — força longitudinal na estrutura aberta.
-    #    Repartida pelos n_planos planos e pelas 2 baías extremas (simetria).
+    #    Repartida pelos n_planos planos e pelas n_modulos_cv baías rígidas;
+    #    chega à treliça distribuída ao longo do vão (uma terça por nó).
     vento_0 = getattr(load, "vento_0", None) or {}
     F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
-    R_vento0 = F_vento0_kN / (2.0 * max(n_planos, 1))
-    # Reação de projeto por baía extrema (POR PLANO) = máx(§9.2.5.3, vento θ=0°)
-    R_ext_estab = sis["R_ext_kN"]                     # por plano
-    R_ext_proj  = max(R_ext_estab, R_vento0)
-    gov_forca   = "vento_0" if R_vento0 > R_ext_estab else "estab_9.2.5"
+    F_vento0_baia = F_vento0_kN / (max(n_planos, 1) * max(n_modulos_cv, 1))
+    R_vento0 = F_vento0_baia / 2.0                    # reação por apoio da treliça
+    # Reação de projeto em cada apoio da treliça — EC5 §9.2.5.3(1): o sistema
+    # resiste a q_d "EM ADIÇÃO" às ações horizontais externas (vento) — SOMA, não
+    # máximo (issue 65). q_d vem da envoltória de N_d sobre todas as combinações,
+    # não da combinação do vento θ=0° — a soma é, por isso, conservadora.
+    R_ext_estab = sis["R_ext_kN"]                     # = q_d·ℓ/2
+    R_ext_proj  = R_ext_estab + R_vento0
+    gov_forca   = ("estab_9.2.5+vento_0" if R_vento0 > 0.0 else "estab_9.2.5")
 
-    # 5) Distribuição às diagonais — painéis POR PLANO (2 aguas por plano)
-    n_pan_plano = max(1, layout.n_paineis_por_mod // max(n_planos, 1))  # =2
-    n_pan = layout.n_paineis_por_mod                  # total no galpão (quantitativos)
-    F_painel = R_ext_proj / n_pan_plano
+    # 5) Diagonal do painel de extremidade: cortante da treliça V = R_ext.
+    n_pan_vao = layout.n_paineis_vao                  # painéis por plano e baía
+    n_pan = layout.n_paineis_por_mod                  # por baía, todos os planos
+    F_painel = R_ext_proj                             # cortante no painel extremo
     F_diag   = F_painel / diag["cos_theta"] if diag["cos_theta"] > 0 else 1e9
 
     # 6) Diagonal — dimensionada à TRAÇÃO (§6.2.3).
@@ -526,18 +561,20 @@ def verificar_contraventamento(
 
     # 7) Flecha do sistema (critério de rigidez global §9.2.5.3)
     #    Para vento θ=0°: q_eq = F_total/ℓ  (carga longitudinal repartida)
-    q_vento0 = F_vento0_kN / layout.ell_m if layout.ell_m > 0 else 0.0
-    q_flecha = max(sis["q_d_kNpm"], q_vento0)
+    q_vento0 = F_vento0_baia / layout.ell_m if layout.ell_m > 0 else 0.0
+    q_flecha = sis["q_d_kNpm"] + q_vento0             # §9.2.5.3(2): q_d e vento
     fl = flecha_sistema_estabilizador(
         q_d_kNpm=q_flecha,
         ell_m=layout.ell_m,
         C_h_kNpm=bar["C_h_kNpm"],
-        n_paineis=n_pan_plano,
-        n_modulos_cv=n_modulos_cv,
+        s_painel_m=layout.s_terca,
+        EA_banzo_kN=mat.E0_mean / 1e3 * geo.b * float(geo.h(geo.L / 2.0)),
+        dist_banzos_m=layout.dist_portico,
     )
 
     # 8) Terça como biela (força + flambagem + rigidez local EA/L ≥ C_min)
-    F_terca = R_ext_proj / n_pan_plano
+    #    O montante de extremidade leva o cortante da treliça.
+    F_terca = R_ext_proj
     F_terca = max(F_terca, ap["F_d_kN"])
 
     ter = verifica_terca_biela(
@@ -573,11 +610,11 @@ def verificar_contraventamento(
         l_1_ef = s_terca
         l_1_nota = "terças válidas como restrição lateral (cobertura OK)"
     else:
-        # Penalização: sem baía rígida fiável, só contam os extremos
-        l_1_ef = layout.ell_m
+        # Penalização: sem sistema fiável, l_1 passa ao vão da própria viga
+        l_1_ef = geo.L
         l_1_nota = (
             "cobertura NÃO valida restrição a s; "
-            f"l_1 penalizado = ℓ = {layout.ell_m:.2f} m"
+            f"l_1 penalizado = vão da viga = {geo.L:.2f} m"
         )
 
     # η governante do módulo
@@ -591,14 +628,15 @@ def verificar_contraventamento(
     eta_gov = etas[gov_key]
 
     # Quantitativo
-    n_barras = n_modulos_cv * n_pan * 2
+    n_barras = n_modulos_cv * n_pan * 2               # 2 diagonais por cruz
     L_tot = n_barras * diag["d_diag_m"]
     peso = L_tot * (math.pi * (d_barra_mm / 1000) ** 2 / 4) * 7850
 
     return {
         # Identificação
         "sistema": "Cruzes St.André + terças-biela — integridade cobertura",
-        "posicao": f"{n_modulos_cv} modulos (ell={layout.ell_m:.1f} m entre baias)",
+        "posicao": (f"{n_modulos_cv} baias rigidas, cruzes nos {n_pan_vao} "
+                    f"paineis do vao (ell={layout.ell_m:.2f} m)"),
         "norma":   "EC5 §9.2.5.2+§9.2.5.3+§6.3.2 | EN 1993-1-1 §6.2.3 | vento θ=0°",
 
         # Compressão a estabilizar + vento longitudinal
@@ -620,12 +658,17 @@ def verificar_contraventamento(
         # §9.2.5.3 — POR PLANO (dois planos independentes)
         "n_planos":       n_planos,
         "n_por_plano":    n_por_plano,
+        "n_por_sistema":  n_sis,
+        "n_modulos_cv":   n_modulos_cv,
         "ell_m":          sis["ell_m"],
         "k_ell":          sis["k_ell"],
         "q_d_kNpm":       sis["q_d_kNpm"],          # por plano
         "F_total_kN":     sis["F_total_kN"],        # por plano
         "R_ext_kN":       sis["R_ext_kN"],          # por plano, por baía
-        "n_paineis_por_plano": n_pan_plano,
+        "n_paineis_vao":  n_pan_vao,
+        "R_vento0_kN":    round(R_vento0, 3),
+        # força longitudinal total entregue pelas treliças aos apoios
+        "F_cobertura_total_kN": round(2.0 * R_ext_proj * n_planos * n_modulos_cv, 3),
 
         # Painel / diagonal
         "L_panel_m":      diag["L_panel_m"],
@@ -639,6 +682,10 @@ def verificar_contraventamento(
         "aco":            aco,
         "A_mm2":          bar["A_mm2"],
         "N_t_Rd_kN":      bar["N_t_Rd_kN"],
+        "N_pl_Rd_kN":     bar["N_pl_Rd_kN"],
+        "N_u_Rd_kN":      bar["N_u_Rd_kN"],
+        "d_rosca_mm":     bar["d_rosca_mm"],
+        "ductil":         bar["ductil"],
         "C_h_kNpm":       bar["C_h_kNpm"],
         "eta_diag_N":     bar["eta_N"],
         "ok_diag":        bar["ok_N"],
@@ -648,6 +695,8 @@ def verificar_contraventamento(
 
         # Flecha sistema
         "delta_mm":       fl["delta_mm"],
+        "delta_V_mm":     fl["delta_V_mm"],
+        "delta_M_mm":     fl["delta_M_mm"],
         "delta_lim_mm":   fl["delta_lim_mm"],
         "eta_delta":      fl["eta_delta"],
         "ok_delta":       fl["ok"],

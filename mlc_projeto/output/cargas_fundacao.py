@@ -66,6 +66,9 @@ def montar_quadro_cargas_fundacao(
     n_linhas_portico: int,
     n_paineis_long: int,
     n_paineis_transv: int,
+    cv_vertical_central: dict | None = None,
+    n_paineis_central: int = 0,
+    V_base_corrente_kN: float = 0.0,
 ) -> dict:
     """
     Consolida os esforços de cálculo que chegam a cada tipo de base.
@@ -78,6 +81,9 @@ def montar_quadro_cargas_fundacao(
         n_pilares_linha  : pilares por alinhamento ao longo do comprimento
         n_linhas_portico : alinhamentos de pilares
         n_paineis_*      : painéis de cruz em cada direção
+        cv_vertical_central : contraventamento vertical da linha central (issue 64)
+        V_base_corrente_kN  : cortante nas bases correntes — envelope do vento
+                              no pilar e do impacto de veículo (acidental, issue 48)
 
     Returns:
         dict com as linhas do quadro, os totais e a declaração de escopo.
@@ -91,6 +97,14 @@ def montar_quadro_cargas_fundacao(
     # Horizontais dos contraventamentos, por painel, à fundação.
     H_long   = float(cv_vertical.get("H_base_kN", 0.0))
     H_transv = float(cv_transversal.get("H_base_kN", 0.0))
+    cvc = cv_vertical_central or {}
+    H_cen = float(cvc.get("H_base_kN", 0.0))
+    D_cen = float(cvc.get("N_uplift_kN", 0.0))
+    # Montantes centrais: painéis contíguos, metade em cada extremidade; cada
+    # grupo de k painéis tem k+1 pilares montantes (no pilar comum a dois
+    # painéis o download de um anula o arrancamento do outro) — envelope.
+    _k = int(n_paineis_central) // 2
+    n_cen_cv = min(n_pilares_linha, 2 * (_k + 1)) if (cvc and _k) else 0
 
     linhas = [
         CargaBase(
@@ -98,16 +112,16 @@ def montar_quadro_cargas_fundacao(
             n_bases=max(0, n_pilares_linha * 2 - 4),
             N_comp_kN=N_comp,
             N_tracao_kN=float(res_succao["N_uplift_ext_kN"]),
-            H_kN=H_arco,
-            origem="reação vertical + uplift de sucção; H do arco (0 na Opção B)",
+            H_kN=max(H_arco, float(V_base_corrente_kN)),
+            origem="reação vertical + uplift de sucção; H = impacto de veículo (acidental)",
         ),
         CargaBase(
             tipo="Central (pilar do apoio partilhado)",
-            n_bases=n_pilares_linha,
+            n_bases=n_pilares_linha - n_cen_cv,
             N_comp_kN=2.0 * N_comp,
             N_tracao_kN=float(res_succao["N_uplift_cen_kN"]),
-            H_kN=0.0,
-            origem="soma das reações dos dois vãos; empuxos cancelam-se",
+            H_kN=float(V_base_corrente_kN),
+            origem="soma das reações dos dois vãos; H = impacto de veículo (acidental)",
         ),
         CargaBase(
             tipo="Canto (montante de contraventamento)",
@@ -119,15 +133,25 @@ def montar_quadro_cargas_fundacao(
             origem="reação + downloads dos dois painéis; H dos dois contraventamentos",
         ),
     ]
+    if n_cen_cv:
+        linhas.insert(2, CargaBase(
+            tipo="Central montante (contraventamento)",
+            n_bases=n_cen_cv,
+            N_comp_kN=2.0 * N_comp + D_cen,
+            N_tracao_kN=float(res_succao.get("N_uplift_cen_cv_kN", 0.0)),
+            H_kN=H_cen,
+            origem="2 reações + download do painel central; H do painel",
+        ))
 
     return {
         "titulo": "Cargas de cálculo (ELU) destinadas à fundação",
         "linhas": [c.como_linha() for c in linhas],
         "cargas": linhas,
         "totais": {
-            "H_longitudinal_total_kN": round(H_long * n_paineis_long, 1),
+            "H_longitudinal_total_kN": round(H_long * n_paineis_long
+                                             + H_cen * n_paineis_central, 1),
             "H_transversal_total_kN":  round(H_transv * n_paineis_transv, 1),
-            "n_paineis_long":          n_paineis_long,
+            "n_paineis_long":          n_paineis_long + n_paineis_central,
             "n_paineis_transv":        n_paineis_transv,
             "n_linhas_portico":        n_linhas_portico,
         },

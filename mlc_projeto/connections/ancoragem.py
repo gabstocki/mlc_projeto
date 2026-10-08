@@ -771,6 +771,67 @@ def resistencia_borda_corte(
     }
 
 
+def verificar_base_corrente(
+    *,
+    rotulo: str,
+    N_t_persistente_kN: float,
+    V_persistente_kN: float,
+    V_acidental_kN: float,
+    n_chumbadores: int = 4,
+    d_mm: int = 24,
+    classe: str = "8.8",
+    layout: tuple[int, int] = (2, 2),
+    dados_concreto: dict | None = None,
+) -> dict:
+    """
+    Ancoragem de uma base CORRENTE (L3 de extremidade, L3c central) — issue 48.
+
+    Duas situações de projeto, não concomitantes (EN 1990 §6.4.3):
+
+      · persistente (sucção): arrancamento N_t da combinação de sucção e o
+        cortante do vento no próprio pilar (metade do arrasto vai à base);
+      · acidental (impacto de veículo, EN 1991-1-7): cortante R_base do
+        choque, sem tração (a acidental é G + A_d, base comprimida).
+
+    Sem chaveta: o corte vai pelos chumbadores (EN 1993-1-8 Tab. 3.4 e
+    interação §3.4; concreto: pry-out e borda, EN 1992-4). O atrito sob a
+    chapa, que a compressão de G mobilizaria na acidental, NÃO é creditado; e
+    os coeficientes parciais da situação persistente são mantidos na
+    acidental — ambos a favor da segurança.
+    """
+    casos = {}
+    for nome, N, V in (
+        ("persistente_succao", N_t_persistente_kN, V_persistente_kN),
+        ("acidental_impacto", 0.0, V_acidental_kN),
+    ):
+        r = verificar_grupo_ancoragem(
+            N_Ed_kN=N, V_Ed_kN=V, n_chumbadores=n_chumbadores, d_mm=d_mm,
+            classe=classe, chaveta_cisalhamento=False,
+            dados_concreto=dados_concreto, layout=layout,
+        )
+        casos[nome] = r
+    gov = max(casos, key=lambda k: casos[k]["eta"])
+    g = casos[gov]
+    return {
+        "rotulo": rotulo,
+        "n_chumbadores": n_chumbadores,
+        "d_mm": d_mm,
+        "classe": classe,
+        "layout": layout,
+        "casos": casos,
+        "N_t_persistente_kN": round(float(N_t_persistente_kN), 2),
+        "V_persistente_kN": round(float(V_persistente_kN), 2),
+        "V_acidental_kN": round(float(V_acidental_kN), 2),
+        "caso_gov": gov,
+        "eta_aco": g["eta_aco"] if "eta_aco" in g else g.get("eta_interacao"),
+        "eta_concreto": g.get("eta_concreto"),
+        "modo_concreto_gov": g.get("modo_concreto_gov"),
+        "eta": g["eta"],
+        "ok": all(c["ok"] for c in casos.values()),
+        "norma": "EN 1993-1-8 Tab. 3.4/§3.4 + EN 1992-4 | EN 1991-1-7 (A_d)",
+    }
+
+
 def esmagamento_chaveta(
     V_Ed_kN: float,
     l_chaveta_mm: float,

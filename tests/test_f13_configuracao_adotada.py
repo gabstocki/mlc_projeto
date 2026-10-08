@@ -1,8 +1,9 @@
 """
 Configuração adotada do contraventamento longitudinal — no âmbito de F-13.
 
-Fixa a decisão da terceira varredura (auditoria adversarial v2): 8 painéis em
-vez de 4. O peso de aço é praticamente independente de n (900–1030 kg de n=2 a
+Fixa a decisão da terceira varredura (auditoria adversarial v2), revista na
+issue 64 (Opção A): a força longitudinal reparte-se entre as fachadas e a linha
+central, com 4 painéis em cada conjunto (8 baías ocupadas, como antes). O peso de aço é praticamente independente de n (900–1030 kg de n=2 a
 n=16); o que n compra é margem no CAMINHO DE CARGA — download no montante,
 ancoragem e bloco de fundação — e o que custa são baías de circulação.
 """
@@ -18,8 +19,9 @@ from mlc_projeto.checks.elu.contraventamento_vertical import (
 )
 
 
-def test_projeto_adota_oito_paineis():
-    assert M.N_PAINEIS_CV_VERT == 8
+def test_projeto_adota_quatro_mais_quatro_paineis():
+    assert M.N_PAINEIS_CV_VERT == 4          # fachadas (1 por extremidade e fachada)
+    assert M.N_PAINEIS_CV_CENTRAL == 4       # linha central (2 por extremidade)
     assert M.D_BARRA_CVV_MM is None          # diâmetro auto-dimensionado
 
 
@@ -28,11 +30,12 @@ def test_coeficiente_de_atrito_e_declarado_no_projeto():
 
 
 def test_baias_disponiveis_comportam_os_paineis():
-    """46,0/5,75 = 8 baías por fachada × 2 fachadas longitudinais = 16."""
-    baias_por_fachada = round(M.L_COMP_GALPAO / M.L_T)
-    assert baias_por_fachada == 8
-    assert M.N_PAINEIS_CV_VERT <= 2 * baias_por_fachada
-    assert 2 * baias_por_fachada - M.N_PAINEIS_CV_VERT == 8   # baías livres
+    """8 baías por alinhamento; ocupam-se 4 nas fachadas e 4 na linha central."""
+    baias = round(M.L_COMP_GALPAO / M.L_T)
+    assert baias == 8
+    assert 2 * baias - M.N_PAINEIS_CV_VERT == 12          # fachadas livres
+    assert baias - M.N_PAINEIS_CV_CENTRAL == 4             # linha central livre
+    assert M.N_PAINEIS_CV_VERT + M.N_PAINEIS_CV_CENTRAL == 8
 
 
 def _cvv(n_paineis):
@@ -72,17 +75,32 @@ def test_peso_de_aco_e_praticamente_insensivel_a_n():
     assert max(pesos) / min(pesos) < 1.20
 
 
-def test_dois_paineis_reprovariam_o_conjunto():
-    """Contrato de regressão: a concentração em 2 painéis não é admissível."""
-    M_old = M.N_PAINEIS_CV_VERT
+def test_dois_paineis_centrais_reprovariam_o_conjunto():
+    """Contrato de regressão (issue 64): concentrar a metade central em 2
+    painéis reprova o pilar central montante."""
+    M_old = M.N_PAINEIS_CV_CENTRAL
     M.gerar_relatorio_backup = getattr(M, "gerar_relatorio")
     try:
-        M.N_PAINEIS_CV_VERT = 2
+        M.N_PAINEIS_CV_CENTRAL = 2
         M.gerar_relatorio = lambda *a, **k: {}
         with contextlib.redirect_stdout(io.StringIO()):
             r = M._main_impl(rodar_varredura=False, abrir_viz=False)
         assert r["meta"]["status"] == "REPROVADO"
-        assert r["succao_uplift"]["eta"] > 1.0
+        assert r["pilar_central_contraventado"]["eta"] > 1.0
     finally:
-        M.N_PAINEIS_CV_VERT = M_old
+        M.N_PAINEIS_CV_CENTRAL = M_old
+        M.gerar_relatorio = M.gerar_relatorio_backup
+
+
+def test_configuracao_adotada_aprova():
+    M.gerar_relatorio_backup = getattr(M, "gerar_relatorio")
+    try:
+        M.gerar_relatorio = lambda *a, **k: {}
+        with contextlib.redirect_stdout(io.StringIO()):
+            r = M._main_impl(rodar_varredura=False, abrir_viz=False)
+        assert r["meta"]["status"] == "APROVADO"
+        assert r["contraventamento_vertical_central"]["ok"] is True
+        assert r["pilar_central_contraventado"]["eta"] < 1.0
+        assert r["ancoragem_central_cv"]["eta"] < 1.0
+    finally:
         M.gerar_relatorio = M.gerar_relatorio_backup

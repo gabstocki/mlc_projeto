@@ -9,6 +9,12 @@ edificação, os materiais adotados, os valores característicos declarados como
 dados de entrada e as premissas assumidas, incluindo as reservas normativas que
 condicionam a validade dos resultados.
 
+As tabelas deste capítulo contêm apenas dados de entrada, isto é, valores
+fixados antes da análise e que o programa de cálculo recebe sem os calcular. As
+dimensões que resultam do cálculo, como a altura e a largura da viga e as seções
+dos pilares, e todos os esforços e taxas de utilização são apresentados em
+tabelas próprias de resultados, a partir do \autoref{cap:predimensionamento}.
+
 \section{DESCRIÇÃO DA EDIFICAÇÃO}\label{sec:descricao-edificacao}
 
 Trata-se de uma cobertura destinada a estacionamento de veículos, aberta nas
@@ -56,10 +62,12 @@ extradorso são as terças.
 {}
 {}
 
-A \autoref{tab:geometria-edificacao} reúne os dados geométricos. A altura na
-cumeeira é derivada das demais, conforme $h_{ap} = h_0 + (L/2)\tan\alpha$.
+A \autoref{tab:geometria-edificacao} reúne os dados geométricos de entrada,
+fixados pelo uso da edificação. A inclinação, as alturas e a largura da viga e
+as seções dos pilares não constam dela, porque resultam do pré-dimensionamento e
+estão reunidas na \autoref{tab:criterios-predim}.
 
-\tabela{Dados geométricos da edificação}{\footnotesize
+\tabela{Dados geométricos de entrada da edificação}{\footnotesize
 \begin{tabular}{lrl}
 \toprule
     \textbf{Parâmetro} & \textbf{Valor} & \textbf{Unidade} \\
@@ -71,12 +79,6 @@ cumeeira é derivada das demais, conforme $h_{ap} = h_0 + (L/2)\tan\alpha$.
     Número de pórticos                   & 9     & \\
     Espaçamento entre pórticos           &  5,75 & m \\
     Altura dos pilares                   &  7,00 & m \\
-    Altura da viga no apoio              &  1,00 & m \\
-    Altura da viga na cumeeira           &  2,785 & m \\
-    Inclinação do extradorso             & 10,0  & graus \\
-    Largura da seção da viga             &  0,32 & m \\
-    Seção dos pilares laterais e central & 0,32 $\times$ 0,27 & m \\
-    Seção dos pilares de canto           & 0,32 $\times$ 0,32 & m \\
     Seção das terças                     & 0,20 $\times$ 0,58 & m \\
     Espaçamento entre terças             &  2,53 & m \\
 \bottomrule
@@ -203,7 +205,7 @@ anexo nacional brasileiro. Diversos parâmetros desses documentos são deixados 
 determinação de cada país, e o texto do próprio Eurocódigo apenas recomenda um
 valor. Na ausência de anexo, o projeto adota integralmente os valores
 recomendados, e essa escolha é declarada de forma explícita em toda saída de
-cálculo, conforme reproduzido na \autoref{tab:ndp}. São dezenove ao todo, e
+cálculo, conforme reproduzido na \autoref{tab:ndp}. São dezoito ao todo, e
 caso a obra venha a ser submetida sob um anexo nacional concreto, todos devem
 ser revistos.
 
@@ -231,8 +233,7 @@ ser revistos.
     Limite de flecha final líquida     & $L/250$ & EN 1995-1-1, tab. 7.2 \\
     $\alpha_{cc}$                      & 1,00  & EN 1992-1-1, item 3.1.6(1) \\
     $\gamma_C$                         & 1,50  & EN 1992-1-1, tab. 2.1N \\
-    $\alpha_{cr}$ mínimo               & 10,0  & EN 1993-1-1, item 5.2.1(3) \\
-    $\phi_0$                           & 0,005 & EN 1993-1-1, item 5.3.2 \\
+    $\alpha_{cr}$ mínimo               & 10,0  & EN 1993-1-1, item 5.2.1(3), por analogia \\
 \bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
@@ -240,25 +241,39 @@ ser revistos.
 {}
 {}
 
-Essa reserva não é formalidade. Coeficientes como $\gamma_M$ e os limites de
+Coeficientes como $\gamma_M$ e os limites de
 flecha incidem diretamente sobre o dimensionamento, e um anexo nacional que os
 alterasse modificaria as taxas de utilização apresentadas no
 \autoref{cap:dimensionamento}.
 
 \subsection{Rota normativa para a ação do vento}\label{ssec:rota-vento}
 
-A determinação dos coeficientes de pressão exigiu uma decisão de
-enquadramento. A cobertura é formada por duas águas duplas lado a lado, o que a
-caracteriza como telhado múltiplo, situação que as tabelas de coberturas
-isoladas da ABNT NBR 6123 \cite{NBR6123:2023} não contemplam. Soma-se a isso a
-presença permanente de veículos sob a cobertura, que constituem obstrução ao
-escoamento.
+A estrutura é uma cobertura isolada no sentido do item 7.2 da ABNT NBR 6123
+\cite{NBR6123:2023}: uma cobertura sobre suportes de reduzidas dimensões, aberta
+nas quatro faces. Os coeficientes da tabela 25, de coberturas isoladas a duas
+águas, só se aplicam, porém, quando $0{,}07 \leq \operatorname{tg}\theta \leq 0{,}6$
+e $h \geq 0{,}5\,\ell_2$ (item 7.2.1), em que $h$ é a altura livre entre o piso e a
+aresta horizontal mais baixa da cobertura e $\ell_2$ a profundidade da cobertura
+medida perpendicularmente à cumeeira. A primeira condição é atendida, com
+$\operatorname{tg}\theta = \operatorname{tg} 10^{\circ} = 0{,}176$. A segunda não: adotou-se
+$h = 7{,}00$ m, o pé-direito até o beiral, ao passo que $0{,}5\,\ell_2 = 20{,}25$ m
+para a cobertura inteira, de 40,5 m, e ao menos 10,1 m para cada água dupla, de
+20,25 m. A geometria está fora do domínio da tabela 25, e a norma não permite
+extrapolá-la.
 
-Por esses dois motivos, o enquadramento como cobertura isolada foi descartado,
-e adotou-se a rota de edificação com coeficientes de pressão externa e interna,
-com varredura dos casos de pressão interna admissíveis. O detalhamento dessa
-escolha e os oito padrões de coeficientes varridos constam do
-\autoref{cap:modelagem}.
+Para essa situação, e também quando obstruções possam ser colocadas sob a
+cobertura, o último parágrafo do item 7.2.1 determina que a cobertura resista à
+ação do vento, na zona de obstrução, calculada como edificação fechada de mesma
+cobertura, com $c_{pi} = +0{,}8$ para obstruções na borda de sotavento e
+$c_{pi} = -0{,}3$ para obstruções na borda de barlavento. As duas condições
+ocorrem aqui, e os veículos podem ocupar toda a área coberta, de modo que a zona
+de obstrução corresponde à cobertura inteira. Os coeficientes de pressão
+externa são os da tabela 10 da norma, para telhados múltiplos, simétricos, de
+tramos iguais, aplicável por ser $h = 7{,}00$ m inferior à largura do tramo,
+$a' = 20{,}25$ m. Por permanecer a estrutura uma cobertura isolada, aplicam-se
+ainda o item 7.2.2, à força de atrito com vento paralelo à cumeeira, e o item
+7.2.6, aos elementos de vedação. O detalhamento e os padrões de coeficientes
+varridos constam do \autoref{cap:modelagem}.
 
 \subsection{Duração da ação do vento}\label{ssec:duracao-vento}
 

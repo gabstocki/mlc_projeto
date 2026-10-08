@@ -200,9 +200,12 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
 
     # ── Limiares de estabilidade (analogia EN 1993) ──────────────────────
     "alpha_cr_min":     _p(10.0, "EN 1993-1-1 §5.2.1(3)", "EN-recomendado",
-                           "análise elástica; adotado por analogia em MLC"),
-    "phi_0":            _p(1.0 / 200.0, "EN 1993-1-1 §5.3.2", "EN-recomendado",
-                           "imperfeição global"),
+                           "análise elástica; adotado POR ANALOGIA em MLC — o "
+                           "EC5 não fixa limiar (issue 46)"),
+    "phi_0":            _p(0.005, "EN 1995-1-1 §5.4.4(2) Eq. (5.1)", "EN",
+                           "inclinação inicial; φ = 0,005·√(5/h) para h > 5 m"),
+    "e_bow_rel":        _p(0.0025, "EN 1995-1-1 §5.4.4(3) Eq. (5.2)", "EN",
+                           "curvatura inicial e = 0,0025·ℓ (incorporada em k_c)"),
     "H_imp_over_H_max": _p(0.10, "critério de dispensa", "PROJETO",
                            "não normalizado; ver AUD-006/AUD-008"),
     "w_over_f_max":     _p(0.05, "critério de dispensa", "PROJETO",
@@ -497,19 +500,19 @@ CATALOGO_NBR6123: tuple[ItemNBR, ...] = (
     ItemNBR(
         chave="tabela_10_alpha_90",
         designacao="Colunas b1/b2/b3 da Tab. 10 (vento α = 90°) e c_pe médio",
-        clausula="NBR 6123:2023 Tab. 10",
-        local="NÃO IMPLEMENTADO",
-        simbolos=(),
-        estado="NAO_CONFIRMADO",
-        evidencia="Apanhado ao ler a tabela: a Tab. 10 tem, além das zonas "
-                  "a*..z* para α = 0°, as colunas b1/b2/b3 para α = 90° "
-                  "(−0,8 / −0,6 / −0,2) e uma linha de c_pe médio para "
-                  "elementos localizados. O repositório só transcreveu α = 0°.",
-        questao="Na rota de edificação fechada (§7.2.1), o vento paralelo às "
-                "cumeeiras devia usar b1/b2/b3 da Tab. 10. O projeto trata "
-                "θ = 0° pela rota de cobertura isolada (§7.2.2 + arrasto dos "
-                "pilares). As duas rotas estão a ser misturadas de forma "
-                "coerente? Só o projetista fecha esta.",
+        clausula="NBR 6123:2023 Tab. 10 (figura e linha α = 90°)",
+        local="core/wind.py:292-294",
+        simbolos=("TABELA_10_ALPHA90", "TABELA_10_CPE_MEDIO"),
+        estado="CONFIRMADO",
+        evidencia="Issue 39 (3.ª revisão): lido no PDF (pág. 24 da norma) — "
+                  "α = 90°, θ ≤ 45°: b1 = −0,8, b2 = −0,6, b3 = −0,2, com "
+                  "b1 = b2 = h a partir do frontão de barlavento (figura); "
+                  "c_pe médio das bordas −1,5 / −2,0, y = mín(h; 0,1b). "
+                  "Implementado como 6 padrões de pórtico (3 faixas × 2 c_pi).",
+        questao="Decisão registrada: atrito para α = 90° pelo §7.2.2 "
+                "(cobertura isolada, envolvente) em vez de §6.1.5, conforme "
+                "orientação do orientador (mesma seção §7.2 da cobertura "
+                "isolada); bordas de vedação por §7.2.6 (±2,0).",
     ),
     ItemNBR(
         chave="tabela_25_cp",

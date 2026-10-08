@@ -574,12 +574,26 @@ def fendilhamento_ligacao(
     F_90_Ed_kN = abs(float(res_lig["V_d_kN"])) # componente ⊥ fibras
 
     h_e_mm = h_mm / 2.0 + (n_vert - 1) * a2_mm / 2.0
+    posicao_grupo = "centrado na altura"
+    if res_lig.get("apoio_por_contato"):
+        # Issue 42: a gravidade vai por contato; os pinos só recebem o
+        # ARRANCAMENTO, que puxa a viga para baixo contra os pinos — a borda
+        # carregada é a INFERIOR. O grupo fica no terço superior, com a fileira
+        # mais alta a a4,c = 3d da borda superior (descarregada; EC5 Tab. 8.5),
+        # logo h_e = h − a4,c (borda inferior → fileira mais distante).
+        d_pino = float(res_lig.get("d_mm_pino", res_lig.get("d_mm", 24.0)))
+        a4c_mm = 3.0 * d_pino
+        h_e_mm = h_mm - a4c_mm
+        posicao_grupo = (f"terço superior: fileira mais alta a a4,c={a4c_mm:.0f} mm "
+                         "do topo; borda carregada (arrancamento) = inferior")
 
     res = verificar_fendilhamento(
         F_90_Ed_kN=F_90_Ed_kN, b_mm=b_mm, h_mm=h_mm, h_e_mm=h_e_mm,
         k_mod=k_mod, gamma_M=gamma_M, w=1.0,
     )
     res["ligacao"] = res_lig.get("ligacao", "—")
+    res["posicao_grupo"] = posicao_grupo
+    res["apoio_por_contato"] = bool(res_lig.get("apoio_por_contato"))
     res["n_linhas"] = n_vert
     res["a2_mm"] = round(a2_mm, 1)
     res["reforcado"] = False
@@ -874,9 +888,17 @@ def dimensionar_ligacao_base(
     eta_alvo: float = 0.75,
     L_max_mm: float = 1800.0,
     t_chapa_mm: float | None = None,
+    V_pinos_kN: float | None = None,
 ) -> dict:
     """
     Dimensiona a ligação viga-pilar — rótula na base.
+
+    Issue 42 — APOIO POR CONTATO: com `V_pinos_kN` informado, a reação
+    vertical de GRAVIDADE vai por contato direto (viga sobre chapa de topo /
+    sela, verificada em checks/elu/apoio.verifica_apoio_contato) e os pinos,
+    em furos ovalizados verticais na chapa, recebem só o ARRANCAMENTO
+    (`V_pinos_kN`, sucção) e o esforço axial. Sem ele, comportamento antigo
+    (reação vertical pelos pinos).
 
     Esforços no eixo da viga (biarticulada):
         N_d = N_viga  (compressão axial no apoio)
@@ -902,6 +924,10 @@ def dimensionar_ligacao_base(
     V_d = load.V_viga_ELU()    # kN — cortante (⊥ eixo)
     R_v = load.V_max_ELU()
     H   = load.H_ELU()
+    apoio_por_contato = V_pinos_kN is not None
+    V_gravidade = V_d
+    if apoio_por_contato:
+        V_d = abs(float(V_pinos_kN))   # só o arrancamento passa pelos pinos
 
     F_res_kN = math.sqrt(N_d ** 2 + V_d ** 2)
     F_res_N  = F_res_kN * 1e3
@@ -1023,6 +1049,9 @@ def dimensionar_ligacao_base(
 
     return {
         "ligacao":       "L1 — Viga-pilar (rótula base)",
+        "apoio_por_contato": apoio_por_contato,
+        "V_gravidade_kN": round(V_gravidade,   3),
+        "d_mm_pino":     d_mm,
         "V_d_kN":        round(V_d,            3),
         "N_d_kN":        round(N_d,            3),
         "R_v_kN":        round(R_v,            3),
@@ -1317,14 +1346,18 @@ def dimensionar_sapata(
         eta_H = H_d / R_chu_kN if R_chu_kN > 0 else 0.0
         n_chu_x4 = n_chu if n_chu % 4 == 0 else n_chu + (4 - n_chu % 4)
         eta_H_x4 = H_d / (n_chu_x4 * F_chu_kN) if F_chu_kN > 0 else 0.0
-        eta = eta_H
-        ok_norma = eta_H <= 1.0
+        # Issue 48: η não pode ser só η_H — na Opção B H_d = 0 e a ligação
+        # saía com η = 0,0000. Inclui-se a compressão sob a chapa (η_N); o
+        # arrancamento e o impacto são verificados a jusante
+        # (ancoragem.verificar_base_corrente), que atualiza este η.
+        eta = max(eta_H, eta_N)
+        ok_norma = eta <= 1.0
         ok_alvo = eta_H <= eta_alvo + 1e-9
         nota = (
             f"Sem tirante: H_sapata=H_arco={H_d:.1f} kN. "
             f"Chumbadores n={n_chu} (mín. construtivo 4; mín η≤1: {n_chu_eta1}; "
-            f"grade ×4: {n_chu_x4}). Ancoragem ao uplift verificada à parte "
-            f"(sucção/issue 33). Verificação final EN 1992-4."
+            f"grade ×4: {n_chu_x4}). Arrancamento (sucção) e impacto de veículo "
+            f"verificados em ancoragem.verificar_base_corrente (issue 48)."
         )
         ligacao = "L3 — Sapata na fundação"
 
@@ -1377,6 +1410,7 @@ def dimensionar_ligacoes(
     b_pilar_m:    float = 0.32,
     h_pilar_m:    float = 0.27,
     dados_ancoragem: dict | None = None,
+    V_pinos_kN: float | None = None,
 ) -> dict:
     """
     Dimensiona as ligações do pórtico (biarticulada): L1 (base) e L3 (sapata).
@@ -1391,6 +1425,7 @@ def dimensionar_ligacoes(
     """
     L1 = dimensionar_ligacao_base(
         mat, load, geo, d_mm=d_base_mm, eta_alvo=eta_alvo,
+        V_pinos_kN=V_pinos_kN,
     )
     L3 = dimensionar_sapata(
         load, geo, F_chu_kN=F_chu_kN, eta_alvo=eta_alvo,
@@ -1453,6 +1488,7 @@ def dimensionar_ligacao_base_central(
     k_mod:     float | None = None,
     gamma_M:   float = GAMMA_M_LIGACAO,
     eta_alvo:  float = 0.75,
+    V_pinos_kN: float | None = None,
 ) -> dict:
     """
     Ligação viga-pilar central — duas chapas independentes.
@@ -1470,6 +1506,7 @@ def dimensionar_ligacao_base_central(
     res = dimensionar_ligacao_base(
         mat=mat, load=load, geo=geo,
         d_mm=d_mm, k_mod=k_mod, gamma_M=gamma_M, eta_alvo=eta_alvo,
+        V_pinos_kN=V_pinos_kN,
     )
     rho_k = mat.rho_k
     # F-14: idem para a chapa central do pilar
@@ -1623,6 +1660,7 @@ def dimensionar_ligacoes_central(
     h_pilar_c: float = 0.26,
     d_base_mm: float = 20.0,
     eta_alvo:  float = 0.75,
+    V_pinos_kN: float | None = None,
 ) -> dict:
     """
     Dimensiona as ligações do pilar central compartilhado: L1c e L3c.
@@ -1635,6 +1673,7 @@ def dimensionar_ligacoes_central(
     """
     L1c = dimensionar_ligacao_base_central(
         mat, load, geo, b_pilar_c, d_base_mm, eta_alvo=eta_alvo,
+        V_pinos_kN=V_pinos_kN,
     )
     L3c = dimensionar_sapata_central(
         load, geo, d_chu_mm=20.0,

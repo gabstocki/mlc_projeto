@@ -91,17 +91,16 @@ def test_tabelas_confirmadas_contra_o_texto(chave):
 
 
 @pytest.mark.parametrize("chave", [
-    "v0_isopleta", "s3_estatistico", "ca_pilar", "tabela_10_alpha_90",
+    "v0_isopleta", "s3_estatistico", "ca_pilar",
 ])
 def test_itens_que_o_texto_nao_fecha(chave):
     """
-    Os quatro que sobram depois de ler a norma — e nenhum é uma tabela:
+    Os três que sobram depois de ler a norma — e nenhum é uma tabela:
 
     · `v0_isopleta`      — a Figura 1 é um mapa e o projeto não declara a
                            localidade da obra.
     · `s3_estatistico`   — [F-21] valor do grupo 3 rotulado «grupo 2».
     · `ca_pilar`         — [F-20] citação inexistente para o fim a que serve.
-    · `tabela_10_alpha_90` — lacuna: a norma tem colunas que o código não tem.
 
     Marcar qualquer um destes CONFIRMADO seria fechar por cansaço.
     """
@@ -112,7 +111,8 @@ def test_itens_nao_confirmados_e_o_complemento():
     nao = nz.itens_nbr_nao_confirmados()
     assert nao, "F-18 ainda está aberto — a lista não pode estar vazia"
     assert all(i.estado == "NAO_CONFIRMADO" for i in nao)
-    assert len(nao) == 4, f"esperados 4 em aberto, estão {len(nao)}"
+    # issue 39: tabela_10_alpha_90 fechada (lida no PDF e implementada)
+    assert len(nao) == 3, f"esperados 3 em aberto, estão {len(nao)}"
     assert len(nao) < len(nz.CATALOGO_NBR6123)
 
 

@@ -23,13 +23,14 @@ def _load():
                                    L_t=5.75, params_vento=pv)
 
 
-def test_17_combinacoes():
-    """8 padrões × (ELU_W + ELU_S) + ELU_Q = 17 (cat. H reduziu 24→17)."""
+def test_29_combinacoes():
+    """14 padrões × (ELU_W + ELU_S) + ELU_Q = 29: os 8 da Tab. 10 com α = 0°
+    e os 6 com α = 90° (faixas b1/b2/b3 × 2 c_pi — issue 39)."""
     t = _load().tabela_combinacoes()
-    assert len(t) == 17
+    assert len(t) == 29
     grupos = [r["grupo"] for r in t]
-    assert grupos.count("W") == 8
-    assert grupos.count("S") == 8
+    assert grupos.count("W") == 14
+    assert grupos.count("S") == 14
     assert grupos.count("Q") == 1
 
 
@@ -41,7 +42,7 @@ def test_cpe_por_padrao():
             assert r["C_esq"] is not None and r["C_dir"] is not None
             # Onda 2: pela rota do §7.2.1 o caso é um tramo da Tabela 10,
             # não mais os carregamentos C1/C2 da Tabela 25.
-            assert r["caso"].startswith("Tab.10 tramo")
+            assert r["caso"].startswith(("Tab.10 tramo", "Tab.10 α=90°"))
         else:
             assert r["C_esq"] is None
 

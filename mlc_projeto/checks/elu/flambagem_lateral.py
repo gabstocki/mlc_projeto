@@ -263,6 +263,11 @@ def verifica_flambagem_lateral(
     # de momento menor com k_mod menor pode governar.
     melhor = None
     for comb in load.combinacoes_ELU_fisicas().values():
+        # Issue 47: aqui só o momento POSITIVO (extradorso comprimido, contido
+        # pelas terças). O momento negativo da sucção comprime o intradorso,
+        # que as terças não contêm — ver verifica_flambagem_lateral_succao.
+        if comb.M_max_kNm <= 0.0:
+            continue
         matc   = mat.com_duracao(comb.duracao)
         x_i    = comb.x_Mmax_m
         h_i    = float(geo.h(x_i))
@@ -346,6 +351,113 @@ def verifica_flambagem_lateral(
         "ok":            eta <= 1.0,
         # Referência
         "norma":         "EC5 §6.3.3 Eq. 6.32 + 6.33",
+    }
+
+
+# ── Flambagem lateral sob sucção — intradorso comprimido (issue 47) ──────────
+
+def momento_biapoiada(x: float, L: float, q_esq: float, q_dir: float) -> float:
+    """
+    Momento fletor (kN·m) da viga biapoiada de vão L sob carga q_esq na metade
+    esquerda e q_dir na direita (kN/m, positivo para baixo). M > 0 comprime o
+    extradorso; M < 0 comprime o intradorso.
+    """
+    a = L / 2.0
+    R_A = (q_esq * a * (L - a / 2.0) + q_dir * a * (a / 2.0)) / L
+    if x <= a:
+        return R_A * x - q_esq * x * x / 2.0
+    return R_A * x - q_esq * a * (x - a / 2.0) - q_dir * (x - a) ** 2 / 2.0
+
+
+def verifica_flambagem_lateral_succao(
+    geo:   GeometriaViga,
+    mat:   GlulamMaterial,
+    load:  Carregamentos,
+    l_1:   float | None = None,
+    posicao_carga: str = "centro_gravidade",
+    n_secoes: int = 201,
+) -> dict:
+    """
+    Flambagem lateral com o INTRADORSO comprimido — EC5 §6.3.3 (issue 47).
+
+    Sob sucção o momento inverte e comprime a borda inferior, que não é contida
+    pelas terças (fixadas no extradorso). Hipóteses, todas conservadoras:
+
+      · l_1 = vão da viga (contenção lateral só nos apoios, por garfo nas
+        ligações L1/L1c); a contenção contínua da borda TRACIONADA pelas terças
+        não é creditada;
+      · l_ef = 0,9·l_1 (EC5 Tab. 6.1, viga simplesmente apoiada, carga
+        distribuída), sem a redução de 0,5h que a nota da tabela admite para
+        carga aplicada na borda tracionada (a sucção chega pelas terças, no
+        extradorso, que aqui é a borda tracionada);
+      · varredura ao longo do vão: a altura varia (duplo-bisel), e a seção
+        crítica é a de maior σ_m,d/(k_crit·f_m,d), não necessariamente a de
+        maior |M|.
+
+    Considera todas as combinações ELU com algum trecho de momento negativo.
+    """
+    if getattr(load, "empuxo_desenvolve", False):
+        raise NotImplementedError(
+            "M(x) da viga biapoiada; com empuxo desenvolvido o momento muda.")
+    L = geo.L
+    l_1 = L if l_1 is None else float(l_1)
+    b = geo.b
+    melhor = None
+    n_comb = 0
+    for comb in load.combinacoes_ELU_fisicas().values():
+        matc = mat.com_duracao(comb.duracao)
+        tem_negativo = False
+        for i in range(n_secoes):
+            x = L * i / (n_secoes - 1)
+            M = momento_biapoiada(x, L, comb.q_esq, comb.q_dir)
+            if M >= 0.0:
+                continue
+            tem_negativo = True
+            h = float(geo.h(x))
+            l_ef = calcular_l_ef(l_1, restricao="so_apoios", tipo_carga="distribuida",
+                                 posicao_carga=posicao_carga, h_m=h)
+            sig_cr = calcular_sigma_m_crit(E_005=matc.E0_05, b=b, h=h, l_ef=l_ef)
+            lam = calcular_lambda_rel_m(matc.f_m_k, sig_cr)
+            kcr = calcular_k_crit(lam)
+            sig = abs(M) * 1e3 / (b * h * h / 6.0)
+            eta = sig / (kcr * matc.f_m_d)
+            if melhor is None or eta > melhor["eta"]:
+                melhor = dict(eta=eta, comb=comb, mat=matc, x=x, h=h, M=M, l_ef=l_ef,
+                              sig_cr=sig_cr, lam=lam, k_crit=kcr, sigma_md=sig)
+        n_comb += tem_negativo
+    if melhor is None:
+        return {"eta": 0.0, "ok": True, "aplicavel": False,
+                "nota": "nenhuma combinação ELU produz momento negativo",
+                "norma": "EC5 §6.3.3 (intradorso comprimido)"}
+    m = melhor
+    return {
+        "aplicavel":     True,
+        "comb_gov":      m["comb"].nome,
+        "duracao":       m["comb"].duracao,
+        "k_mod":         m["mat"].k_mod,
+        "n_combinacoes_com_M_negativo": n_comb,
+        "x_m":           round(m["x"], 3),
+        "h_m":           round(m["h"], 4),
+        "b_m":           b,
+        "M_d_kNm":       round(m["M"], 2),
+        "l_1_m":         round(l_1, 3),
+        "l_ef_m":        round(m["l_ef"], 3),
+        "l_ef_formula":  (f"l_ef = 0,9·l_1 {_AJUSTE_POSICAO_CARGA[posicao_carga]:+g}·h "
+                          "(EC5 Tab. 6.1; l_1 = vão, intradorso livre)"),
+        "posicao_carga": posicao_carga,
+        "E0_05_MPa":     round(m["mat"].E0_05 / 1e6, 0),
+        "sigma_m_crit_MPa": round(m["sig_cr"] / 1e6, 3),
+        "lambda_rel_m":  round(m["lam"], 4),
+        "k_crit":        round(m["k_crit"], 4),
+        "sigma_md_MPa":  round(m["sigma_md"] / 1e6, 4),
+        "f_md_MPa":      round(m["mat"].f_m_d / 1e6, 4),
+        "resist_MPa":    round(m["k_crit"] * m["mat"].f_m_d / 1e6, 4),
+        "eta":           round(m["eta"], 4),
+        "ok":            m["eta"] <= 1.0,
+        "hipoteses": ("contenção lateral só nos apoios; contenção da borda "
+                      "tracionada pelas terças não creditada; sem redução de "
+                      "0,5h pela carga na borda tracionada"),
+        "norma":         "EC5 §6.3.3 Eq. 6.32/6.33 (intradorso comprimido)",
     }
 
 

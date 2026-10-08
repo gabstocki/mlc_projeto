@@ -54,8 +54,8 @@ def test_combinacoes_fisicas_excluem_os_aliases():
     fis = load.combinacoes_ELU_fisicas()
     assert not (set(fis) & set(ALIASES))
     assert set(fis) <= set(load.combinacoes_ELU())
-    # 8 padrões × 2 casos (W e S) + ELU_Q
-    assert len(fis) == 17
+    # 14 padrões (8 de α=0° + 6 de α=90°, issue 39) × 2 casos (W e S) + ELU_Q
+    assert len(fis) == 29
 
 
 def test_envelope_devolve_a_combinacao_que_maximiza():

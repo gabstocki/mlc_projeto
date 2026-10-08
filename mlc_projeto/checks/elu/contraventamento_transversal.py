@@ -14,7 +14,7 @@ Cadeia de forças (direção transversal, ⊥ cumeeira, θ=90°)
 --------------------------------------------------------
   Vento θ=90°: arrasto nos pilares
              + COMPONENTE HORIZONTAL da pressão na cobertura (achado F-01)
-             + força nocional (EN 1993-1-1 §5.3.2)
+             + força nocional (EN 1995-1-1 §5.4.4)
        ↓  metade do arrasto de cada pilar vai ao TOPO; a componente da
           cobertura vai INTEIRA ao topo (a viga apoia nas rótulas de topo)
   Diafragma de cobertura (viga horizontal ao longo do comprimento)
@@ -43,7 +43,7 @@ Modelo de cálculo
 Referências
 -----------
   EN 1995-1-1 §5.4 (análise/estabilidade do sistema)
-  EN 1993-1-1 §5.3.2 (imperfeições globais, φ) e §6.2.3 (diagonal à tração)
+  EN 1995-1-1 §5.4.4 (imperfeições globais, φ); EN 1993-1-1 §6.2.3 (diagonal à tração)
   NBR 6123 (arrasto θ=90° nos pilares, via core/wind.py)
 """
 
@@ -95,7 +95,7 @@ def demanda_transversal(
         inteira ao nível da cobertura, porque a viga apoia nas rótulas de topo
         dos pilares. Envelope entre combinações ELU: `load.H_cobertura_max_ELU()`
         (por pórtico) × n_frames.
-      · Força nocional global — EN 1993-1-1 §5.3.2: H_imp = φ·V_vertical_total.
+      · Força nocional global — EN 1995-1-1 §5.4.4(2): H_imp = φ·V_vertical_total.
 
     Args:
         load, params_vento : ações do projeto
@@ -121,7 +121,7 @@ def demanda_transversal(
     H_cob_portico = abs(float(comb_cob.H_cob_kN))
     H_cob = H_cob_portico * n_frames
 
-    # Força nocional sobre a carga vertical total do galpão (§5.3.2)
+    # Força nocional sobre a carga vertical total do galpão (EC5 §5.4.4)
     # Resíduo do [F-06]: a medida a maximizar é a carga VERTICAL, não |M_max|
     # (ver a mesma correção em contraventamento_vertical.py).
     gov, R_v = load.envelope_ELU(lambda c: abs(float(c.V_max_kN)))
@@ -303,7 +303,7 @@ def verificar_contraventamento_transversal(
 
     return {
         "sistema": "Contraventamento transversal (diafragma + frontões)",
-        "norma":   "EN 1993-1-1 §5.3.2+§6.2.3 | EN 1995-1-1 §5.4 | NBR 6123 (θ=90°)",
+        "norma":   "EN 1995-1-1 §5.4.4 | EN 1993-1-1 §6.2.3 | NBR 6123 (θ=90°)",
         "direcao": "transversal (⊥ cumeeira, plano do pórtico, θ=90°)",
 
         # Demanda
@@ -338,6 +338,11 @@ def verificar_contraventamento_transversal(
         "aco":            aco,
         "N_diag_kN":      painel["N_diag_kN"],
         "N_t_Rd_kN":      painel["N_t_Rd_kN"],
+        "N_pl_Rd_kN":    painel["N_pl_Rd_kN"],
+        "N_u_Rd_kN":     painel["N_u_Rd_kN"],
+        "d_rosca_mm":    painel["d_rosca_mm"],
+        "extremidade_recalcada": painel["extremidade_recalcada"],
+        "ductil":        painel["ductil"],
         "eta_diag_N":     painel["eta_N"],
         "ok_diag":        painel["ok_N"],
 
@@ -390,7 +395,7 @@ def relatorio(res: dict) -> None:
     """Imprime relatório legível do contraventamento transversal."""
     print("=" * 68)
     print("  CONTRAVENTAMENTO TRANSVERSAL — DIAFRAGMA + FRONTÕES → FUNDAÇÃO")
-    print("  EN 1993-1-1 §5.3.2 + §6.2.3 | EN 1995-1-1 §5.4 | NBR 6123 (θ=90°)")
+    print("  EN 1995-1-1 §5.4.4 | EN 1993-1-1 §6.2.3 | NBR 6123 (θ=90°)")
     print("=" * 68)
     print(f"  Sistema : {res['sistema']}")
     print(f"  Direção : {res['direcao']}")

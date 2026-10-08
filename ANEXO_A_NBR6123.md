@@ -48,8 +48,8 @@ um dimensionamento errado que passa em todos os testes.
 | | |
 |---|---|
 | Itens catalogados | 15 |
-| Confirmados contra o texto | **11** |
-| **Por resolver** | **4** |
+| Confirmados contra o texto | **12** |
+| **Por resolver** | **3** |
 
 Dois estados apenas, deliberadamente: `CONFIRMADO` significa que o texto
 literal foi lido e confrontado. Tudo o resto é `NAO_CONFIRMADO`.
@@ -89,20 +89,7 @@ o projeto não declara, duas decisões que só o projetista toma, e uma lacuna.
 
 **A confirmar:** A que grupo da Tab. 4 pertence o galpão? Grupo 3 abrange «residências, hotéis, comércio, indústrias»; grupo 2 é para estruturas cuja ruína represente substancial risco à vida, com aglomerações. Um estacionamento coberto parece grupo 3 — mas é o projetista que classifica, e o rótulo atual afirma o contrário do valor usado.
 
-### A.3 — Colunas b1/b2/b3 da Tab. 10 (vento α = 90°) e c_pe médio
-
-| | |
-|---|---|
-| Cláusula alegada | `NBR 6123:2023 Tab. 10` |
-| Local no código | `NÃO IMPLEMENTADO` |
-| Símbolos |  |
-| Chave no catálogo | `tabela_10_alpha_90` |
-
-**Verificação independente:** Apanhado ao ler a tabela: a Tab. 10 tem, além das zonas a*..z* para α = 0°, as colunas b1/b2/b3 para α = 90° (−0,8 / −0,6 / −0,2) e uma linha de c_pe médio para elementos localizados. O repositório só transcreveu α = 0°.
-
-**A confirmar:** Na rota de edificação fechada (§7.2.1), o vento paralelo às cumeeiras devia usar b1/b2/b3 da Tab. 10. O projeto trata θ = 0° pela rota de cobertura isolada (§7.2.2 + arrasto dos pilares). As duas rotas estão a ser misturadas de forma coerente? Só o projetista fecha esta.
-
-### A.4 — Coeficiente de arrasto C_a = 1,2 de pilar prismático livre
+### A.3 — Coeficiente de arrasto C_a = 1,2 de pilar prismático livre
 
 | | |
 |---|---|
@@ -188,6 +175,16 @@ BM-17: condição confirmada à letra para as duas águas. É esta condição qu
 
 
 BM-17: os 40 valores conferem um a um. A NOTA de que «para α = 0° as forças horizontais de atrito já estão consideradas nos valores da Tabela 10» também está confirmada — é o que impede a dupla contagem com §7.2.2.
+
+### Colunas b1/b2/b3 da Tab. 10 (vento α = 90°) e c_pe médio
+
+| | |
+|---|---|
+| Cláusula | `NBR 6123:2023 Tab. 10 (figura e linha α = 90°)` |
+| Local | `core/wind.py:292-294` |
+
+
+Issue 39 (3.ª revisão): lido no PDF (pág. 24 da norma) — α = 90°, θ ≤ 45°: b1 = −0,8, b2 = −0,6, b3 = −0,2, com b1 = b2 = h a partir do frontão de barlavento (figura); c_pe médio das bordas −1,5 / −2,0, y = mín(h; 0,1b). Implementado como 6 padrões de pórtico (3 faixas × 2 c_pi).
 
 ### Cpb/Cps de cobertura isolada a duas águas, carregamentos 1 e 2
 
@@ -287,4 +284,4 @@ abrir achado se divergir. Depois regenerar este anexo e correr
 
 ---
 
-*Gerado de `CATALOGO_NBR6123` em 4e77401.*
+*Gerado de `CATALOGO_NBR6123` em 936a0fa.*

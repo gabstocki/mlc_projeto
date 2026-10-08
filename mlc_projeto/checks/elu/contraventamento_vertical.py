@@ -41,13 +41,13 @@ Modelo de cálculo
   · Rigidez horizontal do painel (uma diagonal ativa):
         C_h = (E·A / L_diag) · cos²β
         δ = V_Ed / C_h ≤ H_col / drift_lim   (ELS do contraventamento)
-  · Imperfeições globais — EN 1993-1-1 §5.3.2:
-        φ = φ0·α_h·α_m ;  H_imp = φ · V_Ed,vertical  (somada à ação lateral)
+  · Imperfeições globais — EN 1995-1-1 §5.4.4(2) (issue 46):
+        φ = 0,005·√(5/h) (h > 5 m) ;  H_imp = φ · V_Ed,vertical  (somada à ação lateral)
 
 Referências
 -----------
   EN 1995-1-1 §5.4 (análise estrutural / estabilidade do sistema)
-  EN 1993-1-1 §5.3.2 (imperfeições globais, φ) e §6.2.3 (tração da diagonal)
+  EN 1995-1-1 §5.4.4 (imperfeições globais, φ); EN 1993-1-1 §6.2.3 (tração da diagonal)
   NBR 6123 (força de vento θ=0°, via core/wind.py)
 """
 
@@ -60,6 +60,9 @@ import math
 # sistema desta direção depende da rigidez dos painéis aqui dimensionados, e a
 # sua definição normativa (EN 1993-1-1 Eq. 5.2) vive em estabilidade_global.py.
 from mlc_projeto.checks.elu.estabilidade_global import alpha_cr_sistema
+from mlc_projeto.checks.elu.estabilidade_global import (
+    forca_nocional as _forca_nocional_ec5,
+)
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.loads     import Carregamentos
 
@@ -75,6 +78,8 @@ GAMMA_M2  = 1.25         # EN 1993-1-1 §6.1 — rotura de seções tracionadas
 PASSO_ROSCA_MM = {
     12: 1.75, 16: 2.0, 20: 2.5, 24: 3.0, 27: 3.0, 30: 3.5, 33: 3.5, 36: 4.0,
     39: 4.0, 42: 4.5, 45: 4.5, 48: 5.0, 52: 5.0, 56: 5.5, 60: 5.5, 64: 6.0,
+    # roscas maiores (ISO 261), só para extremidades recalcadas (issue 44)
+    68: 6.0, 72: 6.0, 76: 6.0, 80: 6.0,
 }
 
 ACO = {
@@ -87,8 +92,6 @@ D_COMERCIAL_MM = (
     12, 16, 20, 24, 27, 30, 33, 36, 39, 42, 45, 48, 52, 56, 60, 64,
 )
 
-# EN 1993-1-1 §5.3.2 — imperfeição global
-PHI_0 = 1.0 / 200.0
 
 
 # ── Geometria do painel de cruz ───────────────────────────────────────────────
@@ -117,23 +120,12 @@ def geometria_painel(H_col_m: float, b_baia_m: float) -> dict:
 
 def forca_nocional(V_vertical_kN: float, h_m: float, m_colunas: int) -> dict:
     """
-    Força horizontal nocional H_imp = φ·V — EN 1993-1-1 §5.3.2.
+    Força horizontal H_imp = φ·V da inclinação inicial — EN 1995-1-1 §5.4.4(2).
 
-        φ = φ0 · α_h · α_m
-        φ0 = 1/200 ;  α_h = 2/√h  (2/3 ≤ α_h ≤ 1) ;  α_m = √[0,5·(1 + 1/m)]
+    Delega em `estabilidade_global.forca_nocional` (fonte única; issue 46):
+    φ = 0,005·√(5/h) para h > 5 m, sem redução pelo número de colunas.
     """
-    if h_m <= 0:
-        raise ValueError("h_m deve ser > 0")
-    m = max(1, int(m_colunas))
-    alpha_h = min(1.0, max(2.0 / 3.0, 2.0 / math.sqrt(h_m)))
-    alpha_m = math.sqrt(0.5 * (1.0 + 1.0 / m))
-    phi = PHI_0 * alpha_h * alpha_m
-    return {
-        "phi":      round(phi, 6),
-        "alpha_h":  round(alpha_h, 4),
-        "alpha_m":  round(alpha_m, 4),
-        "H_imp_kN": round(phi * abs(V_vertical_kN), 3),
-    }
+    return _forca_nocional_ec5(V_vertical_kN, h_m, m_colunas=m_colunas)
 
 
 # ── Resistência da diagonal à tração — EN 1993-1-1 §6.2.3 ─────────────────────
@@ -156,28 +148,63 @@ def area_resistente_rosca(d_mm: float) -> float:
     return math.pi / 4.0 * (d - 0.9382 * PASSO_ROSCA_MM[d]) ** 2
 
 
-def resistencia_tracao_diagonal(d_mm: float, aco: str) -> dict:
+#: Issue 44 — extremidades RECALCADAS (upset): a rosca é aberta numa
+#: extremidade de diâmetro maior que a barra, escolhida para que a rotura da
+#: rosca não preceda o escoamento do fuste (EN 1993-1-1 §6.2.3(3)). Sem isso,
+#: com rosca cortada no próprio diâmetro, N_u,Rd < N_pl,Rd (M36: 211,7 < 239 kN)
+#: e a barra rompe na rosca antes de escoar — modo frágil.
+EXTREMIDADE_RECALCADA = True
+
+
+def rosca_recalcada_minima(d_mm: float, aco: str) -> int:
     """
-    Resistência à tração da diagonal — EN 1993-1-1 §6.2.3(2), achado F-11.
+    Menor rosca métrica grossa d_t ≥ d com N_u,Rd(rosca) ≥ N_pl,Rd(fuste):
 
-        N_t,Rd = min( N_pl,Rd = A·f_y/γ_M0 ;  N_u,Rd = 0,9·A_net·f_u/γ_M2 )
-
-    A versão anterior devolvia só `N_pl,Rd`, sobre a área BRUTA. Com barra
-    roscada em S235 a rotura da seção líquida governa (A_s ≈ 0,81·A) e a
-    resistência real é ~10 % menor.
+        0,9·A_s(d_t)·f_u/γ_M2 ≥ A·f_y/γ_M0     (EN 1993-1-1 §6.2.3(3))
     """
     if aco not in ACO:
         raise ValueError(f"Aço '{aco}' não reconhecido. Use {list(ACO)}")
     A = math.pi * float(d_mm) ** 2 / 4.0
-    A_net = area_resistente_rosca(d_mm)
+    N_pl = A * ACO[aco]["f_y"] / GAMMA_M0
+    for d_t in sorted(PASSO_ROSCA_MM):
+        if d_t < d_mm - 1e-9:
+            continue
+        N_u = 0.9 * area_resistente_rosca(d_t) * ACO[aco]["f_u"] / GAMMA_M2
+        if N_u >= N_pl - 1e-9:
+            return d_t
+    raise ValueError(f"Nenhuma rosca tabelada garante ductilidade para Ø{d_mm}.")
+
+
+def resistencia_tracao_diagonal(
+    d_mm: float, aco: str, recalcada: bool | None = None,
+) -> dict:
+    """
+    Resistência à tração da diagonal — EN 1993-1-1 §6.2.3(2), achado F-11.
+
+        N_t,Rd = min( N_pl,Rd = A·f_y/γ_M0 ;  N_u,Rd = 0,9·A_s·f_u/γ_M2 )
+
+    A_s é a área resistente da ROSCA (= EN 1993-1-8 Tab. 3.4, k_2 = 0,9). Com
+    extremidade recalcada (issue 44, padrão do projeto) a rosca é a menor que
+    garante N_u,Rd ≥ N_pl,Rd: governa o escoamento do fuste e o modo é dúctil.
+    Com rosca cortada no diâmetro da barra, governa a rotura da rosca (frágil).
+    """
+    if aco not in ACO:
+        raise ValueError(f"Aço '{aco}' não reconhecido. Use {list(ACO)}")
+    recalcada = EXTREMIDADE_RECALCADA if recalcada is None else bool(recalcada)
+    d_rosca = rosca_recalcada_minima(d_mm, aco) if recalcada else int(round(d_mm))
+    A = math.pi * float(d_mm) ** 2 / 4.0
+    A_net = area_resistente_rosca(d_rosca)
     N_pl = A * ACO[aco]["f_y"] / GAMMA_M0 / 1e3            # kN
     N_u = 0.9 * A_net * ACO[aco]["f_u"] / GAMMA_M2 / 1e3   # kN
     return {
         "A_mm2": A, "A_net_mm2": A_net,
+        "d_rosca_mm": d_rosca,
+        "extremidade_recalcada": recalcada,
         "N_pl_Rd_kN": N_pl, "N_u_Rd_kN": N_u,
         "N_t_Rd_kN": min(N_pl, N_u),
         "modo_tracao_gov": "secao_liquida" if N_u < N_pl else "plastificacao",
-        "norma": "EN 1993-1-1 §6.2.3(2)",
+        "ductil": N_u >= N_pl - 1e-9,
+        "norma": "EN 1993-1-1 §6.2.3(2)/(3) + EN 1993-1-8 Tab. 3.4",
     }
 
 
@@ -266,6 +293,9 @@ def verifica_painel_vertical(
         "N_u_Rd_kN":     round(tr["N_u_Rd_kN"], 3),
         "N_t_Rd_kN":     round(N_t_Rd, 3),
         "modo_tracao_gov": tr["modo_tracao_gov"],
+        "d_rosca_mm":    tr["d_rosca_mm"],
+        "extremidade_recalcada": tr["extremidade_recalcada"],
+        "ductil":        tr["ductil"],
         "pendente": (
             "As LIGAÇÕES DE EXTREMIDADE das diagonais (chapa de gousset, "
             "esticador, pino/olhal, solda ao montante) NÃO estão dimensionadas "
@@ -290,6 +320,28 @@ def verifica_painel_vertical(
     }
 
 
+# ── Repartição da força longitudinal entre os alinhamentos (issue 64) ─────────
+
+def reparticao_alinhamentos(n_porticos: int = 2) -> dict:
+    """
+    Fração da força longitudinal entregue a cada alinhamento de pilares.
+
+    As treliças de contraventamento da cobertura (EC5 §9.2.5.3) vencem o vão
+    de cada água entre o beiral e o alinhamento interno, e entregam metade da
+    força em cada apoio. Com n_porticos águas lado a lado, cada beiral recebe
+    1/(2·n_porticos) e cada alinhamento interno 1/n_porticos. A força nocional
+    reparte-se na mesma proporção, porque o pilar interno carrega o dobro da
+    carga vertical do pilar de beiral.
+    """
+    n = max(1, int(n_porticos))
+    return {
+        "fachadas":  2.0 / (2.0 * n),          # dois beirais
+        "internos":  (n - 1) / n,              # alinhamentos internos (central)
+        "por_beiral": 1.0 / (2.0 * n),
+        "por_interno": 1.0 / n,
+    }
+
+
 # ── Verificação completa do contraventamento vertical ─────────────────────────
 
 def verificar_contraventamento_vertical(
@@ -307,10 +359,17 @@ def verificar_contraventamento_vertical(
     drift_lim:      float = 300.0,
     R_ext_cobertura_kN: float | None = None,
     V_Ed_total_kN: float | None = None,
+    fracao_demanda: float = 1.0,
+    alinhamento: str = "fachadas",
 ) -> dict:
     """
     Verifica o contraventamento vertical LONGITUDINAL (paredes // cumeeira) que
     conduz a força de vento θ=0° do nível da cobertura até a fundação.
+
+    Issue 64 (Opção A): as treliças da cobertura apoiam-se nos beirais E no
+    alinhamento central; cada conjunto de alinhamentos é verificado em separado,
+    com a fração da demanda que lhe cabe (`fracao_demanda`, ver
+    `reparticao_alinhamentos`): fachadas 1/2, linha central 1/2.
 
     Demanda lateral (longitudinal):
         V_lat = F_vento0 (θ=0°, estrutura aberta) + H_imp (nocional §5.3.2)
@@ -332,6 +391,9 @@ def verificar_contraventamento_vertical(
         eta_alvo           : margem de projeto na escolha automática do diâmetro
         drift_lim          : limite de drift δ ≤ H_col/drift_lim
         R_ext_cobertura_kN : reação entregue pelo contraventamento da cobertura (kN)
+        fracao_demanda: fração da demanda longitudinal (e da carga vertical
+                        estabilizada) que cabe a estes painéis (issue 64)
+        alinhamento   : rótulo ("fachadas" | "central")
         V_Ed_total_kN : carga vertical de cálculo TOTAL estabilizada por estes
                         painéis (kN). Quando informada, calcula-se o α_cr de
                         SISTEMA desta direção (EN 1993-1-1 Eq. 5.2) a partir da
@@ -351,7 +413,7 @@ def verificar_contraventamento_vertical(
     vento_0 = getattr(load, "vento_0", None) or {}
     F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
 
-    # ── 2) Força nocional (imperfeição global) — EN 1993-1-1 §5.3.2 ───────────
+    # ── 2) Força nocional (imperfeição global) — EN 1995-1-1 §5.4.4 ───────────
     # Resíduo do [F-06]: a nocional é φ·V_Ed,vertical, logo o que se maximiza é
     # a CARGA VERTICAL, não |M_max|. `combinacao_ELU_governante()` é um seletor
     # gravítico por procuração — coincide muitas vezes, mas coincidir não é
@@ -364,11 +426,16 @@ def verificar_contraventamento_vertical(
     H_imp_kN = noc["H_imp_kN"]
 
     # ── 3) Cortante lateral de projeto por painel ─────────────────────────────
-    V_lat_total = F_vento0_kN + H_imp_kN
+    frac = float(fracao_demanda)
+    if not 0.0 < frac <= 1.0:
+        raise ValueError("fracao_demanda deve estar em (0, 1]")
+    V_lat_total = frac * (F_vento0_kN + H_imp_kN)
     if R_ext_cobertura_kN is not None:
-        # coerência: a demanda por extremidade não pode ser menor que a reação
+        # coerência: a demanda não pode ser menor que a parcela da força
         # entregue pelo contraventamento da cobertura (soma nas duas extremidades)
-        V_lat_total = max(V_lat_total, 2.0 * float(R_ext_cobertura_kN))
+        V_lat_total = max(V_lat_total, frac * 2.0 * float(R_ext_cobertura_kN))
+    if V_Ed_total_kN is not None:
+        V_Ed_total_kN = frac * float(V_Ed_total_kN)
     # ── 4) Ponto fixo demanda ↔ rigidez ↔ 2.ª ordem (achado F-02) ─────────────
     #      Sem V_Ed_total_kN mantém-se k_II = 1,0, mas então o α_cr de sistema
     #      fica indeterminado e estabilidade_global.py recusa dispensar a 2.ª
@@ -422,7 +489,9 @@ def verificar_contraventamento_vertical(
 
     return {
         "sistema": "Contraventamento vertical longitudinal (cruzes de St. André)",
-        "norma":   "EN 1993-1-1 §5.3.2+§6.2.3 | EN 1995-1-1 §5.4 | NBR 6123 (θ=0°)",
+        "alinhamento":   alinhamento,
+        "fracao_demanda": round(frac, 4),
+        "norma":   "EN 1995-1-1 §5.4.4 | EN 1993-1-1 §6.2.3 | NBR 6123 (θ=0°)",
         "direcao": "longitudinal (// cumeeira, θ=0°)",
 
         # Demanda
@@ -446,6 +515,11 @@ def verificar_contraventamento_vertical(
         "aco":           aco,
         "N_diag_kN":     painel["N_diag_kN"],
         "N_t_Rd_kN":     painel["N_t_Rd_kN"],
+        "N_pl_Rd_kN":    painel["N_pl_Rd_kN"],
+        "N_u_Rd_kN":     painel["N_u_Rd_kN"],
+        "d_rosca_mm":    painel["d_rosca_mm"],
+        "extremidade_recalcada": painel["extremidade_recalcada"],
+        "ductil":        painel["ductil"],
         "eta_diag_N":    painel["eta_N"],
         "ok_diag":       painel["ok_N"],
 
@@ -494,7 +568,7 @@ def relatorio(res: dict) -> None:
     """Imprime relatório legível do contraventamento vertical."""
     print("=" * 68)
     print("  CONTRAVENTAMENTO VERTICAL — CAMINHO DE CARGA LATERAL À FUNDAÇÃO")
-    print("  EN 1993-1-1 §5.3.2 + §6.2.3 | EN 1995-1-1 §5.4 | NBR 6123 (θ=0°)")
+    print("  EN 1995-1-1 §5.4.4 | EN 1993-1-1 §6.2.3 | NBR 6123 (θ=0°)")
     print("=" * 68)
     print(f"  Sistema : {res['sistema']}")
     print(f"  Direção : {res['direcao']}")

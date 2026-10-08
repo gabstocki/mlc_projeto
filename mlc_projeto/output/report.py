@@ -37,15 +37,19 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("cumeeira",            "Cumeeira t90",              "EC5 §6.4.3"),
     ("misula",              "Mísula face incl. σm,α",    "EC5 §6.4.2"),
     ("flambagem",           "Flambagem lateral",         "EC5 §6.3.3"),
+    ("flambagem_succao",    "Flambagem lateral (sucção)", "EC5 §6.3.3 intradorso"),
     ("flexao",              "Flexo-comp. viga",          "EC5 §6.3.2+§6.3.3"),
     ("cisalhamento",        "Cisalhamento",              "EC5 §6.1.7"),
     # [F-12] Hankinson (§6.2.2) retirado: no apoio a força é ⊥ às fibras.
-    ("apoio",               "Apoio",                     "EC5 §6.1.5"),
+    ("apoio",               "Apoio L1 (contato)",        "EC5 §6.1.5"),
+    ("apoio_central",       "Apoio L1c (sela)",          "EC5 §6.1.5"),
+    ("sela_central",        "Sela central (placa)",      "EN 1993-1-1 §6.2.5"),
     ("flexo_comp",          "Pilar lateral (N)",         "EC5 §6.3.2"),
     ("pilar_central",       "Pilar central (N)",         "EC5 §6.3.2"),
     ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
     ("pilar_contraventado", "Pilar canto (grav+brace+vento)","EC5 §6.2.3+§6.3.2"),
+    ("pilar_central_contraventado", "Pilar central montante", "EC5 §6.2.3+§6.3.2"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
     ("terca_Qk_conc",       "Terça Q_k concentrado",     "EN 1991-1-1 Tab.6.10"),
@@ -56,19 +60,26 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §7.2.6"),
     ("fogo",                "Fogo (seção reduzida)",     "EN 1995-1-2 §4.2.2"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
-    ("contraventamento_vertical", "Contravento vertical", "EN 1993-1-1 §5.3+§6.2.3"),
-    ("contraventamento_transversal", "Contravento transversal", "EN 1993-1-1 §5.3+§6.2.3"),
+    ("contraventamento_vertical", "Contravento vertical", "EC5 §5.4.4+EN 1993-1-1 §6.2.3"),
+    ("contraventamento_vertical_central", "Contravento vert. central", "EC5 §5.4.4+EN 1993-1-1 §6.2.3"),
+    ("contraventamento_transversal", "Contravento transversal", "EC5 §5.4.4+EN 1993-1-1 §6.2.3"),
     # [A3] As diagonais estavam verificadas; o que as segura, não.
     ("lig_diag_vertical",   "Lig. diagonal longitudinal","EN 1993-1-8 §3.13+§4.5"),
+    ("lig_diag_vertical_central", "Lig. diagonal central", "EN 1993-1-8 §3.13+§4.5"),
     ("lig_diag_transversal","Lig. diagonal frontão",     "EN 1993-1-8 §3.13+§4.5"),
     ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
-    ("estabilidade_global", "Estabilidade global P-Δ",   "EN 1993-1-1 §5.2+§5.3"),
+    ("no_contraventamento", "Nó contravent. (escoras)",  "EC5 §6.3.2+§8.2.3+An. A"),
+    ("estabilidade_global", "Estabilidade global P-Δ",   "EC5 §5.4.4+EN 1993-1-1 §5.2.1"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
     ("icamento",            "Içamento (montagem)",       "EN 1991-1-6+EC5 §6.3.3"),
     ("ancoragem_canto",     "Ancoragem canto (moldada)", "EN 1993-1-8 + EN 1992-4"),
     # [A4] O corte vai por chaveta — o que cria esta verificação, que estava
     # declarada como pendente em main.py.
     ("chaveta_concreto",    "Chaveta — esmagamento",     "EN 1992-1-1 §6.7"),
+    ("ancoragem_L3",        "Ancoragem L3 (sucção/impacto)", "EN 1993-1-8 + EN 1992-4"),
+    ("ancoragem_L3c",       "Ancoragem L3c (sucção/impacto)", "EN 1993-1-8 + EN 1992-4"),
+    ("ancoragem_central_cv", "Ancoragem central montante", "EN 1993-1-8 + EN 1992-4"),
+    ("chaveta_concreto_central", "Chaveta central — esmag.", "EN 1992-1-1 §6.7"),
     ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
     ("tirante_piso_robustez","Robustez tirante piso",    "EN 1991-1-7+335+1993-1-2"),
@@ -553,6 +564,7 @@ def gerar_tex(
     r_fL1c = _clean_dict(resultados.get("fadiga_L1c",  {}))
     r_cv   = _clean_dict(resultados.get("contraventamento", {}))
     r_cvv  = _clean_dict(resultados.get("contraventamento_vertical", {}))
+    r_cvc  = _clean_dict(resultados.get("contraventamento_vertical_central", {}))
     r_cvt  = _clean_dict(resultados.get("contraventamento_transversal", {}))
     r_cb   = _clean_dict(resultados.get("corda_beiral", {}))
     r_succ = _clean_dict(resultados.get("succao_uplift", {}))
@@ -569,6 +581,23 @@ def gerar_tex(
     r_ic   = _clean_dict(resultados.get("icamento", {}))
     r_tir  = _clean_dict(resultados.get("tirante_base", {}))
     meta   = _clean_dict(resultados.get("meta", {}))
+    _qw = meta.get("combinacao_Q_W") or {}
+    if _qw:
+        _qw_txt = (
+            (f'nenhum dos {_i(len(_qw.get("linhas", [])))} padrões de vento '
+             '$\\theta=90^\\circ$ é de pressão (todos são de sucção, favoráveis, '
+             'com $\\gamma=0$ pela EN~1990 Tab.~A1.2(B)), e '
+             if not _qw.get("n_padroes_pressao") else
+             f'{_i(_qw.get("n_padroes_pressao", 0))} padrões de vento '
+             '$\\theta=90^\\circ$ são de pressão, e ')
+            + '$1{,}35G+1{,}5Q+1{,}5\\cdot 0{,}6\\,W$ dá '
+            f'$M={_br(_qw.get("M_QW_kNm", 0), 1)}$~kN$\\cdot$m, frente a '
+            f'$1{{,}}35G+1{{,}}5Q$ (${_br(_qw.get("M_ELU_Q_kNm", 0), 1)}$~kN$\\cdot$m). '
+            'Nos pilares, as verificações já somam a maior reação gravítica '
+            '(com $Q$) ao vento integral ($1{,}5W$), envoltória que cobre $0{,}9W$.'
+        )
+    else:
+        _qw_txt = 'demonstração não disponível nesta execução.'
     com_tirante = bool(r_tir.get("ativo") or meta.get("com_tirante"))
 
     # Extrair sub-dicts de flexo_comp
@@ -835,14 +864,17 @@ def gerar_tex(
     parts.append(comb_lines)
     parts.append(
         '  \\bottomrule\n\\end{tabular}}\n\n\\vspace{4pt}\n'
-        '\\textit{Concomitância (categoria H):} a cobertura é \\textbf{não '
-        'acessível} (categoria~H, EN 1991-1-1 Tab.~6.9/6.10). Pela EN~1990 '
-        'Tab.~A1.1, $\\psi_0=\\psi_1=\\psi_2=0$ para a sobrecarga; e a '
-        'EN~1991-1-1~\\S3.3.2(1) determina que a sobrecarga de cobertura '
-        '\\textbf{não atua simultaneamente com o vento}. Logo $Q$ e $W$ são '
-        'ações variáveis \\textbf{alternativas}: combinações com vento dominante '
-        'não incluem $Q$, e a combinação de sobrecarga não inclui vento '
-        '(vento pela NBR~6123:2023).\n\n'
+        '\\textit{Concomitância (categoria H, issue~45):} a cobertura é '
+        '\\textbf{não acessível} (categoria~H, EN 1991-1-1 Tab.~6.9/6.10). Os '
+        '$\\psi_0=\\psi_1=\\psi_2=0$ da sobrecarga (EN~1990 Tab.~A1.1) eliminam '
+        '$Q$ apenas como \\textbf{acompanhante} do vento; não eliminam o vento '
+        'como acompanhante de $Q$ ($\\psi_{0,W}=0{,}6$). Quem dispensa esta '
+        'segunda concomitância é a EN~1991-1-1:2002/AC:2009 \\S3.3.2(1): em '
+        'coberturas, em particular de categoria~H, a sobrecarga não precisa ser '
+        'combinada com neve nem com vento. Logo $Q$ e $W$ são ações variáveis '
+        '\\textbf{alternativas}. A dispensa não altera a viga: '
+        + _qw_txt +
+        '\n\n'
         '\\textit{Sobrecarga (categoria H):} $q_k=0{,}40$~kN/m$^2$ '
         '(EN~1991-1-1 Tab.~6.10, valor recomendado; issue~2). A norma prevê '
         'também uma carga concentrada $Q_k=1{,}0$~kN de manutenção, para '
@@ -939,7 +971,7 @@ def gerar_tex(
     parts.append('~m & Geometria de cobertura \\\\\n  $l_1$ efetivo (LTB) & ')
     parts.append(_br(l_1_ef, 2))
     parts.append('~m & ')
-    parts.append('Cobertura OK $\\Rightarrow l_1=s$' if cob_ok else 'Cobertura falha $\\Rightarrow l_1=\\ell$ (penalizado)')
+    parts.append('Cobertura OK $\\Rightarrow l_1=s$' if cob_ok else 'Cobertura falha $\\Rightarrow l_1=L$ (vão da viga)')
     parts.append(' \\\\\n  $l_{ef}$ flambagem & ')
     parts.append(_br(0.9 * l_1_ef, 3))
     parts.append('~m & EC5 Tab.~6.1 ($0{,}9\\,l_1$) \\\\\n  Placa de apoio $l_{ap}$ & ')
@@ -998,7 +1030,9 @@ def gerar_tex(
             f'{_tex_escape(str(r_fl.get("tipo_carga", "distribuida")))} '
             '(EC5 Tab.~6.1):\n'
             '\\[\n'
-            f'  l_{{ef}} = 0{{,}}9\\,l_1 = 0{{,}}9\\cdot{_br(r_fl.get("l_1_m",0),3)}'
+            f'  l_{{ef}} = 0{{,}}9\\,l_1 + {_br(r_fl.get("delta_posicao_h",0),1)}\\,h'
+            f' = 0{{,}}9\\cdot{_br(r_fl.get("l_1_m",0),3)} + {_br(r_fl.get("delta_posicao_h",0),1)}'
+            f'\\cdot{_br(r_fl.get("h_crit_m",0),3)}'
             f' = {_br(r_fl.get("l_ef_m",0),3)}~\\text{{m}}\n'
             '\\]\n'
             f'com $l_1={_br(r_fl.get("l_1_m",0),3)}$~m = {_tex_escape(str(r_fl.get("l_1_origem","")))}. '
@@ -1025,7 +1059,42 @@ def gerar_tex(
             'Verificação (Eq.~6.33): '
             f'$\\sigma_{{m,d}}={_br(r_fl.get("sigma_md_MPa",0),3)}\\leq '
             f'k_{{crit}}f_{{m,d}}={_br(r_fl.get("resist_MPa",0),3)}$~MPa '
-            f'$\\Rightarrow\\eta={_br(r_fl.get("eta",0),3)}$.\n\n'
+            f'$\\Rightarrow\\eta={_br(r_fl.get("eta",0),3)}$. '
+            'O termo $+2h$ é a nota da Tab.~6.1 para carga aplicada na borda '
+            'comprimida (as terças apoiam no extradorso). Esta verificação cobre '
+            'o momento positivo; o negativo, de sucção, segue abaixo.\n\n'
+        )
+
+    # ── Detalhe: flambagem lateral sob sucção — intradorso (issue 47) ──────────
+    r_fs = _clean_dict(resultados.get("flambagem_succao", {}))
+    if r_fs.get("aplicavel"):
+        parts.append(
+            '\\subsection*{Detalhes -- Flambagem lateral sob sucção '
+            '(intradorso comprimido, EC5~\\S6.3.3)}\n\n'
+            'Nas combinações de sucção o momento inverte e comprime o '
+            '\\textbf{intradorso}, que as terças (fixadas no extradorso) não contêm. '
+            'Adota-se contenção lateral só nos apoios ($l_1=L$), sem creditar a '
+            'contenção da borda tracionada pelas terças nem a redução de $0{,}5h$ '
+            'da nota da Tab.~6.1 para carga na borda tracionada. A seção crítica '
+            'resulta de varredura ao longo do vão ('
+            f'{_i(r_fs.get("n_combinacoes_com_M_negativo", 0))} combinações com '
+            'trecho de momento negativo):\n'
+            '\\[\n'
+            f'  l_{{ef}} = 0{{,}}9\\,L = 0{{,}}9\\cdot{_br(r_fs.get("l_1_m",0),2)}'
+            f' = {_br(r_fs.get("l_ef_m",0),2)}~\\text{{m}}\n'
+            '\\]\n'
+            f'Governa {_tex_escape(str(r_fs.get("comb_gov","")))} em '
+            f'$x={_br(r_fs.get("x_m",0),2)}$~m, onde $h={_br(r_fs.get("h_m",0),3)}$~m e '
+            f'$M_d={_br(r_fs.get("M_d_kNm",0),1)}$~kN$\\cdot$m:\n'
+            '\\[\n'
+            '  \\sigma_{m,crit}=\\frac{0{,}78\\,b^2 E_{0,05}}{h\\,l_{ef}}'
+            f'={_br(r_fs.get("sigma_m_crit_MPa",0),2)}~\\text{{MPa}},\\quad '
+            f'\\lambda_{{rel,m}}={_br(r_fs.get("lambda_rel_m",0),3)},\\quad '
+            f'k_{{crit}}={_br(r_fs.get("k_crit",0),3)}\n'
+            '\\]\n'
+            f'$\\sigma_{{m,d}}={_br(r_fs.get("sigma_md_MPa",0),2)}\\leq '
+            f'k_{{crit}}f_{{m,d}}={_br(r_fs.get("resist_MPa",0),2)}$~MPa '
+            f'$\\Rightarrow\\eta={_br(r_fs.get("eta",0),3)}$.\n\n'
         )
 
     # ── Detalhe: mísula / borda inclinada (EC5 §6.4.2) ────────────────────────
@@ -1184,10 +1253,11 @@ def gerar_tex(
         '(Castigliano biarticulada). '
         'A estabilidade de \\textbf{barra} está coberta por EC5~\\S6.3.2 '
         '($k_c$) e \\S6.3.3 ($k_{crit}$). '
-        'A escala \\textbf{global} verifica-se por analogia com '
-        'EN~1993-1-1~\\S5.2.1 ($\\alpha_{cr}$) e \\S5.3.2 '
-        '(forças nocionais $\\varphi$), face ao silêncio do EC5 sobre '
-        'limiares numéricos de pórtico. O $\\alpha_{cr,arco}$ abaixo é o modo de '
+        'As imperfeições globais seguem a EN~1995-1-1~\\S5.4.4 '
+        '($\\varphi=0{,}005\\sqrt{5/h}$; a curvatura $e=0{,}0025\\ell$ das '
+        'barras está em $k_c$). O critério $\\alpha_{cr}\\geq 10$ da '
+        'EN~1993-1-1~\\S5.2.1 é empregado \\textbf{por analogia}, face ao '
+        'silêncio do EC5 sobre limiares numéricos de pórtico (issue~46). O $\\alpha_{cr,arco}$ abaixo é o modo de '
         '\\emph{snap-through} do arco abatido -- \\textbf{não} o modo de '
         'deslocamento lateral (\\emph{sway}) do pórtico.\n\n'
         '\\textbf{Critérios de dispensa de 2.\\textsuperscript{a} ordem \\emph{global}:}\n'
@@ -1212,8 +1282,8 @@ def gerar_tex(
         f'{_br(r_eg.get("V_portal_kN", 0), 1)}~kN & \\\\\n'
     )
     parts.append(
-        f'  $\\varphi=\\varphi_0\\alpha_h\\alpha_m$ & '
-        f'{float(r_eg.get("phi", 0)):.5f} & EN~1993-1-1~\\S5.3.2 \\\\\n'
+        f'  $\\varphi=0{{,}}005\\sqrt{{5/h}}$ & '
+        f'{float(r_eg.get("phi", 0)):.5f} & EN~1995-1-1~\\S5.4.4 Eq.~(5.1) \\\\\n'
     )
     parts.append(
         f'  $H_{{imp}}=\\varphi\\,V$ & '
@@ -1299,25 +1369,30 @@ def gerar_tex(
             '% ── 8b.1 Contraventamento vertical ─────────────────────\n'
             '\\subsection*{8b.1 Contraventamento Vertical -- '
             'Caminho de Carga Lateral à Fundação '
-            '(EN~1993-1-1~\\S5.3.2+\\S6.2.3)}\n\n'
+            '(EN~1995-1-1~\\S5.4.4 + EN~1993-1-1~\\S6.2.3)}\n\n'
             'Com pilares biarticulados (topo e base) e ligações viga-pilar '
             'rotuladas não há ação de pórtico: a estabilidade lateral longitudinal '
             'é provida por \\textbf{cruzes de St.\\ André} nas paredes, que '
             'conduzem a força de vento $\\theta=0^\\circ$ (mais a força nocional '
-            'EN~1993-1-1~\\S5.3.2) do nível da cobertura \\textbf{até a fundação}.\n\n'
-            '\\begin{tabular}{@{}lll@{}}\n'
+            'EN~1995-1-1~\\S5.4.4) do nível da cobertura \\textbf{até a fundação}.\n\n'
+            'As treliças de contraventamento da cobertura (EC5~\\S9.2.5.3) apoiam-se '
+            'nos beirais e no alinhamento central; a força longitudinal reparte-se '
+            '$1/2$ nas fachadas ($1/4$ por beiral) e $1/2$ na linha central, que '
+            'tem cruzes próprias (issue~64).\n\n'
+            '\\begin{tabular}{@{}llll@{}}\n'
             '  \\toprule\n'
-            '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref./limite} \\\\\n'
+            '  \\textbf{Parâmetro} & \\textbf{Fachadas} & \\textbf{Linha central} & \\textbf{Ref.} \\\\\n'
             '  \\midrule\n'
-            f'  $F_{{w,\\theta=0}}$ (vento long.) & {_br(r_cvv.get("F_vento0_kN", 0), 1)}~kN & NBR 6123 \\\\\n'
-            f'  $H_{{imp}}=\\varphi\\,V$ (nocional) & {_br(r_cvv.get("H_imp_kN", 0), 1)}~kN & \\S5.3.2 \\\\\n'
-            f'  $V_{{lat}}$ total & {_br(r_cvv.get("V_lat_total_kN", 0), 1)}~kN & {_i(r_cvv.get("n_paineis", 2))} painéis \\\\\n'
-            f'  $V$ por painel & {_br(r_cvv.get("V_painel_kN", 0), 1)}~kN & \\\\\n'
-            f'  Diagonal & $d={_i(r_cvv.get("d_mm", 0))}$~mm {r_cvv.get("aco", "S235")} & $\\beta={_br(r_cvv.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
-            f'  $N_{{diag}}\\leq N_{{t,Rd}}$ & {_br(r_cvv.get("N_diag_kN", 0), 1)} $\\leq$ {_br(r_cvv.get("N_t_Rd_kN", 0), 1)}~kN & $\\eta={_br(r_cvv.get("eta_diag_N", 0), 3)}$ {_sim_eg(_cvv_okN)} \\\\\n'
-            f'  $H_{{base}}$ (cortante) & {_br(r_cvv.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
-            f'  $N_{{uplift}}$ (arrancamento) & {_br(r_cvv.get("N_uplift_kN", 0), 1)}~kN & ancoragem \\\\\n'
-            f'  $\\delta\\leq H/300$ & {_br(r_cvv.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvv.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(r_cvv.get("eta_delta", 0), 3)}$ {_sim_eg(_cvv_okd)} \\\\\n'
+            f'  $F_{{w,\\theta=0}}+H_{{imp}}$ (total) & \\multicolumn{{2}}{{c}}{{{_br(r_cvv.get("F_vento0_kN", 0) + r_cvv.get("H_imp_kN", 0), 1)}~kN}} & NBR 6123, EC5 \\S5.4.4 \\\\\n'
+            f'  Fração da demanda & {_br(r_cvv.get("fracao_demanda", 1), 2)} & {_br(r_cvc.get("fracao_demanda", 0), 2)} & reações das treliças \\\\\n'
+            f'  $V_{{lat}}$ / painéis & {_br(r_cvv.get("V_lat_total_kN", 0), 1)}~kN / {_i(r_cvv.get("n_paineis", 0))} & {_br(r_cvc.get("V_lat_total_kN", 0), 1)}~kN / {_i(r_cvc.get("n_paineis", 0))} & \\\\\n'
+            f'  $V$ por painel & {_br(r_cvv.get("V_painel_kN", 0), 1)}~kN & {_br(r_cvc.get("V_painel_kN", 0), 1)}~kN & \\\\\n'
+            f'  Diagonal ({r_cvv.get("aco", "S235")}) & $\\varnothing{_i(r_cvv.get("d_mm", 0))}$ & $\\varnothing{_i(r_cvc.get("d_mm", 0))}$ & $\\beta={_br(r_cvv.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
+            f'  $N_{{diag}}$ / $N_{{t,Rd}}$ & {_br(r_cvv.get("N_diag_kN", 0), 1)} / {_br(r_cvv.get("N_t_Rd_kN", 0), 1)}~kN & {_br(r_cvc.get("N_diag_kN", 0), 1)} / {_br(r_cvc.get("N_t_Rd_kN", 0), 1)}~kN & \\S6.2.3 \\\\\n'
+            f'  $\\eta$ diagonal & {_br(r_cvv.get("eta_diag_N", 0), 3)} {_sim_eg(_cvv_okN)} & {_br(r_cvc.get("eta_diag_N", 0), 3)} {_sim_eg(bool(r_cvc.get("ok_diag", False)))} & \\\\\n'
+            f'  $H_{{base}}$ por painel & {_br(r_cvv.get("H_base_kN", 0), 1)}~kN & {_br(r_cvc.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
+            f'  $\\pm V\\tan\\beta$ no montante & {_br(r_cvv.get("N_uplift_kN", 0), 1)}~kN & {_br(r_cvc.get("N_uplift_kN", 0), 1)}~kN & pilar/ancoragem \\\\\n'
+            f'  $\\delta$ / $H/300$ & {_br(r_cvv.get("delta_mm", 0), 2)} / {_br(r_cvv.get("delta_lim_mm", 0), 2)}~mm & {_br(r_cvc.get("delta_mm", 0), 2)} / {_br(r_cvc.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(max(r_cvv.get("eta_delta", 0), r_cvc.get("eta_delta", 0)), 3)}$ {_sim_eg(_cvv_okd)} \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
             '\\textbf{Direção transversal (no plano do pórtico):} tratada na '
             '\\S8b.2 (diafragma de cobertura + frontões contraventados).\n\n'
@@ -1330,7 +1405,7 @@ def gerar_tex(
         parts.append(
             '% ── 8b.2 Contraventamento transversal ──────────────────\n'
             '\\subsection*{8b.2 Contraventamento Transversal -- '
-            'Diafragma de Cobertura + Frontões (EN~1993-1-1~\\S5.3.2+\\S6.2.3)}\n\n'
+            'Diafragma de Cobertura + Frontões (EN~1995-1-1~\\S5.4.4 + EN~1993-1-1~\\S6.2.3)}\n\n'
             'No plano do pórtico ($\\perp$ cumeeira), os pilares birotulados '
             'formam um mecanismo \\emph{sway}. A estabilidade é provida pelo '
             '\\textbf{diafragma de cobertura} (viga horizontal ao longo do '
@@ -1344,7 +1419,7 @@ def gerar_tex(
             '  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Ref./limite} \\\\\n'
             '  \\midrule\n'
             f'  Arrasto $\\theta=90^\\circ$ (topo) & {_br(r_cvt.get("H_vento_topo_kN", 0), 1)}~kN & {_i(r_cvt.get("n_colunas", 0))} pilares, NBR 6123 \\\\\n'
-            f'  $H_{{imp}}=\\varphi\\,V$ (nocional) & {_br(r_cvt.get("H_imp_kN", 0), 1)}~kN & \\S5.3.2 \\\\\n'
+            f'  $H_{{imp}}=\\varphi\\,V$ (nocional) & {_br(r_cvt.get("H_imp_kN", 0), 1)}~kN & EC5 \\S5.4.4 \\\\\n'
             f'  $H_{{tr}}$ total & {_br(r_cvt.get("H_tr_kN", 0), 1)}~kN & \\\\\n'
             f'  $N_{{corda}}$ diafragma & {_br(r_cvt.get("N_corda_kN", 0), 1)}~kN & $M/B$ (ao beiral) \\\\\n'
             f'  $R_{{frontão}}$ & {_br(r_cvt.get("R_gable_kN", 0), 1)}~kN & $H_{{tr}}/2$ \\\\\n'
@@ -1544,8 +1619,9 @@ def gerar_tex(
         '  \\item Viga MLC comprimida ($N$ + $M$) gera força de estabilização\n'
         '        (EC5~\\S9.2.5).\n'
         '  \\item Terças atuam como \\textbf{bielas} (compressão + rigidez $EA/L$).\n'
-        '  \\item Cruzes de St.~André nos módulos extremos (diagonal tracionada).\n'
-        '  \\item Reações no pórtico de extremidade $\\rightarrow$ fundação.\n'
+        '  \\item Treliça de contraventamento nas baías extremas, paralela às vigas e\n'
+        '        com cruzes de St.~André em todos os painéis do vão (diagonal tracionada).\n'
+        '  \\item Reações nos apoios da viga $\\rightarrow$ contraventamento vertical $\\rightarrow$ fundação.\n'
         '\\end{enumerate}\n\n'
         '\\vspace{4pt}\n'
         '\\subsection*{9.1 Compressão a estabilizar e sistema (EC5~\\S9.2.5)}\n\n'
@@ -1560,17 +1636,17 @@ def gerar_tex(
     parts.append(_br(r_cv.get('N_flex_kN', 0), 2))
     parts.append('~kN & \\S9.2.5.2 \\\\\n  $N_d$ (estabilizar) & ')
     parts.append(_br(r_cv.get('N_d_kN', 0), 2))
-    parts.append('~kN & \\\\\n  N.º de vigas $n$ (por plano) & ')
-    parts.append(f'{_i(r_cv.get('n_por_plano', 9))}')
-    parts.append(f' & {_i(r_cv.get("n_planos", 2))} planos independentes \\\\\n  $\\ell$ (vão do sistema) & ')
-    parts.append(_br(r_cv.get('ell_m', 46), 1))
-    parts.append('~m & Entre baías rígidas \\\\\n  $k_\\ell=\\min(1,\\sqrt{15/\\ell})$ & ')
+    parts.append('~kN & \\\\\n  N.º de vigas $n$ (por sistema) & ')
+    parts.append(f'{_i(r_cv.get('n_por_sistema', 5))}')
+    parts.append(f' & $\\lceil {_i(r_cv.get("n_por_plano", 9))}/{_i(r_cv.get("n_modulos_cv", 2))}\\rceil$ (vigas por plano / baías rígidas) \\\\\n  $\\ell$ (vão do sistema) & ')
+    parts.append(_br(r_cv.get('ell_m', 20.25), 2))
+    parts.append('~m & Vão da viga (Fig.~9.10) \\\\\n  $k_\\ell=\\min(1,\\sqrt{15/\\ell})$ & ')
     parts.append(_br(r_cv.get('k_ell', 0), 3))
     parts.append(' & \\S9.2.5.3 Eq.~9.38 \\\\\n  $q_d=k_\\ell n N_d/(k_{f,3}\\ell)$ & ')
     parts.append(_br(r_cv.get('q_d_kNpm', 0), 4))
     parts.append('~kN/m &\n    $k_{f,3}=')
     parts.append(_br(r_cv.get('k_f3', 30), 0))
-    parts.append('$ (Tab.~9.2) \\\\\n  $R_{ext}=q_d\\ell/2$ (por plano) & ')
+    parts.append('$ (Tab.~9.2) \\\\\n  $R_{ext}=q_d\\ell/2$ (apoio da treliça) & ')
     parts.append(_br(r_cv.get('R_ext_kN', 0), 2))
     parts.append('~kN & Por extremo \\\\\n  $a$ (restrição na viga) & ')
     parts.append(_br(r_cv.get('a_restricao_m', s_m), 2))
@@ -1587,11 +1663,11 @@ def gerar_tex(
         '\\textit{Fatores de modificação} (EC5 Tab.~9.2, valores recomendados '
         'sublinhados na norma): $k_s=4$ ($1$--$4$), $k_{f,2}=80$ ($80$--$100$, MLC), '
         '$k_{f,3}=30$ ($30$--$80$). \\textbf{Dois planos de cobertura independentes} '
-        '(um por vão), cada um estabilizando $n=9$ vigas com o seu próprio '
-        'contraventamento; a força de estabilização de um plano \\textbf{não} '
-        'transita pelo outro — não há duplicação. Aumentar o número de baías com '
-        'cruzes reduz $\\ell$ mas eleva $k_\\ell$ e a reação, logo mantêm-se apenas '
-        'as \\textbf{baías extremas}.\n\n'
+        '(um por vão); em cada um, as vigas repartem-se pelas baías rígidas, e cada '
+        'treliça estabiliza $n$ vigas. O vão $\\ell$ é o do sistema de contraventamento, '
+        'paralelo às vigas, e coincide com o vão destas; não depende do comprimento '
+        'da edificação nem do número de baías, que altera apenas $n$. A diagonal '
+        'crítica é a do painel junto ao apoio, onde o cortante da treliça é máximo.\n\n'
     )
     parts.append('\\subsection*{9.2 Diagonal de aço (EN~1993-1-1~\\S6.2.3)}\n\n')
     parts.append('\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Parâmetro} & \\textbf{Valor} & \\textbf{Obs.} \\\\\n  \\midrule\n  Layout & Cruzes nos ')
@@ -1614,7 +1690,8 @@ def gerar_tex(
     parts.append(_br(r_cv.get('F_diag_kN', 0), 2))
     parts.append('~kN & Tração (1 diagonal ativa) \\\\\n  $N_{t,Rd}$ & ')
     parts.append(_br(r_cv.get('N_t_Rd_kN', 0), 2))
-    parts.append('~kN & $A f_y/\\gamma_{M0}$ \\\\\n  $\\eta_N$ (diagonal) & ')
+    parts.append('~kN & $\\min(A f_y/\\gamma_{M0};\\,0{,}9A_s f_u/\\gamma_{M2})$, rosca recalcada M'
+                 + f"{_i(r_cv.get('d_rosca_mm', 0))}" + ' (issue~44) \\\\\n  $\\eta_N$ (diagonal) & ')
     parts.append(f'{_eta(r_cv, "eta_diag_N"):.4f}')
     parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.3 Flecha do sistema e terça-biela}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & $\\eta$ \\\\\n  \\midrule\n  $\\delta\\leq\\ell/500$ (rigidez global) &\n    ')
     parts.append(f'{r_cv.get('delta_mm', 0):.2f}')
@@ -1656,6 +1733,30 @@ def gerar_tex(
     parts.append(_br(r_cv.get('L_total_m', 0), 1))
     parts.append('~m\n    (')
     parts.append(_br(r_cv.get('peso_total_kg', 0), 1))
+    # ── Nó de topo das baías contraventadas (issue 66) ─────────────────────
+    r_nc = _clean_dict(resultados.get("no_contraventamento", {}))
+    if r_nc:
+        _lb, _lc = r_nc.get("ligacao_escora_beiral", {}), r_nc.get("ligacao_escora_central", {})
+        parts.append(
+            '\\subsection*{Nó de topo das baías contraventadas (issue~66)}\n\n'
+            'A reação longitudinal da treliça de cobertura não passa pela L1/L1c: segue '
+            'pela terça sobre o apoio, que funciona como \\textbf{escora}, até um nó '
+            'metálico no topo do pilar, onde concorrem a diagonal da cobertura e a do '
+            'painel vertical.\n\n'
+            '\\begin{tabular}{@{}lccccc@{}}\n  \\toprule\n'
+            '  Escora & $N$ (kN) & $\\eta$ flexo-axial & Ligação & $R_d$ (kN) & $\\eta$ lig. \\\\\n'
+            '  \\midrule\n'
+            f'  Beiral & {_br(r_nc.get("N_escora_beiral_kN",0),1)} & '
+            f'{_br(r_nc.get("escora_beiral",{}).get("eta",0),3)} & '
+            f'{_i(_lb.get("n_pinos",0))}$\\times\\varnothing${_i(_lb.get("d_mm",0))} & '
+            f'{_br(_lb.get("R_d_kN",0),0)} & {_br(_lb.get("eta",0),3)} \\\\\n'
+            f'  Linha central & {_br(r_nc.get("N_escora_central_kN",0),1)} & '
+            f'{_br(r_nc.get("escora_central",{}).get("eta",0),3)} & '
+            f'{_i(_lc.get("n_pinos",0))}$\\times\\varnothing${_i(_lc.get("d_mm",0))} & '
+            f'{_br(_lc.get("R_d_kN",0),0)} & {_br(_lc.get("eta",0),3)} \\\\\n'
+            '  \\bottomrule\n\\end{tabular}\n\n'
+        )
+
     parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto (contraventamento vertical em \\S8b.1; transversal em \\S8b.2). Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{@{}lllcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\eta$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
     parts.append(f'{r_els.get('w_S1_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_inst_mm', 67.5):.2f}~mm & ')
@@ -1978,6 +2079,14 @@ def gerar_tex(
             'corte, madeira de espessura $t_1=b/2$ por lado; chapa de aço de '
             'espessura $t_2$ (grossa, $\\geq d$ -- ver Esquadro). Resistência lateral '
             'por Johansen (EC5~\\S8.2 Tab.~8.2), reduzida por $n_{ef}$ (\\S8.5.1.1).\n\n'
+            + ('\\textbf{Apoio por contato (issue~42):} a reação vertical de gravidade '
+               f'({_br(r_L1.get("V_gravidade_kN", 0), 1)}~kN) vai por contato direto da '
+               'viga sobre a chapa de topo (L1) ou a sela (L1c), verificada à compressão '
+               '$\\perp$ às fibras (EC5~\\S6.1.5). Os pinos, em furos ovalizados '
+               'verticais na chapa e no terço superior da viga, recebem só o '
+               f'arrancamento ({_br(r_L1.get("V_d_kN", 0), 1)}~kN, sucção) e o esforço '
+               'axial; no fendilhamento a borda carregada passa a ser a inferior.\n\n'
+               if r_L1.get("apoio_por_contato") else '') +
             '{\\small\\begin{tabular}{@{}lll@{}}\n  \\toprule\n'
             '  \\textbf{Parâmetro} & \\textbf{Símbolo} & \\textbf{Valor} \\\\\n'
             '  \\midrule\n'

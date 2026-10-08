@@ -76,11 +76,11 @@ def test_varredura_load_completa():
     )
     vv = load.varredura_vento_90
     assert vv["completo"] is True
-    assert vv["n_padroes_cpe"] == 8
+    assert vv["n_padroes_cpe"] == 14     # 8 (α=0°) + 6 (α=90°, issue 39)
     # Categoria H (issue 3): Q e vento NÃO concomitantes (EN 1991-1-1 §3.3.2(1)).
     # Por padrão de vento: 2 combos (W pressão + W sucção); a sobrecarga entra em
-    # UMA combinação gravítica (sem vento). Total = 8×2 + 1 = 17.
-    assert vv["n_combinacoes_elu_vento"] == 8 * 2 + 1
+    # UMA combinação gravítica (sem vento). Total = 14×2 + 1 = 29 (issue 39).
+    assert vv["n_combinacoes_elu_vento"] == 14 * 2 + 1
     assert load.vento_0 is not None
     assert load.vento_0["F_total_kN"] > 0
     gov = load.combinacao_ELU_governante()

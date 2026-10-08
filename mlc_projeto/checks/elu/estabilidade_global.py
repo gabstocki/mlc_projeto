@@ -20,9 +20,11 @@ Referências
 -----------
   EN 1995-1-1 §5.4.2 / §5.4.3  — análise estrutural (1.ª vs 2.ª ordem)
   EN 1995-1-1 §6.3.2           — imperfeições de barra (via k_c)
-  EN 1993-1-1 §5.2.1           — critério α_cr (analogia de pórticos;
-                                  EC5 não fixa limiar numérico global)
-  EN 1993-1-1 §5.3.2           — forças nocionais (φ = φ0·α_h·α_m)
+  EN 1995-1-1 §5.4.4           — imperfeições: inclinação inicial
+                                  φ = 0,005·√(5/h) e curvatura e = 0,0025·ℓ
+  EN 1993-1-1 §5.2.1           — critério α_cr ≥ 10, empregado POR ANALOGIA:
+                                  o EC5 não fixa limiar numérico para dispensar
+                                  a análise de 2.ª ordem (issue 46)
   EN 1990                      — combinações de ações
 
 Critérios de dispensa de 2.ª ordem **global** (adotados)
@@ -52,8 +54,13 @@ from mlc_projeto.core.loads     import Carregamentos
 from mlc_projeto.core.validacao import DominioInvalidoError
 
 
-# EN 1993-1-1 §5.3.2 — imperfeição global (força nocional)
-PHI_0 = 1.0 / 200.0
+# EN 1995-1-1 §5.4.4(2) — inclinação inicial (imperfeição global) — issue 46.
+# A norma de madeira tem prescrição própria; a EN 1993-1-1 §5.3.2 (φ0·α_h·α_m)
+# deixou de ser usada. Não é NDP: valor fixado no texto do EC5.
+PHI_0 = 0.005            # rad — h ≤ 5 m
+H_REF_PHI_M = 5.0        # m — acima disto φ = 0,005·√(5/h)
+# EN 1995-1-1 §5.4.4(3) — curvatura inicial (flecha de fabricação) e = 0,0025·ℓ
+E_BOW_REL = 0.0025
 
 # Limiares de projeto
 ALPHA_CR_MIN = 10.0     # EN 1993-1-1 §5.2.1(3) — análise elástica
@@ -65,43 +72,63 @@ W_OVER_F_MAX = 0.05     # abaixamento relativo do freche
 H_IMP_OVER_H_MAX = 0.10 # nocional face ao empuxo de cálculo
 
 
+def inclinacao_inicial_ec5(h_m: float) -> float:
+    """
+    Inclinação inicial φ (rad) — EN 1995-1-1 §5.4.4(2), Eq. (5.1):
+
+        φ = 0,005                 para h ≤ 5 m
+        φ = 0,005·√(5/h)          para h > 5 m
+
+    h = altura da estrutura ou comprimento da barra (m).
+    """
+    if h_m <= 0:
+        raise ValueError("h_m deve ser > 0")
+    return PHI_0 if h_m <= H_REF_PHI_M else PHI_0 * math.sqrt(H_REF_PHI_M / h_m)
+
+
+def curvatura_inicial_ec5(ell_m: float) -> float:
+    """Curvatura inicial e (m) — EN 1995-1-1 §5.4.4(3), Eq. (5.2): e = 0,0025·ℓ."""
+    if ell_m <= 0:
+        raise ValueError("ell_m deve ser > 0")
+    return E_BOW_REL * ell_m
+
+
 def forca_nocional(
     V_Ed_kN: float,
     h_m: float,
     m_colunas: int = 2,
 ) -> dict:
     """
-    Força horizontal nocional — EN 1993-1-1 §5.3.2 (analogia).
+    Força horizontal equivalente à inclinação inicial — EN 1995-1-1 §5.4.4.
 
-        φ = φ0 · α_h · α_m
-        φ0 = 1/200
-        α_h = 2/√h   mas  2/3 ≤ α_h ≤ 1
-        α_m = √[0,5·(1 + 1/m)]
+        φ = 0,005·√(5/h)   (h > 5 m)          Eq. (5.1)
         H_Ed,imp = φ · V_Ed
 
-    V_Ed = soma das reações verticais do pórtico (2·R_v).
-    h    = altura do piso / pé-direito (m).
-    m    = número de colunas no alinhamento considerado.
+    V_Ed = carga vertical de cálculo estabilizada (kN); h = pé-direito (m).
+
+    O EC5 não reduz φ pelo número de colunas: `m_colunas` fica só como
+    informação. Para comparação, devolve-se também o φ da EN 1993-1-1 §5.3.2
+    (φ0·α_h·α_m), antes usado por analogia (issue 46).
     """
     if h_m <= 0:
         raise ValueError("h_m deve ser > 0")
     m = max(1, int(m_colunas))
+    phi = inclinacao_inicial_ec5(h_m)
+    H_imp = phi * abs(V_Ed_kN)
 
     alpha_h = min(1.0, max(2.0 / 3.0, 2.0 / math.sqrt(h_m)))
     alpha_m = math.sqrt(0.5 * (1.0 + 1.0 / m))
-    phi = PHI_0 * alpha_h * alpha_m
-    H_imp = phi * abs(V_Ed_kN)
+    phi_en1993 = (1.0 / 200.0) * alpha_h * alpha_m
 
     return {
         "phi_0":     PHI_0,
-        "alpha_h":   round(alpha_h, 4),
-        "alpha_m":   round(alpha_m, 4),
         "phi":       round(phi, 6),
+        "phi_en1993_comparacao": round(phi_en1993, 6),
         "V_Ed_kN":   round(V_Ed_kN, 3),
         "H_imp_kN":  round(H_imp, 3),
         "h_m":       h_m,
         "m_colunas": m,
-        "norma":     "EN 1993-1-1 §5.3.2 (φ global, analogia para MLC)",
+        "norma":     "EN 1995-1-1 §5.4.4(2) Eq. (5.1)",
     }
 
 
@@ -460,6 +487,9 @@ def verificar_estabilidade_global(
         k_H_geom = float("inf")
 
     # ── 6) P-Δ no pilar (fora de prumo nocional) ──────────────
+    # Inclinação inicial φ do EC5 §5.4.4(2). A curvatura inicial e = 0,0025·ℓ
+    # (§5.4.4(3)) da BARRA já está incorporada em k_c (EC5 §6.3.2, β_c) e não
+    # se soma aqui (issue 46).
     e_0 = noc["phi"] * H_pilar_m  # m
     M_imp_pilar = R_v * e_0       # kN·m
     W_p = b_pilar * h_pilar ** 2 / 6.0
@@ -568,7 +598,7 @@ def verificar_estabilidade_global(
         "sistema": "biarticulada MLC — estabilidade global",
         "norma": (
             "EN 1995-1-1 §5.4.2+§6.3.2 | "
-            "EN 1993-1-1 §5.2.1+§5.3.2 (α_cr, φ analogia)"
+            "EN 1995-1-1 §5.4.4 (φ) | EN 1993-1-1 §5.2.1 (α_cr, por analogia)"
         ),
         # Esforços de referência
         "comb":          gov.nome,
@@ -581,8 +611,9 @@ def verificar_estabilidade_global(
         "H_pilar_m":     H_pilar_m,
         # Nocionais
         "phi":           noc["phi"],
-        "alpha_h":       noc["alpha_h"],
-        "alpha_m":       noc["alpha_m"],
+        "phi_norma":     noc["norma"],
+        "phi_en1993_comparacao": noc["phi_en1993_comparacao"],
+        "e_bow_pilar_mm": round(curvatura_inicial_ec5(H_pilar_m) * 1000, 2),
         "H_imp_kN":      H_imp,
         "H_imp_over_H":  round(ratio_imp, 5),
         # Rastreabilidade do envelope da razão (resíduo do F-06): qual combinação
@@ -688,9 +719,9 @@ def relatorio_estabilidade_global(res: dict) -> None:
           f"N_viga = {res['N_viga_kN']:.1f} kN")
     print(f"  f_c        = {res['f_c_m']:.3f} m  (freche centroidal)")
     print()
-    print("  ── Forças nocionais (EN 1993-1-1 §5.3.2) ──")
+    print("  ── Imperfeições (EN 1995-1-1 §5.4.4) ──")
     print(f"    φ = {res['phi']:.5f}  "
-          f"(α_h={res['alpha_h']:.3f}, α_m={res['alpha_m']:.3f})")
+          f"(EN 1993-1-1 §5.3.2 daria {res['phi_en1993_comparacao']:.5f})")
     print(f"    H_imp = {res['H_imp_kN']:.2f} kN  |  "
           f"H_imp/H_Ed = {res['H_imp_over_H']:.4f}  "
           f"(lim {res['lim_H_imp']:.2f})  "

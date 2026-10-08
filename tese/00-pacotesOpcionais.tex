@@ -134,9 +134,20 @@
     {├}{{+}}1 {┤}{{+}}1 {╭}{{+}}1 {╮}{{+}}1 {╰}{{+}}1 {╯}{{+}}1
     {✓}{{$\checkmark$}}1 {✗}{{$\times$}}1 {⚠}{{!}}1 {«}{{\guillemotleft}}1
     {»}{{\guillemotright}}1 {–}{{--}}1 {—}{{---}}1 {…}{{\ldots}}1
+    {§}{{\S}}1 {█}{{\rule{0.5em}{0.8ex}}}1 {⊥}{{$\perp$}}1 {−}{{-}}1
+    {ℓ}{{$\ell$}}1 {⁺}{{$^{+}$}}1 {⁻}{{$^{-}$}}1 {⇒}{{$\Rightarrow$}}1
 }
 
 \lstset{style=pythonUFPR}
+
+% Saida de console do pipeline (Apendice D): texto puro, sem realce de sintaxe.
+\lstdefinestyle{consoleUFPR}{
+  style           = pythonUFPR,
+  language        = {},
+  basicstyle      = \ttfamily\tiny,
+  numbers         = left,
+  breakatwhitespace = false,
+}
 \renewcommand{\lstlistingname}{LISTAGEM}
 
 % Comando para fazer 

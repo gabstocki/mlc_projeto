@@ -151,3 +151,50 @@ def test_ELU_C2_herda_duracao_do_governante():
     assert "1,5Q" in gov_q.descricao or "ELU_Q" in gov_q.descricao
     assert gov_q.duracao == "media"
     assert load_q.combinacoes["ELU_C2"].duracao == "media"
+
+
+# ── Issue 45 — Q dominante + vento acompanhante (ψ0,W = 0,6) ──────────────────
+
+def _load_projeto():
+    import mlc_projeto.main as M
+    from mlc_projeto.core.loads import carregamentos_com_vento, peso_proprio_gk
+    from mlc_projeto.core.wind import ParametrosVento
+    geo = M.GeometriaViga(**M.GEO_PARAMS)
+    mat = M.GlulamMaterial(**M.MAT_CURTA)
+    gk = peso_proprio_gk(geo, mat, L_t=M.L_T, b_terca=M.B_TERCA, h_terca=M.H_TERCA,
+                         s_terca=M.S, g_telha_kNm2=M.G_TELHA_KNM2,
+                         g_instalacoes_kNm2=M.G_INSTALACOES_KNM2)
+    return carregamentos_com_vento(
+        geo=geo, mat=mat, g_area=gk["g_k_viga_kNm2"], q_area=M.Q_AREA, L_t=M.L_T,
+        params_vento=ParametrosVento(**M.VENTO_PARAMS),
+        b_pilar=M.B_PILAR, h_pilar=M.H_PILAR, n_pilares_linha=9,
+        n_linhas_portico=3, L_cob_m=M.L_COMP_GALPAO, B_cob_m=40.5,
+        empuxo_desenvolve=M.EMPUXO_DESENVOLVE,
+    )
+
+
+def test_q_mais_vento_acompanhante_nao_altera_a_viga():
+    """A dispensa da EN 1991-1-1 §3.3.2(1) não muda a viga. Issue 39: a faixa
+    b3 da Tab. 10 α=90° com c_pi=−0,3 é de pressão leve (C_net=+0,1), e
+    1,35G+1,5Q+0,9W dá M 4 % maior; mas a combinação com vento é de curta
+    duração (k_mod 0,70 contra 0,65 da média), e a utilização M/k_mod fica
+    abaixo da de 1,35G+1,5Q. Se a geometria mudar e isso se inverter, este
+    teste obriga a reavaliar a dispensa."""
+    import mlc_projeto.main as M
+    r = _load_projeto().combinacao_Q_com_vento_acompanhante(
+        mat=M.GlulamMaterial(**M.MAT_CURTA))
+    assert r["n_padroes_pressao"] == 1
+    assert r["M_QW_kNm"] > r["M_ELU_Q_kNm"]
+    assert r["razao_utilizacao"] < 1.0
+    assert r["altera_dimensionamento"] is False
+    assert "3.3.2(1)" in r["norma_dispensa"]
+
+
+def test_q_mais_vento_inclui_so_parcela_desfavoravel():
+    """Com um padrão de pressão fictício a combinação passa a governar."""
+    load = _load_projeto()
+    load.padroes_vento = [dict(load.padroes_vento[0],
+                               w_esq_kNm2=0.5, w_dir_kNm2=0.5, id="ficticio")]
+    r = load.combinacao_Q_com_vento_acompanhante()       # sem mat: só M
+    assert r["n_padroes_pressao"] == 1
+    assert r["altera_dimensionamento"] is True

@@ -155,6 +155,124 @@ def verifica_apoio(
     }
 
 
+# ── Apoio por contato direto — issue 42 ───────────────────────────────────────
+
+#: EC5 §6.1.5(4) (A1:2008): MLC sobre apoios discretos, l ≤ 400 mm, l_1 ≥ 2h.
+K_C90_MLC_APOIO_DISCRETO = 1.75
+L_MAX_KC90_MM = 400.0
+#: EC5 §6.1.5(1): l_ef = l + 30 mm de cada lado com comprimento descarregado.
+ACRESCIMO_LEF_MM = 30.0
+
+
+def reacao_arrancamento_max(load: Carregamentos) -> dict:
+    """
+    Maior reação de ARRANCAMENTO (R < 0) num apoio da viga, sobre todas as
+    combinações ELU — é a força que os pinos recebem quando a gravidade vai
+    por contato (issue 42).
+    """
+    melhor = (0.0, None)
+    for comb in load.combinacoes_ELU_fisicas().values():
+        r = load._analisar(q_esq=comb.q_esq, q_dir=comb.q_dir)
+        up = max(0.0, -float(r["R_A_kN"]), -float(r["R_B_kN"]))
+        if up > melhor[0]:
+            melhor = (up, comb)
+    return {"R_up_kN": round(melhor[0], 3),
+            "comb": melhor[1].nome if melhor[1] else None,
+            "duracao": melhor[1].duracao if melhor[1] else None}
+
+
+def verifica_apoio_contato(
+    geo:  GeometriaViga,
+    mat:  GlulamMaterial,
+    load: Carregamentos,
+    l_apoio_m: float,
+    a_extremidade_m: float = 0.0,
+    rotulo: str = "L1",
+) -> dict:
+    """
+    Compressão ⊥ às fibras no apoio por CONTATO direto — EC5 §6.1.5 (issue 42).
+
+        σ_c,90,d = R_d / (b · l_ef) ≤ k_c,90 · f_c,90,d
+
+        l_ef = l + min(30 mm; a_ext) [lado da extremidade] + 30 mm [lado do vão]
+        k_c,90 = 1,75 (MLC, apoio discreto, l ≤ 400 mm, l_1 ≥ 2h — trivial
+                 num apoio de extremidade)
+
+    A reação vertical de gravidade vai inteira por contato; os pinos, em furos
+    ovalizados na chapa, ficam para o arrancamento e o esforço axial. Varre as
+    combinações ELU com o k_mod de cada duração (F-06).
+    """
+    b = geo.b
+    l_mm = l_apoio_m * 1000.0
+    l_ef_mm = l_mm + ACRESCIMO_LEF_MM + min(ACRESCIMO_LEF_MM, a_extremidade_m * 1000.0)
+    k_c90 = K_C90_MLC_APOIO_DISCRETO if l_mm <= L_MAX_KC90_MM else 1.0
+    melhor = None
+    for comb in load.combinacoes_ELU_fisicas().values():
+        matc = mat.com_duracao(comb.duracao)
+        R_d_N = abs(float(comb.V_max_kN)) * 1e3
+        sigma = R_d_N / (b * l_ef_mm / 1000.0)
+        eta = sigma / (k_c90 * matc.f_c90_d)
+        if melhor is None or eta > melhor["eta"]:
+            melhor = dict(eta=eta, comb=comb, mat=matc, R=R_d_N, sigma=sigma)
+    m = melhor
+    eta_sem_kc = m["sigma"] / m["mat"].f_c90_d
+    return {
+        "rotulo":          rotulo,
+        "apoio":           "contato direto (chapa de topo / sela)",
+        "b_m":             b,
+        "l_apoio_m":       round(l_apoio_m, 3),
+        "l_ef_m":          round(l_ef_mm / 1000.0, 3),
+        "k_c90":           k_c90,
+        "comb_gov":        m["comb"].nome,
+        "duracao":         m["comb"].duracao,
+        "k_mod":           m["mat"].k_mod,
+        "R_d_kN":          round(m["R"] / 1e3, 3),
+        "sigma_c90d_MPa":  round(m["sigma"] / 1e6, 4),
+        "f_c90d_MPa":      round(m["mat"].f_c90_d / 1e6, 4),
+        "eta_sem_kc90":    round(eta_sem_kc, 4),
+        "eta":             round(m["eta"], 4),
+        "ok":              m["eta"] <= 1.0,
+        "norma":           "EC5 §6.1.5 (l_ef, k_c,90 = 1,75 MLC apoio discreto)",
+    }
+
+
+def verifica_sela_central(
+    sigma_contato_MPa: float,
+    l_apoio_viga_m: float,
+    h_pilar_m: float,
+    folga_m: float = 0.02,
+    f_y_MPa: float = 275.0,
+    gamma_M0: float = 1.00,
+    t_min_mm: float = 10.0,
+) -> dict:
+    """
+    Sela metálica sobre o pilar central (L1c) — issue 42.
+
+    Cada viga apoia num comprimento l_apoio; a sela tem comprimento
+    2·l_apoio + folga e balança c = (L_sela − h_pilar)/2 além de cada face do
+    pilar. Placa em balanço sob a pressão de contato σ (sem nervuras):
+
+        m_Ed = σ·c²/2  (por metro de largura) ;  t ≥ √(6·m_Ed·γ_M0/f_y)
+    """
+    L_sela = 2.0 * l_apoio_viga_m + folga_m
+    c = max(0.0, (L_sela - h_pilar_m) / 2.0)
+    m_Ed = sigma_contato_MPa * 1e6 * c ** 2 / 2.0                 # N·m/m
+    t_req_mm = math.sqrt(6.0 * m_Ed * gamma_M0 / (f_y_MPa * 1e6)) * 1000.0
+    comerciais = (10, 12.5, 16, 19, 22.4, 25, 31.5, 37.5)
+    t_adot = next((x for x in comerciais if x >= max(t_req_mm, t_min_mm)), comerciais[-1])
+    eta = (t_req_mm / t_adot) ** 2 if t_adot > 0 else 999.0
+    return {
+        "L_sela_m": round(L_sela, 3),
+        "balanco_m": round(c, 3),
+        "m_Ed_kNm_por_m": round(m_Ed / 1e3, 3),
+        "t_req_mm": round(t_req_mm, 2),
+        "t_adot_mm": t_adot,
+        "eta": round(eta, 4),
+        "ok": eta <= 1.0,
+        "norma": "EN 1993-1-1 §6.2.5 (flexão da placa em balanço)",
+    }
+
+
 # ── Varredura acumulada: 5 verificações + l_ap ───────────────────────────────
 
 def varrer_acumulado(

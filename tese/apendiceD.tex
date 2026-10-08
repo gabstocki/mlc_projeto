@@ -1,0 +1,19 @@
+% =============================================================================
+% apendiceD.tex — SAÍDA COMPLETA DO PROGRAMA DE CÁLCULO (issue 51)
+% A listagem é lida de ../output/pipeline_console.txt, regravado a cada execução
+% do pipeline; os caracteres não ASCII são mapeados no estilo consoleUFPR
+% (00-pacotesOpcionais.tex), conferido por tests/test_apendices_analise.py.
+% =============================================================================
+
+\chapter{SAÍDA COMPLETA DO PROGRAMA DE CÁLCULO}\label{ap:saida-pipeline}
+
+Este apêndice reproduz, sem edição, a saída de console da execução do programa
+de cálculo descrito no \autoref{ap:codigo-fonte} que produziu os resultados
+desta monografia. A saída percorre as mesmas fases do fluxo de execução: dados
+de entrada, verificações de estado-limite último e de serviço, ligações,
+resumo das taxas de utilização e exportação do memorial. Cada verificação é
+listada com a cláusula normativa e a taxa de utilização $\eta$; as linhas
+iniciadas por um ponto ou uma seta trazem as grandezas intermediárias. O
+símbolo $\checkmark$ indica verificação atendida.
+
+\lstinputlisting[style=consoleUFPR]{../output/pipeline_console.txt}

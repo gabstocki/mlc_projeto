@@ -58,8 +58,13 @@ def test_resistencia_tracao_EN1993():
     A = math.pi * 27.0 ** 2 / 4.0
     N_pl = A * ACO["S235"]["f_y"] / 1.0 / 1e3
     N_u = 0.9 * area_resistente_rosca(27.0) * ACO["S235"]["f_u"] / GAMMA_M2 / 1e3
-    assert _n_t_rd_kN(27.0, "S235") == pytest.approx(min(N_pl, N_u), rel=1e-9)
-    assert _n_t_rd_kN(27.0, "S235") < N_pl
+    from mlc_projeto.checks.elu.contraventamento_vertical import (
+        resistencia_tracao_diagonal)
+    cortada = resistencia_tracao_diagonal(27.0, "S235", recalcada=False)
+    assert cortada["N_t_Rd_kN"] == pytest.approx(min(N_pl, N_u), rel=1e-9)
+    assert cortada["N_t_Rd_kN"] < N_pl                 # rosca cortada: frágil
+    # Issue 44 — extremidade recalcada (padrão): governa o escoamento
+    assert _n_t_rd_kN(27.0, "S235") == pytest.approx(N_pl, rel=1e-9)
 
 
 # ── Caminho de carga do painel ───────────────────────────────────────────────

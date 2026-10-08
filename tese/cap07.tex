@@ -20,15 +20,18 @@ normativo, um limite de projeto mais restritivo de $\eta \leq 0{,}75$ para os
 modos de ruptura frágeis das ligações, pelas razões expostas no
 \autoref{cap:detalhamento}.
 
-O conjunto compreende quarenta e quatro verificações, das quais quarenta e
-duas são executadas e duas declaradas não aplicáveis. As não aplicáveis são o tirante de
+O conjunto compreende cinquenta e cinco verificações, das quais
+cinquenta e três são executadas e duas declaradas não aplicáveis. As não aplicáveis são o tirante de
 base e o tirante de piso de robustez, ambos sem função no modelo de viga
 biapoiada adotado na \autoref{ssec:modelo-apoio}: não havendo empuxo a
-equilibrar, não há tirante a dimensionar. Registram-se como exclusão declarada,
-e não por omissão, para que a ausência seja rastreável.
+equilibrar, não há tirante a dimensionar.
 
 Este capítulo apresenta as verificações dos elementos e dos sistemas. As das
-ligações e da ancoragem constam do \autoref{cap:detalhamento}.
+ligações e da ancoragem constam do \autoref{cap:detalhamento}. As tabelas
+reúnem as taxas de utilização; a verificação governante de cada elemento é
+desenvolvida em equações, com a expressão normativa, a substituição dos valores
+e o resultado, no \autoref{ap:memoria-calculo}, gerado pelo mesmo programa que
+produz os resultados.
 
 \section{VIGA PRINCIPAL}\label{sec:verif-viga}
 
@@ -45,8 +48,10 @@ em classe de serviço 3, com $k_{mod} = 0{,}65$ para ações de duração média
     Cisalhamento                    & EC5 6.1.7          & 0,3814 & Atende \\
     Tensões na zona de cumeeira     & EC5 6.4.3          & 0,3526 & Atende \\
     Tensões na borda inclinada      & EC5 6.4.2          & 0,3140 & Atende \\
-    Pressão de contato no apoio     & EC5 6.1.5 e 6.2.2  & 0,2660 & Atende \\
+    Compressão no apoio sobre a sela central, L1c & EC5 6.1.5 & 0,4887 & Atende \\
+    Compressão no apoio sobre o pilar lateral, L1 & EC5 6.1.5 & 0,4561 & Atende \\
     Flexo-compressão                & EC5 6.3.2 e 6.3.3  & 0,1672 & Atende \\
+    Flambagem lateral sob sucção, intradorso comprimido & EC5 6.3.3 & 0,1582 & Atende \\
     Flambagem lateral por torção    & EC5 6.3.3          & 0,1039 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-viga}{}{}
@@ -65,12 +70,49 @@ superior passa a tracionada. É por essa razão que a verificação não é gove
 pela seção de maior momento, e sim por uma seção intermediária sob carregamento
 invertido.
 
-A flambagem lateral apresenta a menor taxa do conjunto, com $\eta = 0{,}1039$.
-Esse valor é inteiramente condicionado pelo sistema de contraventamento: o
-comprimento efetivo de 2,530 m corresponde ao espaçamento entre terças, válido
-apenas porque o diafragma de cobertura foi verificado como capaz de estabilizar.
-Caso não fosse, o comprimento efetivo passaria aos 46,0 m do comprimento da
-edificação, e esta seria a verificação governante em vez da menos solicitada.
+A flambagem lateral sob momento positivo apresenta a menor taxa do conjunto, com
+$\eta = 0{,}1039$. Esse valor é inteiramente condicionado pelo sistema de
+contraventamento: a distância entre contenções do extradorso comprimido, de
+2,53 m, corresponde ao espaçamento entre terças, válido apenas porque o
+diafragma de cobertura foi verificado como capaz de estabilizar. Ao valor
+$0{,}9 \times 2{,}53$ m a nota da tabela 6.1 soma $2h$, por estar a carga
+aplicada na borda comprimida, e o comprimento efetivo resulta em 7,85 m.
+Caso não fosse, as terças deixariam de ser contenções laterais e o comprimento
+efetivo passaria ao vão da própria viga, de 20,25 m. Mesmo nessa situação a taxa
+subiria apenas a 0,2026, porque a seção de 0,32 m de largura é robusta à
+flambagem lateral, e a verificação continuaria longe de governar.
+
+Nas combinações de sucção o momento inverte, atingindo $-394{,}4$ kN$\cdot$m na
+combinação $0{,}9\,G + 1{,}5\,W$, e a borda comprimida passa a ser o intradorso,
+que as terças, fixadas no extradorso, não contêm. Essa situação foi verificada
+em separado, com hipóteses conservadoras: contenção lateral apenas nos apoios,
+sem crédito à contenção da borda tracionada pelas terças, e sem a redução de
+$0{,}5h$ que a nota da tabela 6.1 admite quando a carga atua na borda
+tracionada. O comprimento efetivo é, então,
+
+\begin{equation}
+    \ell_{ef} = 0{,}9\,L = 0{,}9 \times 20{,}25 = 18{,}23~\text{m}.
+    \label{eq:lef-succao}
+\end{equation}
+
+\noindent
+Como a altura da viga varia, a seção crítica foi obtida por varredura ao longo
+do vão, nas quinze combinações com trecho de momento negativo. Governa a seção
+a 15,80 m do apoio, onde $h = 1{,}786$ m e $M_d = -290{,}4$ kN$\cdot$m, e não a de
+maior momento, mais alta. Nessa seção, pelas fórmulas (6.30) a (6.34) da
+EN 1995-1-1 \cite{EN1995-1-1:2004},
+
+\begin{equation}
+    \sigma_{m,crit} = \frac{0{,}78\,b^2 E_{0,05}}{h\,\ell_{ef}}
+    = \frac{0{,}78 \times 0{,}32^2 \times 9.600}{1{,}786 \times 18{,}23}
+    = 23{,}56~\text{MPa},
+\end{equation}
+
+\noindent
+$\lambda_{rel,m} = \sqrt{24/23{,}56} = 1{,}01$ e
+$k_{crit} = 1{,}56 - 0{,}75 \times 1{,}01 = 0{,}80$. A tensão de cálculo, de
+1,71 MPa, compara-se a $k_{crit} f_{m,d} = 0{,}80 \times 13{,}44 = 10{,}79$ MPa,
+com $k_{mod} = 0{,}70$ da ação de curta duração, e resulta $\eta = 0{,}1582$.
 
 \section{PILARES}\label{sec:verif-pilares}
 
@@ -84,7 +126,8 @@ lateral e central, e de 0,32 $\times$ 0,32 m no de canto.
 \toprule
     \textbf{Pilar e situação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    De canto, gravidade com contraventamento & EC5 6.2.3 e 6.3.2 & 0,4283 & Atende \\
+    De canto, gravidade com contraventamento & EC5 6.2.3 e 6.3.2 & 0,4333 & Atende \\
+    Central montante, gravidade com contraventamento & EC5 6.2.3 e 6.3.2 & 0,7460 & Atende \\
     Central, compressão com instabilidade    & EC5 6.3.2         & 0,4151 & Atende \\
     Lateral, vento perpendicular à cumeeira  & EC5 6.3.2         & 0,2587 & Atende \\
     Lateral, vento paralelo à cumeeira       & EC5 6.3.2         & 0,2433 & Atende \\
@@ -98,12 +141,18 @@ $k_c = 0{,}445$. Sua taxa de 0,4151 é o dobro da do pilar lateral, com 0,2075,
 o que confirma a decisão registrada na \autoref{sec:predim-pilares} de dimensionar
 a seção comum pelo pilar central.
 
-O pilar de canto é o mais solicitado, ainda que dotado de seção maior. Recebe
-esforço normal de 293,2 kN, resultante da reação de gravidade somada ao esforço
-descendente de 193,6 kN transmitido pelos dois sistemas de contraventamento que
+O pilar de canto, dotado de seção maior, recebe
+esforço normal de 297,0 kN, resultante da reação de gravidade somada ao esforço
+descendente de 197,4 kN transmitido pelos dois sistemas de contraventamento que
 nele se encontram. Sob sucção, a mesma seção trabalha à flexo-tração com
-$\eta = 0{,}221$, e o esforço de arrancamento de 181,4 kN determina a ancoragem
+$\eta = 0{,}224$, e o esforço de arrancamento de 185,3 kN determina a ancoragem
 tratada no \autoref{cap:detalhamento}.
+
+O pilar central montante, situado nas duas baías extremas do alinhamento central,
+recebe as reações das duas vigas, de 199,2 kN, somadas ao esforço descendente de
+129,7 kN do painel de contraventamento, totalizando 328,9 kN. Com a seção comum
+de 0,32 $\times$ 0,27 m, resulta $\eta = 0{,}7460$, a maior taxa entre os
+pilares.
 
 \section{TERÇAS E COBERTURA}\label{sec:verif-tercas}
 
@@ -120,7 +169,7 @@ EN 1991-1-1 \cite{EN1991-1-1:2002}.
     \textbf{Verificação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
     Fixação da telha sob sucção    & NBR 6123 7.2.6     & 0,6788 & Atende \\
-    Terça como biela do diafragma  & EC5 6.3.2          & 0,2609 & Atende \\
+    Terça como biela do diafragma  & EC5 6.3.2          & 0,2634 & Atende \\
     Terça à flexão                 & EC5 6.1.6 e 6.1.7  & 0,0979 & Atende \\
     Terça sob carga concentrada    & EN 1991-1-1 6.3.4.2 & 0,0546 & Atende \\
 \bottomrule
@@ -129,8 +178,8 @@ EN 1991-1-1 \cite{EN1991-1-1:2002}.
 A terça acumula duas funções, e a segunda é a mais exigente. Além de resistir à
 flexão devida ao carregamento da cobertura, com taxa de apenas 0,0979, ela
 funciona como biela comprimida do diafragma de contraventamento, recebendo
-esforço normal de 104,7 kN. Verificada à interação combinada de flexão e
-compressão, a taxa sobe para 0,2609, quase o triplo da flexão isolada. A
+esforço normal de 106,1 kN. Verificada à interação combinada de flexão e
+compressão, a taxa sobe para 0,2634, quase o triplo da flexão isolada. A
 esbeltez em torno do eixo de menor inércia, com $\lambda_z = 100$, conduz a
 $k_{c,z} = 0{,}368$ e explica a diferença.
 
@@ -159,36 +208,50 @@ diagonais são em aço S235, e as suas ligações de extremidade são detalhadas
 \toprule
     \textbf{Sistema} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    Contraventamento da cobertura   & EC5 9.2.5           & 0,7902 & Governa o projeto \\
-    Contraventamento vertical       & EC5 5.4             & 0,7883 & Atende \\
-    Ligação da diagonal vertical    & EN 1993-1-8 3.13    & 0,7713 & Atende \\
-    Ligação da diagonal transversal & EN 1993-1-8 3.13    & 0,7633 & Atende \\
-    Contraventamento transversal    & EC5 5.4             & 0,7024 & Atende \\
-    Estabilidade global             & EN 1993-1-1 5.2.1   & 0,4790 & Atende \\
+    Contraventamento vertical, fachadas & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,8352 & Governa o projeto \\
+    Contraventamento vertical, alinhamento central & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,8352 & Governa o projeto \\
+    Contraventamento transversal    & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,8242 & Atende \\
+    Ligação da diagonal vertical    & EN 1993-1-8 3.13    & 0,8105 & Atende \\
+    Ligação da diagonal transversal & EN 1993-1-8 3.13    & 0,8091 & Atende \\
+    Contraventamento da cobertura   & EC5 9.2.5           & 0,8009 & Atende \\
+    Estabilidade global             & EN 1993-1-1 5.2.1, por analogia & 0,6062 & Atende \\
     Corda do diafragma no beiral    & EC5 6.2.3 e 6.3.2   & 0,0656 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-contraventamento}{}{}
 
-O contraventamento da cobertura, com $\eta = 0{,}7902$, é a verificação que
-governa todo o projeto. Sua diagonal de 28 mm recebe esforço de 114,3 kN e
-responde por peso de aço da ordem de 486 kg. Como exposto na
-\autoref{ssec:o-que-governa}, essa taxa é praticamente insensível à seção da
+O contraventamento da cobertura, com $\eta = 0{,}8009$, tem a terceira maior
+taxa do projeto. Pelo item 9.2.5.3 da EN 1995-1-1 \cite{EN1995-1-1:2004}, o
+sistema resiste à força de estabilização em adição às ações horizontais
+externas, de modo que a reação em cada apoio da treliça soma a parcela do vento
+paralelo à cumeeira, 104,7 kN, à da estabilização das vigas, 1,4 kN, e vale
+106,1 kN; a flecha limite de $\ell/500$ é verificada sob a mesma soma. Como a
+força de estabilização decorre da envoltória de todas as combinações, e não da
+combinação com vento paralelo à cumeeira, a soma é conservadora. A diagonal de
+28 mm recebe esforço de 115,9 kN e
+responde por peso de aço da ordem de 1.943 kg, com cruzes nos oito painéis
+do vão de cada baía rígida. Como exposto na
+\autoref{ssec:o-que-governa}, essa taxa é praticamente irrelevante à seção da
 viga, o que a torna o limite efetivo do dimensionamento.
 
 O contraventamento vertical, com $\eta = 0{,}7883$, conduz à fundação a força
-longitudinal de 847,4 kN, composta pelos 837,3 kN de vento paralelo à cumeeira e
-por 10,1 kN de força nocional de imperfeição. Distribuída pelos oito painéis,
-resulta em diagonal de 36 mm solicitada a 166,9 kN. O contraventamento
-transversal, menos solicitado, conduz 106,2 kN por meio do diafragma de cobertura
+longitudinal de 852,5 kN, composta pelos 837,3 kN de vento paralelo à cumeeira e
+por 15,2 kN de força de imperfeição. Metade segue aos quatro painéis das
+fachadas e metade aos quatro do alinhamento central, na proporção das reações das
+treliças da cobertura. Cada painel recebe 106,6 kN, e a diagonal de 33 mm é
+solicitada a 167,9 kN. Com extremidades recalcadas, a resistência é a de
+escoamento da seção bruta, 201,0 kN, e resulta $\eta = 0{,}8352$, a maior taxa do
+projeto. O contraventamento
+transversal, menos solicitado, conduz 111,2 kN por meio do diafragma de cobertura
 e dos frontões.
 
 As ligações de extremidade das diagonais figuram entre as mais solicitadas do
-conjunto, com 0,7713 na diagonal vertical e 0,7633 na transversal. Elas são
+conjunto, com 0,8105 na diagonal vertical e 0,8091 na transversal. Elas são
 dimensionadas por capacidade, isto é, para a resistência da própria barra e não
-para o esforço solicitante, de modo que a ruptura, se ocorrer, se dê na barra e
-não no seu olhal. O detalhamento consta da \autoref{sec:detalhe-contraventamento}.
+para o esforço solicitante. Como as barras têm extremidades recalcadas, essa
+resistência é a de escoamento, e um eventual excesso de solicitação leva ao
+escoamento da barra antes da ruptura do olhal, do pino ou da rosca. O detalhamento consta da \autoref{sec:detalhe-contraventamento}.
 
-A estabilidade global apresenta $\eta = 0{,}4790$, valor que traduz a folga do
+A estabilidade global apresenta $\eta = 0{,}6062$, valor que traduz a folga do
 fator $\alpha_{cr}$ discutido na \autoref{sec:ordem-analise} em relação ao
 limite normativo.
 
@@ -266,7 +329,7 @@ permanente, a sucção deixa 2,98 mm de flecha ascendente líquida, contra os
 \section{SÍNTESE}\label{sec:sintese-dimensionamento}
 
 Todas as verificações executadas são atendidas. A taxa de utilização máxima do
-conjunto é de 0,7902, correspondente ao contraventamento da cobertura, e o
+conjunto é de 0,8352, correspondente ao contraventamento vertical, e o
 veredito global do dimensionamento é de aprovação.
 
 A \autoref{fig:modelo-eta} ilustra a distribuição da taxa de utilização em
@@ -292,7 +355,7 @@ entre 0,70 e 0,80, seguidas da fixação da telha, com 0,68. A verificação mai
 solicitada da viga principal, o cisalhamento, fica em 0,3814, e a menos
 solicitada, a flambagem lateral, em 0,1039.
 
-Essa concentração tem uma leitura de projeto. Em uma edificação aberta, de
+Em uma edificação aberta, de
 cobertura leve e grande área exposta, a ação do vento paralelo à cumeeira e a
 estabilização dos elementos comprimidos determinam o dimensionamento mais do que
 o carregamento gravitacional. A madeira das vigas trabalha com folga; o aço das
