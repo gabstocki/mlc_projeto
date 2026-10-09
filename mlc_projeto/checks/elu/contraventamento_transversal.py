@@ -81,6 +81,7 @@ def demanda_transversal(
     n_frames:     int,
     n_porticos:   int = 2,
     gamma_Q:      float = GAMMA_Q,
+    n_pilares_extra: int = 0,
 ) -> dict:
     """
     Força horizontal transversal (⊥ cumeeira) ao nível da cobertura.
@@ -108,7 +109,7 @@ def demanda_transversal(
         dict com F_col, reações de topo, nocional e demanda total H_tr.
     """
     n_col_por_frame = n_porticos + 1
-    n_col = n_frames * n_col_por_frame
+    n_col = n_frames * n_col_por_frame + int(n_pilares_extra)   # + pilares de frontão
 
     # Arrasto θ=90° por pilar (característico) → design → reação de topo
     w90 = forca_vento_pilar_90(params_vento, b_pilar=b_pilar, h_pilar=h_pilar)
@@ -203,6 +204,7 @@ def verificar_contraventamento_transversal(
     eta_alvo:       float = 0.90,
     drift_lim:      float = 300.0,
     V_Ed_total_kN:  float | None = None,
+    n_pilares_extra: int = 0,
 ) -> dict:
     """
     Verifica o sistema de contraventamento transversal (Opção 2, issue 31):
@@ -245,6 +247,7 @@ def verificar_contraventamento_transversal(
     dem = demanda_transversal(
         load, params_vento, H_pilar_m, b_pilar, h_pilar,
         n_frames=n_frames, n_porticos=n_porticos,
+        n_pilares_extra=n_pilares_extra,
     )
     H_tr = dem["H_tr_kN"]
 

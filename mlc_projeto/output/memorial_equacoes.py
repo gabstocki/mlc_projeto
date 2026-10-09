@@ -16,12 +16,20 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+from mlc_projeto.output.formatacao import fmt_eta, fmt_sig
 
-def _n(x: float, d: int = 2) -> str:
-    """Número com vírgula decimal e milhar com ponto, para modo matemático."""
-    s = f"{float(x):,.{d}f}"
-    s = s.replace(",", "X").replace(".", "{,}").replace("X", ".")
-    return s
+
+def _n(x: float, d: int | None = None) -> str:
+    """
+    Grandeza em modo matemático com três algarismos significativos (issue 53);
+    `d` é mantido por compatibilidade e ignorado.
+    """
+    return fmt_sig(float(x)).replace(",", "{,}")
+
+
+def _e(eta: float) -> str:
+    """Taxa de utilização: duas casas, arredondada para cima (issue 53)."""
+    return fmt_eta(float(eta)).replace(",", "{,}")
 
 
 def _eq(rotulo: str, linhas: list[str]) -> str:
@@ -70,7 +78,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" = {_n(ci['tau_d_MPa'], 3)}",
             f"f_{{v,d}} &= \\frac{{k_{{mod}}\\,f_{{v,k}}}}{{\\gamma_M}} = {_n(ci['f_vd_MPa'], 2)}",
             f"\\eta &= \\frac{{\\tau_d}}{{f_{{v,d}}}} = \\frac{{{_n(ci['tau_d_MPa'], 3)}}}"
-            f"{{{_n(ci['f_vd_MPa'], 2)}}} = {_n(ci['eta'], 3)}",
+            f"{{{_n(ci['f_vd_MPa'], 2)}}} = {_e(ci['eta'])}",
         ]))
     if cu:
         a("\\subsection*{Tração perpendicular às fibras na cumeeira (itens 6.4.3, "
@@ -83,7 +91,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             "k_{dis}\\,k_{vol}\\,f_{t,90,d} &="
             f" {_n(cu['k_dis'])} \\times {_n(cu['k_vol'], 3)} \\times {_n(cu['f_t90d_MPa'], 2)}"
             f" = {_n(cu['resist_t90_MPa'], 3)}",
-            f"\\eta &= {_n(cu['eta_t90'], 3)}",
+            f"\\eta &= {_e(cu['eta_t90'])}",
         ]))
     if mi:
         a("\\subsection*{Tensão na borda inclinada (item 6.4.2)}\n\n"
@@ -98,7 +106,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f"\\operatorname{{tg}}^2\\alpha\\right)^2\\right]^{{-1/2}} = {_n(mi['k_m_alpha'], 3)}",
             f"\\eta &= \\frac{{\\sigma_{{m,\\alpha,d}}}}{{k_{{m,\\alpha}}\\,f_{{m,d}}}}"
             f" = \\frac{{{_n(mi['sigma_m_alpha_MPa'], 3)}}}{{{_n(mi['k_m_alpha'], 3)} \\times "
-            f"{_n(mi['f_md_MPa'])}}} = {_n(mi['eta'], 3)}",
+            f"{_n(mi['f_md_MPa'])}}} = {_e(mi['eta'])}",
         ]))
     if fx:
         a("\\subsection*{Flexo-compressão (item 6.3.2, fórmula 6.23)}\n\n")
@@ -107,7 +115,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             " + \\frac{\\sigma_{m,y,d}}{f_{m,d}}"
             f" = \\frac{{{_n(fx['sigma_c_MPa'], 4)}}}{{{_n(fx['k_c_y'], 3)} \\times "
             f"{_n(fx['f_c0d_MPa'])}}} + \\frac{{{_n(fx['sigma_m_MPa'], 3)}}}"
-            f"{{{_n(fx['f_md_MPa'])}}} = {_n(fx['eta'], 3)}",
+            f"{{{_n(fx['f_md_MPa'])}}} = {_e(fx['eta'])}",
         ]))
     if els:
         a("\\subsection*{Flecha final líquida (itens 2.3.2.2 e 7.2)}\n\n")
@@ -116,7 +124,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" = {_n(els['w_G_mm'])} \\times (1 + {_n(els['k_def'], 1)}) + {_n(els['w_Q1_mm'])}"
             f" = {_n(els['w_net_fin_mm'])}~\\text{{mm}}",
             f"\\eta &= \\frac{{w_{{net,fin}}}}{{L/250}} = \\frac{{{_n(els['w_net_fin_mm'])}}}"
-            f"{{{_n(els['lim_fin_mm'], 1)}}} = {_n(els['eta'], 3)}",
+            f"{{{_n(els['lim_fin_mm'], 1)}}} = {_e(els['eta'])}",
         ]))
 
     # ── Pilares ─────────────────────────────────────────────────────────
@@ -138,7 +146,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             "\\eta &= \\frac{N_{c,d}/(b\\,h)}{k_c\\,f_{c,0,d}} + \\frac{\\sigma_{m,d}}{f_{m,d}}"
             f" = \\frac{{{_n(pc['sigma_c_MPa'], 3)}}}{{{_n(pc['k_c'], 3)} \\times "
             f"{_n(pc['f_c0d_MPa'])}}} + \\frac{{{_n(pc['sigma_m_comp_MPa'], 3)}}}"
-            f"{{{_n(pc['f_md_MPa'])}}} = {_n(pc['eta'], 3)}",
+            f"{{{_n(pc['f_md_MPa'])}}} = {_e(pc['eta'])}",
         ]))
 
     # ── Terças e cobertura ─────────────────────────────────────────────
@@ -158,7 +166,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" = \\frac{{{_n(tb['sigma_c_MPa'], 3)}}}{{{_n(tb['k_c_z'], 3)} \\times "
             f"{_n(tb['f_c0d_MPa'])}}} + 0{{,}}7\\,\\frac{{{_n(tb['sigma_my_MPa'], 3)}}}"
             f"{{{_n(tb['f_md_MPa'])}}} + \\frac{{{_n(tb['sigma_mz_MPa'], 3)}}}"
-            f"{{{_n(tb['f_md_MPa'])}}} = {_n(tb['eta'], 3)}",
+            f"{{{_n(tb['f_md_MPa'])}}} = {_e(tb['eta'])}",
         ]))
     if ft:
         a("\\subsection*{Fixação da telha à terça (ABNT NBR 6123, item 7.2.6)}\n\n")
@@ -168,7 +176,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" - 0{{,}}9 \\times {_n(ft['g_telha_kNm2'])}) \\times {_n(ft['s_terca_m'])}"
             f" \\times {_n(ft['e_fix_m'])} = {_n(ft['F_fix_d_kN'], 3)}",
             f"\\eta &= \\frac{{F_d}}{{R_k/\\gamma_M}} = \\frac{{{_n(ft['F_fix_d_kN'], 3)}}}"
-            f"{{{_n(ft['R_fix_k_kN'], 1)}/{_n(ft['gamma_M_fix'], 1)}}} = {_n(ft['eta'], 3)}",
+            f"{{{_n(ft['R_fix_k_kN'], 1)}/{_n(ft['gamma_M_fix'], 1)}}} = {_e(ft['eta'])}",
         ]))
 
     # ── Contraventamento ───────────────────────────────────────────────
@@ -192,7 +200,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" = {_n(cv['F_diag_kN'])}",
             "\\eta &= \\frac{N_{Ed}}{A\\,f_y/\\gamma_{M0}}"
             f" = \\frac{{{_n(cv['F_diag_kN'])}}}{{{_n(cv['A_mm2'], 1)} \\times 235 \\times 10^{{-3}}}}"
-            f" = {_n(cv['eta_diag_N'], 3)}",
+            f" = {_e(cv['eta_diag_N'])}",
         ]))
     if cvv:
         a("\\subsection*{Diagonal do contraventamento vertical (EN 1993-1-1, item 6.2.3)}\n\n")
@@ -208,7 +216,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f" = \\min({_n(cvv['N_pl_Rd_kN'], 1)};\\ {_n(cvv['N_u_Rd_kN'], 1)})"
             f" = {_n(cvv['N_t_Rd_kN'], 1)}",
             f"\\eta &= \\frac{{{_n(cvv['N_diag_kN'])}}}{{{_n(cvv['N_t_Rd_kN'], 1)}}}"
-            f" = {_n(cvv['eta_diag_N'], 3)}",
+            f" = {_e(cvv['eta_diag_N'])}",
         ]))
 
     # ── Ligações ───────────────────────────────────────────────────────
@@ -232,7 +240,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f"{_n(L1['F_v_Rk_plano_kN'])}}}{{{_n(L1['gamma_M'])}}} = {_n(L1['R_total_kN'], 1)}",
             "\\eta &= \\frac{\\sqrt{N_d^2 + V_d^2}}{R_d}"
             f" = \\frac{{\\sqrt{{{_n(L1['N_d_kN'])}^2 + {_n(L1['V_d_kN'])}^2}}}}"
-            f"{{{_n(L1['R_total_kN'], 1)}}} = {_n(L1['eta'], 3)} \\leq 0{{,}}75",
+            f"{{{_n(L1['R_total_kN'], 1)}}} = {_e(L1['eta'])} \\leq 0{{,}}75",
         ]))
     if an:
         a("\\subsection*{Ancoragem da base de canto, cone de arrancamento "
@@ -248,7 +256,7 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
             f"\\frac{{{_n(an['cone_A_c_N_mm2'] / 1e6, 2)}}}{{{_n(an['cone_A0_c_N_mm2'] / 1e6, 2)}}}"
             f" \\times 1 = {_n(an['N_Rd_cone_kN'], 1)}",
             f"\\eta &= \\frac{{N_{{Ed}}}}{{N_{{Rd,c}}}} = \\frac{{{_n(an['N_Ed_kN'], 1)}}}"
-            f"{{{_n(an['N_Rd_cone_kN'], 1)}}} = {_n(an['eta_concreto'], 3)}",
+            f"{{{_n(an['N_Rd_cone_kN'], 1)}}} = {_e(an['eta_concreto'])}",
         ]))
 
     out_path = Path(out_path)

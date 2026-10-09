@@ -4,7 +4,26 @@
 
 \chapter{INTRODUÇÃO}\label{cap:introducao}
 
-A \criarsigla*{MLC}{madeira lamelada colada} é um
+A madeira voltou a ocupar lugar de destaque entre os materiais estruturais. Às
+qualidades que sempre a recomendaram, como a elevada relação entre resistência e
+peso, a facilidade de trabalho e a pré-fabricação, a montagem rápida e a seco e o
+apelo estético das superfícies aparentes, somou-se nas últimas décadas uma
+vantagem ambiental. A madeira provém de fonte renovável, demanda pouca energia
+na produção quando comparada ao aço e ao concreto e mantém armazenado, durante
+toda a vida útil da edificação, o carbono que a árvore retirou da atmosfera
+\cite{ramage:2017}. Substituir por madeira parte dos materiais convencionais nas
+novas construções é apontado como um meio de converter o estoque edificado em
+reservatório de carbono \cite{churkina:2020}.
+
+Esse movimento tem como protagonista a chamada madeira maciça engenheirada,
+designação dos produtos industrializados que permitem empregar a madeira em
+elementos de grandes dimensões, com propriedades controladas
+\cite{harte:2017}. O mais antigo e difundido deles é a
+\criarsigla*{MLC}{madeira lamelada colada}, que viabilizou, ao longo do último
+século, coberturas e pórticos de vãos que a madeira serrada não alcança
+\cite{herzog:2004}.
+
+A MLC é um
 produto estrutural obtido pela colagem de lamelas de madeira serrada com as
 fibras orientadas paralelamente ao eixo longitudinal da peça. O processo de
 laminação dissocia a dimensão da peça acabada da dimensão da tora de origem e
@@ -13,7 +32,7 @@ colagem. Disso decorrem as duas características que sustentam o emprego
 estrutural do material: a possibilidade de produzir elementos de grande vão e
 de seção variável, e uma dispersão de resistência menor do que a da madeira
 serrada de mesma espécie, o que se traduz em valores característicos mais
-elevados.
+elevados \cite{thelandersson:2003, porteous:2013}.
 
 Essas características tornam a MLC competitiva justamente na faixa de
 aplicação em que a madeira serrada não alcança e em que as soluções em aço ou
@@ -22,19 +41,46 @@ predominantemente permanente e sobrecarga reduzida. Galpões industriais,
 pavilhões, centros de distribuição e edifícios-garagem constituem o campo
 típico dessa aplicação.
 
-%% TODO: referência — inserir citação de literatura sobre o desenvolvimento
-%% histórico e o mercado da MLC (ex.: Porteous \& Kermani; Herzog et al.;
-%% Zangiácomo \& Rocco Lahr). Chaves a criar em referencias.bib.
+%% TODO: verificar — referências inseridas na issue 57 (ramage:2017,
+%% churkina:2020, harte:2017, porteous:2013, thelandersson:2003, herzog:2004):
+%% conferir os dados bibliográficos com as fontes antes da entrega. Falta
+%% literatura nacional sobre o mercado brasileiro de MLC.
 
 \section{CONTEXTO NORMATIVO}\label{sec:contexto-normativo}
 
-O projeto de estruturas de madeira no Brasil é regido pela ABNT NBR 7190-1
-\cite{NBR7190-1:2022}, cuja revisão de 2022 aproximou o texto brasileiro do
-formato dos estados-limites já consagrado nos Eurocódigos. A norma brasileira,
-entretanto, trata a madeira lamelada colada de forma sucinta e não reproduz o
-conjunto de verificações específicas dessa tipologia, entre elas as tensões
-transversais em vigas de seção variável, o comportamento das bordas inclinadas
-e as regras de estabilização de sistemas de contraventamento.
+A primeira norma brasileira de estruturas de madeira, a NB-11 de 1951, tinha como
+método de segurança o das tensões admissíveis. A passagem para o método dos
+estados-limites, de natureza probabilística, ocorreu com a ABNT NBR 7190:1997
+\cite{NBR7190:1997}, que já organizava o projeto em verificações de
+estados-limites últimos e de serviço, com coeficientes parciais de segurança e
+coeficientes de modificação da resistência. Não é esse, portanto, o traço que
+distingue a revisão de 2022 \cite{NBR7190-1:2022}.
+
+O que a revisão de 2022 trouxe foi a atualização dos critérios de dimensionamento
+com base em ensaios de novos materiais e ligações. A norma passou a ser publicada
+em sete partes: a ABNT NBR 7190-1 reúne os critérios de dimensionamento, e as
+Partes 2 a 7 tratam dos métodos de ensaio, respectivamente para a classificação
+visual e mecânica de peças estruturais, para corpos de prova isentos de defeitos
+de madeiras nativas, para a caracterização de peças estruturais, para ligações
+com conectores mecânicos, para a madeira lamelada colada e para a madeira
+lamelada colada cruzada. As classes de resistência foram redefinidas a partir
+de ensaios de peças estruturais, em série semelhante à europeia, com as classes
+C14 a C50 para coníferas e D18 a D70 para folhosas, mantida para as espécies
+nativas a caracterização por corpos de prova isentos de defeitos, nas classes
+D20 a D60. O coeficiente de modificação passou a ser o produto de dois fatores,
+$k_{mod} = k_{mod1} \cdot k_{mod2}$, o primeiro dependente da classe de
+carregamento e do tipo de material, com valores explícitos para a madeira
+lamelada colada, a lamelada colada cruzada e a laminada colada, e o segundo da
+classe de umidade. Foram incluídos ainda novos coeficientes de modificação, um
+novo critério para a estabilidade de peças comprimidas e flexocomprimidas e
+recomendações para a segurança em situação de incêndio.
+
+A norma brasileira, entretanto, não fornece o procedimento de verificação da
+tipologia deste trabalho: vigas de MLC com dupla inclinação devem, segundo ela,
+ser analisadas individualmente, sem as regras para a borda inclinada e para as
+tensões transversais na zona de cumeeira que o Eurocódigo apresenta. As
+diferenças entre as duas abordagens são discutidas na
+\autoref{sec:eurocodigo-nbr}.
 
 A EN 1995-1-1 \cite{EN1995-1-1:2004}, o Eurocódigo 5, cobre essas verificações
 de maneira explícita e é complementada por um conjunto normativo coerente: a
@@ -71,11 +117,58 @@ restrição, pois permite varrer o espaço de geometrias viáveis, identificar q
 verificação governa em cada região desse espaço e submeter cada etapa a testes
 automatizados que impedem a propagação silenciosa de erros.
 
+\section{OBJETIVOS}\label{sec:objetivos}\label{sec:objetivo-geral}
+
+O objetivo deste trabalho é dimensionar e verificar a estrutura de um galpão em
+madeira lamelada colada com pórticos de vigas de duplo-bisel, segundo a
+EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de um programa de cálculo
+automatizado e reprodutível, e apresentar o memorial resultante. São objetivos
+específicos:\label{sec:objetivos-especificos}
+
+\begin{alineas}
+    \item obter a geometria da viga de duplo-bisel e as seções dos pilares e das
+    terças que atendem ao conjunto de verificações de estado-limite último e de
+    serviço;
+
+    \item definir os sistemas de contraventamento que estabilizam a cobertura e a
+    edificação e conduzem as forças laterais até a fundação;
+
+    \item detalhar as ligações e a ancoragem, em desenhos cotados e em escala, e
+    fornecer os esforços de cálculo destinados ao projeto da fundação;
+
+    \item estimar o custo preliminar da estrutura;
+
+    \item disponibilizar o programa de cálculo, com código aberto e testes
+    automatizados, capaz de reproduzir o memorial a partir dos dados de entrada.
+\end{alineas}
+
+\section{DELIMITAÇÃO DO TRABALHO}\label{sec:delimitacao}
+
+O trabalho delimita-se à superestrutura em madeira lamelada colada e aos seus
+elementos de ligação. A fundação não é dimensionada: o programa entrega os
+esforços característicos e de cálculo em cada base, a saber, reação vertical,
+força horizontal e esforço de arrancamento, que constituem os dados de entrada
+para o projeto geotécnico, executado em etapa posterior e a partir de sondagem
+específica do terreno.
+
+Também não integram o escopo o projeto de instalações, o detalhamento de
+fechamentos e vedações e o plano de montagem.
+
+A resistência ao fogo é verificada, porém sob uma limitação que se declara. O
+tempo requerido de resistência não é fixado pelo Eurocódigo: decorre do
+regulamento nacional de segurança contra incêndio, isto é, da
+ABNT NBR 14432 \cite{NBR14432:2001} e da instrução técnica do corpo de bombeiros estadual
+aplicável à ocupação. O valor adotado é, portanto, uma declaração de projeto, e
+a verificação vale sob essa declaração.
+
+%% TODO: dado ausente — confirmar o tempo requerido de resistência ao fogo
+%% junto ao regulamento aplicável à ocupação e à área da edificação. O valor
+%% em uso está declarado como parâmetro de origem PROJETO em core/normativo.py.
+
 \section{ESTRUTURA DO TRABALHO}\label{sec:estrutura-trabalho}
 
-O texto está organizado em nove partes. Após esta introdução, o
-\autoref{cap:objetivos} enuncia os objetivos geral e específicos, e o
-\autoref{cap:revisao} reúne a revisão bibliográfica, com o comportamento
+O texto está organizado em oito capítulos. Após esta introdução, que enuncia
+também os objetivos e a delimitação do trabalho, o \autoref{cap:revisao} reúne a revisão bibliográfica, com o comportamento
 mecânico da MLC e as prescrições normativas aplicáveis. A edificação, as
 premissas de projeto e as reservas normativas assumidas aparecem no
 \autoref{cap:definicao-problema}.
@@ -91,8 +184,8 @@ com as considerações finais e as recomendações para desenvolvimentos futuros
 \autoref{ap:codigo-fonte} descreve o programa de cálculo; o
 \autoref{ap:memoria-calculo} apresenta a memória de cálculo das verificações
 governantes; o \autoref{ap:analise-estatica}, os diagramas e os esforços da
-viga em cada combinação; e o \autoref{ap:saida-pipeline}, a saída completa da
-execução do programa.
+viga em cada combinação; o \autoref{ap:saida-pipeline}, a saída completa da
+execução do programa; e o \autoref{ap:desenhos}, os desenhos cotados em escala.
 
 Em todo o texto, os dados de entrada e os resultados são apresentados em
 tabelas separadas. Os dados de entrada gerais concentram-se no

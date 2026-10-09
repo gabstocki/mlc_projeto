@@ -14,7 +14,19 @@
   biapoiada (provavelmente pede ilustrar os dois extremos de apoio horizontal).
 
 ## O que fazer
-- [ ] Figura esquemática da viga de duplo-bisel com α, h₀, h_ap, b e L cotados (símbolos da lista — issue 56).
-- [ ] Figura do modelo estrutural do pórtico: vigas, 3 pilares, rótulas, apoios, cargas,
+- [x] Figura esquemática da viga de duplo-bisel com α, h₀, h_ap, b e L cotados (símbolos da lista — issue 56).
+- [x] Figura do modelo estrutural do pórtico: vigas, 3 pilares, rótulas, apoios, cargas,
       eixos; nomes dos elementos coerentes com a issue 52. Opcional: o modelo FEM (OpenSeesPy).
-- [ ] Opcional: esquema do apoio horizontal (indeslocável → arco; livre → biapoiada; mola k).
+- [x] Opcional: esquema do apoio horizontal (indeslocável → arco; livre → biapoiada; mola k).
+
+## Resolução (2026-10-08) ✅
+Novo módulo `mlc_projeto/output/esquemas.py`, gerado pelo pipeline a partir da GeometriaViga
+(→ `tese/fig/esq0*.pdf`; sem escala, altura ampliada e declarada na figura):
+- ESQ-01 `fig:esq-variaveis` (§5.2.1): viga com $L$, $h_0$, $h_{ap}$, $\alpha$, seção $b\times h(x)$
+  e as faixas da varredura.
+- ESQ-02 `fig:esq-modelo` (§6.1): pórtico intermediário — eixo da viga, cargas $q_{esq}$/$q_{dir}$,
+  pilares articulados no topo e na base, eixos A–C, nomes V(2i−1), V(2i), P(3i−2)… (issue 52),
+  nota da estabilidade no plano (diafragma → CV-T).
+- ESQ-03 `fig:esq-apoio` (§6.1.1): (a) apoio indeslocável → arco, H > 0; (b) mola $k_h$;
+  (c) apoio livre → biapoiada, H = 0 (a nota sem texto do orientador).
+Símbolo $k_h$ acrescentado à lista. Teste `tests/test_esquemas.py`; suíte 731.

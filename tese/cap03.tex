@@ -1,33 +1,40 @@
 % =============================================================================
 % cap03.tex — REVISAO BIBLIOGRAFICA
+% Reescrita na issue 60 (3ª revisão do orientador): 3.1 produto e casos de
+% estudo; 3.2 baixa adesão no Brasil; 3.3 Eurocódigo × norma brasileira. As
+% bases de cálculo que aqui estavam foram para os capítulos que as aplicam.
 % =============================================================================
 
 \chapter{REVISÃO BIBLIOGRÁFICA}\label{cap:revisao}
 
-Esta revisão percorre os fundamentos que sustentam as verificações executadas
-no trabalho. Parte da constituição do material, passa pelas propriedades de
-cálculo e pelos coeficientes que as modificam, e chega às prescrições
-específicas aplicáveis a vigas de seção variável, à estabilidade, ao
-contraventamento e às ligações.
+Esta revisão situa o trabalho em três frentes. A primeira é o próprio material e
+a experiência acumulada com coberturas de grande vão em madeira lamelada colada,
+inclusive com as suas falhas. A segunda é a razão pela qual, apesar dessa
+experiência, o material ainda é pouco empregado no Brasil. A terceira é a
+diferença entre a abordagem do Eurocódigo 5 e a da norma brasileira, que
+fundamenta a escolha normativa deste trabalho.
 
 \section{A MADEIRA LAMELADA COLADA COMO PRODUTO ESTRUTURAL}\label{sec:mlc-produto}
 
 A MLC é obtida pela colagem de lamelas de madeira serrada, classificadas
 previamente quanto à resistência, com as fibras paralelas ao eixo do elemento.
 A EN 14080 \cite{EN14080:2013} fixa os requisitos de produção e as propriedades
-características do produto acabado. As lamelas são emendadas topo a topo por
-entalhes múltiplos, o que permite comprimentos muito superiores ao da madeira
-serrada disponível, e são coladas em prensa com adesivos estruturais
-classificados pela EN 301 \cite{EN301:2017}.
+características do produto acabado, e a ABNT NBR 7190-1 \cite{NBR7190-1:2022}
+estabelece requisitos equivalentes para a produção nacional, entre eles a faixa
+de densidade das lamelas, o teor de umidade máximo de 18\% na colagem e a
+geometria das emendas. As lamelas são emendadas topo a topo por entalhes
+múltiplos, o que permite comprimentos muito superiores ao da madeira serrada
+disponível, e são coladas em prensa com adesivos estruturais classificados pela
+EN 301 \cite{EN301:2017}.
 
-Três consequências desse processo interessam ao projeto estrutural. A primeira
-é a liberdade geométrica: a espessura reduzida das lamelas permite curvá-las
-antes da cura e produzir elementos de altura variável ao longo do vão,
-ajustando a seção ao diagrama de momentos. A segunda é a homogeneização: os
-defeitos naturais da madeira, sobretudo os nós, são distribuídos
-aleatoriamente entre as lamelas em vez de se concentrarem em uma única seção
-crítica, o que reduz a dispersão da resistência e eleva os valores
-característicos. A terceira é a estabilidade dimensional, decorrente da
+Três consequências desse processo interessam ao projeto estrutural
+\cite{thelandersson:2003, porteous:2013}. A primeira é a liberdade geométrica: a
+espessura reduzida das lamelas permite curvá-las antes da cura e produzir
+elementos de altura variável ao longo do vão, ajustando a seção ao diagrama de
+momentos. A segunda é a homogeneização: os defeitos naturais da madeira,
+sobretudo os nós, distribuem-se entre as lamelas em vez de se concentrarem em
+uma única seção crítica, o que reduz a dispersão da resistência e eleva os
+valores característicos. A terceira é a estabilidade dimensional, decorrente da
 secagem controlada das lamelas antes da colagem.
 
 A EN 14080 \cite{EN14080:2013} organiza o produto em classes designadas pela
@@ -36,189 +43,119 @@ sufixo \textit{h} para composição homogênea, em que todas as lamelas pertence
 à mesma classe, e \textit{c} para composição combinada, em que lamelas de
 classe superior ocupam as zonas mais solicitadas da seção.
 
-%% TODO: referência — acrescentar literatura sobre o processo produtivo da MLC
-%% e sobre a eficiência das emendas dentadas (ex.: Porteous \& Kermani;
-%% Herzog et al.; Calil Junior). Chaves a criar em referencias.bib.
+\subsection{Coberturas de grande vão: estudos e lições}\label{ssec:casos}
 
-\section{PROPRIEDADES DE CÁLCULO}\label{sec:propriedades-calculo}
+A viga de duplo-bisel apoiada sobre pilares é uma das soluções mais difundidas
+para coberturas de grande vão em MLC, em pavilhões, ginásios e edificações
+agroindustriais \cite{herzog:2004}. Por vencer o vão como peça única, reduz o
+tempo de montagem, e por acompanhar com a altura o diagrama de momentos,
+economiza material. \textcite{simonportela:2023} otimizaram coberturas desse
+tipo, formadas por vigas de duplo-bisel de MLC GL32h e terças, para vãos de 15 a
+30 m, com um algoritmo genético que minimiza o custo, e concluíram que o vão e a
+carga de neve determinam a altura e a largura das vigas e das terças e o
+espaçamento destas, enquanto o comprimento da cobertura determina o número
+ótimo de vigas. O procedimento é próximo do adotado neste trabalho, com a
+diferença de que aqui a geometria é obtida pela varredura de todas as
+candidatas e cada uma é submetida à cadeia completa de verificações, sem modelo
+simplificado.
 
-O Eurocódigo 5 obtém o valor de cálculo de uma propriedade de resistência a
-partir do valor característico por meio da expressão
+A experiência com estruturas existentes indica onde está o risco.
+\textcite{dietsch:2018} analisaram 230 estruturas de madeira de grande vão que
+apresentaram falhas, mais de dois terços delas em MLC. O modo de falha mais
+frequente, em 46\% dos casos, foi a fissuração ao longo das fibras, associada a
+teores de umidade baixos ou variáveis e a tensões de tração perpendicular às
+fibras impostas pela geometria das peças; a maior parte das falhas teve origem
+em erros de projeto, e não de fabricação ou de montagem. O levantamento de
+\textcite{fruhwald:2007}, com 127 casos de falha em estruturas de madeira,
+aponta na mesma direção: projeto deficiente ou ausência de verificação de
+resistência responde por 41\% dos casos, e cerca de metade das falhas está
+relacionada ao projeto, contra cerca de um quarto originado no canteiro.
 
-\begin{align}
-    X_d = k_{mod}\,\frac{X_k}{\gamma_M} \label{eq:valor-calculo}
-\end{align}
+Essas conclusões orientam a atenção deste trabalho. A tração perpendicular às
+fibras na zona de cumeeira e o fendilhamento nas ligações, os dois mecanismos
+ligados à fissuração ao longo das fibras, são verificados explicitamente, e a
+exposição da estrutura à umidade é tratada pela classe de serviço e pelas
+exigências de durabilidade.
 
-\noindent
-em que $\gamma_M$ é o coeficiente parcial do material, igual a 1,25 para
-elementos de MLC e a 1,30 para ligações, e $k_{mod}$ é o coeficiente de
-modificação.
+\section{A BAIXA ADESÃO AO MATERIAL NO BRASIL}\label{sec:adesao-brasil}
 
-O coeficiente $k_{mod}$ concentra duas influências que a madeira sofre e que os
-materiais isotrópicos usuais não apresentam na mesma intensidade: o teor de
-umidade de equilíbrio e a duração do carregamento. Quanto mais úmido o ambiente
-e quanto mais prolongada a ação, menor a resistência mobilizável.
+A MLC não é novidade no país. A primeira fábrica de vigas de MLC, a Esmara
+Estruturas de Madeira, foi inaugurada em Curitiba em 1934; outras se instalaram
+em São Paulo na década de 1960 e no Paraná nas décadas de 1970 e 1980
+\cite{pauli:2021}. A partir dos anos 1980, porém, a indústria deixou de se
+desenvolver, sobretudo pela falta de divulgação da tecnologia e pela ausência de
+normas específicas \cite{pauli:2021}. Passadas várias décadas desde a sua
+introdução, o emprego da MLC na construção civil brasileira permanece tímido,
+considerando a vocação florestal do país \cite{leite:2017}.
 
-A umidade é tratada por classes de serviço. A classe 1 corresponde a ambientes
-internos aquecidos, com umidade de equilíbrio da ordem de 12\%; a classe 2, a
-ambientes cobertos porém não aquecidos, com umidade até cerca de 20\%; e a
-classe 3, a condições mais severas que as anteriores, típicas de peças expostas
-à intempérie ou em edificações abertas. A duração é tratada por cinco
-categorias, que vão da ação permanente, superior a dez anos, à ação
-instantânea. A \autoref{tab:kmod-kdef} apresenta os valores aplicáveis à MLC.
-Quando a combinação reúne ações de durações distintas, adota-se o $k_{mod}$ da
-ação de menor duração entre as presentes.
+A literatura aponta causas que se reforçam mutuamente. O custo da MLC é
+superior ao do aço e do concreto, de modo que o material fica restrito a obras
+de alto padrão; e o custo é alto justamente porque a produção e a demanda são
+pequenas, o que mantém o mercado em um ciclo de baixa utilização
+\cite{pauli:2021}. Investir em escala industrial sem garantia de demanda é
+arriscado, e o adesivo estrutural, em geral importado, encarece a peça final
+\cite{leite:2017, pauli:2021}. Somam-se o pouco conhecimento dos projetistas
+sobre as qualidades do material e o processo construtivo, o número reduzido de
+profissionais especializados e de fábricas instaladas \cite{pauli:2021}.
 
-\tabela
-{Coeficientes de modificação e de fluência para madeira lamelada colada}
-{\footnotesize
-\begin{tabular}{ccccccc}
-\toprule
-    \textbf{Classe de} & \multicolumn{5}{c}{\textbf{$k_{mod}$ por classe de duração da ação}} & \textbf{$k_{def}$} \\
-\cmidrule(lr){2-6}
-    \textbf{serviço} & Permanente & Longa & Média & Curta & Instantânea & \\
-\midrule
-    1 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,60 \\
-    2 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,80 \\
-    3 & 0,50 & 0,55 & 0,65 & 0,70 & 0,90 & 2,00 \\
-\bottomrule
-\end{tabular}}
-{Adaptado da EN 1995-1-1 \cite{EN1995-1-1:2004}, tabelas 3.1 e 3.2}
-{kmod-kdef}
-{}
-{}
+A matéria-prima não é o obstáculo. \textcite{zangiacomo:2003} mostrou a
+viabilidade de produzir elementos estruturais de MLC com espécies tropicais
+alternativas, de que o país dispõe em quantidade e que permanecem
+subaproveitadas, e a indústria existente trabalha com madeiras de florestas
+plantadas, como pínus e eucalipto \cite{pauli:2021}. O que falta é a
+demanda e, para ela, a familiaridade dos projetistas com o dimensionamento.
+É nessa lacuna que se insere um trabalho que documenta, verificação por
+verificação, o projeto completo de uma estrutura de MLC.
 
-O coeficiente $k_{def}$ quantifica a fluência e é empregado nas verificações de
-estado-limite de serviço para converter a flecha instantânea na flecha final. A
-progressão de 0,60 na classe 1 até 2,00 na classe 3 mostra que a deformação
-diferida de uma peça exposta pode triplicar a parcela instantânea, o que faz da
-classe de serviço uma decisão de projeto com consequência direta sobre a altura
-da seção.
+\section{A ABORDAGEM DO EUROCÓDIGO E A NORMA BRASILEIRA}\label{sec:eurocodigo-nbr}
 
-\section{VIGAS DE SEÇÃO VARIÁVEL}\label{sec:vigas-secao-variavel}
+O Eurocódigo 5 \cite{EN1995-1-1:2004} integra um conjunto normativo articulado:
+a EN 1990 \cite{EN1990:2002} fixa as bases de projeto e as combinações de ações,
+as partes da EN 1991 definem as ações e a EN 14080 \cite{EN14080:2013}, as
+classes e as propriedades da MLC. As verificações são formuladas por modos de
+ruptura, com expressões próprias para cada um, e os valores dos coeficientes de
+segurança são deixados aos Anexos Nacionais, sob a forma de parâmetros de
+determinação nacional.
 
-A viga de duplo-bisel tem altura crescente do apoio até a cumeeira, situada a
-meio vão, acompanhando o crescimento do momento fletor. Essa eficiência tem
-contrapartidas que o Eurocódigo 5 trata em prescrições próprias.
+A ABNT NBR 7190-1 \cite{NBR7190-1:2022} adota o mesmo método dos
+estados-limites e, na revisão de 2022, aproximou-se do Eurocódigo em vários
+pontos. As classes de resistência passaram a ser definidas por ensaios de peças
+estruturais, em série semelhante à europeia, e o coeficiente de modificação
+passou a ser o produto de apenas dois fatores, com a eliminação do terceiro
+coeficiente parcial da versão de 1997; a revisão alterou também os coeficientes
+de ponderação das tensões normais, a verificação de peças comprimidas e tornou
+mais rigorosa a verificação ao cisalhamento \cite{jornada:2024}. Nas ligações
+por pinos metálicos, a versão de 1997 previa apenas dois modos de ruína, contra
+o conjunto mais amplo de mecanismos da teoria de Johansen adotado pelo
+Eurocódigo, e as estruturas dimensionadas pelo critério europeu resultavam mais
+robustas \cite{baena:2015, carneiro:2021}; a versão de 2022 passou a tabelar os
+modos de falha das ligações com pinos.
 
-A primeira decorre da borda inclinada. Em uma viga de altura constante, as
-tensões de flexão são paralelas às faces. Quando uma face é inclinada, a tensão
-na borda deixa de ser uniaxial e passa a combinar componentes paralela e
-perpendicular às fibras, além de cisalhamento. O item 6.4.2 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} trata essa situação por meio do coeficiente
-$k_{m,\alpha}$, que reduz a resistência à flexão na borda inclinada. A redução é
-assimétrica: é mais severa quando a borda inclinada está tracionada do que
-quando está comprimida, porque a resistência à tração perpendicular às fibras é
-muito inferior à resistência à compressão na mesma direção.
+As diferenças que importam a este trabalho estão em três pontos. O primeiro é a
+viga de seção variável. O Eurocódigo trata a borda inclinada e a zona de
+cumeeira em itens próprios, 6.4.2 e 6.4.3, com coeficientes que reduzem a
+resistência à flexão na borda inclinada e que limitam a tração perpendicular às
+fibras no vértice. A norma brasileira determina que vigas de MLC curvas, com
+dupla inclinação ou do tipo bumerangue sejam analisadas individualmente, sem
+fornecer o procedimento \cite{NBR7190-1:2022}. Para a tipologia deste trabalho,
+a viga de duplo-bisel, é essa a lacuna decisiva.
 
-A segunda decorre da zona de cumeeira. Na região do vértice, a mudança de
-direção das tensões de flexão gera tensões de tração perpendicular às fibras,
-que constituem a fragilidade característica da madeira. O item 6.4.3 da mesma
-norma verifica essas tensões introduzindo o coeficiente $k_{dis}$, que responde
-pela distribuição não uniforme, e um fator de volume, que incorpora o efeito de
-escala: quanto maior o volume solicitado, maior a probabilidade de conter um
-defeito capaz de iniciar a ruptura.
+O segundo é a estabilidade lateral das vigas. A norma brasileira permite
+dispensar a verificação quando a distância entre contenções laterais respeita um
+limite proporcional à largura da seção, e remete as seções não retangulares a
+estudo individual \cite{NBR7190-1:2022}; o Eurocódigo reduz a resistência à
+flexão por um coeficiente contínuo, função da esbeltez relativa.
 
-\section{ESTABILIDADE}\label{sec:estabilidade-revisao}
+O terceiro é o contraventamento. A norma brasileira formula a estabilização de
+peças comprimidas e do banzo comprimido de peças fletidas pela rigidez mínima do
+elemento contraventante e por uma força de cálculo proporcional ao esforço da
+peça estabilizada \cite{NBR7190-1:2022}. O Eurocódigo, no item 9.2.5, trata o
+sistema de contraventamento de um conjunto de vigas como uma treliça sob carga
+distribuída, função do número de vigas estabilizadas e do vão do sistema, e
+exige que essa força seja somada às ações externas. Para uma cobertura de vigas
+paralelas, a formulação europeia descreve diretamente o sistema projetado.
 
-A esbeltez das vigas de MLC torna a estabilidade lateral, e não a resistência
-da seção, o critério que frequentemente governa. O item 6.3.3 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} trata a flambagem lateral por torção
-mediante o coeficiente $k_{crit}$, que reduz a resistência à flexão em função da
-esbeltez relativa. Essa esbeltez depende do comprimento efetivo entre pontos de
-contenção lateral, o que estabelece a ligação direta entre a verificação da
-viga e o sistema de contraventamento: terças efetivamente vinculadas a um
-diafragma contraventado reduzem o comprimento efetivo ao espaçamento entre
-elas, enquanto terças não contraventadas deixam a viga com o vão inteiro como
-comprimento efetivo.
-
-Para os pilares, sujeitos a esforço normal e momento simultâneos, aplicam-se as
-expressões de flexo-compressão do item 6.3.2, que combinam as taxas de
-utilização por meio dos coeficientes $k_c$ relativos a cada eixo principal.
-
-Em nível de sistema, a estabilidade global é avaliada pelo fator $\alpha_{cr}$,
-razão entre a carga crítica elástica e a carga de cálculo. Valores de
-$\alpha_{cr}$ superiores ao limite normativo permitem dispensar a análise de
-segunda ordem e tratar a estrutura como indeslocável, desde que consideradas as
-imperfeições geométricas por meio de forças horizontais equivalentes.
-
-\section{CONTRAVENTAMENTO}\label{sec:contraventamento-revisao}
-
-O item 9.2.5 da EN 1995-1-1 \cite{EN1995-1-1:2004} estabelece as forças que um
-sistema de contraventamento deve resistir para estabilizar um conjunto de
-elementos comprimidos ou fletidos. A formulação parte da imperfeição inicial
-dos elementos estabilizados e conduz a uma carga distribuída sobre o sistema
-contraventante, modulada pelo coeficiente
-
-\begin{align}
-    k_{\ell} = \min\left(1;\ \sqrt{\frac{15}{\ell}}\right) \label{eq:k-ell}
-\end{align}
-
-\noindent
-em que $\ell$ é o vão do sistema de contraventamento em metros. O sistema é
-paralelo aos elementos que estabiliza e se apoia nos mesmos pontos que eles, de
-modo que, no caso de vigas, $\ell$ coincide com o vão das próprias vigas, e não
-com o comprimento da edificação nem com a distância entre os sistemas. O número
-de sistemas contraventados não altera $\ell$: altera apenas o número $n$ de
-elementos que cada sistema estabiliza, e mais sistemas significam menor força
-em cada um.
-
-\section{LIGAÇÕES}\label{sec:ligacoes-revisao}
-
-O dimensionamento de ligações por pinos metálicos apoia-se na teoria de
-Johansen, incorporada ao item 8.2 da EN 1995-1-1 \cite{EN1995-1-1:2004}. O
-método examina os mecanismos cinematicamente admissíveis de uma ligação, que
-combinam o esmagamento da madeira sob o pino e a formação de rótulas plásticas
-no próprio pino, e adota como resistência o menor valor entre eles. Os modos
-que envolvem plastificação do pino são dúcteis e permitem redistribuição de
-esforços.
-
-A esses mecanismos somam-se modos de ruptura frágeis, que não admitem
-redistribuição e cuja ocorrência é súbita. O item 8.1.4 trata do fendilhamento
-provocado por componentes de força perpendiculares às fibras, e o anexo A trata
-da ruptura de bloco, em que um volume de madeira delimitado pelo grupo de pinos
-se destaca da peça. O item 8.1.2 introduz ainda o número efetivo de pinos
-$n_{ef}$, inferior ao número real quando os pinos se alinham paralelamente às
-fibras, reconhecendo que a distribuição de carga entre eles não é uniforme. A
-\autoref{tab:modos-ruptura} resume essa classificação, que orienta a adoção de
-taxas de utilização máximas distintas para cada natureza, conforme exposto no
-\autoref{cap:detalhamento}.
-
-\tabela
-{Classificação dos modos de ruptura em ligações de madeira}
-{\footnotesize
-\begin{tabular}{lll}
-\toprule
-    \textbf{Natureza} & \textbf{Modo de ruptura} & \textbf{Prescrição} \\
-\midrule
-    Dúctil  & Plastificação do pino com esmagamento da madeira & Item 8.2 \\
-    Dúctil  & Escoamento da chapa metálica                     & EN 1993-1-8 \\
-    Frágil  & Esmagamento localizado sem plastificação do pino  & Item 8.2 \\
-    Frágil  & Fendilhamento por tração perpendicular às fibras  & Item 8.1.4 \\
-    Frágil  & Ruptura de bloco no grupo de pinos                & Anexo A \\
-\bottomrule
-\end{tabular}}
-{Elaborado pelo autor (2026) com base na EN 1995-1-1 \cite{EN1995-1-1:2004}}
-{modos-ruptura}
-{}
-{}
-
-\section{AÇÕES E COMBINAÇÕES}\label{sec:acoes-revisao}
-
-As ações permanentes e as sobrecargas de utilização seguem a
-EN 1991-1-1 \cite{EN1991-1-1:2002}, e as ações durante a execução, relevantes
-para a fase de içamento, seguem a EN 1991-1-6 \cite{EN1991-1-6:2005}. As
-combinações de ações e os coeficientes parciais e de combinação decorrem da
-EN 1990 \cite{EN1990:2002}.
-
-A ação do vento merece tratamento à parte. Embora o Eurocódigo 1 disponha de
-parte específica sobre o assunto, a EN 1991-1-4 \cite{EN1991-1-4:2005}, seus
-parâmetros descrevem o regime de ventos europeu e dependem de mapas de
-velocidade básica inexistentes para o território brasileiro. Adota-se, por isso,
-a ABNT NBR 6123 \cite{NBR6123:2023}, que determina a velocidade característica
-a partir da velocidade básica do sítio e dos fatores topográfico, de rugosidade
-e dimensões da edificação, e estatístico. Sobre a pressão dinâmica resultante
-incidem os coeficientes de pressão externa e interna tabelados conforme a forma
-da edificação, sendo que edificações abertas ou com dominante face permeável
-admitem coeficientes internos que agravam substancialmente a sucção na
-cobertura.
+Essas diferenças sustentam a escolha do Eurocódigo 5 como base de
+dimensionamento, com a ABNT NBR 6123 \cite{NBR6123:2023} para as forças devidas
+ao vento. A dificuldade que essa composição introduz, a ausência de Anexo
+Nacional brasileiro, é tratada no \autoref{cap:definicao-problema}.

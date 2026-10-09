@@ -13,4 +13,15 @@
 (Itens da Tabela 4 → issue 56.)
 
 ## O que fazer
-- [ ] Aplicar as três correções; localizar o espaço espúrio no PDF compilado.
+- [x] Aplicar as três correções; localizar o espaço espúrio no PDF compilado.
+
+## Resolução (2026-10-08) ✅
+- Abertura do cap. 4 reescrita: «Este capítulo define a estrutura a ser dimensionada e as
+  condições sob as quais o dimensionamento é feito…».
+- «molhamento» → «exposição eventual à chuva conduzida pelo vento» (§ Classe de serviço).
+- **Espaço espúrio — causa encontrada no macro `\tabela`** (`00-pacotesOpcionais.tex`): o
+  `\noindent` antes de `\begin{table}` abria um parágrafo vazio contendo o float; quando a tabela
+  não cabia, a página era encerrada ali e o texto seguinte ia para depois do float (p. 27: ~⅓ de
+  página em branco após «…nas verificações de ligação.»). Removido o `\noindent` (com `%` no fim da
+  linha anterior): o texto agora preenche a página. A correção vale para **todas** as tabelas.
+  Testado também `[!htbp]`: resultado igual ao `[!ht]`, mantido o original.

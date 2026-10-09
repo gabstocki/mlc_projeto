@@ -10,6 +10,19 @@
 - §2.2 Objetivos específicos parece **metodologia**. Se não forem obrigatórios, retirar; se forem, manter **apenas objetivos**.
 
 ## O que fazer
-- [ ] Verificar se o modelo UFPR/curso exige objetivos específicos.
-- [ ] Fundir cap. 2 no cap. 1; mover conteúdo metodológico para o capítulo de metodologia; realocar a Delimitação.
-- [ ] Renumerar capítulos e corrigir todas as referências cruzadas (`\ref`) e o texto “Estrutura do trabalho”.
+- [x] Verificar se o modelo UFPR/curso exige objetivos específicos.
+- [x] Fundir cap. 2 no cap. 1; mover conteúdo metodológico para o capítulo de metodologia; realocar a Delimitação.
+- [x] Renumerar capítulos e corrigir todas as referências cruzadas (`\ref`) e o texto “Estrutura do trabalho”.
+
+## Resolução (2026-10-08) ✅
+- `cap02.tex` removido (git rm); conteúdo no cap. 1: §1.3 OBJETIVOS (objetivo geral em
+  parágrafo, **sem o título** “Objetivo geral”) e §1.4 DELIMITAÇÃO DO TRABALHO (texto mantido).
+- Objetivos específicos **mantidos, só como objetivos** (escolha do usuário — vale exija ou não a
+  UFPR): 5 alíneas de resultado (geometria e seções; contraventamentos; ligações/ancoragem em
+  desenho + esforços para a fundação; custo; programa aberto e testado). Os 8 itens antigos eram
+  passos de método (caracterizar, levantar ações, verificar…) e a tabela alínea × capítulo saiu.
+- Labels antigos mantidos como âncoras (`sec:objetivo-geral`, `sec:objetivos-especificos`,
+  `sec:delimitacao`); `cap:objetivos` deixou de existir. “Estrutura do trabalho”: oito capítulos.
+- cap. 9 (Quanto aos objetivos) reescrito para os 5 objetivos novos. Capítulos renumerados
+  automaticamente (Revisão = cap. 2 … Considerações finais = cap. 8); nenhum número fixo no texto.
+- A exigência de objetivos específicos pelo modelo UFPR não foi verificada (sem acesso à regra).

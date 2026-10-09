@@ -4,10 +4,11 @@
 
 \chapter{DEFINIÇÃO DO PROBLEMA}\label{cap:definicao-problema}
 
-Este capítulo fixa o objeto do dimensionamento. Reúne a descrição da
-edificação, os materiais adotados, os valores característicos declarados como
-dados de entrada e as premissas assumidas, incluindo as reservas normativas que
-condicionam a validade dos resultados.
+Este capítulo define a estrutura a ser dimensionada e as condições sob as quais
+o dimensionamento é feito. Descreve a edificação e a nomenclatura dos seus
+elementos, os materiais adotados e os valores característicos declarados como
+dados de entrada, e registra as premissas assumidas, incluindo as reservas
+normativas que condicionam a validade dos resultados.
 
 As tabelas deste capítulo contêm apenas dados de entrada, isto é, valores
 fixados antes da análise e que o programa de cálculo recebe sem os calcular. As
@@ -68,21 +69,60 @@ as seções dos pilares não constam dela, porque resultam do pré-dimensionamen
 estão reunidas na \autoref{tab:criterios-predim}.
 
 \tabela{Dados geométricos de entrada da edificação}{\footnotesize
-\begin{tabular}{lrl}
+\begin{tabular}{lcrl}
 \toprule
-    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Unidade} \\
+    \textbf{Parâmetro} & \textbf{Símbolo} & \textbf{Valor} & \textbf{Unidade} \\
 \midrule
-    Largura total em planta              & 40,50 & m \\
-    Comprimento total em planta          & 46,00 & m \\
-    Vão de cada pórtico                  & 20,25 & m \\
-    Número de vãos por pórtico           & 2     & \\
-    Número de pórticos                   & 9     & \\
-    Espaçamento entre pórticos           &  5,75 & m \\
-    Altura dos pilares                   &  7,00 & m \\
-    Seção das terças                     & 0,20 $\times$ 0,58 & m \\
-    Espaçamento entre terças             &  2,53 & m \\
+    Largura total em planta              & $B_{tot}$ & 40,50 & m \\
+    Comprimento total em planta          & $L_{tot}$ & 46,00 & m \\
+    Vão de cada pórtico                  & $L$       & 20,25 & m \\
+    Número de vãos por pórtico           & --        & 2     & -- \\
+    Número de pórticos                   & --        & 9     & -- \\
+    Espaçamento entre pórticos           & $L_T$     &  5,75 & m \\
+    Altura dos pilares                   & $H$       &  7,00 & m \\
+    Seção das terças                     & $b_t \times h_t$ & 0,20 $\times$ 0,58 & m \\
+    Espaçamento entre terças             & $s$       &  2,53 & m \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{geometria-edificacao}{}{}
+
+\section{NOMENCLATURA DOS ELEMENTOS}\label{sec:nomenclatura}
+
+Os elementos recebem nomes que se repetem nos desenhos e em todo o memorial. A
+locação usa duas famílias de eixos: os eixos 1 a 9 marcam os pórticos, a cada
+5,75 m ao longo do comprimento, e os alinhamentos A, B e C marcam as linhas de
+pilares, a cada 20,25 m ao longo da largura, sendo B a linha central. Os
+pilares são numerados por pórtico, de A para C, e as vigas por pórtico, primeiro
+o vão A--B e depois o vão B--C. A \autoref{tab:nomenclatura} resume o esquema,
+e a \autoref{fig:des-planta-cobertura} mostra a planta de cobertura com os
+nomes. Os demais desenhos constam do \autoref{ap:desenhos} e são reproduzidos no
+texto onde cada elemento é discutido.
+
+\tabela{Nomenclatura dos elementos}{\footnotesize
+\begin{tabular}{llp{7.4cm}}
+\toprule
+    \textbf{Nome} & \textbf{Elemento} & \textbf{Regra ou posição} \\
+\midrule
+    1 a 9, A a C & Eixos & Pórticos ao longo do comprimento; alinhamentos de pilares ao longo da largura \\
+    V1 a V18 & Vigas & V$(2i-1)$ no vão A--B e V$(2i)$ no vão B--C do pórtico $i$ \\
+    P1 a P27 & Pilares & P$(3i-2)$ em A, P$(3i-1)$ em B e P$(3i)$ em C, no pórtico $i$; cantos P1, P3, P25 e P27 \\
+    PF1, PF2 & Pilares de frontão & Eixo 1 a 5,75 m de A; eixo 9 a 5,75 m de C \\
+    T1 a T17 & Linhas de terças & De A para C, a cada 2,53 m; T1, T9 e T17 sobre os apoios \\
+    CV-H1, CV-H2 & Contraventamento da cobertura & Baías 1--2 e 8--9 \\
+    CV-V1 a CV-V8 & Painéis verticais & A: 1--2, 8--9; C: 1--2, 8--9; B: 1--2, 2--3, 7--8, 8--9 \\
+    CV-T1, CV-T2 & Painéis dos frontões & P1--PF1 no eixo 1; PF2--P27 no eixo 9 \\
+    L1, L1c, L1f & Ligações de topo & Viga sobre pilar lateral, sela do pilar central e topo do pilar de frontão \\
+    L3, L3c, L3f, L3a & Ligações de base & Corrente lateral, corrente central, pilar de frontão e base ancorada com chaveta \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{nomenclatura}{}{}
+
+\figura
+{Planta de cobertura e locação}
+{1.0}
+{fig/des01_planta_cobertura.pdf}
+{Elaborado pelo autor (2026)}
+{des-planta-cobertura}
+{}
+{}
 
 \section{MATERIAIS}\label{sec:materiais}
 
@@ -119,10 +159,65 @@ torna determinantes as verificações da zona de cumeeira e do fendilhamento nas
 ligações, discutidas no \autoref{cap:dimensionamento} e no
 \autoref{cap:detalhamento}.
 
+\subsection{Valores de cálculo}\label{ssec:valores-calculo}
+
+O Eurocódigo 5 obtém o valor de cálculo de uma propriedade de resistência a
+partir do valor característico por meio da expressão
+
+\begin{align}
+    X_d = k_{mod}\,\frac{X_k}{\gamma_M} \label{eq:valor-calculo}
+\end{align}
+
+\noindent
+em que $\gamma_M$ é o coeficiente parcial do material, igual a 1,25 para
+elementos de MLC e a 1,30 para ligações, e $k_{mod}$ é o coeficiente de
+modificação.
+
+O coeficiente $k_{mod}$ concentra duas influências que a madeira sofre e que os
+materiais isotrópicos usuais não apresentam na mesma intensidade: o teor de
+umidade de equilíbrio e a duração do carregamento. Quanto mais úmido o ambiente
+e quanto mais prolongada a ação, menor a resistência mobilizável.
+
+A umidade é tratada por classes de serviço. A classe 1 corresponde a ambientes
+internos aquecidos, com umidade de equilíbrio da ordem de 12\%; a classe 2, a
+ambientes cobertos porém não aquecidos, com umidade até cerca de 20\%; e a
+classe 3, a condições mais severas que as anteriores, típicas de peças expostas
+à intempérie ou em edificações abertas. A duração é tratada por cinco
+categorias, que vão da ação permanente, superior a dez anos, à ação
+instantânea. A \autoref{tab:kmod-kdef} apresenta os valores aplicáveis à MLC.
+Quando a combinação reúne ações de durações distintas, adota-se o $k_{mod}$ da
+ação de menor duração entre as presentes.
+
+\tabela
+{Coeficientes de modificação e de fluência para madeira lamelada colada}
+{\footnotesize
+\begin{tabular}{ccccccc}
+\toprule
+    \textbf{Classe de} & \multicolumn{5}{c}{\textbf{$k_{mod}$ por classe de duração da ação}} & \textbf{$k_{def}$} \\
+\cmidrule(lr){2-6}
+    \textbf{serviço} & Permanente & Longa & Média & Curta & Instantânea & \\
+\midrule
+    1 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,60 \\
+    2 & 0,60 & 0,70 & 0,80 & 0,90 & 1,10 & 0,80 \\
+    3 & 0,50 & 0,55 & 0,65 & 0,70 & 0,90 & 2,00 \\
+\bottomrule
+\end{tabular}}
+{Adaptado da EN 1995-1-1 \cite{EN1995-1-1:2004}, tabelas 3.1 e 3.2}
+{kmod-kdef}
+{}
+{}
+
+O coeficiente $k_{def}$ quantifica a fluência e é empregado nas verificações de
+estado-limite de serviço para converter a flecha instantânea na flecha final. A
+progressão de 0,60 na classe 1 até 2,00 na classe 3 mostra que a deformação
+diferida de uma peça exposta pode triplicar a parcela instantânea, o que faz da
+classe de serviço uma decisão de projeto com consequência direta sobre a altura
+da seção.
+
 \subsection{Classe de serviço e durabilidade}\label{ssec:classe-servico}
 
 Por se tratar de edificação aberta nas quatro faces, com as peças estruturais
-sujeitas a variações de umidade e a molhamento eventual por chuva conduzida
+sujeitas a variações de umidade e à exposição eventual à chuva conduzida
 pelo vento, adotou-se a classe de serviço 3. A consequência direta é dupla:
 na \autoref{eq:valor-calculo}, os coeficientes $k_{mod}$ caem para a faixa de
 0,50 a 0,90, conforme a duração da ação, e o coeficiente de fluência assume
@@ -167,21 +262,21 @@ corresponde à categoria H, de coberturas não acessíveis salvo para manutenç�
 a carga concentrada não é concomitante com a distribuída nem com o vento.
 
 \tabela{Valores característicos declarados como dados de entrada}{\footnotesize
-\begin{tabular}{lrll}
+\begin{tabular}{lcrll}
 \toprule
-    \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} & \textbf{Origem} \\
+    \textbf{Grandeza} & \textbf{Símbolo} & \textbf{Valor} & \textbf{Unidade} & \textbf{Origem} \\
 \midrule
-    Telha metálica trapezoidal      & 0,10 & kN/m\textsuperscript{2} & Ficha técnica \\
-    Instalações e serviços          & 0,10 & kN/m\textsuperscript{2} & Estimativa de projeto \\
-    Sobrecarga de cobertura         & 0,40 & kN/m\textsuperscript{2} & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
-    Carga concentrada de manutenção & 1,00 & kN & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
-    Velocidade básica do vento      & 45,0 & m/s & ABNT NBR 6123 \cite{NBR6123:2023} \\
-    Fator topográfico $S_1$         & 1,00 & & ABNT NBR 6123 \cite{NBR6123:2023} \\
-    Fator estatístico $S_3$         & 1,00 & & ABNT NBR 6123 \cite{NBR6123:2023} \\
-    Categoria de rugosidade         & IV & & ABNT NBR 6123 \cite{NBR6123:2023} \\
-    Classe da edificação            & B & & ABNT NBR 6123 \cite{NBR6123:2023} \\
-    Força de impacto de veículo, frontal & 50,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
-    Força de impacto de veículo, lateral & 25,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
+    Telha metálica trapezoidal      & $g_{tel}$ & 0,10 & kN/m\textsuperscript{2} & Ficha técnica \\
+    Instalações e serviços          & $g_{ins}$ & 0,10 & kN/m\textsuperscript{2} & Estimativa de projeto \\
+    Sobrecarga de cobertura         & $q_k$ & 0,40 & kN/m\textsuperscript{2} & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
+    Carga concentrada de manutenção & $Q_k$ & 1,00 & kN & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
+    Velocidade básica do vento      & $V_0$ & 45,0 & m/s & ABNT NBR 6123 \cite{NBR6123:2023} \\
+    Fator topográfico               & $S_1$ & 1,00 & -- & ABNT NBR 6123 \cite{NBR6123:2023} \\
+    Fator estatístico               & $S_3$ & 1,00 & -- & ABNT NBR 6123 \cite{NBR6123:2023} \\
+    Categoria de rugosidade         & -- & IV & -- & ABNT NBR 6123 \cite{NBR6123:2023} \\
+    Classe da edificação            & -- & B & -- & ABNT NBR 6123 \cite{NBR6123:2023} \\
+    Força de impacto de veículo, frontal & $F_{d,x}$ & 50,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
+    Força de impacto de veículo, lateral & $F_{d,y}$ & 25,0 & kN & EN 1991-1-7 \cite{EN1991-1-7:2006} \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{valores-declarados}{}{}
 

@@ -1217,6 +1217,7 @@ def carregamentos_com_vento(
     L_cob_m:      float = 46.0,
     B_cob_m:      float | None = None,
     empuxo_desenvolve: bool = True,
+    n_pilares_extra: int = 0,
 ) -> Carregamentos:
     """
     Cria Carregamentos com varredura completa Tab.25 (θ=90°) e θ=0°.
@@ -1241,6 +1242,7 @@ def carregamentos_com_vento(
         n_linhas_portico=n_linhas_portico,
         L_cob_m=L_cob_m,
         B_cob_m=B_cob_m,
+        n_pilares_extra=n_pilares_extra,
     )
 
     padroes = list(res.pressoes_padrao.values())

@@ -299,9 +299,7 @@
 \newcommand{\tabela}[6]
 {
   \sbox{\mybox}{#2}
-  \settowidth{\myboxlen}{\usebox{\mybox}}
-  \noindent
-  %\rule{\myboxlen}{1pt}\\
+  \settowidth{\myboxlen}{\usebox{\mybox}}%
   \begin{table}[!ht]
     \centering\footnotesize
     \par\caption{\uppercase{#1}}

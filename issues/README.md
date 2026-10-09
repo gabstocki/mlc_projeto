@@ -144,21 +144,21 @@ todas cobertas; as das pp. 29 e 36 não estavam no e-mail (issue 63).
 | 49 | P2 | [Reescrever §5.2.3 com o mecanismo real](49-reescrever-5-2-3-mecanismo.md) | ✅
 | 50 | P1 | [Equações simbólicas nas verificações governantes](50-equacoes-simbolicas-memorial.md) | ✅
 | 51 | P2 | [Tabelas de entrada × resultado; anexos de análise e saída do pipeline](51-organizacao-entradas-resultados-anexos.md) | ✅
-| 52 | P1 | [Desenhos cotados/em escala + nomenclatura V1, P1…](52-desenhos-nomenclatura.md) |
-| 53 | P2 | [Precisão numérica (η 2 casas; forças 3 alg. sig.)](53-precisao-numerica.md) |
-| 55 | P2 | [Declarar softwares e uso de IA](55-softwares-ia-declarados.md) |
-| 56 | P1 | [Lista de símbolos + coluna de símbolo na Tabela 4](56-lista-simbolos-tabela4.md) |
+| 52 | P1 | [Desenhos cotados/em escala + nomenclatura V1, P1…](52-desenhos-nomenclatura.md) | ✅
+| 53 | P2 | [Precisão numérica (η 2 casas; forças 3 alg. sig.)](53-precisao-numerica.md) | ✅
+| 55 | P2 | [Declarar softwares e uso de IA](55-softwares-ia-declarados.md) | ✅
+| 56 | P1 | [Lista de símbolos + coluna de símbolo na Tabela 4](56-lista-simbolos-tabela4.md) | ✅
 
 ### Texto e formatação (anotações do PDF, até p. 35)
 | # | Prioridade | Issue |
 |---|-----------|-------|
-| 54 | P2 | [Palavras-chave / Keywords](54-palavras-chave-keywords.md) |
-| 57 | P2 | [Introdução: abertura mais ampla](57-introducao-paragrafo-inicial.md) |
-| 58 | P2 | [§1.1: ELU/ELS não começaram em 2022](58-contexto-normativo-elu-els.md) |
-| 59 | P2 | [Objetivos como subseção do cap. 1](59-objetivos-reorganizar.md) |
-| 60 | P1 | [Reescrever a revisão bibliográfica](60-revisao-bibliografica-reescrever.md) |
-| 61 | P2 | [Cap. 4: redação](61-cap4-redacao.md) |
-| 62 | P2 | [Revisão textual do restante (após p. 35)](62-revisao-textual-geral.md) |
-| 63 | P2 | [Figuras: variáveis da varredura (§5.2) e modelo estrutural (§6.1)](63-figuras-varredura-e-modelo.md) — só no PDF |
+| 54 | P2 | [Palavras-chave / Keywords](54-palavras-chave-keywords.md) | ✅
+| 57 | P2 | [Introdução: abertura mais ampla](57-introducao-paragrafo-inicial.md) | ✅
+| 58 | P2 | [§1.1: ELU/ELS não começaram em 2022](58-contexto-normativo-elu-els.md) | ✅
+| 59 | P2 | [Objetivos como subseção do cap. 1](59-objetivos-reorganizar.md) | ✅
+| 60 | P1 | [Reescrever a revisão bibliográfica](60-revisao-bibliografica-reescrever.md) | ✅
+| 61 | P2 | [Cap. 4: redação](61-cap4-redacao.md) | ✅
+| 62 | P2 | [Revisão textual do restante (após p. 35)](62-revisao-textual-geral.md) | ✅
+| 63 | P2 | [Figuras: variáveis da varredura (§5.2) e modelo estrutural (§6.1)](63-figuras-varredura-e-modelo.md) — só no PDF | ✅
 
 **Ordem sugerida:** 41, 45, 46, 47, 48, 44, 42 (alteram resultados) → 39, 40, 49 → 43, 52, 50, 56, 53, 51 → texto (54–62).

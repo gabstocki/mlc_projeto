@@ -6,6 +6,7 @@ import re
 import pytest
 
 import mlc_projeto.main as M
+from mlc_projeto.output.formatacao import fmt_eta
 from mlc_projeto.output.memorial_equacoes import gerar_apendice_memoria
 
 
@@ -32,9 +33,10 @@ def test_apendice_tem_as_verificacoes_governantes(res, tmp_path):
 
 def test_valores_saem_dos_resultados(res, tmp_path):
     tex = gerar_apendice_memoria(res, tmp_path / "ap.tex").read_text()
-    eta_cv = f"{res['contraventamento_vertical']['eta_diag_N']:.3f}".replace(".", "{,}")
+    # issue 53: η com duas casas, arredondado para cima
+    eta_cv = fmt_eta(res['contraventamento_vertical']['eta_diag_N']).replace(",", "{,}")
     assert eta_cv in tex
-    eta_ci = f"{res['cisalhamento']['eta']:.3f}".replace(".", "{,}")
+    eta_ci = fmt_eta(res['cisalhamento']['eta']).replace(",", "{,}")
     assert eta_ci in tex
     # vírgula decimal: nenhum "0.xxx" anglo-saxão nas equações (o ponto só
     # aparece como separador de milhar, em grupos de três dígitos)

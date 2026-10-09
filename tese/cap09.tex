@@ -4,27 +4,32 @@
 
 \chapter{CONSIDERAÇÕES FINAIS}\label{cap:consideracoes}
 
+Este capítulo avalia o cumprimento dos objetivos, reúne os principais
+resultados e as contribuições do trabalho, declara as suas limitações e indica
+desenvolvimentos futuros.
+
 \section{QUANTO AOS OBJETIVOS}\label{sec:quanto-objetivos}
 
-O objetivo geral enunciado na \autoref{sec:objetivo-geral} foi alcançado. A
+O objetivo enunciado na \autoref{sec:objetivos} foi alcançado. A
 estrutura do galpão em madeira lamelada colada foi dimensionada e verificada
 segundo a EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de programa de cálculo
 automatizado, e o memorial resultante consta do
 \autoref{cap:dimensionamento} e do \autoref{cap:detalhamento}. O conjunto de
-cinquenta e cinco verificações é atendido, com taxa de utilização máxima de
-0,8352.
+sessenta e três verificações é atendido, com taxa de utilização máxima de
+0,85.
 
-Os objetivos específicos foram cumpridos nos termos seguintes. A caracterização
-do material e das exigências de durabilidade consta da
-\autoref{sec:materiais}. As ações e as combinações constam da
-\autoref{sec:acoes} e da \autoref{sec:combinacoes}. A geometria foi estabelecida
-por varredura paramétrica de 1.391 candidatas, apresentada na
-\autoref{sec:varredura-global}. As verificações de estado-limite último dos
-elementos, dos sistemas de contraventamento e da estabilidade global constam do
-\autoref{cap:dimensionamento}, e as de serviço, da \autoref{sec:verif-els}. As
-ligações e a ancoragem constam do \autoref{cap:detalhamento}. O programa,
-submetido a suíte de 698 testes automatizados, é reproduzido no
-\autoref{ap:codigo-fonte}.
+Os objetivos específicos foram cumpridos nos termos seguintes. A geometria da
+viga foi estabelecida por varredura paramétrica de 1.391 candidatas, apresentada
+na \autoref{sec:varredura-global}, e todas as seções atendem às verificações de
+estado-limite último do \autoref{cap:dimensionamento} e às de serviço da
+\autoref{sec:verif-els}. Os sistemas de contraventamento da cobertura, das
+fachadas, do alinhamento central e dos frontões, com o caminho das forças até a
+fundação, constam da \autoref{sec:predim-contraventamento} e da
+\autoref{sec:verif-contraventamento}. As ligações e a ancoragem estão detalhadas no
+\autoref{cap:detalhamento} e nos desenhos do \autoref{ap:desenhos}, e os esforços
+destinados à fundação, na \autoref{sec:cargas-fundacao}. A estimativa de custo
+consta da \autoref{sec:estimativa-custo}. O programa, submetido a suíte de 730
+testes automatizados, é descrito no \autoref{ap:codigo-fonte}.
 
 \section{PRINCIPAIS RESULTADOS}\label{sec:principais-resultados}
 
@@ -39,8 +44,8 @@ superior ao que o modelo de arco indicaria. A consequência favorável é que n�
 há esforço horizontal por efeito de arco a transmitir à fundação.
 
 O segundo é que nenhuma verificação da viga governa o dimensionamento. A mais
-solicitada, o cisalhamento, atinge 0,3814. O que governa são os
-contraventamentos vertical e da cobertura, com 0,8352 e 0,8009, cuja solicitação responde à área exposta ao vento e é
+solicitada, o cisalhamento, atinge 0,39. O que governa são os
+contraventamentos transversal, vertical e da cobertura, com 0,85, 0,84 e 0,81, cuja solicitação responde à área exposta ao vento e é
 praticamente insensível à seção da viga. Em uma edificação aberta e de cobertura
 leve, a estabilização determina o projeto mais do que a resistência dos
 elementos.
@@ -51,20 +56,20 @@ sentido oposto ao peso próprio e é parcialmente cancelada. A sucção permanec
 determinante para o arrancamento e para a ancoragem.
 
 O quarto é o peso próprio. Calculado por parcelas a partir da geometria,
-resultou em 0,8229 kN/m\textsuperscript{2}, cerca de metade do valor que uma
+resultou em 0,823 kN/m\textsuperscript{2}, cerca de metade do valor que uma
 estimativa global usual atribuiria. Adotar valor único de tabela teria
 sobrecarregado o modelo em aproximadamente oitenta por cento e mascarado a
 leveza própria da solução em madeira.
 
 O quinto é a força longitudinal de vento. A parcela de atrito sobre a cobertura,
-de 776,8 kN, equivale a 2,35 vezes o arrasto de bloqueio da silhueta e governa
+de 777 kN, equivale a 2,35 vezes o arrasto de bloqueio da silhueta e governa
 todo o dimensionamento do contraventamento longitudinal, dos pilares de canto e centrais montantes e
 das respectivas ancoragens. A prescrição é envolvente por construção, e a ordem
 de grandeza é característica dela.
 
 O sexto é o caminho da reação de apoio. Transmitida por pinos, a reação de
 gravidade atuaria quase perpendicularmente às fibras, e o fendilhamento chegaria
-a 0,961, acima do limite de projeto de 0,75 para modos frágeis, exigindo reforço
+a 0,97, acima do limite de projeto de 0,75 para modos frágeis, exigindo reforço
 com parafusos autoperfurantes. Apoiando a viga por contato direto sobre o pilar,
 e no pilar central sobre uma sela metálica, a gravidade deixa de passar pelos
 pinos, que ficam apenas para o arrancamento de sucção. O fendilhamento cai para
@@ -96,7 +101,7 @@ metade do volume de madeira da adotada, e a
 Sem a varredura, a margem existiria do mesmo modo, porém sem que se soubesse da
 sua existência nem da sua dimensão.
 
-A suíte de 698 testes automatizados constitui contribuição de mesma natureza.
+A suíte de 731 testes automatizados constitui contribuição de mesma natureza.
 Ela impede que uma alteração em qualquer módulo altere silenciosamente
 resultados de outro, risco real em uma cadeia de verificações mutuamente
 dependentes.

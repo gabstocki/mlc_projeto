@@ -1,0 +1,138 @@
+% =============================================================================
+% 00-simbolos.tex — LISTA DE SÍMBOLOS (issue 56)
+% Notação da EN 1995-1-1 como base. Ordem: latinas maiúsculas, latinas
+% minúsculas e gregas; índices: d = de cálculo, k = característico.
+% Mantida à mão (o \criarsimbolo do modelo ordena pela descrição).
+% =============================================================================
+\begin{center}
+    {\ABNTEXchapterfont LISTA DE SÍMBOLOS}
+\end{center}
+\vspace*{0.6cm}
+
+{\small
+\newcommand{\simb}[2]{\item[{#1}] #2}
+\newcommand{\grupo}[1]{\item[] \textbf{#1}}
+\begin{description}[labelsep=3mm, labelwidth=24mm, leftmargin=27mm, itemsep=0pt, parsep=1pt]
+
+\grupo{Letras latinas maiúsculas}
+\simb{$A$}{área da seção transversal}
+\simb{$A_d$}{ação acidental (impacto de veículo)}
+\simb{$A_s$}{área resistente da rosca}
+\simb{$B_{tot}$}{largura total da edificação em planta}
+\simb{$E_d$}{efeito de cálculo das ações}
+\simb{$E_{0,mean}$}{módulo de elasticidade médio paralelo às fibras}
+\simb{$E_{0,05}$}{módulo de elasticidade característico paralelo às fibras}
+\simb{$F_{d,x}$, $F_{d,y}$}{forças de impacto de veículo, frontal e lateral}
+\simb{$F_t$}{força de atrito do vento sobre a cobertura}
+\simb{$F_{v,Rk}$}{resistência característica de um pino por plano de corte}
+\simb{$F_{90,Rd}$}{resistência de cálculo ao fendilhamento}
+\simb{$G$}{ação permanente}
+\simb{$G_{mean}$}{módulo de cisalhamento médio}
+\simb{$H$}{altura dos pilares}
+\simb{$H_{Ed}$}{esforço horizontal de cálculo na base}
+\simb{$H_{imp}$}{força horizontal equivalente às imperfeições}
+\simb{$L$}{vão da viga}
+\simb{$L_T$}{espaçamento entre pórticos}
+\simb{$L_{tot}$}{comprimento total da edificação em planta}
+\simb{$M_{Ed}$, $M_d$}{momento fletor de cálculo}
+\simb{$M_{ap,d}$}{momento fletor de cálculo na cumeeira}
+\simb{$M_{cum}$}{momento na cumeeira}
+\simb{$M_{max}$}{momento fletor máximo}
+\simb{$M_{y,Rk}$}{momento de plastificação característico do pino}
+\simb{$N_{Ed}$, $N_d$}{esforço normal de cálculo}
+\simb{$N_{pl,Rd}$}{resistência de cálculo ao escoamento da seção bruta}
+\simb{$N_{t,Rd}$}{resistência de cálculo à tração}
+\simb{$N_{u,Rd}$}{resistência de cálculo à ruptura da rosca}
+\simb{$N_{max}$, $V_{max}$}{esforço normal e cortante extremos no eixo da viga}
+\simb{$N_t$}{esforço de tração (arrancamento)}
+\simb{$N_{Rd,c}$}{resistência de cálculo ao cone de arrancamento do concreto}
+\simb{$Q$}{ação variável (sobrecarga)}
+\simb{$Q_k$}{carga concentrada característica de manutenção}
+\simb{$R_d$}{resistência de cálculo}
+\simb{$R_A$, $R_B$}{reações verticais nos apoios}
+\simb{$R_v$}{reação vertical no apoio}
+\simb{$S_1$, $S_3$}{fatores topográfico e estatístico (ABNT NBR 6123)}
+\simb{$V_0$}{velocidade básica do vento}
+\simb{$V_{Ed}$, $V_d$}{esforço cortante de cálculo}
+\simb{$W$}{ação do vento}
+
+\grupo{Letras latinas minúsculas}
+\simb{$a_2$}{espaçamento entre pinos perpendicular às fibras}
+\simb{$a_{3,t}$}{distância do pino à extremidade carregada}
+\simb{$a_{4,c}$}{distância do pino à borda não carregada}
+\simb{$b$}{largura da seção da viga}
+\simb{$b_1$, $b_2$, $b_3$}{faixas da cobertura para o vento paralelo às cumeeiras (ABNT NBR 6123)}
+\simb{$b_t$, $h_t$}{largura e altura da seção da terça}
+\simb{$c_{pe}$, $c_{pi}$}{coeficientes de pressão externa e interna}
+\simb{$c_p$}{coeficiente de pressão}
+\simb{$c_{net}$}{coeficiente de pressão líquida}
+\simb{$d$}{diâmetro do pino ou do chumbador}
+\simb{$e$}{curvatura inicial das barras (imperfeição)}
+\simb{$f_{c,0,k}$, $f_{c,0,d}$}{resistência à compressão paralela às fibras}
+\simb{$f_{c,90,k}$, $f_{c,90,d}$}{resistência à compressão perpendicular às fibras}
+\simb{$f_{ck}$}{resistência característica do concreto à compressão}
+\simb{$f_{h,\alpha,k}$}{resistência característica ao embutimento no ângulo $\alpha$}
+\simb{$f_{m,k}$, $f_{m,d}$}{resistência à flexão}
+\simb{$f_{t,0,k}$}{resistência à tração paralela às fibras}
+\simb{$f_{t,90,k}$, $f_{t,90,d}$}{resistência à tração perpendicular às fibras}
+\simb{$f_u$, $f_y$}{resistências à ruptura e ao escoamento do aço}
+\simb{$f_{v,k}$, $f_{v,d}$}{resistência ao cisalhamento}
+\simb{$g$}{carga permanente distribuída}
+\simb{$g_{tel}$, $g_{ins}$}{pesos da telha e das instalações}
+\simb{$h$}{altura da seção}
+\simb{$h_0$}{altura da viga no apoio}
+\simb{$h_{ap}$}{altura da viga na cumeeira}
+\simb{$h_e$}{distância do pino mais afastado à borda carregada}
+\simb{$h_{imp}$}{altura de aplicação do impacto de veículo}
+\simb{$h_{ef}$}{profundidade efetiva de embutimento do chumbador}
+\simb{$k_c$, $k_{c,y}$, $k_{c,z}$}{coeficientes de instabilidade por flexão}
+\simb{$k_{cr}$}{coeficiente de fissuração no cisalhamento}
+\simb{$k_{crit}$}{coeficiente de flambagem lateral por torção}
+\simb{$k_{c,90}$}{coeficiente de compressão perpendicular às fibras}
+\simb{$k_{def}$}{coeficiente de fluência}
+\simb{$k_{dis}$, $k_{vol}$}{coeficientes de distribuição e de volume na cumeeira}
+\simb{$k_{\ell}$}{coeficiente do vão do contraventamento da cobertura}
+\simb{$k_m$}{coeficiente de redistribuição de tensões de flexão}
+\simb{$k_{m,\alpha}$}{coeficiente de redução da borda inclinada}
+\simb{$k_h$}{rigidez horizontal do apoio da viga}
+\simb{$k_{mod}$}{coeficiente de modificação}
+\simb{$k_p$}{coeficiente da tensão de tração perpendicular na cumeeira}
+\simb{$k_{90}$}{coeficiente da resistência ao embutimento}
+\simb{$\ell$}{vão do sistema de contraventamento}
+\simb{$\ell_{ef}$}{comprimento efetivo}
+\simb{$\ell_2$}{profundidade da cobertura isolada (ABNT NBR 6123)}
+\simb{$n$, $n_{ef}$}{número de pinos e número efetivo de pinos}
+\simb{$q$}{carga distribuída}
+\simb{$q_d$, $q_{Ed}$}{carga distribuída de cálculo}
+\simb{$q_{esq}$, $q_{dir}$}{cargas de cálculo por meia-água}
+\simb{$q_k$}{sobrecarga característica de cobertura}
+\simb{$s$}{espaçamento entre terças}
+\simb{$t$, $t_1$}{espessura da chapa; espessura lateral de madeira}
+\simb{$w_{inst}$, $w_{net,fin}$}{flechas instantânea e final líquida}
+\simb{$x$}{posição ao longo do vão}
+
+\grupo{Letras gregas}
+\simb{$\alpha$}{inclinação do extradorso; ângulo da força com as fibras}
+\simb{$\alpha_{cr}$}{fator de amplificação das cargas para a instabilidade global}
+\simb{$\beta$}{inclinação da diagonal de contraventamento}
+\simb{$\gamma_G$, $\gamma_Q$}{coeficientes parciais das ações permanente e variável}
+\simb{$\gamma_M$}{coeficiente parcial do material}
+\simb{$\gamma_{M0}$, $\gamma_{M2}$}{coeficientes parciais do aço}
+\simb{$\gamma_C$, $\gamma_{Mc}$}{coeficientes parciais do concreto}
+\simb{$\gamma_{Ms}$}{coeficiente parcial do chumbador}
+\simb{$\eta$}{taxa de utilização, $E_d/R_d$}
+\simb{$\theta$}{inclinação do eixo da viga}
+\simb{$\lambda$, $\lambda_{rel}$}{esbeltez e esbeltez relativa}
+\simb{$\lambda_{rel,m}$}{esbeltez relativa à flexão (flambagem lateral)}
+\simb{$\rho_k$, $\rho_{mean}$}{massas específicas característica e média}
+\simb{$\sigma_{c,0,d}$}{tensão de compressão paralela às fibras}
+\simb{$\sigma_{c,90,d}$}{tensão de compressão perpendicular às fibras}
+\simb{$\sigma_{m,d}$}{tensão de flexão}
+\simb{$\sigma_{m,crit}$}{tensão crítica de flexão (flambagem lateral)}
+\simb{$\sigma_{t,90,d}$}{tensão de tração perpendicular às fibras}
+\simb{$\tau_d$}{tensão de cisalhamento}
+\simb{$\varphi_{dyn}$}{fator de amplificação dinâmica no içamento}
+\simb{$\phi$}{imperfeição inicial de prumo}
+\simb{$\psi_0$, $\psi_1$, $\psi_2$}{coeficientes de combinação; $\psi_{0,W}$ refere-se ao vento}
+\end{description}
+}

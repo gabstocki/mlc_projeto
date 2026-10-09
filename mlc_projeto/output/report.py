@@ -21,6 +21,9 @@ OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 
 # ── Helpers (robustos a None / tipos inválidos) ───────────────────────────────
 
+from mlc_projeto.output.formatacao import eta_exibido, fmt_eta, fmt_sig  # noqa: E402
+
+
 def _f(x, default: float = 0.0) -> float:
     """float seguro; None/inválido → default."""
     if x is None:
@@ -69,6 +72,16 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("lig_diag_transversal","Lig. diagonal frontão",     "EN 1993-1-8 §3.13+§4.5"),
     ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
     ("no_contraventamento", "Nó contravent. (escoras)",  "EC5 §6.3.2+§8.2.3+An. A"),
+    # [issue 52] 2º montante da cruz do frontão (não existia no plano do frontão).
+    ("pilar_frontao_montante", "Pilar de frontão PF",    "EC5 §6.2.3+§6.3.2"),
+    ("lig_topo_frontao",    "Lig. topo PF (L1f)",        "EC5 §8.2.3+§8.5.1.1+An. A"),
+    ("ancoragem_L3f",       "Ancoragem L3f (base PF)",   "EN 1993-1-8 + EN 1992-4"),
+    # [issue 52] chapa de base (T-stub) + pé do pilar (cavilhas)
+    ("base_L3",             "Base L3 (chapa + pé)",      "EN 1993-1-8 §6.2.4 + EC5 §8"),
+    ("base_L3c",            "Base L3c (chapa + pé)",     "EN 1993-1-8 §6.2.4 + EC5 §8"),
+    ("base_L3f",            "Base L3f (chapa + pé)",     "EN 1993-1-8 §6.2.4 + EC5 §8"),
+    ("base_L3a_canto",      "Base L3a canto (chapa + pé)", "EN 1993-1-8 §6.2.4 + EC5 §8"),
+    ("base_L3a_central",    "Base L3a central (chapa + pé)", "EN 1993-1-8 §6.2.4 + EC5 §8"),
     ("estabilidade_global", "Estabilidade global P-Δ",   "EC5 §5.4.4+EN 1993-1-1 §5.2.1"),
     ("impacto_veiculo",     "Impacto veículo (A_d)",     "EN 1991-1-7"),
     ("icamento",            "Içamento (montagem)",       "EN 1991-1-6+EC5 §6.3.3"),
@@ -101,6 +114,9 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
 # Chaves que não são verificações η (excluir do Excel automático residual)
 _META_KEYS = frozenset({
     "meta", "k_def", "load", "geo", "mat",
+    # agregado do pilar de frontão (issue 52): as três partes já constam do
+    # catálogo como verificações próprias
+    "pilar_frontao",
 })
 
 
@@ -278,6 +294,11 @@ def _i(x, default: int = 0) -> int:
 def _br(x, nd: int = 2) -> str:
     """Decimal brasileiro para LaTeX. Aceita None."""
     return f"{_f(x):.{nd}f}".replace(".", "{,}")
+
+
+def _be(eta) -> str:
+    """η para LaTeX: duas casas, arredondado para cima (issue 53)."""
+    return fmt_eta(_f(eta)).replace(",", "{,}")
 
 
 def _tex_escape(s: object) -> str:
@@ -638,7 +659,7 @@ def gerar_tex(
         simbolo = r"\checkmark" if ok else r"$\times$"
         v = _f(eta, float("nan"))
         # F-04: η indeterminado imprime-se como travessão, nunca como 0,0000.
-        eta_tex = "--" if math.isnan(v) else f"{v:.4f}"
+        eta_tex = "--" if math.isnan(v) else _be(v)
         return (
             f"  {nome_verif} & {norma} & "
             f"{eta_tex} & "
@@ -884,9 +905,9 @@ def gerar_tex(
             'Verificada como combinação alternativa (issue~34): terça a meio-vão '
             f'$M_d={_br(r_qk.get("M_d_kNm", 0), 2)}$~kN·m (duração média, '
             f'$k_{{mod}}={_br(r_qk.get("k_mod", 0.65), 2)}$) $\\Rightarrow$ '
-            f'$\\eta={_br(r_qk.get("eta", 0), 3)}$ '
+            f'$\\eta={_be(r_qk.get("eta", 0))}$ '
             f'({_tex_escape(str(r_qk.get("verif_gov", "")))}), abaixo da UDL '
-            f'($\\eta_{{flex}}={_br((r_ter or {}).get("eta_flexao", 0), 3)}$) '
+            f'($\\eta_{{flex}}={_be((r_ter or {}).get("eta_flexao", 0))}$) '
             '$\\Rightarrow$ a UDL governa. Telha: $M_{local,d}='
             f'{_br(r_qk.get("M_telha_d_kNm", 0), 3)}$~kN·m/m a confrontar com a '
             'ficha do fabricante (issue~17).'
@@ -1059,7 +1080,7 @@ def gerar_tex(
             'Verificação (Eq.~6.33): '
             f'$\\sigma_{{m,d}}={_br(r_fl.get("sigma_md_MPa",0),3)}\\leq '
             f'k_{{crit}}f_{{m,d}}={_br(r_fl.get("resist_MPa",0),3)}$~MPa '
-            f'$\\Rightarrow\\eta={_br(r_fl.get("eta",0),3)}$. '
+            f'$\\Rightarrow\\eta={_be(r_fl.get("eta",0))}$. '
             'O termo $+2h$ é a nota da Tab.~6.1 para carga aplicada na borda '
             'comprimida (as terças apoiam no extradorso). Esta verificação cobre '
             'o momento positivo; o negativo, de sucção, segue abaixo.\n\n'
@@ -1094,7 +1115,7 @@ def gerar_tex(
             '\\]\n'
             f'$\\sigma_{{m,d}}={_br(r_fs.get("sigma_md_MPa",0),2)}\\leq '
             f'k_{{crit}}f_{{m,d}}={_br(r_fs.get("resist_MPa",0),2)}$~MPa '
-            f'$\\Rightarrow\\eta={_br(r_fs.get("eta",0),3)}$.\n\n'
+            f'$\\Rightarrow\\eta={_be(r_fs.get("eta",0))}$.\n\n'
         )
 
     # ── Detalhe: mísula / borda inclinada (EC5 §6.4.2) ────────────────────────
@@ -1128,7 +1149,7 @@ def gerar_tex(
             '\\[\n'
             f'  \\sigma_{{m,\\alpha,d}}={_br(r_mis.get("sigma_m_alpha_MPa",0),3)}~\\text{{MPa}}'
             f'\\leq k_{{m,\\alpha}} f_{{m,d}}={_br(r_mis.get("resistencia_MPa",0),3)}~\\text{{MPa}}'
-            f'\\;\\Rightarrow\\;\\eta={_br(r_mis.get("eta",0),3)}\n'
+            f'\\;\\Rightarrow\\;\\eta={_be(r_mis.get("eta",0))}\n'
             '\\]\n\n'
             'A zona do ápice (perpendicular à fibra, $\\sigma_{t,90}$) é tratada '
             'à parte pela \\S6.4.3 (cumeeira); esta é a verificação complementar '
@@ -1157,10 +1178,10 @@ def gerar_tex(
             '  \\midrule\n'
             f'  Flexão ápice (Eq.~6.42) $\\sigma_m=k_l\\tfrac{{6M_{{ap}}}}{{b h_{{ap}}^2}}$ & '
             f'${_br(r_cum.get("sigma_m_ap_MPa",0),3)}\\leq k_r f_{{m,d}}={_br(r_cum.get("resist_m_MPa",0),2)}$~MPa & '
-            f'{_br(r_cum.get("eta_flexao_ap",0),3)} \\\\\n'
+            f'{_be(r_cum.get("eta_flexao_ap",0))} \\\\\n'
             f'  Tração $\\perp$ (Eq.~6.54) $\\sigma_{{t,90}}=k_p\\tfrac{{6M_{{ap}}}}{{b h_{{ap}}^2}}$ & '
             f'${_br(r_cum.get("sigma_t90d_MPa",0),3)}\\leq k_{{dis}}k_{{vol}}f_{{t,90,d}}={_br(r_cum.get("resist_t90_MPa",0),3)}$~MPa & '
-            f'{_br(r_cum.get("eta_t90",0),3)} \\\\\n'
+            f'{_be(r_cum.get("eta_t90",0))} \\\\\n'
             '  \\bottomrule\n'
             '\\end{tabular}\n\n'
             f'\\vspace{{2pt}}\nParâmetros: $k_p={_br(r_cum.get("k_p",0),4)}$ '
@@ -1175,14 +1196,14 @@ def gerar_tex(
     parts.append(f'{r_pilar.get('lambda', 0):.1f} & ')
     parts.append(f'{r_pilar.get('lambda_rel', 0):.4f} & ')
     parts.append(f'{r_pilar.get('k_c', 0):.4f} & ')
-    parts.append(f'{_eta(r_pilar):.4f} \\\\\n')
+    parts.append(f'{_be(_eta(r_pilar))} \\\\\n')
     parts.append('  Central ($N\\approx 2R_v$) & ')
     parts.append(f'{r_pc.get('b_m', 0.28):.2f}$\\times${r_pc.get('h_m', 0.28):.2f} & ')
     parts.append(f'{r_pc.get('N_d_kN', 0):.2f} & ')
     parts.append(f'{r_pc.get('lambda', 0):.1f} & ')
     parts.append(f'{r_pc.get('lambda_rel', 0):.4f} & ')
     parts.append(f'{r_pc.get('k_c', 0):.4f} & ')
-    parts.append(f'{_eta(r_pc):.4f} \\\\\n')
+    parts.append(f'{_be(_eta(r_pc))} \\\\\n')
     parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
     parts.append(
         '\\textbf{Definição de $N_d$ e combinação governante (issue 13):} '
@@ -1194,10 +1215,10 @@ def gerar_tex(
         '\\begin{itemize}\n'
         f'  \\item Lateral: governa \\texttt{{{_tex_escape(r_pilar.get("comb_gov", "--"))}}} '
         f'($k_{{mod}}={_br(r_pilar.get("k_mod", 0), 2)}$), '
-        f'$N_d={_br(r_pilar.get("N_d_kN", 0), 1)}$~kN, $\\eta={_br(_eta(r_pilar), 4)}$;\n'
+        f'$N_d={_br(r_pilar.get("N_d_kN", 0), 1)}$~kN, $\\eta={_be(_eta(r_pilar))}$;\n'
         f'  \\item Central: governa \\texttt{{{_tex_escape(r_pc.get("comb_gov", "--"))}}} '
         f'($k_{{mod}}={_br(r_pc.get("k_mod", 0), 2)}$), '
-        f'$N_d={_br(r_pc.get("N_d_kN", 0), 1)}$~kN, $\\eta={_br(_eta(r_pc), 4)}$.\n'
+        f'$N_d={_br(r_pc.get("N_d_kN", 0), 1)}$~kN, $\\eta={_be(_eta(r_pc))}$.\n'
         '\\end{itemize}\n'
         '\\textit{Origem dos dois valores de $N$:} a reação vertical de ELU '
         '($\\approx$210~kN, ELU\\_C2) é o $N$ do pilar; o esforço normal do '
@@ -1336,7 +1357,7 @@ def gerar_tex(
         f"\\quad método: \\texttt{{{_eg_met}}}"
         f"\\quad $\\alpha_{{cr,arco}}={_br(r_eg.get('alpha_cr', 0), 1)}$"
         f"\\quad $H_{{imp}}/H_{{Ed}}={float(r_eg.get('H_imp_over_H', 0)):.4f}$"
-        f"\\quad $\\eta_{{crit}}={float(r_eg.get('eta', 0)):.4f}$"
+        f"\\quad $\\eta_{{crit}}={_be(float(r_eg.get('eta', 0)))}$"
         "\\\\[0.35em]\n"
         "Análise de estabilidade global \\textbf{executada} no pipeline "
         "e \\textbf{registrada} neste memorial. "
@@ -1389,10 +1410,10 @@ def gerar_tex(
             f'  $V$ por painel & {_br(r_cvv.get("V_painel_kN", 0), 1)}~kN & {_br(r_cvc.get("V_painel_kN", 0), 1)}~kN & \\\\\n'
             f'  Diagonal ({r_cvv.get("aco", "S235")}) & $\\varnothing{_i(r_cvv.get("d_mm", 0))}$ & $\\varnothing{_i(r_cvc.get("d_mm", 0))}$ & $\\beta={_br(r_cvv.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
             f'  $N_{{diag}}$ / $N_{{t,Rd}}$ & {_br(r_cvv.get("N_diag_kN", 0), 1)} / {_br(r_cvv.get("N_t_Rd_kN", 0), 1)}~kN & {_br(r_cvc.get("N_diag_kN", 0), 1)} / {_br(r_cvc.get("N_t_Rd_kN", 0), 1)}~kN & \\S6.2.3 \\\\\n'
-            f'  $\\eta$ diagonal & {_br(r_cvv.get("eta_diag_N", 0), 3)} {_sim_eg(_cvv_okN)} & {_br(r_cvc.get("eta_diag_N", 0), 3)} {_sim_eg(bool(r_cvc.get("ok_diag", False)))} & \\\\\n'
+            f'  $\\eta$ diagonal & {_be(r_cvv.get("eta_diag_N", 0))} {_sim_eg(_cvv_okN)} & {_be(r_cvc.get("eta_diag_N", 0))} {_sim_eg(bool(r_cvc.get("ok_diag", False)))} & \\\\\n'
             f'  $H_{{base}}$ por painel & {_br(r_cvv.get("H_base_kN", 0), 1)}~kN & {_br(r_cvc.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
             f'  $\\pm V\\tan\\beta$ no montante & {_br(r_cvv.get("N_uplift_kN", 0), 1)}~kN & {_br(r_cvc.get("N_uplift_kN", 0), 1)}~kN & pilar/ancoragem \\\\\n'
-            f'  $\\delta$ / $H/300$ & {_br(r_cvv.get("delta_mm", 0), 2)} / {_br(r_cvv.get("delta_lim_mm", 0), 2)}~mm & {_br(r_cvc.get("delta_mm", 0), 2)} / {_br(r_cvc.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(max(r_cvv.get("eta_delta", 0), r_cvc.get("eta_delta", 0)), 3)}$ {_sim_eg(_cvv_okd)} \\\\\n'
+            f'  $\\delta$ / $H/300$ & {_br(r_cvv.get("delta_mm", 0), 2)} / {_br(r_cvv.get("delta_lim_mm", 0), 2)}~mm & {_br(r_cvc.get("delta_mm", 0), 2)} / {_br(r_cvc.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_be(max(r_cvv.get("eta_delta", 0), r_cvc.get("eta_delta", 0)))}$ {_sim_eg(_cvv_okd)} \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
             '\\textbf{Direção transversal (no plano do pórtico):} tratada na '
             '\\S8b.2 (diafragma de cobertura + frontões contraventados).\n\n'
@@ -1424,10 +1445,10 @@ def gerar_tex(
             f'  $N_{{corda}}$ diafragma & {_br(r_cvt.get("N_corda_kN", 0), 1)}~kN & $M/B$ (ao beiral) \\\\\n'
             f'  $R_{{frontão}}$ & {_br(r_cvt.get("R_gable_kN", 0), 1)}~kN & $H_{{tr}}/2$ \\\\\n'
             f'  Diagonal frontão & $d={_i(r_cvt.get("d_mm", 0))}$~mm {r_cvt.get("aco", "S235")} & $\\beta={_br(r_cvt.get("beta_deg", 0), 1)}^\\circ$ \\\\\n'
-            f'  $N_{{diag}}\\leq N_{{t,Rd}}$ & {_br(r_cvt.get("N_diag_kN", 0), 1)} $\\leq$ {_br(r_cvt.get("N_t_Rd_kN", 0), 1)}~kN & $\\eta={_br(r_cvt.get("eta_diag_N", 0), 3)}$ {_sim_eg(_cvt_okN)} \\\\\n'
+            f'  $N_{{diag}}\\leq N_{{t,Rd}}$ & {_br(r_cvt.get("N_diag_kN", 0), 1)} $\\leq$ {_br(r_cvt.get("N_t_Rd_kN", 0), 1)}~kN & $\\eta={_be(r_cvt.get("eta_diag_N", 0))}$ {_sim_eg(_cvt_okN)} \\\\\n'
             f'  $H_{{base}}$ (cortante) & {_br(r_cvt.get("H_base_kN", 0), 1)}~kN & à fundação \\\\\n'
             f'  $N_{{uplift}}$ (arrancamento) & {_br(r_cvt.get("N_uplift_kN", 0), 1)}~kN & ancoragem \\\\\n'
-            f'  $\\delta\\leq H/300$ & {_br(r_cvt.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvt.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_br(r_cvt.get("eta_delta", 0), 3)}$ {_sim_eg(_cvt_okd)} \\\\\n'
+            f'  $\\delta\\leq H/300$ & {_br(r_cvt.get("delta_mm", 0), 2)} $\\leq$ {_br(r_cvt.get("delta_lim_mm", 0), 2)}~mm & $\\eta={_be(r_cvt.get("eta_delta", 0))}$ {_sim_eg(_cvt_okd)} \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
             'Com o diafragma verificado, o dimensionamento dos pilares '
             '(\\S8) e o modelo $pilar\\_vento\\_90$ (biapoiado, topo travado) '
@@ -1441,9 +1462,9 @@ def gerar_tex(
                 f'do diafragma, com $N_{{corda}}={_br(r_cb.get("N_corda_kN", 0), 1)}$~kN '
                 '($\\pm$, inverte com o sentido do vento). Verificada como '
                 'flexo-axial: flexo-\\textbf{compressão} (EC5~\\S6.3.2, '
-                f'$\\eta={_br(r_cb.get("eta_compressao", 0), 3)}$) e flexo-'
-                f'\\textbf{{tração}} (\\S6.2.3, $\\eta={_br(r_cb.get("eta_tracao", 0), 3)}$) '
-                f'-- $\\eta_{{\\mathrm{{gov}}}}={_br(r_cb.get("eta", 0), 3)}$. '
+                f'$\\eta={_be(r_cb.get("eta_compressao", 0))}$) e flexo-'
+                f'\\textbf{{tração}} (\\S6.2.3, $\\eta={_be(r_cb.get("eta_tracao", 0))}$) '
+                f'-- $\\eta_{{\\mathrm{{gov}}}}={_be(r_cb.get("eta", 0))}$. '
                 f'\\textbf{{Continuidade obrigatória}}: {_i(r_cb.get("n_emendas", 0))} '
                 f'emenda(s) ao longo de {_br(r_cb.get("L_comp_m", 46), 0)}~m, cada uma '
                 f'transferindo $N_{{corda}}$ (chapa/parafusos, EC5~\\S8) -- sem '
@@ -1536,7 +1557,7 @@ def gerar_tex(
             f'{_br(_c.get("N_d_kN", 0), 1)}~kN & '
             f'{_br(_c.get("M_d_kNm", 0), 2)}~kN·m & '
             f'{_br(_c.get("V_d_kN", 0), 2)}~kN & '
-            f'{_eta(_c):.4f} & '
+            f'{_be(_eta(_c))} & '
             f'{"\\checkmark" if _cok else "$\\\\times$"} \\\\\n'
         )
     parts.append('  \\bottomrule\n\\end{tabular}\n\n')
@@ -1549,7 +1570,7 @@ def gerar_tex(
     _iv_rec = _tex_escape(r_iv.get("recomendacao", "—"))
     _iv_body = (
         f"{_iv_sim}\\ {_iv_st}"
-        f"\\quad $\\eta_{{\\mathrm{{gov}}}}={_eta(r_iv):.4f}$"
+        f"\\quad $\\eta_{{\\mathrm{{gov}}}}={_be(_eta(r_iv))}$"
         f"\\quad gov: {_tex_escape(str(r_iv.get('gov', '—')).replace('_', ' '))}"
         "\\\\[0.35em]\n"
         f"{_iv_rec}"
@@ -1590,15 +1611,15 @@ def gerar_tex(
             f'  Flexão ($M^-={_br(r_ic.get("M_neg_kNm", 0), 1)}$, '
             f'$M^+={_br(r_ic.get("M_pos_kNm", 0), 1)}$~kN·m) & '
             f'$\\sigma_m={_br(r_ic.get("sigma_m_pos_MPa", 0), 2)}$~MPa & '
-            f'{_br(r_ic.get("eta_flexao", 0), 4)} \\\\\n'
+            f'{_be(r_ic.get("eta_flexao", 0))} \\\\\n'
             f'  Cortante & $\\tau={_br(r_ic.get("tau_MPa", 0), 3)}$~MPa & '
-            f'{_br(r_ic.get("eta_cisalhamento", 0), 4)} \\\\\n'
+            f'{_be(r_ic.get("eta_cisalhamento", 0))} \\\\\n'
             f'  LTB s/ contravento (Eq.~6.35) & '
             f'$l_{{ef}}={_br(r_ic.get("l_ef_LTB_m", 0), 1)}$~m, '
             f'$k_{{crit}}={_br(r_ic.get("k_crit", 0), 3)}$ & '
-            f'{_br(r_ic.get("eta_LTB", 0), 4)} \\\\\n'
+            f'{_be(r_ic.get("eta_LTB", 0))} \\\\\n'
             '  \\bottomrule\n\\end{tabular}}\n\n'
-            f'$\\eta_{{\\mathrm{{gov}}}}={_br(r_ic.get("eta", 0), 4)}$ '
+            f'$\\eta_{{\\mathrm{{gov}}}}={_be(r_ic.get("eta", 0))}$ '
             f'({_tex_escape(str(r_ic.get("eta_gov_key", "")))}) -- '
             + ('\\textbf{OK}' if _ic_ok else '\\textbf{verificar}')
             + '. Os momentos de peso próprio na montagem são pequenos face aos '
@@ -1692,13 +1713,13 @@ def gerar_tex(
     parts.append(_br(r_cv.get('N_t_Rd_kN', 0), 2))
     parts.append('~kN & $\\min(A f_y/\\gamma_{M0};\\,0{,}9A_s f_u/\\gamma_{M2})$, rosca recalcada M'
                  + f"{_i(r_cv.get('d_rosca_mm', 0))}" + ' (issue~44) \\\\\n  $\\eta_N$ (diagonal) & ')
-    parts.append(f'{_eta(r_cv, "eta_diag_N"):.4f}')
+    parts.append(f'{_be(_eta(r_cv, "eta_diag_N"))}')
     parts.append(' & \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.3 Flecha do sistema e terça-biela}\n\n\\begin{tabular}{@{}lll@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & $\\eta$ \\\\\n  \\midrule\n  $\\delta\\leq\\ell/500$ (rigidez global) &\n    ')
     parts.append(f'{r_cv.get('delta_mm', 0):.2f}')
     parts.append('~mm $\\leq$ ')
     parts.append(f'{r_cv.get('delta_lim_mm', 0):.1f}')
     parts.append('~mm & ')
-    parts.append(f'{_eta(r_cv, "eta_delta"):.4f}')
+    parts.append(f'{_be(_eta(r_cv, "eta_delta"))}')
     parts.append(' \\\\\n  Terça-biela flexo-compr. \\textbf{combinada} (EC5~\\S6.3.2, Eq.~6.23/6.24) &\n    $\\sigma_{c}=')
     parts.append(_br(r_tfc.get('sigma_c_MPa', 0), 3))
     parts.append('$, $\\sigma_{m,y}=')
@@ -1708,13 +1729,13 @@ def gerar_tex(
     _vg = {"Eq.6.23": "Eq.~6{,}23", "Eq.6.24": "Eq.~6{,}24"}.get(
         str(r_tfc.get('verif_gov', '--')), '--')
     parts.append('$ (' + _vg + ') & ')
-    parts.append(f'{_eta(r_tfc):.4f}')
+    parts.append(f'{_be(_eta(r_tfc))}')
     parts.append(' \\\\\n  Rigidez terça $EA/L\\geq C_{\\min}$ &\n    ')
     parts.append(_br(r_cv.get('C_terca_kNpm', 0), 0))
     parts.append(' $\\geq$ ')
     parts.append(_br(r_cv.get('C_min_kNpm', 0), 0))
     parts.append('~kN/m & ')
-    parts.append(f'{_eta(r_cv, "eta_C_terca"):.4f}')
+    parts.append(f'{_be(_eta(r_cv, "eta_C_terca"))}')
     parts.append(' \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\subsection*{9.4 Função estrutural da cobertura (acoplamento ao LTB)}\n\n\\begin{tabular}{@{}ll@{}}\n  \\toprule\n  \\textbf{Indicador} & \\textbf{Resultado} \\\\\n  \\midrule\n  $\\mathtt{cobertura\\_ok}$ & ')
     parts.append('\\textbf{Sim}' if cob_ok else '\\textbf{Não}')
     parts.append(' \\\\\n  Restrição lateral das terças & ')
@@ -1722,7 +1743,7 @@ def gerar_tex(
     parts.append(' para LTB \\\\\n  $l_1$ efetivo adotado & ')
     parts.append(_br(l_1_ef, 3))
     parts.append('~m \\\\\n  $\\eta$ governante (contravent.) & ')
-    parts.append(f'{_eta(r_cv):.4f}')
+    parts.append(f'{_be(_eta(r_cv))}')
     parts.append(' \\quad(')
     parts.append(str(r_cv.get('eta_gov_key', '--')).replace('_', '\\_'))
     parts.append(') \\\\\n  Quantitativo & ')
@@ -1747,25 +1768,25 @@ def gerar_tex(
             '  Escora & $N$ (kN) & $\\eta$ flexo-axial & Ligação & $R_d$ (kN) & $\\eta$ lig. \\\\\n'
             '  \\midrule\n'
             f'  Beiral & {_br(r_nc.get("N_escora_beiral_kN",0),1)} & '
-            f'{_br(r_nc.get("escora_beiral",{}).get("eta",0),3)} & '
+            f'{_be(r_nc.get("escora_beiral",{}).get("eta",0))} & '
             f'{_i(_lb.get("n_pinos",0))}$\\times\\varnothing${_i(_lb.get("d_mm",0))} & '
-            f'{_br(_lb.get("R_d_kN",0),0)} & {_br(_lb.get("eta",0),3)} \\\\\n'
+            f'{_br(_lb.get("R_d_kN",0),0)} & {_be(_lb.get("eta",0))} \\\\\n'
             f'  Linha central & {_br(r_nc.get("N_escora_central_kN",0),1)} & '
-            f'{_br(r_nc.get("escora_central",{}).get("eta",0),3)} & '
+            f'{_be(r_nc.get("escora_central",{}).get("eta",0))} & '
             f'{_i(_lc.get("n_pinos",0))}$\\times\\varnothing${_i(_lc.get("d_mm",0))} & '
-            f'{_br(_lc.get("R_d_kN",0),0)} & {_br(_lc.get("eta",0),3)} \\\\\n'
+            f'{_br(_lc.get("R_d_kN",0),0)} & {_be(_lc.get("eta",0))} \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n'
         )
 
     parts.append('~kg) \\\\\n  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n\\textit{Nota:} vento no sentido do comprimento do galpão (eixo~$Y$) e\ncontraventamento vertical de frontões \\textbf{não} estão neste módulo --\nsão sistema global distinto (contraventamento vertical em \\S8b.1; transversal em \\S8b.2). Aqui trata-se apenas da estabilização das\nvigas e da integridade do plano da cobertura (EC5~\\S9.2.5).\n\n% ── 10. Verificações ELS ──────────────────────────────────────\n\\section*{10. Verificações ELS -- Flechas}\n\n\\begin{tabular}{@{}lllcc@{}}\n  \\toprule\n  \\textbf{Verificação} & \\textbf{Valor} & \\textbf{Limite} & $\\eta$ & \\\\\n  \\midrule\n  $w_{inst}(S1) \\leq L/300$ & ')
     parts.append(f'{r_els.get('w_S1_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_inst_mm', 67.5):.2f}~mm & ')
-    parts.append(f'{eta_S1:.4f} & ')
+    parts.append(f'{_be(eta_S1)} & ')
     parts.append(f'{sim_S1} \\\\\n')
     parts.append('  $w_{net,fin} \\leq L/250$ & ')
     parts.append(f'{r_els.get('w_net_fin_mm', 0):.2f}~mm & ')
     parts.append(f'{r_els.get('lim_fin_mm', 81.0):.2f}~mm & ')
-    parts.append(f'{eta_nf:.4f} & ')
+    parts.append(f'{_be(eta_nf)} & ')
     parts.append(f'{sim_nf} \\\\\n')
     parts.append('  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n')
     parts.append(
@@ -1831,7 +1852,7 @@ def gerar_tex(
             f'{_br(r_tir.get("N_t_Rd_kN", 0), 1)}~kN & EN~1993-1-1~\\S6.2.3 \\\\\n'
         )
         parts.append(
-            f'  $\\eta$ & {_eta(r_tir):.4f} & '
+            f'  $\\eta$ & {_be(_eta(r_tir))} & '
             f'alvo {_br(r_tir.get("eta_alvo", 0.75), 2)} \\\\\n'
         )
         parts.append(
@@ -1918,7 +1939,7 @@ def gerar_tex(
                 f'reduz $d={_br(r_cor.get("d_mm", 0), 0)}\\to{_br(r_cor.get("d_ef_mm", 0), 0)}$~mm '
                 f'($-{_br(r_cor.get("perda_pct", 0), 0)}$\\% de $N_{{t,Rd}}$); a '
                 'tração reverificada na seção efetiva dá '
-                f'$\\eta={_br(r_cor.get("eta", 0), 3)}$ \\textbf{{(governa a robustez)}}.\n'
+                f'$\\eta={_be(r_cor.get("eta", 0))}$ \\textbf{{(governa a robustez)}}.\n'
             )
             parts.append(
                 '  \\item \\textbf{Incêndio (EN~1993-1-2):} '
@@ -2008,7 +2029,7 @@ def gerar_tex(
     parts.append(f'{r_L1.get('R_total_kN', 0):.1f}~kN, ')
     parts.append(f'{r_L1.get('F_res_kN', 0):.1f}~kN \\\\\n')
     parts.append('  & & $\\eta$, $\\eta_{alvo}$ & ')
-    parts.append(f'{_eta(r_L1):.4f}, {r_L1.get('eta_alvo', 0.75):.2f} \\\\\n')
+    parts.append(f'{_be(_eta(r_L1))}, {r_L1.get('eta_alvo', 0.75):.2f} \\\\\n')
     if com_tirante or r_L3.get('com_tirante'):
         parts.append(
             '  \\midrule\n  L3 -- Sapata & Com tirante ($H\\approx 0$) &\n'
@@ -2023,7 +2044,7 @@ def gerar_tex(
         parts.append('  & Compressão $N$ & $\\sigma_c$, $\\eta_N$ & ')
         parts.append(
             f'{r_L3.get("sigma_c_MPa", 0):.3f}~MPa, '
-            f'{r_L3.get("eta_N", r_L3.get("eta", 0)):.4f} \\\\\n'
+            f'{_be(r_L3.get("eta_N", r_L3.get("eta", 0)))} \\\\\n'
         )
         parts.append('  & Chapa de base & Dimensões & ')
         parts.append(
@@ -2039,12 +2060,12 @@ def gerar_tex(
         parts.append('  & Chapa de base & Dimensões & ')
         parts.append(f'{r_L3.get('lado_chapa_cm', 0):.1f}$\\times${r_L3.get('lado_chapa_cm', 0):.1f}~cm \\\\\n')
         parts.append('  & & $H_d$, $\\eta$, $\\eta_{alvo}$ & ')
-        parts.append(f'{r_L3.get('H_d_kN', 0):.1f}~kN, {_eta(r_L3):.4f}, ')
+        parts.append(f'{r_L3.get('H_d_kN', 0):.1f}~kN, {_be(_eta(r_L3))}, ')
         parts.append(f'{r_L3.get('eta_alvo', 0.75):.2f} \\\\\n')
     parts.append('  \\midrule\n  L1c -- Central & 2 chapas independentes &\n    $d$, $n$/chapa, layout &\n    ')
     parts.append(f'{r_L1c.get('d_mm', 0):.0f}~mm, {r_L1c.get('n_pinos', 0)}, {r_L1c.get('n_linha', 0)}$\\times${r_L1c.get('n_linhas', 0)} \\\\\n')
     parts.append('  & & $\\eta$ & ')
-    parts.append(f'{_eta(r_L1c):.4f} \\\\\n')
+    parts.append(f'{_be(_eta(r_L1c))} \\\\\n')
     parts.append(
         '  \\midrule\n'
         '  L3c -- Sapata central &\n'
@@ -2054,7 +2075,7 @@ def gerar_tex(
     parts.append(
         f'{r_L3c.get("N_d_kN", 0):.1f}~kN, '
         f'{r_L3c.get("sigma_c_MPa", 0):.3f}~MPa, '
-        f'{r_L3c.get("eta_N", r_L3c.get("eta", 0)):.4f} \\\\\n'
+        f'{_be(r_L3c.get("eta_N", r_L3c.get("eta", 0)))} \\\\\n'
     )
     parts.append('  & Chumbadores (só construtivo) & $n$ & ')
     parts.append(f'{r_L3c.get("n_chumbadores", 0)} '
@@ -2186,10 +2207,10 @@ def gerar_tex(
     parts.append(
         f'  L1 & {_tex_escape(r_fL1.get("descricao", "Base lateral"))} & '
         f'{r_fL1.get("u_inst_mm", 0):.3f}~mm & {r_fL1.get("u_fin_mm", 0):.3f}~mm & '
-        f'{_eta(r_fL1, "eta_slip"):.4f} & {_eta(r_fL1, "eta_alt"):.4f} \\\\\n'
+        f'{_be(_eta(r_fL1, "eta_slip"))} & {_be(_eta(r_fL1, "eta_alt"))} \\\\\n'
         f'  L1c & {_tex_escape(r_fL1c.get("descricao", "Base central"))} & '
         f'{r_fL1c.get("u_inst_mm", 0):.3f}~mm & {r_fL1c.get("u_fin_mm", 0):.3f}~mm & '
-        f'{_eta(r_fL1c, "eta_slip"):.4f} & {_eta(r_fL1c, "eta_alt"):.4f} \\\\\n'
+        f'{_be(_eta(r_fL1c, "eta_slip"))} & {_be(_eta(r_fL1c, "eta_alt"))} \\\\\n'
     )
     parts.append(
         '  \\bottomrule\n'
@@ -2221,16 +2242,16 @@ def gerar_tex(
             f'  $H$ (invertido) & {_br(r_succ.get("H_suc_kN", 0), 1)}~kN & tirante frouxo \\\\\n'
             '  \\midrule\n'
             f'  Extremidade: $N_{{uplift}}$ & {_br(r_succ.get("N_uplift_ext_kN", 0), 1)}~kN & '
-            f'$-\\gamma_{{G,inf}}W_{{pilar}}$ ($\\eta_N={_br(r_succ.get("eta_N_ext", 0), 3)}$) \\\\\n'
+            f'$-\\gamma_{{G,inf}}W_{{pilar}}$ ($\\eta_N={_be(r_succ.get("eta_N_ext", 0))}$) \\\\\n'
             f'  Extremidade: $V_{{base}}$ & {_br(r_succ.get("V_base_ext_kN", 0), 1)}~kN & '
-            f'empuxo invertido ($\\eta_V={_br(r_succ.get("eta_V_ext", 0), 3)}$) \\\\\n'
+            f'empuxo invertido ($\\eta_V={_be(r_succ.get("eta_V_ext", 0))}$) \\\\\n'
             f'  Central: $N_{{uplift}}$ & {_br(r_succ.get("N_uplift_cen_kN", 0), 1)}~kN & '
-            f'$\\eta={_br(r_succ.get("eta_cen", 0), 3)}$ ($V\\approx0$) \\\\\n'
+            f'$\\eta={_be(r_succ.get("eta_cen", 0))}$ ($V\\approx0$) \\\\\n'
             '  \\midrule\n'
             f'  Ancoragem & {_i(r_succ.get("n_chu", 4))}$\\times${_br(r_succ.get("F_chu_kN", 80), 0)}'
             f'~=~{_br(r_succ.get("R_anc_kN", 320), 0)}~kN & interação $N$--$V$ linear \\\\\n'
             f'  $\\eta$ governante ({_tex_escape(r_succ.get("base_gov", "extremidade"))}) & '
-            f'\\textbf{{{_br(r_succ.get("eta", 0), 3)}}} & '
+            f'\\textbf{{{_be(r_succ.get("eta", 0))}}} & '
             + (r'\checkmark' if _su_ok else r'$\times$') + ' \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
             '\\textit{Nota:} interação $N$--$V$ linear (conservadora); o '
@@ -2267,10 +2288,10 @@ def gerar_tex(
             f'{_br(r_bloco_c.get("F_bs_Rd_kN",0),0)}~kN & (A.1) \\\\\n'
             f'  $F_{{//,Ed}}$ & {_br(_rbl.get("F_par_kN",0),0)}~kN & '
             f'{_br(r_bloco_c.get("F_par_kN",0),0)}~kN & $|N_d|$ \\\\\n'
-            f'  $\\eta$ (Anexo~A) & \\textbf{{{_br(_rbl.get("eta",0),3)}}} & '
-            f'\\textbf{{{_br(r_bloco_c.get("eta",0),3)}}} & $\\leq 1$ \\\\\n'
-            f'  $\\eta$ só-cisalh. & {_br(_rbl.get("eta_so_cisalh",0),3)} & '
-            f'{_br(r_bloco_c.get("eta_so_cisalh",0),3)} & (transparência) \\\\\n'
+            f'  $\\eta$ (Anexo~A) & \\textbf{{{_be(_rbl.get("eta",0))}}} & '
+            f'\\textbf{{{_be(r_bloco_c.get("eta",0))}}} & $\\leq 1$ \\\\\n'
+            f'  $\\eta$ só-cisalh. & {_be(_rbl.get("eta_so_cisalh",0))} & '
+            f'{_be(r_bloco_c.get("eta_so_cisalh",0))} & (transparência) \\\\\n'
             '  \\bottomrule\n\\end{tabular}\n\n\\vspace{4pt}\n'
             '\\textit{Nota crítica:} a Eq.~(A.1) usa $\\max\\{\\}$ e é governada '
             'pelo mecanismo de \\textbf{tração} (bloco largo $\\Rightarrow$ '
@@ -2318,7 +2339,7 @@ def gerar_tex(
     _eta_max_tab = _est_resumo["eta_max"]
     _all_ok_tab = _est_resumo["all_ok"] and not _est_resumo["pendentes"]
     parts.append('  \\midrule\n  \\multicolumn{2}{l}{\\textbf{$\\eta$ máximo}} &\n  \\multicolumn{2}{c}{\\textbf{')
-    parts.append(f'{_eta_max_tab:.4f}')
+    parts.append(f'{_be(_eta_max_tab)}')
     parts.append('}} \\\\\n')
     _status_global = (
         'APROVADO' if _all_ok_tab and _eta_max_tab <= 1.0 else 'REPROVADO'
@@ -2529,7 +2550,8 @@ def gerar_relatorio(
             "Norma":       r["Norma"],
             # F-04: η indeterminado sai como célula vazia + Estado explícito,
             # nunca como 0 (que se leria como aprovação folgada).
-            "η":           None if math.isnan(float(r["η"])) else r["η"],
+            # issue 53: o Excel exibe o mesmo η do memorial (2 casas, para cima)
+            "η":           None if math.isnan(float(r["η"])) else eta_exibido(r["η"]),
             "OK":          r["OK"],
             "Estado":      r.get("status", ""),
             "chave":       r["chave"],

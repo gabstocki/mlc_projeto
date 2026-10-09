@@ -9,8 +9,8 @@ O memorial apresentado do \autoref{cap:predimensionamento} ao
 desenvolvido para este trabalho. Este apêndice descreve a sua arquitetura, o
 fluxo de execução, o ambiente de reprodução e a forma de acesso ao código.
 
-Optou-se por não reproduzir aqui a listagem integral. O pacote reúne 23.814
-linhas distribuídas por cinquenta e cinco arquivos, volume que ocuparia cerca de
+Optou-se por não reproduzir aqui a listagem integral. O pacote reúne 27.096
+linhas distribuídas por sessenta arquivos, volume que ocuparia cerca de
 cinco vezes a extensão do texto e cuja leitura sequencial em papel não é praticável. O
 código está publicamente disponível, conforme a
 \autoref{sec:ap-disponibilidade}, em forma navegável e com o histórico completo
@@ -33,17 +33,17 @@ do total, por registrarem a proveniência normativa de cada valor.
 \toprule
     \textbf{Pacote} & \textbf{Arq.} & \textbf{Linhas} & \textbf{Responsabilidade} \\
 \midrule
-    \texttt{core}          &  7 &  3.270 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\
+    \texttt{core}          &  7 &  3.381 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\
     \texttt{predim}        &  3 &    705 & Varredura paramétrica do espaço de geometrias \\
-    \texttt{checks/elu}    & 23 &  9.213 & Verificações de estado-limite último de elementos e sistemas \\
+    \texttt{checks/elu}    & 25 &  9.935 & Verificações de estado-limite último de elementos e sistemas \\
     \texttt{checks/els}    &  3 &    846 & Verificações de estado-limite de serviço, com fluência \\
-    \texttt{connections}   &  7 &  3.884 & Ligações, chapas metálicas e ancoragem \\
-    \texttt{output}        &  5 &  2.938 & Memorial, planilha, figuras e cargas de fundação \\
-    \texttt{opensees}      &  3 &    717 & Validação por elementos finitos \\
+    \texttt{connections}   &  8 &  4.194 & Ligações, chapas metálicas, bases e ancoragem \\
+    \texttt{output}        &  9 &  4.674 & Memorial, planilha, figuras, desenhos, apêndices gerados e cargas de fundação \\
+    \texttt{opensees}      &  3 &    725 & Validação por elementos finitos \\
     \texttt{visualization} &  1 &    517 & Visualização tridimensional do modelo \\
-    \texttt{main.py}       &  1 &  1.722 & Orquestração do \textit{pipeline} e dados de projeto \\
+    \texttt{main.py}       &  1 &  2.119 & Orquestração do \textit{pipeline} e dados de projeto \\
 \midrule
-    \textbf{Total}         & \textbf{55} & \textbf{23.814} & \\
+    \textbf{Total}         & \textbf{60} & \textbf{27.096} & \\
 \bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
@@ -77,10 +77,10 @@ de apoio horizontal, cujo resultado consta da \autoref{tab:rigidez-apoio}.
 \midrule
     0 & Dados de entrada: geometria, material, durabilidade, peso próprio por parcelas, ações de vento e combinações \\
     1 & Varredura paramétrica, quando solicitada \\
-    2 & Estados-limites últimos: viga, pilares, terças, contraventamentos, estabilidade global, impacto e içamento \\
+    2 & Estados-limites últimos: viga, pilares, terças, contraventamentos, nó de topo, estabilidade global, fogo, impacto e içamento \\
     3 & Estados-limites de serviço \\
-    4 & Ligações, ruptura de bloco, fendilhamento, chapas metálicas, sucção e ancoragem \\
-    5 & Memorial em LaTeX, planilha e figuras \\
+    4 & Ligações, ruptura de bloco, fendilhamento, chapas metálicas, sucção, pilar de frontão, ancoragem e detalhe das bases \\
+    5 & Memorial em LaTeX, planilha, figuras, desenhos cotados e apêndices B e C desta monografia \\
     6 & Visualização tridimensional, quando solicitada \\
 \bottomrule
 \end{tabular}}

@@ -5,4 +5,7 @@
 - **Arquivos:** `tese/00-pretextual.tex:74,84`
 
 ## O que fazer
-- [ ] Trocar os dois rótulos.
+- [x] Trocar os dois rótulos.
+
+## Resolução (2026-10-08) ✅
+`tese/00-pretextual.tex`: “Palavras-chave” (l. 74) e “Keywords” (l. 84). Nenhuma outra ocorrência.

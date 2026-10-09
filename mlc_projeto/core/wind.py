@@ -685,6 +685,7 @@ def forca_vento_paralelo_cumeeira(
     n_linhas_portico: int = 2,
     L_cob_m: float | None = None,
     B_cob_m: float | None = None,
+    n_pilares_extra: int = 0,
 ) -> dict:
     """
     Força horizontal de vento **paralelo à cumeeira** (θ = 0°).
@@ -709,6 +710,8 @@ def forca_vento_paralelo_cumeeira(
                            compartilham central — ver main)
         L_cob_m          : comprimento da cobertura // cumeeira (default L_comp)
         B_cob_m          : largura total ⊥ cumeeira (default 2·L pórtico se n=2)
+        n_pilares_extra  : pilares fora da malha dos pórticos (pilares de
+                           frontão, issue 52), com a mesma seção
     """
     q = params.q
     H = params.h
@@ -717,7 +720,7 @@ def forca_vento_paralelo_cumeeira(
     A_pil = b_pilar * H                          # m²
     F_pil_kN = q * CA_PILAR_RET * A_pil          # kN por pilar
 
-    n_total = n_pilares_linha * n_linhas_portico
+    n_total = n_pilares_linha * n_linhas_portico + int(n_pilares_extra)
     F_pilares_kN = F_pil_kN * n_total
 
     # Fricção na cobertura

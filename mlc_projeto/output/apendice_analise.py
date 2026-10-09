@@ -24,15 +24,18 @@ import matplotlib.pyplot as plt     # noqa: E402
 import numpy as np                  # noqa: E402
 
 from mlc_projeto.output.figuras import plot_diagramas_MVN   # noqa: E402
+from mlc_projeto.output.formatacao import fmt_sig           # noqa: E402
 
 FIG_GOV = "analise_MVN_governante.pdf"
 FIG_TODAS = "analise_MVN_combinacoes.pdf"
 
 
-def _n(x: float, d: int = 1) -> str:
-    """Número com vírgula decimal e milhar com ponto (texto de tabela)."""
-    s = f"{float(x):,.{d}f}"
-    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+def _n(x: float, d: int | None = None) -> str:
+    """
+    Três algarismos significativos, vírgula decimal (issue 53); `d` ignorado.
+    Resultados de cálculo: os zeros finais contam como significativos (2,10).
+    """
+    s = fmt_sig(float(x), zeros=True)
     return "$-$" + s[1:] if s.startswith("-") else s
 
 

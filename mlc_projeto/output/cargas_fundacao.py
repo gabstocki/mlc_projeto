@@ -69,6 +69,8 @@ def montar_quadro_cargas_fundacao(
     cv_vertical_central: dict | None = None,
     n_paineis_central: int = 0,
     V_base_corrente_kN: float = 0.0,
+    pilar_frontao: dict | None = None,
+    n_pilares_frontao: int = 0,
 ) -> dict:
     """
     Consolida os esforços de cálculo que chegam a cada tipo de base.
@@ -84,6 +86,8 @@ def montar_quadro_cargas_fundacao(
         cv_vertical_central : contraventamento vertical da linha central (issue 64)
         V_base_corrente_kN  : cortante nas bases correntes — envelope do vento
                               no pilar e do impacto de veículo (acidental, issue 48)
+        pilar_frontao    : saída de checks/elu/pilar_frontao (issue 52)
+        n_pilares_frontao: quantidade de pilares de frontão
 
     Returns:
         dict com as linhas do quadro, os totais e a declaração de escopo.
@@ -141,6 +145,16 @@ def montar_quadro_cargas_fundacao(
             N_tracao_kN=float(res_succao.get("N_uplift_cen_cv_kN", 0.0)),
             H_kN=H_cen,
             origem="2 reações + download do painel central; H do painel",
+        ))
+    if pilar_frontao and n_pilares_frontao:
+        _b = pilar_frontao["base"]
+        linhas.append(CargaBase(
+            tipo="Pilar de frontão (montante do CV-T)",
+            n_bases=int(n_pilares_frontao),
+            N_comp_kN=float(pilar_frontao["montante"]["N_comp_kN"]),
+            N_tracao_kN=float(_b["N_t_persistente_kN"]),
+            H_kN=max(float(_b["V_persistente_kN"]), float(_b["V_acidental_kN"])),
+            origem="peso próprio + download da cruz; H do painel (não apoia a viga)",
         ))
 
     return {

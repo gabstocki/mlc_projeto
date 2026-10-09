@@ -22,9 +22,9 @@
     Gov |H|: T10_t1_esq_cpi+0.8  H=0.0 kN
     Gov sucção: T10_t1_esq_cpi+0.8  q=-7.61 kN/m
   Vento θ=0° (// cumeeira) — estrutura aberta:
-    F_total=837.3 kN (pilares=60.5 + fricção=776.8) | w=18.202 kN/m
+    F_total=841.8 kN (pilares=65.0 + fricção=776.8) | w=18.300 kN/m
     Atrito §7.2.2: Ft = 0.5·q·a·b = 776.8 kN (a×b = 1863 m² em planta; engloba as duas faces)
-    Escala: 2.35× o arrasto de bloqueio da silhueta (356.0 kN) — envelope normativo, ver §7.2.2 transcrito em core/wind.py
+    Escala: 2.36× o arrasto de bloqueio da silhueta (356.0 kN) — envelope normativo, ver §7.2.2 transcrito em core/wind.py
 
   RESERVAS NORMATIVAS:
     · NDP NÃO DEFINIDO POR ANEXO NACIONAL — 20 parâmetros adotam o valor recomendado do EN por decisão de projeto. RESULTADO DEPENDENTE DE NATIONAL ANNEX.
@@ -40,140 +40,140 @@
 [FASE 1] Geometria pré-definida (passe rodar_varredura=True para varredura completa)
 
 [FASE 2] Verificações ELU...
-  ✓ Cumeeira §6.4.3                η = 0.3526  ███████
-  ✓ Mísula face incl. §6.4.2       η = 0.3140  ██████
+  ✓ Cumeeira §6.4.3                η = 0.36  ███████
+  ✓ Mísula face incl. §6.4.2       η = 0.32  ██████
   · Borda inclinada α=10°: tracao no topo governa em x=3.48 m (ELU_S_T10_t1_esq_cpi+0.8) | k_m,α=0.414 (comp=0.758, tração=0.414)
 
 [FASE 2] Contraventamento — integridade da cobertura (§9.2.5)...
   Layout: 2 baías rígidas (extremos), cruzes em todo o vão | ℓ = vão da viga = 20.25 m | diagonal ∅28 mm S235
   Critério: EC5 §9.2.5.3 — treliça paralela às vigas, ℓ = vão do sistema
-  ✓ Cobertura §9.2.5               η = 0.7950  ███████████████
+  ✓ Cobertura §9.2.5               η = 0.80  ███████████████
   → l_1 LTB = 2.530 m | terças válidas como restrição lateral (cobertura OK)
   → diagonal Ø28, rosca recalcada M30 (N_u=145.3 ≥ N_pl=144.7 kN)
-  → η_diag=0.795 | η_δ=0.305 | η_terça=0.198 | F_diag=115.0 kN | peso aço≈1943 kg
-  ✓ Flambagem §6.3.3               η = 0.1039  ██
-  ✓ Flambagem §6.3.3 sucção (intradorso) η = 0.1582  ███
+  → η_diag=0.799 | η_δ=0.307 | η_terça=0.199 | F_diag=115.6 kN | peso aço≈1943 kg
+  ✓ Flambagem §6.3.3               η = 0.11  ██
+  ✓ Flambagem §6.3.3 sucção (intradorso) η = 0.16  ███
   · ELU_S_T10_t1_esq_cpi+0.8 | x=4.46 m, h=1.786 m, M=-290.4 kN·m | l_ef=18.23 m (0,9·L) | λ_rel=1.009 k_crit=0.803
-  ✓ Flexo-comp. §6.3.2+6.35        η = 0.1672  ███
-  ✓ Cisalhamento §6.1.7            η = 0.3814  ███████
-  ✓ Apoio L1 contato §6.1.5        η = 0.4561  █████████
-  ✓ Apoio L1c sela §6.1.5          η = 0.4887  █████████
-  ✓ Sela central (placa)           η = 0.7402  ██████████████
+  ✓ Flexo-comp. §6.3.2+6.35        η = 0.17  ███
+  ✓ Cisalhamento §6.1.7            η = 0.39  ███████
+  ✓ Apoio L1 contato §6.1.5        η = 0.46  █████████
+  ✓ Apoio L1c sela §6.1.5          η = 0.49  █████████
+  ✓ Sela central (placa)           η = 0.75  ██████████████
   · L1 (pilar lateral): R=99.6 kN | l=0.270 → l_ef=0.300 m | σ=1.038 ≤ 1.75·1.30 MPa | η=0.456 (sem k_c,90: 0.798)
   · L1c (sela central): R=99.6 kN | l=0.250 → l_ef=0.280 m | σ=1.112 ≤ 1.75·1.30 MPa | η=0.489 (sem k_c,90: 0.855)
   · Sela: 0.52 m sobre pilar 0.27 m, balanço 0.125 m → t_req=13.8 mm, adota 16 mm S275
-  ✓ Pilar 0.32×0.27m §6.3.2        η = 0.2075  ████
+  ✓ Pilar 0.32×0.27m §6.3.2        η = 0.21  ████
 
 [FASE 2] Verificações ELU — Pilar central...
-  ✓ Pilar central 0.32×0.27m §6.3.2 η = 0.4151  ████████
+  ✓ Pilar central 0.32×0.27m §6.3.2 η = 0.42  ████████
   · N_d=199.2 kN (2·R_v) | governa ELU_Q (media, k_mod=0.65) | k_c=0.445 | η=0.4151
   · Origem dos N (issue 13): R_v ELU = reação vertical = N do pilar; N_viga (~9 kN, com empuxo H) é da VIGA; 87 kN ≈ R_v de ELS (serviço), não ELU.
 
 [FASE 2] Pilares — vento lateral (estrutura aberta)...
-  ✓ Pilar vento θ=0° (// cum.)     η = 0.2433  ████
+  ✓ Pilar vento θ=0° (// cum.)     η = 0.25  ████
   · M_d=2.94 kNm | F_d=3.36 kN | eixo=z
-  ✓ Pilar vento θ=90° (⊥ cum.)     η = 0.2587  █████
+  ✓ Pilar vento θ=90° (⊥ cum.)     η = 0.26  █████
   · M_d=2.48 kNm | F_d=2.84 kN | eixo=y
-  · Contraventamento: força governante = estab_9.2.5+vento_0 | R_apoio treliça=106.1 kN (estab=1.4, vento0=104.7)
+  · Contraventamento: força governante = estab_9.2.5+vento_0 | R_apoio treliça=106.6 kN (estab=1.4, vento0=105.2)
 
 [FASE 2] Contraventamento vertical (força lateral → fundação)...
-  ✓ Contravento vertical §5.4      η = 0.8352  ████████████████
-  · F_vento0=837.3 kN + H_imp=15.2 kN → V_lat=426.2 kN / 4 painéis
-  · Diagonal ∅33 mm S235, extremidade recalcada M36 (N_u=211.7 ≥ N_pl=201.0 kN → dúctil) | β=50.6° | N_diag=167.9 kN | η_N=0.835 | η_δ=0.572
-  · Caminho à fundação: H_base=106.6 kN + arrancamento N_uplift=129.7 kN
+  ✓ Contravento vertical §5.4      η = 0.84  ████████████████
+  · F_vento0=841.8 kN + H_imp=15.2 kN → V_lat=428.5 kN / 4 painéis
+  · Diagonal ∅33 mm S235, extremidade recalcada M36 (N_u=211.7 ≥ N_pl=201.0 kN → dúctil) | β=50.6° | N_diag=168.8 kN | η_N=0.840 | η_δ=0.575
+  · Caminho à fundação: H_base=107.1 kN + arrancamento N_uplift=130.4 kN
   · α_cr,long=124.75 (1a_ordem) | K_lat=31953 kN/m | k_II=1.000
-  ✓ Contravento vertical central   η = 0.8352  ████████████████
-  · 50% da força longitudinal → V_lat=426.2 kN / 4 painéis
-  · Diagonal ∅33 mm S235, rosca recalcada M36 | N_diag=167.9 kN | η_N=0.835 | η_δ=0.572
-  · Caminho à fundação: H_base=106.6 kN + download/arrancamento ±129.7 kN no pilar central
+  ✓ Contravento vertical central   η = 0.84  ████████████████
+  · 50% da força longitudinal → V_lat=428.5 kN / 4 painéis
+  · Diagonal ∅33 mm S235, rosca recalcada M36 | N_diag=168.8 kN | η_N=0.840 | η_δ=0.575
+  · Caminho à fundação: H_base=107.1 kN + download/arrancamento ±130.4 kN no pilar central
 
 [FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...
-  ✓ Contravento transversal §5.4   η = 0.8242  ████████████████
-  · Arrasto θ=90° (27 pilares)=38.3 kN + cobertura(F-01)=57.8 kN + H_imp=15.2 kN → H_tr=111.2 kN
+  ✓ Contravento transversal §5.4   η = 0.85  ████████████████
+  · Arrasto θ=90° (29 pilares)=41.1 kN + cobertura(F-01)=57.8 kN + H_imp=15.2 kN → H_tr=114.1 kN
   · Componente ⊥→horizontal da pressão de cobertura: 6.42 kN/pórtico × 9 (ELU_W_T10_t1_esq_cpi+0.8)
-  · Diafragma: R_frontão=55.6 kN | N_corda=15.8 kN (→ beiral)
-  · Frontão ∅24 mm S235, rosca recalcada M27 (β=50.6°) | N_diag=87.6 kN | η_N=0.824 | η_δ=0.564
-  · Caminho à fundação: H_base=55.6 kN + N_uplift=67.7 kN | l_ef=1H (non-sway) validado
+  · Diafragma: R_frontão=57.0 kN | N_corda=16.2 kN (→ beiral)
+  · Frontão ∅24 mm S235, rosca recalcada M27 (β=50.6°) | N_diag=89.9 kN | η_N=0.845 | η_δ=0.579
+  · Caminho à fundação: H_base=57.0 kN + N_uplift=69.4 kN | l_ef=1H (non-sway) validado
   · α_cr,transv=16.5 (1a_ordem) | K_lat=8450 kN/m | k_II=1.000
 
 [FASE 2] Ligações de extremidade das diagonais (EN 1993-1-8 §3.13)...
-  ✓ Lig. diagonal longitudinal §3.13 η = 0.8105  ████████████████
-  · barra ∅33 (N_Ed=167.9 kN, N_t,Rd=201.0 kN) → dimensionada por capacidade com N=201.0 kN (1.20× N_Ed)
-  · pino ∅33 S355 (corte duplo) | olhal t=20 mm S235, a=50 (req 40.5), c=40 (req 29.2) mm
+  ✓ Lig. diagonal longitudinal §3.13 η = 0.82  ████████████████
+  · barra ∅33 (N_Ed=168.8 kN, N_t,Rd=201.0 kN) → dimensionada por capacidade com N=201.0 kN (1.19× N_Ed)
+  · pino ∅33 S355 (corte duplo) | olhal t=20 mm S235, a=50 (req 40.6), c=40 (req 29.3) mm
   · solda de ângulo a=5 mm × 115 mm × 2 cordões | F_w,Rd=239.0 kN
-  · sob N_Ed: governa geometria_a, η=0.8105 | sob a capacidade da barra: geometria_a, η=0.8810
+  · sob N_Ed: governa geometria_a, η=0.8124 | sob a capacidade da barra: geometria_a, η=0.8810
   ⚠ A manilha/forquilha e a rosca de extremidade são peças de catálogo: especificar com resistência de cálculo à tração ≥ 201.0 kN, certificada pelo fabricante. Não são dimensionadas neste memorial.
-  ✓ Lig. diagonal linha central §3.13 η = 0.8105  ████████████████
-  · barra ∅33 (N_Ed=167.9 kN, N_t,Rd=201.0 kN) → dimensionada por capacidade com N=201.0 kN (1.20× N_Ed)
-  · pino ∅33 S355 (corte duplo) | olhal t=20 mm S235, a=50 (req 40.5), c=40 (req 29.2) mm
+  ✓ Lig. diagonal linha central §3.13 η = 0.82  ████████████████
+  · barra ∅33 (N_Ed=168.8 kN, N_t,Rd=201.0 kN) → dimensionada por capacidade com N=201.0 kN (1.19× N_Ed)
+  · pino ∅33 S355 (corte duplo) | olhal t=20 mm S235, a=50 (req 40.6), c=40 (req 29.3) mm
   · solda de ângulo a=5 mm × 115 mm × 2 cordões | F_w,Rd=239.0 kN
-  · sob N_Ed: governa geometria_a, η=0.8105 | sob a capacidade da barra: geometria_a, η=0.8810
+  · sob N_Ed: governa geometria_a, η=0.8124 | sob a capacidade da barra: geometria_a, η=0.8810
   ⚠ A manilha/forquilha e a rosca de extremidade são peças de catálogo: especificar com resistência de cálculo à tração ≥ 201.0 kN, certificada pelo fabricante. Não são dimensionadas neste memorial.
-  ✓ Lig. diagonal frontão §3.13    η = 0.8091  ████████████████
-  · barra ∅24 (N_Ed=87.6 kN, N_t,Rd=106.3 kN) → dimensionada por capacidade com N=106.3 kN (1.21× N_Ed)
-  · pino ∅24 S355 (corte duplo) | olhal t=16 mm S235, a=35 (req 28.3), c=25 (req 20.0) mm
+  ✓ Lig. diagonal frontão §3.13    η = 0.82  ████████████████
+  · barra ∅24 (N_Ed=89.9 kN, N_t,Rd=106.3 kN) → dimensionada por capacidade com N=106.3 kN (1.18× N_Ed)
+  · pino ∅24 S355 (corte duplo) | olhal t=16 mm S235, a=35 (req 28.6), c=25 (req 20.3) mm
   · solda de ângulo a=4 mm × 100 mm × 2 cordões | F_w,Rd=166.3 kN
-  · sob N_Ed: governa geometria_a, η=0.8091 | sob a capacidade da barra: geometria_c, η=0.8988
+  · sob N_Ed: governa geometria_a, η=0.8176 | sob a capacidade da barra: geometria_c, η=0.8988
   ⚠ A manilha/forquilha e a rosca de extremidade são peças de catálogo: especificar com resistência de cálculo à tração ≥ 106.3 kN, certificada pelo fabricante. Não são dimensionadas neste memorial.
 
 [FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...
-  ✓ Pilar canto (grav+brace+vento) §6.2.3/§6.3.2 η = 0.4333  ████████
-  · Download: long=129.7 + transv=67.7 = 197.4 kN (canto = 2 painéis) | M_vento=2.9 kNm
-  · Flexo-compressão: N=297.0 kN (R_v=99.6+download) + M → η=0.433
-  · Flexo-tração (uplift, R_v,min=6.7): N_t=190.7 kN + M → η=0.230 | ancoragem=190.7 kN (→ sucção/issue 33)
-  · Governa: compressao | η=0.4333 (vs pilar interno ~0.207)
-  ✓ Pilar central montante §6.2.3/§6.3.2 η = 0.7460  ██████████████
-  · N=328.9 kN (2·R_v=199.2 + download 129.7) | flexo-compr. η=0.746 | flexo-tração η=0.196 | ancoragem 116.3 kN
+  ✓ Pilar canto (grav+brace+vento) §6.2.3/§6.3.2 η = 0.44  ████████
+  · Download: long=130.4 + transv=69.4 = 199.8 kN (canto = 2 painéis) | M_vento=2.9 kNm
+  · Flexo-compressão: N=299.4 kN (R_v=99.6+download) + M → η=0.436
+  · Flexo-tração (uplift, R_v,min=6.7): N_t=193.1 kN + M → η=0.232 | ancoragem=193.1 kN (→ sucção/issue 33)
+  · Governa: compressao | η=0.4365 (vs pilar interno ~0.207)
+  ✓ Pilar central montante §6.2.3/§6.3.2 η = 0.75  ██████████████
+  · N=329.6 kN (2·R_v=199.2 + download 130.4) | flexo-compr. η=0.747 | flexo-tração η=0.196 | ancoragem 117.0 kN
 
 [FASE 2] Corda do diafragma — elemento de beiral (issue 32)...
-  ✓ Corda beiral §6.2.3/§6.3.2     η = 0.0668  █
-  · Terça de beiral = corda do diafragma (MLC GL24h) | N_corda=15.8 kN (±) | seção 0.2×0.58 m
-  · flexo-compr §6.3.2 η=0.067 | flexo-tração §6.2.3 η=0.062 → η=0.0668 (flexo-compressão (§6.3.2))
-  · Continuidade: 3 emenda(s) × 15.8 kN (obrigatória p/ o diafragma funcionar)
+  ✓ Corda beiral §6.2.3/§6.3.2     η = 0.07  █
+  · Terça de beiral = corda do diafragma (MLC GL24h) | N_corda=16.2 kN (±) | seção 0.2×0.58 m
+  · flexo-compr §6.3.2 η=0.068 | flexo-tração §6.2.3 η=0.062 → η=0.0675 (flexo-compressão (§6.3.2))
+  · Continuidade: 3 emenda(s) × 16.2 kN (obrigatória p/ o diafragma funcionar)
 
 [FASE 2] Nó de topo das baías contraventadas (issue 66)...
-  ✓ Nó contravent. (escoras+lig.)  η = 0.7246  ██████████████
-  · Escora beiral: N=106.6 kN | flexo-axial η=0.225 | ligação 6×Ø20 (1×6, R_d=150 kN) η=0.710
-  · Escora central: N=213.1 kN | flexo-axial η=0.450 | ligação 16×Ø20 (2×8, R_d=294 kN) η=0.725
+  ✓ Nó contravent. (escoras+lig.)  η = 0.73  ██████████████
+  · Escora beiral: N=107.1 kN | flexo-axial η=0.226 | ligação 6×Ø20 (1×6, R_d=150 kN) η=0.714
+  · Escora central: N=214.2 kN | flexo-axial η=0.452 | ligação 16×Ø20 (2×8, R_d=294 kN) η=0.728
 
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
-  ✓ Estab. global α_cr/P-Δ         η = 0.6062  ████████████
+  ✓ Estab. global α_cr/P-Δ         η = 0.61  ████████████
   · α_cr,sistema=16.5 (mín 10, dir. crítica: transversal) | long=124.75 transv=16.5 | k_II=1.065 (aplicado: 1.000)
   · α_cr,arco=2817.4 (informativo, NÃO é o critério) | H_imp=0.84 kN | w/f_c=0.01102
   · 1a_ordem: Análise de 1.ª ordem suficiente: sistema non-sway nas duas direções (contraventa…
 
 [FASE 2] Impacto de veículo em pilares (estacionamento)...
-  ✓ Impacto veículo (A_d)          η = 0.4774  █████████
+  ✓ Impacto veículo (A_d)          η = 0.48  █████████
   · F_dx=50 kN / F_dy=25 kN @ h=0.50 m | k_mod=0.90 (instantânea)
   · Gov: lateral F_dx=50kN | η=0.4774
   · Seções resistem às forças de choque de projeto (50/25 kN). Mesmo assim, recomenda-se defen…
 
 [FASE 2] Içamento da viga (montagem — EN 1991-1-6)...
-  ✓ Içamento §EN1991-1-6           η = 0.0420  
+  ✓ Içamento §EN1991-1-6           η = 0.05  
   · 2 pontos a 0.207·L | lingas a 30° da vertical | W=75 kN (γ_G·φ_dyn·g) | R/ponto=38 kN
   · M⁻=-21 | M⁺=63 kN·m | V=26 kN | N_c(lingas)=22 kN
   · LTB (sem contravento): l_ef=11.9 m | k_crit=0.797 | η_LTB=0.006
   · η governante (cisalhamento) = 0.0420
 
 [FASE 2] Verificações ELU — Terças (flexão cobertura)...
-  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.0979  █
-  ✓ Terça-biela flexo-comp. §6.3.2 η = 0.2634  █████
-  · N_c=106.1 kN (estab. §9.2.5) + M cobertura [1,35G+1,5Q (cat.H: sem vento)] → interação COMBINADA
-  · σ_c=0.914 | σ_m,y=1.049 | σ_m,z=0.246 MPa (f_md=12.48)
-  · k_c,y=0.967 (λ_y=34) | k_c,z=0.368 (λ_z=100) | η_6.23=0.168 η_6.24=0.263 → η=0.2634 (Eq.6.24)
-  ✓ Terça Q_k conc. §EN1991-1-1    η = 0.0546  █
+  ✓ Terça flexão §6.1.6+§6.1.7     η = 0.10  █
+  ✓ Terça-biela flexo-comp. §6.3.2 η = 0.27  █████
+  · N_c=106.6 kN (estab. §9.2.5) + M cobertura [1,35G+1,5Q (cat.H: sem vento)] → interação COMBINADA
+  · σ_c=0.919 | σ_m,y=1.049 | σ_m,z=0.246 MPa (f_md=12.48)
+  · k_c,y=0.967 (λ_y=34) | k_c,z=0.368 (λ_z=100) | η_6.23=0.169 η_6.24=0.264 → η=0.2643 (Eq.6.24)
+  ✓ Terça Q_k conc. §EN1991-1-1    η = 0.06  █
   · Q_k=1.0 kN a meio-vão (não concomit. c/ UDL nem vento) | M_d=7.65 kN·m (dur. média, k_mod=0.65)
   · η_flex=0.0546 | η_cis=0.0484 → η=0.0546 | vs UDL η_flex=0.098 (a mais desfavorável governa)
   · Telha: M_local,d=0.949 kN·m/m → ficha do fabricante (issue 17)
 
 [FASE 2] Fixação telha→terça (sucção — NBR 6123)...
-  ✓ Fixação telha §NBR6123         η = 0.6788  █████████████
+  ✓ Fixação telha §NBR6123         η = 0.68  █████████████
   · q=0.890 kN/m² (classe A, z=8.79 m) | c_p=±2.0 (§7.2.6) | R_fix,d=1.92 kN (R_k=2.5 típico)
   · e_fix=0.20 m (a cada nervura) | η=0.679 | e_fix máx p/ η≤1: 0.29 m
   ⚠ R_fix,k TÍPICO (2,5 kN) — confirmar na ficha técnica da telha; governa pull-over da chapa fina, não pull-out na madeira.
 
 [FASE 2] Resistência ao fogo (EN 1995-1-2, seção reduzida)...
-  ✓ Fogo R30 EN 1995-1-2           η = 0.2128  ████
+  ✓ Fogo R30 EN 1995-1-2           η = 0.22  ████
   · d_ef=28.0 mm (4 faces) | b: 320→264 mm (−17.5%) | q_fi=4.732 kN/m
   · viga: η_M=0.0469 | η_LTB=0.0469 (k_crit=1.0000) | η_V=0.1065 → governa cisalhamento
   · pilar_lateral: 320×270 → 264×214 mm (−34.6% de área) | N_fi=47.9 kN | k_c=0.2887 | η=0.1064
@@ -182,8 +182,8 @@
   ⚠ O tempo requerido R NÃO é fixado pelo Eurocódigo: vem do regulamento nacional de segurança contra incêndio (ABNT NBR 14432 / IT do CBM estadual). O valor aqui verificado é uma DECLARAÇÃO de projeto, registada em NDP_SOURCE com origem 'PROJETO'.
 
 [FASE 3] Verificações ELS...
-  ✓ ELS §2.3.2.2+Tab.7.2           η = 0.1900  ███
-  ✓ Abertura springings (ELS)      η = 0.0632  █
+  ✓ ELS §2.3.2.2+Tab.7.2           η = 0.19  ███
+  ✓ Abertura springings (ELS)      η = 0.07  █
   · δ por springing=1.28 mm | total=2.56 mm ≤ 40.5 mm (L/500) | k_arco=208,462 kN/m
   · Frontão atrai H=6.73 kN (2.5% do rígido 266.9 kN) | k_cruz=5,391 vs k_arco=208,462 kN/m
 
@@ -204,37 +204,35 @@
 
 [FASE 4] Ligações (η_alvo = 0.75 — uso público)...
   · Apoio por contato (issue 42): pinos dimensionados para o arrancamento R_up=86.1 kN (ELU_S_T10_t1_esq_cpi+0.8)
-  ✓ L1 base (d=24mm, 1×5)          η = 0.6914  █████████████
-  ✓ L3 sapata (n_chu=4)            η = 0.0664  █
+  ✓ L1 base (d=24mm, 1×5)          η = 0.70  █████████████
+  ✓ L3 sapata (n_chu=4)            η = 0.07  █
   · L1: n=5 pinos | n_ef,row=1.00 | n_ef=5.0 | F_Rd/pino=25.05 kN | R=125 kN | L_lig=240 mm
   · L3: H=0.0 kN | n_chu=4 (mín η≤1: 1; grade×4: 4) | F_chu=80 kN | R=320 kN
-  ✓ L1c central (d=24mm, 2 chapas) η = 0.6914  █████████████
-  ✓ L3c sapata central             η = 0.1328  ██
+  ✓ L1c central (d=24mm, 2 chapas) η = 0.70  █████████████
+  ✓ L3c sapata central             η = 0.14  ██
   · L3c: N=199.2 kN (2·R_v) | H≈0 (empuxos cancelam) | σ_c=2.213 MPa | η_N=0.1328 | n_chu=4 construtivo (η_H=0)
 
 [FASE 4] Esquadro de chapas (dimensões + espessura; issue 23)...
-  · L1 (embutida): 576×671 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
-  · L1c (embutida): 576×671 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
-  · L3 (base): 400×400 mm | t_req=8.0 → t_adot=8.0 mm (governa mínimo construtivo)
-  · L3c (base): 400×400 mm | t_req=10.1 → t_adot=12.5 mm (governa flexão balanço)
+  · L1 (embutida): 270×964 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
+  · L1c (embutida): 250×964 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
   → L1/L1c: t≥d=24 mm (chapa central rígida p/ rótula do pino) → 25 mm; corrige os 16 mm arbitrados da issue 21.
 
 [FASE 4] Ruptura de bloco (EC5 Anexo A) — L1/L1c...
-  ✓ Ruptura bloco L1 (Anexo A)     η = 0.0063  
+  ✓ Ruptura bloco L1 (Anexo A)     η = 0.01  
   · L1: F_par=9 kN | tração=2654 kN, cisalh=263 kN → F_bs,Rk=2654 (governa tração) | F_bs,Rd=1380 kN | η=0.006 (η só-cisalh=0.064)
-  ✓ Ruptura bloco L1c (Anexo A)    η = 0.0063  
+  ✓ Ruptura bloco L1c (Anexo A)    η = 0.01  
   · L1c: F_par=9 kN | tração=2654 kN, cisalh=263 kN → F_bs,Rk=2654 (governa tração) | F_bs,Rd=1380 kN | η=0.006 (η só-cisalh=0.064)
 
 [FASE 4] Fendilhamento (EC5 §8.1.4) — L1/L1c...
-  ✓ Fendilhamento L1 §8.1.4        η = 0.3387  ██████
+  ✓ Fendilhamento L1 §8.1.4        η = 0.34  ██████
   · L1: F_90,Ed=|V_d|=86 kN | h_e=928 mm (h_e/h=0.93) | F_90,Rd=254 kN | η_nu=0.339
-  ✓ Fendilhamento L1c §8.1.4       η = 0.3387  ██████
+  ✓ Fendilhamento L1c §8.1.4       η = 0.34  ██████
   · L1c: F_90,Ed=|V_d|=86 kN | h_e=928 mm (h_e/h=0.93) | F_90,Rd=254 kN | η_nu=0.339
 
 [FASE 4] Chapas de aço / furos / soldas (EN 1993-1-8) — L1/L1c...
-  ✓ Chapa aço L1 EN1993-1-8        η = 0.0997  █
+  ✓ Chapa aço L1 EN1993-1-8        η = 0.10  █
   · L1 S275 t=25mm: pino η=0.100 | bearing η=0.041 | sec.líq η=0.020 (ruptura líquida) | solda η=0.046 → gov pino_cisalh η=0.100
-  ✓ Chapa aço L1c EN1993-1-8       η = 0.0997  █
+  ✓ Chapa aço L1c EN1993-1-8       η = 0.10  █
   · L1c S275 t=25mm: pino η=0.100 | bearing η=0.041 | sec.líq η=0.020 (ruptura líquida) | solda η=0.046 → gov pino_cisalh η=0.100
   ⚠ Aço S275, t_p=25 mm e solda a=6 mm DECLARADOS — confirmar no detalhamento (issue 23).
 
@@ -257,35 +255,44 @@
   ✓ L1c     η_slip=0.0050  η_alt=0.6914
 
 [FASE 4c] Sucção/uplift — ancoragem e tirante frouxo...
-  ✓ Sucção/uplift (ancoragem)      η = 0.5866  ███████████
+  ✓ Sucção/uplift (ancoragem)      η = 0.60  ███████████
   · Sucção ELU_C3: R_v=-86.1 kN (uplift) | H=+0.0 kN (ok)
   · Extremidade: N_uplift=83.9 kN + V_base=0.0 kN → η_ext=0.262 (ancoragem 4×80 kN)
   · Central: N_uplift=151.8 kN → η_cen=0.474
-  · Central montante (issue 64): N=151.8+129.7=281.6 kN + V=106.6 kN → η=0.587
-  · Canto (uplift+contravent., issue 36): N=83.9+197.4=281.3 kN → η_canto=0.586 | governa: central (contraventada)
+  · Central montante (issue 64): N=151.8+130.4=282.2 kN + V=107.1 kN → η=0.588
+  · Canto (uplift+contravent., issue 36): N=83.9+199.8=283.7 kN → η_canto=0.591 | governa: canto (contraventado)
 
 [FASE 4c] L3 — base de extremidade: 4×M24 sem chaveta
   · persistente_succao: N=83.9 kN V=1.7 kN → η_aço=0.124 η_concreto=0.199
   · acidental_impacto: N=0.0 kN V=46.4 kN → η_aço=0.086 η_concreto=0.332
-  ✓ L3 (chapa + ancoragem)         η = 0.3322  ██████
+  ✓ L3 (chapa + ancoragem)         η = 0.34  ██████
 
 [FASE 4c] L3c — base central: 4×M24 sem chaveta
   · persistente_succao: N=151.8 kN V=1.7 kN → η_aço=0.224 η_concreto=0.360
   · acidental_impacto: N=0.0 kN V=46.4 kN → η_aço=0.086 η_concreto=0.332
-  ✓ L3c (chapa + ancoragem)        η = 0.3599  ███████
+  ✓ L3c (chapa + ancoragem)        η = 0.36  ███████
+
+[FASE 4c] Pilar de frontão PF — 0.32×0.27 m, a 5.75 m do canto (montante da cruz CV-T)
+  ✓ Pilar de frontão (montante)    η = 0.22  ████
+  · D=69.4 kN + G=2.5 kN | N_c=72.8 kN | N_t=67.2 kN | M_vento=2.9 kN·m
+  ✓ L1f topo PF (furo oblongo)     η = 0.69  █████████████
+  · H=57.0 kN // fibras da viga | 3×Ø20 (3×1) | R_d=83.5 kN | η_bloco=0.103
+  ✓ L3f base PF (sucção/impacto)   η = 0.49  █████████
+  · persistente_succao: N=67.2 kN V=58.7 kN → η_aço=0.179 η_concreto=0.483
+  · acidental_impacto: N=0.0 kN V=46.4 kN → η_aço=0.086 η_concreto=0.332
 
 [FASE 4d] Ancoragem do canto — chumbadores moldados com cabeça...
-  ✓ Ancoragem canto (aço)          η = 0.5334  ██████████
+  ✓ Ancoragem canto (aço)          η = 0.54  ██████████
   · 6×M24 classe 8.8 | N_Rd=1017 kN | V_Rd=813 kN (γ_Ms=1.5)
-  · N_Ed=281.3 kN | V_Ed=162.2 kN → chaveta=sim, V nos chumbadores=0.0 kN
-  · η_N=0.277 | η_V=0.000 | η_interação=0.198 → aço OK
+  · N_Ed=283.7 kN | V_Ed=164.2 kN → chaveta=sim, V nos chumbadores=0.0 kN
+  · η_N=0.279 | η_V=0.000 | η_interação=0.199 → aço OK
   · Concreto: h_ef=400 c=600 s=400 mm | N_Rd,cone=527 kN | N_Rd,pull-out=1781 kN → governa cone
-  · β_N=0.533 | β_V=0.000 | η_concreto=0.533 (BS EN 1992-4:2018)
+  · β_N=0.538 | β_V=0.000 | η_concreto=0.538 (BS EN 1992-4:2018)
   · Blow-out §7.2.1.9: c1 = 600 mm > 0,5·h_ef = 200 mm (EN 1992-4:2018 §7.2.1.9(1)) — blow-out não governa.
   · Fendilhamento §7.2.1.7: ψ_h,sp=1.0 → N_Rd=527 kN
   · Borda sob corte §7.2.2.5: O corte é transmitido por CHAVETA embutida no concreto, não pelos chumbadores (V nas barras = 0). A rotura de borda de §7.2.2.5 pressupõe corte transmitido pelas barras. Em contrapartida exige-se o esmagamento sob a chaveta (EN 1992-1-1 §6.7) — ver `esmagamento_chaveta`.
-  ✓ Chaveta — esmagamento §6.7     η = 0.6081  ████████████
-  · V_Ed=162.2 kN sobre 200×80 mm | f_cd=16.67 MPa | F_Rdu=267 kN
+  ✓ Chaveta — esmagamento §6.7     η = 0.62  ████████████
+  · V_Ed=164.2 kN sobre 200×80 mm | f_cd=16.67 MPa | F_Rdu=267 kN
   ⚠ A_c1/A_c0 = 1,0 adotado (sem ganho): elevá-lo exige a geometria da sapata, fora de escopo. Ver NDP_SOURCE['k_confinamento_apoio'].
   · REQUISITOS À FUNDAÇÃO (EN 1992-4 §7.2.1.7(2)/§7.2.1.9(1)):
       c1 > 200 mm (blow-out) — declarado 600 mm: OK
@@ -293,9 +300,31 @@
   ⚠ A fundação deve garantir bloco com c ≥ 600 mm em torno do grupo (≈ 1.60×2.00 m em planta)
 
 [FASE 4d] Ancoragem da base central montante (issue 64)...
-  ✓ Ancoragem central montante     η = 0.5339  ██████████
-  · 6×M24 | N_Ed=281.6 kN | V_Ed=106.6 kN (chaveta) | η_aço=0.198 | η_concreto=0.534 (cone)
-  ✓ Chaveta central — esmagamento §6.7 η = 0.3996  ███████
+  ✓ Ancoragem central montante     η = 0.54  ██████████
+  · 6×M24 | N_Ed=282.2 kN | V_Ed=107.1 kN (chaveta) | η_aço=0.198 | η_concreto=0.535 (cone)
+  ✓ Chaveta central — esmagamento §6.7 η = 0.41  ████████
+
+[FASE 4e] Detalhe das bases — chapa, T-stub e pé do pilar...
+  ✓ Base L3 (extremidade)          η = 0.84  ████████████████
+  · chapa 520×520×8 mm | 2×2 M24 @ 400 | folga arruela–pilar 18 mm
+  · T-stub: N_t=83.9 kN → 42.0/flange, m=183 mm, F_T,Rd=50.0 kN (modo 1) η=0.840 | compressão §6.2.5: c=23 mm, N_c,Rd=1285 kN η=0.077
+  · pé do pilar: 6×Ø20 (3×2) em chapa t=20 | tração // η=0.684 | cortante ⊥ 46.4 kN η=0.357 | L=240 mm
+  ✓ Base L3c (central)             η = 0.67  █████████████
+  · chapa 520×520×12.5 mm | 2×2 M24 @ 400 | folga arruela–pilar 18 mm
+  · T-stub: N_t=151.8 kN → 75.9/flange, m=183 mm, F_T,Rd=122.0 kN (modo 1) η=0.623 | compressão §6.2.5: c=36 mm, N_c,Rd=1488 kN η=0.134
+  · pé do pilar: 12×Ø20 (3×4) em chapa t=20 | tração // η=0.663 | cortante ⊥ 46.4 kN η=0.179 | L=440 mm
+  ✓ Base L3f (pilar de frontão)    η = 0.73  ██████████████
+  · chapa 520×520×8 mm | 2×2 M24 @ 400 | folga arruela–pilar 18 mm
+  · T-stub: N_t=67.2 kN → 33.6/flange, m=183 mm, F_T,Rd=50.0 kN (modo 1) η=0.672 | compressão §6.2.5: c=23 mm, N_c,Rd=1285 kN η=0.057
+  · pé do pilar: 5×Ø20 (1×5) em chapa t=20 | tração // η=0.721 | cortante ⊥ 46.4 kN η=0.429 | L=540 mm
+  ✓ Base L3a (canto)               η = 0.75  ██████████████
+  · chapa 520×920×12.5 mm | 2×3 M24 @ 400 | folga arruela–pilar 18 mm
+  · T-stub: N_t=283.7 kN → 141.9/flange, m=183 mm, F_T,Rd=206.7 kN (modo 2) η=0.686 | compressão §6.2.5: c=36 mm, N_c,Rd=1706 kN η=0.175
+  · pé do pilar: 21×Ø20 (3×7) em chapa t=20 | tração // η=0.749 | cortante ⊥ 46.4 kN η=0.102 | L=740 mm
+  ✓ Base L3a (central montante)    η = 0.75  ██████████████
+  · chapa 520×920×12.5 mm | 2×3 M24 @ 400 | folga arruela–pilar 18 mm
+  · T-stub: N_t=282.2 kN → 141.1/flange, m=183 mm, F_T,Rd=206.7 kN (modo 2) η=0.683 | compressão §6.2.5: c=36 mm, N_c,Rd=1488 kN η=0.222
+  · pé do pilar: 21×Ø20 (3×7) em chapa t=20 | tração // η=0.745 | cortante ⊥ 46.4 kN η=0.102 | L=740 mm
 
 ==============================================================================
   CARGAS DE CÁLCULO (ELU) DESTINADAS À FUNDAÇÃO
@@ -304,11 +333,12 @@
   ----------------------------------------------------------------------------
   Extremidade (pilar lateral)            14     99.6      83.9    46.4
   Central (pilar do apoio partilhado)     3    199.2     151.8    46.4
-  Central montante (contraventamento)     6    328.9     281.6   106.6
-  Canto (montante de contraventamento)    4    297.0     281.3   162.2
+  Central montante (contraventamento)     6    329.6     282.2   107.1
+  Canto (montante de contraventamento)    4    299.4     283.7   164.1
+  Pilar de frontão (montante do CV-T)     2     72.8      67.2    58.7
   ----------------------------------------------------------------------------
-  H longitudinal total = 852.5 kN (8 painéis)
-  H transversal  total = 55.6 kN (1 painéis/frontão)
+  H longitudinal total = 856.9 kN (8 painéis)
+  H transversal  total = 57.0 kN (1 painéis/frontão)
 
   ⚠ ESFORÇOS PARA DIMENSIONAMENTO DE FUNDAÇÃO POR TERCEIROS. Este projeto NÃO dimensiona fundações: não há sondagem. Não estão verificados tensão admissível do solo, dimensões da sapata em planta, deslizamento, tombamento, recalque nem armadura — todos dependem de investigação geotécnica.
 
@@ -318,67 +348,75 @@
 ========================================================================
   Verificação                      Norma                           η  St  Estado
   ----------------------------------------------------------------------------
-  Cumeeira t90                     EC5 §6.4.3                 0.3526  ✓
-  Mísula face incl. σm,α           EC5 §6.4.2                 0.3140  ✓
-  Flambagem lateral                EC5 §6.3.3                 0.1039  ✓
-  Flambagem lateral (sucção)       EC5 §6.3.3 intradorso      0.1582  ✓
-  Flexo-comp. viga                 EC5 §6.3.2+§6.3.3          0.1672  ✓
-  Cisalhamento                     EC5 §6.1.7                 0.3814  ✓
-  Apoio L1 (contato)               EC5 §6.1.5                 0.4561  ✓
-  Apoio L1c (sela)                 EC5 §6.1.5                 0.4887  ✓
-  Sela central (placa)             EN 1993-1-1 §6.2.5         0.7402  ✓
-  Pilar lateral (N)                EC5 §6.3.2                 0.2075  ✓
-  Pilar central (N)                EC5 §6.3.2                 0.4151  ✓
-  Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2        0.2433  ✓
-  Pilar vento θ=90°                NBR 6123+EC5 §6.3.2        0.2587  ✓
-  Pilar canto (grav+brace+vento)   EC5 §6.2.3+§6.3.2          0.4333  ✓
-  Pilar central montante           EC5 §6.2.3+§6.3.2          0.7460  ✓
-  Terça flexão                     EC5 §6.1.6+§6.1.7          0.0979  ✓
-  Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24    0.2634  ✓
-  Terça Q_k concentrado            EN 1991-1-1 Tab.6.10       0.0546  ✓
-  Fixação telha (sucção)           NBR 6123 §7.2.6            0.6788  ✓
-  Fogo (seção reduzida)            EN 1995-1-2 §4.2.2         0.2128  ✓
-  Contraventamento cobertura       EC5 §9.2.5                 0.8009  ✓
-  Contravento vertical             EC5 §5.4.4+EN 1993-1-1 §6.2.3   0.8352  ✓
-  Contravento vert. central        EC5 §5.4.4+EN 1993-1-1 §6.2.3   0.8352  ✓
-  Contravento transversal          EC5 §5.4.4+EN 1993-1-1 §6.2.3   0.8242  ✓
-  Lig. diagonal longitudinal       EN 1993-1-8 §3.13+§4.5     0.8105  ✓
-  Lig. diagonal central            EN 1993-1-8 §3.13+§4.5     0.8105  ✓
-  Lig. diagonal frontão            EN 1993-1-8 §3.13+§4.5     0.8091  ✓
-  Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2          0.0668  ✓
-  Nó contravent. (escoras)         EC5 §6.3.2+§8.2.3+An. A    0.7246  ✓
-  Estabilidade global P-Δ          EC5 §5.4.4+EN 1993-1-1 §5.2.1   0.6062  ✓
-  Impacto veículo (A_d)            EN 1991-1-7                0.4774  ✓
-  Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3     0.0420  ✓
-  Ancoragem canto (moldada)        EN 1993-1-8 + EN 1992-4    0.5334  ✓
-  Chaveta — esmagamento            EN 1992-1-1 §6.7           0.6081  ✓
-  Ancoragem L3 (sucção/impacto)    EN 1993-1-8 + EN 1992-4    0.3322  ✓
-  Ancoragem L3c (sucção/impacto)   EN 1993-1-8 + EN 1992-4    0.3599  ✓
-  Ancoragem central montante       EN 1993-1-8 + EN 1992-4    0.5339  ✓
-  Chaveta central — esmag.         EN 1992-1-1 §6.7           0.3996  ✓
-  Sucção/uplift (ancoragem)        EN 1990+EN 1992-4          0.5866  ✓
+  Cumeeira t90                     EC5 §6.4.3                   0.36  ✓
+  Mísula face incl. σm,α           EC5 §6.4.2                   0.32  ✓
+  Flambagem lateral                EC5 §6.3.3                   0.11  ✓
+  Flambagem lateral (sucção)       EC5 §6.3.3 intradorso        0.16  ✓
+  Flexo-comp. viga                 EC5 §6.3.2+§6.3.3            0.17  ✓
+  Cisalhamento                     EC5 §6.1.7                   0.39  ✓
+  Apoio L1 (contato)               EC5 §6.1.5                   0.46  ✓
+  Apoio L1c (sela)                 EC5 §6.1.5                   0.49  ✓
+  Sela central (placa)             EN 1993-1-1 §6.2.5           0.75  ✓
+  Pilar lateral (N)                EC5 §6.3.2                   0.21  ✓
+  Pilar central (N)                EC5 §6.3.2                   0.42  ✓
+  Pilar vento θ=0°                 NBR 6123+EC5 §6.3.2          0.25  ✓
+  Pilar vento θ=90°                NBR 6123+EC5 §6.3.2          0.26  ✓
+  Pilar canto (grav+brace+vento)   EC5 §6.2.3+§6.3.2            0.44  ✓
+  Pilar central montante           EC5 §6.2.3+§6.3.2            0.75  ✓
+  Terça flexão                     EC5 §6.1.6+§6.1.7            0.10  ✓
+  Terça-biela flexo-comp.          EC5 §6.3.2 Eq.6.23/6.24      0.27  ✓
+  Terça Q_k concentrado            EN 1991-1-1 Tab.6.10         0.06  ✓
+  Fixação telha (sucção)           NBR 6123 §7.2.6              0.68  ✓
+  Fogo (seção reduzida)            EN 1995-1-2 §4.2.2           0.22  ✓
+  Contraventamento cobertura       EC5 §9.2.5                   0.81  ✓
+  Contravento vertical             EC5 §5.4.4+EN 1993-1-1 §6.2.3     0.84  ✓
+  Contravento vert. central        EC5 §5.4.4+EN 1993-1-1 §6.2.3     0.84  ✓
+  Contravento transversal          EC5 §5.4.4+EN 1993-1-1 §6.2.3     0.85  ✓
+  Lig. diagonal longitudinal       EN 1993-1-8 §3.13+§4.5       0.82  ✓
+  Lig. diagonal central            EN 1993-1-8 §3.13+§4.5       0.82  ✓
+  Lig. diagonal frontão            EN 1993-1-8 §3.13+§4.5       0.82  ✓
+  Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2            0.07  ✓
+  Nó contravent. (escoras)         EC5 §6.3.2+§8.2.3+An. A      0.73  ✓
+  Pilar de frontão PF              EC5 §6.2.3+§6.3.2            0.22  ✓
+  Lig. topo PF (L1f)               EC5 §8.2.3+§8.5.1.1+An. A     0.69  ✓
+  Ancoragem L3f (base PF)          EN 1993-1-8 + EN 1992-4      0.49  ✓
+  Base L3 (chapa + pé)             EN 1993-1-8 §6.2.4 + EC5 §8     0.84  ✓
+  Base L3c (chapa + pé)            EN 1993-1-8 §6.2.4 + EC5 §8     0.67  ✓
+  Base L3f (chapa + pé)            EN 1993-1-8 §6.2.4 + EC5 §8     0.73  ✓
+  Base L3a canto (chapa + pé)      EN 1993-1-8 §6.2.4 + EC5 §8     0.75  ✓
+  Base L3a central (chapa + pé)    EN 1993-1-8 §6.2.4 + EC5 §8     0.75  ✓
+  Estabilidade global P-Δ          EC5 §5.4.4+EN 1993-1-1 §5.2.1     0.61  ✓
+  Impacto veículo (A_d)            EN 1991-1-7                  0.48  ✓
+  Içamento (montagem)              EN 1991-1-6+EC5 §6.3.3       0.05  ✓
+  Ancoragem canto (moldada)        EN 1993-1-8 + EN 1992-4      0.54  ✓
+  Chaveta — esmagamento            EN 1992-1-1 §6.7             0.62  ✓
+  Ancoragem L3 (sucção/impacto)    EN 1993-1-8 + EN 1992-4      0.34  ✓
+  Ancoragem L3c (sucção/impacto)   EN 1993-1-8 + EN 1992-4      0.36  ✓
+  Ancoragem central montante       EN 1993-1-8 + EN 1992-4      0.54  ✓
+  Chaveta central — esmag.         EN 1992-1-1 §6.7             0.41  ✓
+  Sucção/uplift (ancoragem)        EN 1990+EN 1992-4            0.60  ✓
   Tirante de base                  EN 1993-1-1 §6.2.3              —  ✓  [NÃO APLICÁVEL]
   Robustez tirante piso            EN 1991-1-7+335+1993-1-2        —  ✓  [NÃO APLICÁVEL]
-  ELS flechas                      EC5 §2.3.2.2+Tab.7.2       0.1900  ✓
-  Ruptura de bloco L1              EC5 Anexo A                0.0063  ✓
-  Ruptura de bloco L1c             EC5 Anexo A                0.0063  ✓
-  Fendilhamento L1 (perp.)         EC5 §8.1.4 Eq.8.4          0.3387  ✓
-  Fendilhamento L1c (perp.)        EC5 §8.1.4 Eq.8.4          0.3387  ✓
-  Chapa aço L1 (furos/solda)       EN 1993-1-8+1-1            0.0997  ✓
-  Chapa aço L1c (furos/solda)      EN 1993-1-8+1-1            0.0997  ✓
-  Ligação L1 base                  EC5 §8.2+§8.5.1.1+§8.6     0.6914  ✓
-  Ligação L3 sapata                EN 1993-1-8+EN 1992-4      0.3322  ✓
-  Ligação L1c base central         EC5 §8.2+§8.5.1.1+§8.6     0.6914  ✓
-  Ligação L3c sapata central       EN 1993-1-8+EN 1992-4      0.3599  ✓
-  Fadiga/slip L1                   EC5 §7.1+§8.1.5            0.0050  ✓
-  Fadiga/slip L1c                  EC5 §7.1+§8.1.5            0.0050  ✓
-  abertura_springings              EN 1995-1-1 §7.2 (ELS, deformações) — li   0.0632  ✓
+  ELS flechas                      EC5 §2.3.2.2+Tab.7.2         0.19  ✓
+  Ruptura de bloco L1              EC5 Anexo A                  0.01  ✓
+  Ruptura de bloco L1c             EC5 Anexo A                  0.01  ✓
+  Fendilhamento L1 (perp.)         EC5 §8.1.4 Eq.8.4            0.34  ✓
+  Fendilhamento L1c (perp.)        EC5 §8.1.4 Eq.8.4            0.34  ✓
+  Chapa aço L1 (furos/solda)       EN 1993-1-8+1-1              0.10  ✓
+  Chapa aço L1c (furos/solda)      EN 1993-1-8+1-1              0.10  ✓
+  Ligação L1 base                  EC5 §8.2+§8.5.1.1+§8.6       0.70  ✓
+  Ligação L3 sapata                EN 1993-1-8+EN 1992-4        0.34  ✓
+  Ligação L1c base central         EC5 §8.2+§8.5.1.1+§8.6       0.70  ✓
+  Ligação L3c sapata central       EN 1993-1-8+EN 1992-4        0.36  ✓
+  Fadiga/slip L1                   EC5 §7.1+§8.1.5              0.01  ✓
+  Fadiga/slip L1c                  EC5 §7.1+§8.1.5              0.01  ✓
+  abertura_springings              EN 1995-1-1 §7.2 (ELS, deformações) — li     0.07  ✓
   ----------------------------------------------------------------------------
-  η máximo     = 0.8352
+  η máximo     = 0.85
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 55 (53 executadas, 2 não aplicáveis)  |  todas OK = True
+  N.º verif.   = 63 (61 executadas, 2 não aplicáveis)  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
@@ -389,6 +427,6 @@
   PDF  : /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.pdf
 
 Pipeline concluído. Relatório gerado em output/
-  Status global = APROVADO | η_max = 0.8352
+  Status global = APROVADO | η_max = 0.85
 
 [FASE 6] Visualização 3D omitida (abrir_viz=False)
