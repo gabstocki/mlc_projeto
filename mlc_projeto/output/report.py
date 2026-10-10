@@ -72,6 +72,7 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("lig_diag_transversal","Lig. diagonal frontão",     "EN 1993-1-8 §3.13+§4.5"),
     ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
     ("no_contraventamento", "Nó contravent. (escoras)",  "EC5 §6.3.2+§8.2.3+An. A"),
+    ("ligacao_terca_viga",  "Ligação terça–viga",        "EC5 §8.7+§8.2.3 (issue 43)"),
     # [issue 52] 2º montante da cruz do frontão (não existia no plano do frontão).
     ("pilar_frontao_montante", "Pilar de frontão PF",    "EC5 §6.2.3+§6.3.2"),
     ("lig_topo_frontao",    "Lig. topo PF (L1f)",        "EC5 §8.2.3+§8.5.1.1+An. A"),

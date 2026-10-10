@@ -134,7 +134,7 @@ todas cobertas; as das pp. 29 e 36 não estavam no e-mail (issue 63).
 | # | Prioridade | Issue |
 |---|-----------|-------|
 | 42 | P1 | [Caminho da reação de apoio: contato direto; compressão no apoio; desenho L1c](42-caminho-reacao-apoio-L1-L1c.md) | ✅
-| 43 | P1 | [Detalhamento das ligações com espaçamentos](43-detalhamento-ligacoes-espacamentos.md) |
+| 43 | P1 | [Detalhamento das ligações com espaçamentos](43-detalhamento-ligacoes-espacamentos.md) | ✅
 | 44 | P1 | [Diagonais: capacidade (rosca × escoamento) e critério uniforme](44-diagonais-capacidade-rosca.md) | ✅
 | 48 | P1 | [Base L3: impacto de veículo + arrancamento 83,9 kN; η=0,0000 incoerente](48-base-L3-impacto-arrancamento.md) | ✅
 

@@ -131,7 +131,7 @@ def test_gera_todas_as_folhas_na_largura_da_pagina(pipeline, tmp_path):
     assert t["a2_mm"] >= 2 * t["curso_mm"] + 2.2 * t["d_mm"]
     assert t["curso_mm"] > t["w_viga_mm"]
     paths = gerar_desenhos(arr, tmp_path)
-    assert len(paths) == len(FOLHAS) == 8
+    assert len(paths) == len(FOLHAS) == 9        # + DES-09 terça–viga (issue 43)
     for p in paths:
         cab = p.read_bytes()[:4096].decode("latin-1")
         assert cab.startswith("%PDF")

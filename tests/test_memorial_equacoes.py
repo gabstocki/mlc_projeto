@@ -28,7 +28,8 @@ def test_apendice_tem_as_verificacoes_governantes(res, tmp_path):
                    "flecha", "pilar-central", "terca", "telha", "cv-cobertura",
                    "cv-vertical", "l1", "ancoragem"):
         assert f"\\label{{eq:mem-{rotulo}}}" in tex
-    assert tex.count("\\begin{equation}") == tex.count("\\end{equation}") == 12
+    # align quebrável entre páginas (revisão de formatação), um número por bloco
+    assert tex.count("\\begin{align}") == tex.count("\\end{align}") == 12
 
 
 def test_valores_saem_dos_resultados(res, tmp_path):

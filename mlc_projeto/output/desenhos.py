@@ -790,6 +790,68 @@ def desenho_detalhe_L1f(arr: Arranjo, caminho: Path) -> Path:
     return f.salvar(caminho)
 
 
+def desenho_terca_viga(arr: Arranjo, caminho: Path) -> Path:
+    """DES-09 — Ligação terça–viga corrente: parafusos a 45° cruzados (issue 43)."""
+    d = arr.det["terca_viga"]
+    bt, ht = arr.b_terca * 1000, arr.h_terca * 1000
+    bv = arr.b_viga * 1000
+    nf, pv, lef = d["n_por_face"], d["passo_vertical_mm"], d["l_ef_mm"]
+    hv = 420.0                                               # trecho de viga mostrado
+    xc = 1250.0                                              # centro da planta
+    f = Folha.para_conteudo(15, -420, xc + 330, -hv - 60, ht + 140, unidade="mm")
+    ax = f.ax
+    # ---------- corte no plano do eixo da viga ----------
+    ax.add_patch(Rectangle((-380, -hv), 760, hv, fc=COR_MLC, ec="k", lw=0.5))
+    for s_ in (-1, 1):
+        _quebra(ax, s_ * 380, s_ * 380, -hv, 0)
+    ax.add_patch(Rectangle((-bt / 2, 0), bt, ht, fc=COR_MLC, ec="k", lw=0.6, zorder=3))
+    c45 = math.cos(math.radians(45))
+    y0 = d["a2_CG_terca_mm"] + lef * c45                     # 1.º parafuso: l_ef na terça
+    for s_ in (-1, 1):                                       # duas faces, cruzados
+        for k in range(nf):
+            ye = y0 + k * pv                                 # entrada na face
+            xe = s_ * bt / 2
+            # desce a 45° atravessando a terça e penetra l_ef na viga
+            dy = ye + lef * c45
+            xf = xe - s_ * dy
+            ax.plot([xe, xf], [ye, ye - dy], color="k", lw=1.1, zorder=5)
+    ax.text(-380, ht + 60, "CORTE NO PLANO DO EIXO DA VIGA", fontsize=6, fontweight="bold")
+    _rot(ax, 0, ht * 0.8, "terça", fs=5)
+    _rot(ax, 230, -hv / 2, "viga", fs=5)
+    f.cota_h(-bt / 2, bt / 2, ht + 25, y_ref=ht, fs=4.4)
+    f.cota_v(bt / 2 + 150, 0, ht, x_ref=bt / 2, esquerda=False, fs=4.4)
+    ys = [0, y0] + [y0 + k * pv for k in range(1, nf)]
+    f.cadeia_v(ys, -bt / 2 - 60, x_ref=-bt / 2, fs=4.0)
+    ax.text(bt / 2 + 20, y0 + (nf - 1) * pv + 40, "45°", fontsize=4.8)
+    # ---------- planta do topo da viga (duas extremidades de terça) ----------
+    ax.add_patch(Rectangle((xc - bv / 2, -hv + 40), bv, 2 * bt + 160, fc=COR_MLC,
+                           ec="k", lw=0.5))
+    yt = -hv + 120
+    for s_ in (-1, 1):
+        x0 = xc + (0 if s_ > 0 else -bv / 2)
+        ax.add_patch(Rectangle((x0 + (2 if s_ > 0 else 0), yt), bv / 2 - 2, bt,
+                               fc="#e9d6a6", ec="k", lw=0.5, zorder=3))
+        for yy, dd in ((yt, -d["desloc_mm"]), (yt + bt, d["desloc_mm"])):
+            ax.add_patch(Circle((xc + s_ * (d["x_p_mm"] + dd), yy), 6, fc="k", zorder=6))
+    ax.text(xc - bv / 2, -hv + 60 + 2 * bt + 160, "PLANTA SOBRE A VIGA", fontsize=6,
+            fontweight="bold")
+    xa, xb = xc + d["x_p_mm"] - d["desloc_mm"], xc + d["x_p_mm"] + d["desloc_mm"]
+    f.cota_h(xc, xa, yt + bt + 40, txt=f"{xa - xc:.0f}", fs=4.2)
+    f.cota_h(xa, xb, yt + bt + 40, txt=f"{xb - xa:.0f}", fs=4.2)
+    f.cota_h(xb, xc + bv / 2, yt + bt + 40, txt=f"{xc + bv / 2 - xb:.0f}", fs=4.2)
+    f.cota_h(xc - bv / 2, xc + bv / 2, yt - 50, txt=f"viga {bv:.0f}", fs=4.2)
+    _rot(ax, xc, yt + bt / 2, "junta das terças", fs=4.0)
+    f.carimbo(
+        "DES-09", "LIGAÇÃO TERÇA–VIGA CORRENTE",
+        f"Cotas em mm. {2 * nf} parafusos autoatarraxantes de rosca total "
+        f"Ø{d['d_mm']:g} por extremidade de terça ({nf} por face), inseridos pelas faces "
+        f"laterais a 45° e cruzados, com penetração efetiva de {lef:.0f} mm na viga e na "
+        "terça. As terças biapoiadas se encontram sobre o eixo da viga. Nas baías "
+        "contraventadas, a junta recebe também o nó das diagonais (cavilhas Ø20).",
+        barra=200.0, divisoes=4)
+    return f.salvar(caminho)
+
+
 # ── Conjunto ───────────────────────────────────────────────────────────────
 
 FOLHAS = (
@@ -801,6 +863,7 @@ FOLHAS = (
     ("des06_bases_correntes.pdf", desenho_bases_correntes),
     ("des07_base_ancorada.pdf", desenho_base_ancorada),
     ("des08_topo_PF_L1f.pdf", desenho_detalhe_L1f),
+    ("des09_terca_viga.pdf", desenho_terca_viga),
 )
 
 
@@ -813,6 +876,21 @@ def flecha_no_ponto(w_meio_mm: float, x_m: float, L_m: float) -> float:
     """Flecha de viga biapoiada sob carga uniforme em x (forma exata da elástica)."""
     xi = x_m / L_m
     return w_meio_mm * 16.0 / 5.0 * xi * (1.0 - 2.0 * xi ** 2 + xi ** 3)
+
+
+def detalhe_topo_pf(topo: dict, w_fin_mm: float, L_T: float, L: float) -> dict:
+    """
+    Detalhe da ligação L1f (fonte única para desenho e quadro de espaçamentos):
+    curso do furo oblongo ≥ flecha da viga no ponto do PF + 5 mm, folga = curso
+    + 5 mm, e passo das cavilhas na chapa a2 ≥ 2·curso + d0 + 1,2·d0 (aço entre
+    furos), nunca menor que o mínimo da madeira.
+    """
+    d = float(topo["d_mm"])
+    w = flecha_no_ponto(float(w_fin_mm), L_T, float(L))
+    curso = 5.0 * math.ceil((w + 5.0) / 5.0)
+    a2 = max(float(topo["a2_mm"]), 10.0 * math.ceil((2.0 * curso + 2.2 * d) / 10.0))
+    return {"w_viga_mm": w, "curso_mm": curso, "folga_mm": curso + 5.0, "a2_mm": a2,
+            "d_mm": d, "a4c_mm": float(topo["a4c_mm"]), "n_vert": int(topo["n_vert"])}
 
 
 def arranjo_de_resultados(res: dict, geo, *, n_eixos: int, L_T: float, H_pilar: float,
@@ -828,8 +906,8 @@ def arranjo_de_resultados(res: dict, geo, *, n_eixos: int, L_T: float, H_pilar: 
     d = float(L1["d_mm"])
     esq = res["esquadro_chapas"]["L1"]
     pf, topo = res["pilar_frontao"], res["pilar_frontao"]["topo"]
-    w_pf = flecha_no_ponto(float(res["ELS"]["w_fin_mm"]), L_T, float(geo.L))
-    curso = 5.0 * math.ceil((w_pf + 5.0) / 5.0)
+    _tf = detalhe_topo_pf(topo, float(res["ELS"]["w_fin_mm"]), L_T, float(geo.L))
+    w_pf, curso = _tf["w_viga_mm"], _tf["curso_mm"]
 
     def _base(k):
         b = res[k]
@@ -854,10 +932,19 @@ def arranjo_de_resultados(res: dict, geo, *, n_eixos: int, L_T: float, H_pilar: 
         "chaveta_H_mm": chaveta_H_mm, "classe_concreto": classe_concreto,
         # L1f: os furos oblongos exigem, na chapa, a2 ≥ 2·curso + d0 + 1,2·d0
         # (aço entre furos); na madeira a2 maior que o mínimo só favorece.
+        "terca_viga": {
+            "n_por_face": int(res["ligacao_terca_viga"]["corrente"]["n_por_face"]),
+            "passo_vertical_mm": float(res["ligacao_terca_viga"]["corrente"]["passo_vertical_mm"]),
+            "l_ef_mm": float(res["ligacao_terca_viga"]["corrente"]["l_ef_mm"]),
+            "d_mm": float(res["ligacao_terca_viga"]["corrente"]["d_mm"]),
+            "a1_CG_mm": float(res["ligacao_terca_viga"]["corrente"]["a1_CG_adotado_mm"]),
+            "x_p_mm": float(res["ligacao_terca_viga"]["corrente"]["x_p_mm"]),
+            "desloc_mm": float(res["ligacao_terca_viga"]["corrente"]["deslocamento_faces_mm"]),
+            "a2_CG_terca_mm": float(res["ligacao_terca_viga"]["corrente"]["a2_CG_terca_adotado_mm"]),
+        },
         "L1f": {
             "n_vert": int(topo["n_vert"]), "d_mm": float(topo["d_mm"]),
-            "a2_mm": max(float(topo["a2_mm"]),
-                         10.0 * math.ceil((2.0 * curso + 2.2 * float(topo["d_mm"])) / 10.0)),
+            "a2_mm": _tf["a2_mm"],
             "a4c_mm": float(topo["a4c_mm"]),
             "t_chapa_mm": float(topo["t_chapa_mm"]), "t_topo_mm": t_chapa_topo_mm,
             "L_chapa_mm": h_pilar * 1000,

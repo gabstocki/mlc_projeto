@@ -82,6 +82,8 @@ por serem modos dúcteis com capacidade de redistribuição.
     Ancoragem de L3c             & Frágil & 0,75 & 0,36 & Atende \\
     Ancoragem de L3f             & Frágil & 0,75 & 0,49 & Atende \\
     Pinos de L1f                 & Frágil & 0,75 & 0,69 & Atende \\
+    Parafusos da terça–viga      & Frágil & 0,75 & 0,56 & Atende \\
+    Cavilhas do montante terça–viga & Frágil & 0,75 & 0,75 & Atende \\
     Cavilhas do pé do pilar, L3a & Frágil & 0,75 & 0,75 & Atende \\
     Cavilhas do pé do pilar, L3f & Frágil & 0,75 & 0,73 & Atende \\
     Chapa de base, T-stub de L3  & Dúctil & 1,00 & 0,84 & Atende \\
@@ -237,6 +239,44 @@ verificados conforme os itens 2.4, 7.1 e 8.1.5. Com a gravidade por contato, os
 pinos só recebem em serviço o esforço axial, e o deslizamento resulta em taxa de
 0,01; a alternância limita-se ao arrancamento, sem compressão a alternar com
 ele, com taxa de 0,70.
+
+\section{LIGAÇÃO ENTRE TERÇA E VIGA}\label{sec:ligacao-terca-viga}
+
+As terças são biapoiadas entre pórticos e se apoiam por contato sobre o
+extradorso da viga, de modo que as extremidades de duas terças consecutivas se
+encontram sobre o eixo da viga, cada uma com meia largura de apoio. A gravidade
+passa pelo contato. A ligação recebe o que o contato não transmite: o
+arrancamento da sucção, de 14,7 kN por extremidade de terça, na combinação
+$0{,}9\,G + 1{,}5\,W$ com o coeficiente de pressão mais desfavorável da
+cobertura; a força de contenção lateral da viga, pelo item 9.2.5.2 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, ao longo da terça; e a parcela do
+cisalhamento do diafragma que leva o vento perpendicular às cumeeiras aos
+frontões, de 3,4 kN, ao longo da viga.
+
+A junta corrente emprega parafusos autoatarraxantes de rosca total de 8 mm,
+inseridos pelas faces laterais da terça a 45$^{\circ}$ e cruzados, com penetração
+efetiva de 120 mm em cada peça. A resistência ao arrancamento segue o item 8.7.2,
+com o número efetivo $n^{0,9}$ do grupo; a resistência lateral, o item 8.7.1 com
+a teoria de Johansen; e a interação, a fórmula (8.28) do item 8.7.3. São
+necessários oito parafusos por extremidade de terça, quatro por face, com taxa de
+0,56. A resistência à tração do aço, o diâmetro de núcleo e o momento de
+plastificação do parafuso são dados de catálogo, declarados e a confirmar com a
+avaliação técnica do produto, como no fixador da telha.
+
+Nas baías contraventadas, a terça é também montante da treliça da cobertura e
+conduz ao nó das diagonais a força de 93,3 kN do montante interior mais
+solicitado. Essa força é transmitida por chapa metálica embutida na terça, com
+cinco cavilhas de 20 mm paralelas às fibras, como nas escoras, com taxa de 0,75.
+A \autoref{fig:des-terca-viga} apresenta a junta corrente.
+
+\figura
+{Ligação corrente entre a terça e a viga}
+{1.0}
+{fig/des09_terca_viga.pdf}
+{Elaborado pelo autor (2026)}
+{des-terca-viga}
+{}
+{}
 
 \section{LIGAÇÃO ENTRE PILAR E FUNDAÇÃO}\label{sec:ligacao-base}
 
@@ -615,6 +655,29 @@ arrancamento de 67,2 kN concomitante ao cortante de 58,7 kN do painel. A
 {des-l1f}
 {}
 {}
+
+\section{ATENDIMENTO DOS ESPAÇAMENTOS}\label{sec:espacamentos}
+
+O dimensionamento das ligações pressupõe que os conectores estejam afastados
+entre si e das bordas e extremidades das peças o bastante para que os modos de
+ruptura considerados sejam os que efetivamente governam. As tabelas seguintes
+confrontam, para cada ligação, o valor mínimo exigido e o adotado no
+detalhamento, que é o mesmo dos desenhos do \autoref{ap:desenhos}. Na madeira
+valem as tabelas 8.5, para cavilhas, e 8.6, para parafusos solicitados
+axialmente, da EN 1995-1-1 \cite{EN1995-1-1:2004}; nas chapas, a tabela 3.3 da
+EN 1993-1-8 \cite{EN1993-1-8:2005}, com as distâncias $e_3$ e $e_4$ próprias dos
+furos ovalizados, e a tabela 3.9 para os olhais; no concreto, a
+EN 1992-4 \cite{EN1992-4:2018}. As distâncias a bordas carregadas são as da
+direção da força em cada ligação.
+
+\input{tab_espacamentos}
+
+Todas as exigências são atendidas. A conferência levou a uma correção no
+detalhe da ligação L1: a chapa embutida, que terminava 26 mm acima da
+extremidade do furo ovalizado do pino mais alto, passou a terminar a 36 mm,
+o mínimo de $1{,}5\,d_0$ exigido para furos ovalizados. No pilar de frontão, o
+passo das cavilhas na chapa, de 90 mm, excede o mínimo da madeira para que reste
+aço entre os furos ovalizados.
 
 \section{PROTEÇÃO CONSTRUTIVA}\label{sec:protecao-construtiva}
 

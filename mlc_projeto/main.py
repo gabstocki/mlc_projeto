@@ -1156,6 +1156,34 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"flexo-axial η={_e['eta']:.3f} | ligação {_l['n_pinos']}×Ø{_l['d_mm']:.0f} "
               f"({_l['n_horiz']}×{_l['n_vert']}, R_d={_l['R_d_kN']:.0f} kN) η={_l['eta']:.3f}")
 
+    # Ligação terça–viga (issue 43): arrancamento de sucção, contenção §9.2.5.2,
+    # diafragma e, nas baías rígidas, a força de montante da treliça.
+    from mlc_projeto.connections.terca_viga import verificar_ligacao_terca_viga
+    _cvh = res_elu["contraventamento"]
+    _w_suc = min(min(p["w_esq_kNm2"], p["w_dir_kNm2"]) for p in load.padroes_vento)
+    _n_tercas_linha = 2 * round(geo.L / S) + 1           # linhas de terças (T1–T17)
+    res_elu["ligacao_terca_viga"] = verificar_ligacao_terca_viga(
+        mat=mat_curta, w_suc_k_kNm2=_w_suc, g_k_terca_kNm2=float(pp["g_k_terca_kNm2"]),
+        s_terca_m=S, L_T_m=L_T, b_terca_m=B_TERCA, h_terca_m=H_TERCA, b_viga_m=geo.b,
+        F_contencao_kN=float(_cvh["F_d_apoio_kN"]),
+        H_diafragma_kN=float(cvt["R_gable_kN"]) / _n_tercas_linha,
+        # montante interior mais solicitado: cortante do 2.º painel da treliça
+        N_montante_kN=float(_cvh["R_ext_proj_kN"]) * (1.0 - 1.0 / int(_cvh["n_paineis_vao"])),
+    )
+    _tv = res_elu["ligacao_terca_viga"]
+    print("\n[FASE 2] Ligação terça–viga (issue 43)...")
+    _print_eta("Ligação terça–viga", _tv)
+    _tc = _tv["corrente"]
+    print(f"  · corrente: V_up={_tv['V_up_kN']:.1f} kN, H_viga={_tv['H_viga_kN']:.1f} kN, "
+          f"H_terça={_tv['H_terca_kN']:.1f} kN → {_tc['n_parafusos']} parafusos "
+          f"Ø{_tc['d_mm']:.0f} a 45° ({_tc['n_por_face']} por face) | "
+          f"R_ax,d={_tc['R_ax_d_kN']:.2f} R_v,d={_tc['R_v_d_kN']:.2f} kN | "
+          f"η_ax={_tc['eta_axial']:.3f} η_v={_tc['eta_lateral']:.3f} → η={_tc['eta']:.3f}")
+    _tm = _tv["montante"]
+    print(f"  · montante (baías rígidas): N={_tv['N_montante_kN']:.1f} kN → "
+          f"{_tm['n_pinos']}×Ø{_tm['d_mm']:.0f} ({_tm['n_vert']}×{_tm['n_horiz']}) "
+          f"R_d={_tm['R_d_kN']:.0f} kN η={_tm['eta']:.3f}")
+
     # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
     print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
     res_elu["estabilidade_global"] = verificar_estabilidade_global(
@@ -1521,13 +1549,15 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         aco=ACO_CHAPA_LIG,   # d do chumbador lido de cada sapata (não é o pino)
     )
     res_elu["esquadro_chapas"] = esquadro
-    # Geometria das chapas embutidas L1/L1c (issue 52 — a que vai ao desenho):
-    # soldada à chapa de topo/sela, sobe do intradorso até 1,5·d acima do pino
-    # mais alto (a 3·d do extradorso) e cobre o apoio no sentido da viga.
+    # Geometria das chapas embutidas L1/L1c (issues 52 e 43 — a que vai ao
+    # desenho): soldada à chapa de topo/sela, sobe do intradorso até e4 = 1,5·d0
+    # acima da EXTREMIDADE do furo ovalizado do pino mais alto (EN 1993-1-8
+    # Tab. 3.3, furos ovalizados; d0 = d, cavilha ajustada) e cobre o apoio.
     for _k, _l_apoio in (("L1", H_PILAR * 1000), ("L1c", L_SELA_POR_VIGA * 1000)):
         _rl = (res_lig if _k == "L1" else res_lig_c)[_k]
         _d = float(_rl["d_mm"])
-        esquadro[_k]["altura_mm"] = round(geo.h0 * 1000 - 3.0 * _d + 1.5 * _d, 0)
+        esquadro[_k]["altura_mm"] = round(geo.h0 * 1000 - 3.0 * _d
+                                          + FOLGA_OBLONGO_L1_MM + 1.5 * _d, 0)
         esquadro[_k]["largura_mm"] = round(max(_l_apoio, float(_rl["a3t_mm"]) + 1.5 * _d), 0)
     # As chapas de BASE (L3/L3c) saem do detalhe da FASE 4e (issue 52), que
     # substitui aqui as entradas do esquadro.
@@ -2077,6 +2107,21 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
                 folga_sela_m=FOLGA_SELA_M, t_chapa_topo_mm=T_CHAPA_TOPO_MM,
                 folga_oblongo_L1_mm=FOLGA_OBLONGO_L1_MM,
             ), _tese / "fig")
+            # Quadro requerido × adotado dos espaçamentos (issue 43)
+            from mlc_projeto.output.quadro_espacamentos import gerar_tex, montar_quadro
+            _qe = montar_quadro(
+                todos_para_relatorio, h0_m=geo.h0, L_T=L_T, L=geo.L,
+                folga_oblongo_mm=FOLGA_OBLONGO_L1_MM, d_chu_mm=D_CHU_MM,
+                h_ef_mm=H_EF_CHU_MM, c_borda_mm=C_BORDA_CHU_MM,
+                s_grupo_mm=S_GRUPO_CHU_MM, h_bloco_mm=H_BLOCO_FUND_MM,
+                h_pilar_mm={"lateral": H_PILAR * 1000, "central": H_PILAR_C * 1000,
+                            "PF": H_PILAR * 1000, "canto": H_PILAR_CANTO * 1000},
+                h_terca_mm=H_TERCA * 1000)
+            gerar_tex(_qe, _tese / "tab_espacamentos.tex")
+            _falhas = [f"{r['ligacao']} {r['grandeza']}" for r in _qe if not r["ok"]]
+            print(f"  Espaçamentos (issue 43): {len(_qe)} itens, "
+                  f"{len(_qe) - len(_falhas)} atendidos"
+                  + (f" | NÃO ATENDIDOS: {_falhas}" if _falhas else ""))
             # Figuras esquemáticas (issue 63): variáveis da varredura, modelo
             # do pórtico e modelo do apoio horizontal
             from mlc_projeto.output.esquemas import gerar_esquemas

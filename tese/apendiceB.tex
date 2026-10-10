@@ -5,6 +5,7 @@
 % =============================================================================
 
 \chapter{MEMÓRIA DE CÁLCULO DAS VERIFICAÇÕES GOVERNANTES}\label{ap:memoria-calculo}
+\allowdisplaybreaks[1]
 
 Este apêndice apresenta, para cada elemento, as verificações que governam o seu dimensionamento, na forma de equações: a expressão normativa, a substituição dos valores e o resultado. Os valores são os da execução do programa que produziu o memorial, de onde este apêndice é gerado. Forças em kN, momentos em kN$\cdot$m, tensões em MPa e comprimentos em metros, salvo indicação. As cláusulas são da EN 1995-1-1 \cite{EN1995-1-1:2004}, salvo indicação.
 
@@ -14,135 +15,113 @@ Este apêndice apresenta, para cada elemento, as verificações que governam o s
 
 A largura efetiva considera o coeficiente de fissuração $k_{cr}$; a força é o cortante no eixo da peça.
 
-\begin{equation}
-    \begin{aligned}
-        \tau_d &= \frac{1{,}5\,V_d}{k_{cr}\,b\,h} = \frac{1{,}5 \times 99{,}2}{0{,}67 \times 0{,}32 \times 1} \times 10^{-3} = 0{,}694 \\
-        f_{v,d} &= \frac{k_{mod}\,f_{v,k}}{\gamma_M} = 1{,}82 \\
-        \eta &= \frac{\tau_d}{f_{v,d}} = \frac{0{,}694}{1{,}82} = 0{,}39
-    \end{aligned}
+\begin{align}
+    \tau_d &= \frac{1{,}5\,V_d}{k_{cr}\,b\,h} = \frac{1{,}5 \times 99{,}2}{0{,}67 \times 0{,}32 \times 1} \times 10^{-3} = 0{,}694 \nonumber \\
+    f_{v,d} &= \frac{k_{mod}\,f_{v,k}}{\gamma_M} = 1{,}82 \nonumber \\
+    \eta &= \frac{\tau_d}{f_{v,d}} = \frac{0{,}694}{1{,}82} = 0{,}39
     \label{eq:mem-cisalhamento}
-\end{equation}
+\end{align}
 \subsection*{Tração perpendicular às fibras na cumeeira (itens 6.4.3, fórmulas 6.54 e 6.55)}
 
-\begin{equation}
-    \begin{aligned}
-        \sigma_{t,90,d} &= k_p\,\frac{6\,M_{ap,d}}{b\,h_{ap}^2} = 0{,}0353 \times \frac{6 \times 504}{0{,}32 \times 2{,}79^2} \times 10^{-3} = 0{,}043 \\
-        k_{dis}\,k_{vol}\,f_{t,90,d} &= 1{,}4 \times 0{,}335 \times 0{,}26 = 0{,}122 \\
-        \eta &= 0{,}36
-    \end{aligned}
+\begin{align}
+    \sigma_{t,90,d} &= k_p\,\frac{6\,M_{ap,d}}{b\,h_{ap}^2} = 0{,}0353 \times \frac{6 \times 504}{0{,}32 \times 2{,}79^2} \times 10^{-3} = 0{,}043 \nonumber \\
+    k_{dis}\,k_{vol}\,f_{t,90,d} &= 1{,}4 \times 0{,}335 \times 0{,}26 = 0{,}122 \nonumber \\
+    \eta &= 0{,}36
     \label{eq:mem-cumeeira}
-\end{equation}
+\end{align}
 \subsection*{Tensão na borda inclinada (item 6.4.2)}
 
 Governa a seção a 3{,}48 m do apoio, sob sucção, com a borda inclinada tracionada.
 
-\begin{equation}
-    \begin{aligned}
-        \sigma_{m,\alpha,d} &= \frac{6\,|M_d|}{b\,h^2} = \frac{6 \times 243}{0{,}32 \times 1{,}61^2} \times 10^{-3} = 1{,}75 \\
-        k_{m,\alpha} &= \left[1 + \left(\frac{f_{m,d}}{0{,}75\,f_{v,d}}\operatorname{tg}\alpha\right)^2 + \left(\frac{f_{m,d}}{f_{t,90,d}}\operatorname{tg}^2\alpha\right)^2\right]^{-1/2} = 0{,}414 \\
-        \eta &= \frac{\sigma_{m,\alpha,d}}{k_{m,\alpha}\,f_{m,d}} = \frac{1{,}75}{0{,}414 \times 13{,}4} = 0{,}32
-    \end{aligned}
+\begin{align}
+    \sigma_{m,\alpha,d} &= \frac{6\,|M_d|}{b\,h^2} = \frac{6 \times 243}{0{,}32 \times 1{,}61^2} \times 10^{-3} = 1{,}75 \nonumber \\
+    k_{m,\alpha} &= \left[1 + \left(\frac{f_{m,d}}{0{,}75\,f_{v,d}}\operatorname{tg}\alpha\right)^2 + \left(\frac{f_{m,d}}{f_{t,90,d}}\operatorname{tg}^2\alpha\right)^2\right]^{-1/2} = 0{,}414 \nonumber \\
+    \eta &= \frac{\sigma_{m,\alpha,d}}{k_{m,\alpha}\,f_{m,d}} = \frac{1{,}75}{0{,}414 \times 13{,}4} = 0{,}32
     \label{eq:mem-borda-inclinada}
-\end{equation}
+\end{align}
 \subsection*{Flexo-compressão (item 6.3.2, fórmula 6.23)}
 
-\begin{equation}
-    \begin{aligned}
-        \eta &= \frac{\sigma_{c,0,d}}{k_{c,y}\,f_{c,0,d}} + \frac{\sigma_{m,y,d}}{f_{m,d}} = \frac{0{,}0166}{0{,}938 \times 12{,}5} + \frac{2{,}07}{12{,}5} = 0{,}17
-    \end{aligned}
+\begin{align}
+    \eta &= \frac{\sigma_{c,0,d}}{k_{c,y}\,f_{c,0,d}} + \frac{\sigma_{m,y,d}}{f_{m,d}} = \frac{0{,}0166}{0{,}938 \times 12{,}5} + \frac{2{,}07}{12{,}5} = 0{,}17
     \label{eq:mem-flexocompressao}
-\end{equation}
+\end{align}
 \subsection*{Flecha final líquida (itens 2.3.2.2 e 7.2)}
 
-\begin{equation}
-    \begin{aligned}
-        w_{net,fin} &= w_G\,(1 + k_{def}) + w_Q\,(1 + \psi_2\,k_{def}) = 4{,}42 \times (1 + 2) + 2{,}15 = 15{,}4~\text{mm} \\
-        \eta &= \frac{w_{net,fin}}{L/250} = \frac{15{,}4}{81} = 0{,}19
-    \end{aligned}
+\begin{align}
+    w_{net,fin} &= w_G\,(1 + k_{def}) + w_Q\,(1 + \psi_2\,k_{def}) = 4{,}42 \times (1 + 2) + 2{,}15 = 15{,}4~\text{mm} \nonumber \\
+    \eta &= \frac{w_{net,fin}}{L/250} = \frac{15{,}4}{81} = 0{,}19
     \label{eq:mem-flecha}
-\end{equation}
+\end{align}
 \section{PILARES}\label{sec:mem-pilares}
 
 \subsection*{Pilar central montante (item 6.3.2, fórmula 6.23)}
 
 O pilar recebe as reações das duas vigas e o esforço descendente do painel de contraventamento.
 
-\begin{equation}
-    \begin{aligned}
-        N_{c,d} &= 2\,R_v + V_{Ed}\,\operatorname{tg}\beta = 199 + 130 = 330 \\
-        \lambda &= \frac{\ell_{ef}}{i} = \frac{7}{0{,}0779} = 89{,}8,\quad \lambda_{rel} = 1{,}43,\quad k_c = 0{,}445 \\
-        \eta &= \frac{N_{c,d}/(b\,h)}{k_c\,f_{c,0,d}} + \frac{\sigma_{m,d}}{f_{m,d}} = \frac{3{,}82}{0{,}445 \times 12{,}5} + \frac{0{,}757}{12{,}5} = 0{,}75
-    \end{aligned}
+\begin{align}
+    N_{c,d} &= 2\,R_v + V_{Ed}\,\operatorname{tg}\beta = 199 + 130 = 330 \nonumber \\
+    \lambda &= \frac{\ell_{ef}}{i} = \frac{7}{0{,}0779} = 89{,}8,\quad \lambda_{rel} = 1{,}43,\quad k_c = 0{,}445 \nonumber \\
+    \eta &= \frac{N_{c,d}/(b\,h)}{k_c\,f_{c,0,d}} + \frac{\sigma_{m,d}}{f_{m,d}} = \frac{3{,}82}{0{,}445 \times 12{,}5} + \frac{0{,}757}{12{,}5} = 0{,}75
     \label{eq:mem-pilar-central}
-\end{equation}
+\end{align}
 \section{TERÇAS E COBERTURA}\label{sec:mem-tercas}
 
 \subsection*{Terça como biela do contraventamento (item 6.3.2, fórmula 6.24)}
 
-\begin{equation}
-    \begin{aligned}
-        \sigma_{c,0,d} &= \frac{N_d}{b\,h} = \frac{107}{0{,}2 \times 0{,}58} \times 10^{-3} = 0{,}919,\quad \lambda_z = 99{,}6,\quad k_{c,z} = 0{,}368 \\
-        \eta &= \frac{\sigma_{c,0,d}}{k_{c,z}\,f_{c,0,d}} + k_m\,\frac{\sigma_{m,y,d}}{f_{m,d}} + \frac{\sigma_{m,z,d}}{f_{m,d}} = \frac{0{,}919}{0{,}368 \times 13{,}4} + 0{,}7\,\frac{1{,}05}{12{,}5} + \frac{0{,}247}{12{,}5} = 0{,}27
-    \end{aligned}
+\begin{align}
+    \sigma_{c,0,d} &= \frac{N_d}{b\,h} = \frac{107}{0{,}2 \times 0{,}58} \times 10^{-3} = 0{,}919,\quad \lambda_z = 99{,}6,\quad k_{c,z} = 0{,}368 \nonumber \\
+    \eta &= \frac{\sigma_{c,0,d}}{k_{c,z}\,f_{c,0,d}} + k_m\,\frac{\sigma_{m,y,d}}{f_{m,d}} + \frac{\sigma_{m,z,d}}{f_{m,d}} = \frac{0{,}919}{0{,}368 \times 13{,}4} + 0{,}7\,\frac{1{,}05}{12{,}5} + \frac{0{,}247}{12{,}5} = 0{,}27
     \label{eq:mem-terca}
-\end{equation}
+\end{align}
 \subsection*{Fixação da telha à terça (ABNT NBR 6123, item 7.2.6)}
 
-\begin{equation}
-    \begin{aligned}
-        F_{d} &= \left(\gamma_Q\,|c_p|\,q - \gamma_{G,fav}\,g\right) s\,e \\
-        &= (1{,}5 \times 2 \times 0{,}89 - 0{,}9 \times 0{,}1) \times 2{,}53 \times 0{,}2 = 1{,}31 \\
-        \eta &= \frac{F_d}{R_k/\gamma_M} = \frac{1{,}31}{2{,}5/1{,}3} = 0{,}68
-    \end{aligned}
+\begin{align}
+    F_{d} &= \left(\gamma_Q\,|c_p|\,q - \gamma_{G,fav}\,g\right) s\,e \nonumber \\
+    &= (1{,}5 \times 2 \times 0{,}89 - 0{,}9 \times 0{,}1) \times 2{,}53 \times 0{,}2 = 1{,}31 \nonumber \\
+    \eta &= \frac{F_d}{R_k/\gamma_M} = \frac{1{,}31}{2{,}5/1{,}3} = 0{,}68
     \label{eq:mem-telha}
-\end{equation}
+\end{align}
 \section{CONTRAVENTAMENTO}\label{sec:mem-contraventamento}
 
 \subsection*{Diagonal do contraventamento da cobertura (item 9.2.5.3; EN 1993-1-1, item 6.2.3)}
 
-\begin{equation}
-    \begin{aligned}
-        k_\ell &= \min\left(1;\ \sqrt{15/\ell}\right) = \sqrt{15/20{,}3} = 0{,}861 \\
-        q_d &= \frac{k_\ell\,n\,N_d}{k_{f,3}\,\ell} = \frac{0{,}861 \times 5 \times 19{,}7}{30 \times 20{,}3} = 0{,}139~\text{kN/m} \\
-        V_{Ed} &= \frac{q_d\,\ell}{2} + R_w = 1{,}41 + 105 = 107 \\
-        N_{Ed} &= \frac{V_{Ed}}{\cos\theta} = \frac{107}{\cos 23{,}8^\circ} = 117 \\
-        \eta &= \frac{N_{Ed}}{A\,f_y/\gamma_{M0}} = \frac{117}{616 \times 235 \times 10^{-3}} = 0{,}81
-    \end{aligned}
+\begin{align}
+    k_\ell &= \min\left(1;\ \sqrt{15/\ell}\right) = \sqrt{15/20{,}3} = 0{,}861 \nonumber \\
+    q_d &= \frac{k_\ell\,n\,N_d}{k_{f,3}\,\ell} = \frac{0{,}861 \times 5 \times 19{,}7}{30 \times 20{,}3} = 0{,}139~\text{kN/m} \nonumber \\
+    V_{Ed} &= \frac{q_d\,\ell}{2} + R_w = 1{,}41 + 105 = 107 \nonumber \\
+    N_{Ed} &= \frac{V_{Ed}}{\cos\theta} = \frac{107}{\cos 23{,}8^\circ} = 117 \nonumber \\
+    \eta &= \frac{N_{Ed}}{A\,f_y/\gamma_{M0}} = \frac{117}{616 \times 235 \times 10^{-3}} = 0{,}81
     \label{eq:mem-cv-cobertura}
-\end{equation}
+\end{align}
 \subsection*{Diagonal do contraventamento vertical (EN 1993-1-1, item 6.2.3)}
 
-\begin{equation}
-    \begin{aligned}
-        V_{Ed} &= \frac{f\,(F_w + H_{imp})}{n} = \frac{0{,}5 \times (842 + 15{,}2)}{4} = 107 \\
-        N_{Ed} &= \frac{V_{Ed}}{\cos\beta} = \frac{107}{\cos 50{,}6^\circ} = 169 \\
-        N_{t,Rd} &= \min\left(\frac{A\,f_y}{\gamma_{M0}};\ \frac{0{,}9\,A_s\,f_u}{\gamma_{M2}}\right) = \min(201;\ 212) = 201 \\
-        \eta &= \frac{169}{201} = 0{,}84
-    \end{aligned}
+\begin{align}
+    V_{Ed} &= \frac{f\,(F_w + H_{imp})}{n} = \frac{0{,}5 \times (842 + 15{,}2)}{4} = 107 \nonumber \\
+    N_{Ed} &= \frac{V_{Ed}}{\cos\beta} = \frac{107}{\cos 50{,}6^\circ} = 169 \nonumber \\
+    N_{t,Rd} &= \min\left(\frac{A\,f_y}{\gamma_{M0}};\ \frac{0{,}9\,A_s\,f_u}{\gamma_{M2}}\right) = \min(201;\ 212) = 201 \nonumber \\
+    \eta &= \frac{169}{201} = 0{,}84
     \label{eq:mem-cv-vertical}
-\end{equation}
+\end{align}
 \section{LIGAÇÕES E ANCORAGEM}\label{sec:mem-ligacoes}
 
 \subsection*{Pinos da ligação L1 (itens 8.2.3 e 8.5.1.1)}
 
 Chapa de aço central, corte duplo; o modo governante de Johansen é o de uma rótula plástica no pino.
 
-\begin{equation}
-    \begin{aligned}
-        F_{v,Rk} &= f_{h,\alpha,k}\,t_1\,d\left[\sqrt{2 + \frac{4\,M_{y,Rk}}{f_{h,\alpha,k}\,d\,t_1^2}} - 1\right] \\
-        &= 14{,}1 \times 148 \times 24\left[\sqrt{2 + \frac{4 \times 465.000}{14{,}1 \times 24 \times 148^2}} - 1\right] \times 10^{-3} = 25 \\
-        R_d &= n_{ef}\,\frac{2\,k_{mod}\,F_{v,Rk}}{\gamma_M} = 5 \times \frac{2 \times 0{,}65 \times 25}{1{,}3} = 125 \\
-        \eta &= \frac{\sqrt{N_d^2 + V_d^2}}{R_d} = \frac{\sqrt{8{,}75^2 + 86{,}1^2}}{125} = 0{,}70 \leq 0{,}75
-    \end{aligned}
+\begin{align}
+    F_{v,Rk} &= f_{h,\alpha,k}\,t_1\,d\left[\sqrt{2 + \frac{4\,M_{y,Rk}}{f_{h,\alpha,k}\,d\,t_1^2}} - 1\right] \nonumber \\
+    &= 14{,}1 \times 148 \times 24\left[\sqrt{2 + \frac{4 \times 465.000}{14{,}1 \times 24 \times 148^2}} - 1\right] \times 10^{-3} = 25 \nonumber \\
+    R_d &= n_{ef}\,\frac{2\,k_{mod}\,F_{v,Rk}}{\gamma_M} = 5 \times \frac{2 \times 0{,}65 \times 25}{1{,}3} = 125 \nonumber \\
+    \eta &= \frac{\sqrt{N_d^2 + V_d^2}}{R_d} = \frac{\sqrt{8{,}75^2 + 86{,}1^2}}{125} = 0{,}70 \leq 0{,}75
     \label{eq:mem-l1}
-\end{equation}
+\end{align}
 \subsection*{Ancoragem da base de canto, cone de arrancamento (EN 1992-4, fórmulas 7.1 a 7.7)}
 
-\begin{equation}
-    \begin{aligned}
-        N^0_{Rk,c} &= k_1\,\sqrt{f_{ck}}\,h_{ef}^{1{,}5} = 8{,}9 \times \sqrt{25} \times 400^{1{,}5} \times 10^{-3} = 356 \\
-        N_{Rd,c} &= \frac{N^0_{Rk,c}}{\gamma_{Mc}}\,\frac{A_{c,N}}{A^0_{c,N}}\,\psi_{s,N}\,\psi_{re,N}\,\psi_{ec,N} = \frac{356}{1{,}5} \times \frac{3{,}2}{1{,}44} \times 1 = 527 \\
-        \eta &= \frac{N_{Ed}}{N_{Rd,c}} = \frac{284}{527} = 0{,}54
-    \end{aligned}
+\begin{align}
+    N^0_{Rk,c} &= k_1\,\sqrt{f_{ck}}\,h_{ef}^{1{,}5} = 8{,}9 \times \sqrt{25} \times 400^{1{,}5} \times 10^{-3} = 356 \nonumber \\
+    N_{Rd,c} &= \frac{N^0_{Rk,c}}{\gamma_{Mc}}\,\frac{A_{c,N}}{A^0_{c,N}}\,\psi_{s,N}\,\psi_{re,N}\,\psi_{ec,N} = \frac{356}{1{,}5} \times \frac{3{,}2}{1{,}44} \times 1 = 527 \nonumber \\
+    \eta &= \frac{N_{Ed}}{N_{Rd,c}} = \frac{284}{527} = 0{,}54
     \label{eq:mem-ancoragem}
-\end{equation}
+\end{align}
+
+\allowdisplaybreaks[0]

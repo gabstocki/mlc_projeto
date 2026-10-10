@@ -171,7 +171,7 @@ def gerar_apendice_analise(load, geo, tese_dir: Path,
       f"governa {governa} da viga, com momento máximo "
       f"de {_n(gov['M_max'], 2)}~kN$\\cdot$m a {_n(gov['x_M'], 2)}~m do apoio. "
       "A \\autoref{fig:an-mvn-governante} apresenta os seus diagramas.\n\n"
-      "\\figura\n{Diagramas de esforços da combinação governante}\n{0.85}\n"
+      "\\figura\n{Diagramas de esforços da combinação governante}\n{0.65}\n"
       f"{{fig/{FIG_GOV}}}\n{{Elaborado pelo autor (2026)}}\n"
       "{an-mvn-governante}\n{}\n{}\n\n")
 

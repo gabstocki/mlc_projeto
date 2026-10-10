@@ -136,6 +136,11 @@
   · Escora beiral: N=107.1 kN | flexo-axial η=0.226 | ligação 6×Ø20 (1×6, R_d=150 kN) η=0.714
   · Escora central: N=214.2 kN | flexo-axial η=0.452 | ligação 16×Ø20 (2×8, R_d=294 kN) η=0.728
 
+[FASE 2] Ligação terça–viga (issue 43)...
+  ✓ Ligação terça–viga             η = 0.75  ██████████████
+  · corrente: V_up=14.7 kN, H_viga=3.4 kN, H_terça=0.2 kN → 8 parafusos Ø8 a 45° (4 por face) | R_ax,d=6.27 R_v,d=1.30 kN | η_ax=0.745 η_v=0.024 → η=0.556
+  · montante (baías rígidas): N=93.3 kN → 5×Ø20 (5×1) R_d=125 kN η=0.746
+
 [FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...
   ✓ Estab. global α_cr/P-Δ         η = 0.61  ████████████
   · α_cr,sistema=16.5 (mín 10, dir. crítica: transversal) | long=124.75 transv=16.5 | k_II=1.065 (aplicado: 1.000)
@@ -213,8 +218,8 @@
   · L3c: N=199.2 kN (2·R_v) | H≈0 (empuxos cancelam) | σ_c=2.213 MPa | η_N=0.1328 | n_chu=4 construtivo (η_H=0)
 
 [FASE 4] Esquadro de chapas (dimensões + espessura; issue 23)...
-  · L1 (embutida): 270×964 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
-  · L1c (embutida): 250×964 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
+  · L1 (embutida): 270×974 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
+  · L1c (embutida): 250×974 mm | t_req=24.0 → t_adot=25.0 mm (governa t_thick_d_mm)
   → L1/L1c: t≥d=24 mm (chapa central rígida p/ rótula do pino) → 25 mm; corrige os 16 mm arbitrados da issue 21.
 
 [FASE 4] Ruptura de bloco (EC5 Anexo A) — L1/L1c...
@@ -377,6 +382,7 @@
   Lig. diagonal frontão            EN 1993-1-8 §3.13+§4.5       0.82  ✓
   Corda beiral (diafragma)         EC5 §6.2.3+§6.3.2            0.07  ✓
   Nó contravent. (escoras)         EC5 §6.3.2+§8.2.3+An. A      0.73  ✓
+  Ligação terça–viga               EC5 §8.7+§8.2.3 (issue 43)     0.75  ✓
   Pilar de frontão PF              EC5 §6.2.3+§6.3.2            0.22  ✓
   Lig. topo PF (L1f)               EC5 §8.2.3+§8.5.1.1+An. A     0.69  ✓
   Ancoragem L3f (base PF)          EN 1993-1-8 + EN 1992-4      0.49  ✓
@@ -416,11 +422,12 @@
   H_fund      = 0.00 kN  (empuxo → sapata)
   η_alvo lig.  = 0.75
   k_mod vento  = 0.70 (curta; inst.=0.90 não usada)
-  N.º verif.   = 63 (61 executadas, 2 não aplicáveis)  |  todas OK = True
+  N.º verif.   = 64 (62 executadas, 2 não aplicáveis)  |  todas OK = True
   Status       = APROVADO
 ========================================================================
 
 [FASE 5] Export relatório (Excel + LaTeX/PDF)...
+  Espaçamentos (issue 43): 79 itens, 79 atendidos
   Excel: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.xlsx
   Figura: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc_diagrama_MVN.pdf
   LaTeX: /home/gabrielstocki/Documentos/mlc_projeto/output/relatorio_mlc.tex

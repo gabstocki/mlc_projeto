@@ -33,14 +33,17 @@ def _e(eta: float) -> str:
 
 
 def _eq(rotulo: str, linhas: list[str]) -> str:
-    corpo = " \\\\\n        ".join(linhas)
+    """
+    Bloco de equações com um único número, na última linha. Usa `align` (e não
+    `equation` + `aligned`) para que o bloco possa quebrar entre linhas no fim
+    da página, sem deixar meia página em branco.
+    """
+    corpo = " \\nonumber \\\\\n    ".join(linhas)
     return (
-        "\\begin{equation}\n"
-        "    \\begin{aligned}\n"
-        f"        {corpo}\n"
-        "    \\end{aligned}\n"
+        "\\begin{align}\n"
+        f"    {corpo}\n"
         f"    \\label{{eq:mem-{rotulo}}}\n"
-        "\\end{equation}\n"
+        "\\end{align}\n"
     )
 
 
@@ -54,7 +57,8 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
       "% execução do pipeline (issue 50). NÃO EDITAR À MÃO.\n"
       "% =============================================================================\n\n"
       "\\chapter{MEMÓRIA DE CÁLCULO DAS VERIFICAÇÕES GOVERNANTES}"
-      "\\label{ap:memoria-calculo}\n\n"
+      "\\label{ap:memoria-calculo}\n"
+      "\\allowdisplaybreaks[1]\n\n"
       "Este apêndice apresenta, para cada elemento, as verificações que governam o "
       "seu dimensionamento, na forma de equações: a expressão normativa, a "
       "substituição dos valores e o resultado. Os valores são os da execução do "
@@ -260,6 +264,8 @@ def gerar_apendice_memoria(res: dict, out_path: Path) -> Path:
         ]))
 
     out_path = Path(out_path)
+    # restaura o padrão (equações indivisíveis) para o restante do documento
+    P.append("\n\\allowdisplaybreaks[0]\n")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("".join(P), encoding="utf-8")
     return out_path

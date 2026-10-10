@@ -385,3 +385,20 @@
     \label{qua:#4}
   \end{quadro}
   } 
+
+% ----------------------------------------------------------
+% AJUSTES DE MARGEM (revisão de formatação, 2026-10)
+% ----------------------------------------------------------
+% Sumário e listas: coluna dos números de página larga o bastante para três
+% dígitos, e margem direita dos títulos correspondente.
+\setpnumwidth{2.2em}
+\setrmarg{3.2em}
+% Bibliografia: permite quebrar URLs e DOIs em qualquer caractere e dá folga
+% de espaçamento às linhas justificadas com palavras longas.
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
+\AtBeginBibliography{\setlength{\emergencystretch}{3em}}
+% Folga de espaçamento em todo o documento: evita linhas que ultrapassam a
+% margem em títulos longos (listas) e em parágrafos com palavras compostas.
+\setlength{\emergencystretch}{2em}
