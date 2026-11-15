@@ -216,7 +216,15 @@ S      = 2.53          # m — espaçamento entre terças (l_ef viga)
 # Orientação: b_pilar // largura da viga; h_pilar no plano do pórtico.
 B_PILAR     = 0.32     # m — = b da viga
 H_PILAR     = 0.27     # m — plano do pórtico
-H_PILAR_ALT = 7.0      # m — comprimento
+H_PILAR_ALT = 7.0      # m — do topo da chapa de base ao apoio da viga (nó a nó)
+# Pilarete metálico (issue 87): eleva a madeira acima da zona de respingo. O pé
+# do pilar de madeira fica no topo do pilarete, H_PILARETE_M acima do piso
+# acabado (= topo do bloco de fundação); a madeira mede H_PILAR_ALT − H_PILARETE_M.
+# Painéis de contraventamento, estabilidade global e caminho à fundação seguem
+# com H_PILAR_ALT (as diagonais ligam-se à chapa de base, abaixo do pilarete).
+H_PILARETE_M = 0.30    # m — topo da chapa de topo do pilarete acima do piso
+H_PILAR_MAD  = H_PILAR_ALT - H_PILARETE_M   # m — comprimento da peça de madeira
+H_IMP_PISO_M = 0.50    # m — altura do choque de veículo acima do piso (EN 1991-1-7)
 B_PILAR_C   = 0.32     # m — central idêntico
 H_PILAR_C   = 0.27     # m
 # Pilar de CANTO — montante do painel longitudinal E do frontão transversal.
@@ -225,16 +233,50 @@ H_PILAR_C   = 0.27     # m
 # o que o tornava o gargalo do sistema. Passa a ter seção própria.
 B_PILAR_CANTO = 0.32   # m — mantém a largura da viga (fabricação/ligação)
 H_PILAR_CANTO = 0.32   # m — engrossado de 0,27 (ver varredura no bloco do CV)
+# Pilar BIPARTIDO dos 14 montantes das baías rígidas (issue 104): duas lâminas de
+# MLC, uma de cada lado da viga, da base até a escora; a diagonal CV-V e a escora
+# concorrem no topo da lâmina, e a componente vertical desce // às fibras. Os
+# montantes de canto, laterais e centrais deixam de ser pilares maciços.
+from mlc_projeto.checks.elu.pilar_bipartido import FOLGA_ESCORA_VIGA_MM  # noqa: E402
+from mlc_projeto.checks.elu.pilar_bipartido import (  # noqa: E402
+    B_LAMINA_M as B_LAMINA, H_LAMINA_M as H_LAMINA, geometria as _geo_bipartido,
+)
+#: nó da diagonal CV-V 100 mm abaixo do extradorso no apoio (sob a escora)
+DZ_NO_ESCORA_M = 0.10
 
-# --- Terças (pré-definidas; verificação no pipeline) --------------------------
+# --- Terças — seção DIMENSIONADA (issue 101; predim/varredura_terca.py) -------
+# Espaçamento fixo s = L/8 (painéis do contraventamento, l_1 da viga); seção
+# única para correntes, de ponta, corda do diafragma e escoras. Varredura de
+# seções comerciais com o pipeline completo; critério: APROVADO e η ≤ 0,75 em
+# todas as verificações que dependem da terça. Menor área aprovada:
+#   0,20×0,36 → η 0,83 (nó)   0,18×0,40 → 0,96   0,20×0,40 → 0,74  ← adotada
+#   0,20×0,58 (anterior, dado de entrada) → 0,74, com 45 % a mais de madeira
+# Governa a ligação da escora central ao nó de topo (altura para as fileiras de
+# cavilhas); as verificações da barra ficam abaixo de 0,44.
 B_TERCA = 0.20
-H_TERCA = 0.58
+H_TERCA = 0.40
+B_ESCORA_CENTRAL = 0.24  # m — escora central (T9 nas baías contraventadas da linha B): com o
+                         # vento majorado (issue 109), N ≈ 351 kN e a flambagem no eixo fraco
+                         # pede peça mais larga que a terça corrente (decisão do autor)
+
+# --- Beiral e oitões (issue 82) -----------------------------------------------
+# Projeção da cobertura além da face externa dos pilares de perímetro, para
+# proteger da chuva os topos das vigas e das terças, as ligações de topo e o
+# trecho superior dos pilares, sem alterar a área interna:
+#   · beirais (alinhamentos A e C): a viga prolonga-se em balanço além do apoio;
+#   · oitões (eixos 1 e 9): as terças prolongam-se em balanço além do frontão.
+# Os balanços medem-se do EIXO do apoio: projeção + meia dimensão do pilar.
+A_BEIRAL_M = 1.00   # m — projeção do beiral além da face do pilar (A e C)
+A_OITAO_M  = 1.00   # m — projeção do oitão além da face do pilar (eixos 1 e 9)
+A_BAL_VIGA_M  = A_BEIRAL_M + H_PILAR / 2.0        # 1,135 m — balanço da viga
+A_BAL_TERCA_M = A_OITAO_M + B_PILAR_CANTO / 2.0   # 1,160 m — balanço da terça
+GEO_PARAMS["a_bal"] = A_BAL_VIGA_M
 
 # --- Içamento da viga (montagem — EN 1991-1-6; issue 26) ----------------------
 # Esquema confirmado: 2 pontos a 0,207·L (|M⁻|=|M⁺|); lingas inclinadas (compressão
 # axial), viga SEM contraventamento (LTB no vão entre pontos). Confirmar no plano de
 # montagem/rigging. γ_G peso próprio, φ_dyn amplificação dinâmica do içamento.
-A_ICAM_REL     = 0.207   # posição dos pontos de içamento (fração de L)
+A_ICAM_REL = None      # pontos de içamento: posição que iguala |M⁻| e |M⁺| (issue 100)
 GAMMA_G_ICAM   = 1.35    # coef. do peso próprio (desfavorável)
 PHI_DYN_ICAM   = 1.10    # amplificação dinâmica do içamento (EN 1991-1-6)
 PSI_LINGA_DEG  = 30.0    # ângulo da linga com a vertical (0 = balancim)
@@ -263,7 +305,9 @@ R_FIX_K_KN    = 2.5     # kN — resistência característica do fixador (típic
 #   Ø30 → η=0,69
 L_COMP_GALPAO   = 46.0    # m — comprimento do galpão
 N_MODULOS_CV    = 2       # baías rígidas (extremos) — define n por sistema (issue 41)
-D_BARRA_CV_MM   = 28.0    # mm — diagonal tracionada (redimensionada: 22 → 28)
+D_BARRA_CV_MM   = 28.0    # mm — diâmetro MÍNIMO da diagonal da cobertura; o pipeline
+                          # escolhe o menor comercial com η ≤ ETA_CV_COB (issue 109)
+ETA_CV_COB      = 0.90    # alvo do aço (dúctil, rosca recalcada)
 ACO_CV          = "S235"
 
 # --- Contraventamento VERTICAL (issue 14) — caminho de carga lateral à fundação
@@ -353,6 +397,10 @@ N_PILARES_FRONTAO   = 2 * N_PAINEIS_CV_TRANSV
 D_BARRA_CVT_MM      = None  # mm — None → auto (comercial, η ≤ ETA_CVT_ALVO)
 ACO_CVT             = "S235"
 ETA_CVT_ALVO        = 0.90  # margem de projeto na diagonal do frontão
+# Rigidez (issue 110, decisão do autor): o diâmetro da CV-T é também o menor que leva
+# o deslocamento transversal do SISTEMA (painel do frontão + diafragma da cobertura) a
+# η ≤ ETA_DESLOC_TRANSV do limite H/300, para dar folga ao α_cr transversal.
+ETA_DESLOC_TRANSV   = 0.75
 
 # --- Ligações / apoio ---------------------------------------------------------
 D_BASE_MM   = 24       # mm — cavilhas L1/L1c (EC5 §8.6(2): 6–30 mm; issue 18)
@@ -401,6 +449,13 @@ H_BLOCO_FUND_MM = 2.0 * H_EF_CHU_MM       # 800 mm
 # (EN 1992-1-1 §6.7), que estava declarada como pendente.
 CHAVETA_L_MM = 200.0    # comprimento em contacto com o concreto
 CHAVETA_H_MM = 80.0     # altura embutida
+T_CHAVETA_MM = 30.0     # espessura da chaveta (barra chata) — braço entre cordões
+# Bases correntes (L3, L3c, L3f) — issue 74: chaveta CRUCIFORME (dois braços de
+# 200 × 80 mm), porque o choque de veículo pode vir de qualquer direção; com ela,
+# o cortante não passa pelos chumbadores, que sem chaveta, sobre graute e porca de
+# nivelamento, trabalhariam com braço de alavanca (EN 1992-4 §6.2.2.3).
+CHAVETA_CRUZ = {"l_mm": CHAVETA_L_MM, "h_mm": CHAVETA_H_MM, "classe_concreto": "C25/30",
+                "tipo": "cruciforme"}
 DADOS_ANCORAGEM = {
     "h_ef_mm": H_EF_CHU_MM,
     "h_bloco_mm": H_BLOCO_FUND_MM,
@@ -411,6 +466,16 @@ DADOS_ANCORAGEM = {
     "concreto_fissurado": CONCRETO_FISSURADO,
     "verificacao_en1992_4": "EN 1992-4:2018 §7.2.1.4/7.2.1.5/7.4.1.4/7.2.3",
 }
+# Bases ancoradas dos MONTANTES (canto e central montante): com o vento longitudinal
+# majorado (issue 109) o arrancamento passa de ~357 para ~449 kN e o cone com h_ef=400
+# chega a η≈0,85 > 0,75 (modo frágil). Embutimento maior e chaveta mais longa só nelas;
+# as bases correntes mantêm h_ef=400 e a chaveta cruciforme de 200 mm.
+H_EF_CHU_MONT_MM    = 500.0
+C_BORDA_CHU_MONT_MM = 1.5 * H_EF_CHU_MONT_MM          # 750 mm
+H_BLOCO_FUND_MONT_MM = 2.0 * H_EF_CHU_MONT_MM         # 1.000 mm
+CHAVETA_L_MONT_MM   = 260.0
+DADOS_ANCORAGEM_MONT = dict(DADOS_ANCORAGEM, h_ef_mm=H_EF_CHU_MONT_MM,
+                            c_borda_mm=C_BORDA_CHU_MONT_MM, h_bloco_mm=H_BLOCO_FUND_MONT_MM)
 ETA_LIG_ALVO = 0.75    # margem de projeto L1/L3 (uso público; frágil em madeira)
 # --- Apoio da viga no pilar — CONTATO DIRETO (issue 42) ----------------------
 # A reação vertical de gravidade vai por contato (viga sobre chapa de topo do
@@ -423,10 +488,11 @@ L_AP            = H_PILAR   # m — apoio no pilar lateral = dimensão no plano 
 L_SELA_POR_VIGA = 0.25      # m — apoio de cada viga na sela do pilar central
 # Detalhamento (issue 52) — valores construtivos declarados:
 T_CHAPA_TOPO_MM = 16.0      # mm — chapa de topo do pilar lateral e do PF (como a sela)
-FOLGA_OBLONGO_L1_MM = 10.0  # mm — curso vertical dos furos ovalizados de L1/L1c:
-#   cobre o esmagamento ⊥ fibras com fluência sob a viga, para que a gravidade
-#   siga por contato e não carregue os pinos.
+# Curso vertical dos furos ovalizados de L1/L1c: CALCULADO (issue 72,
+# connections/oblongo_L1.py) — para baixo, retração + fluência ⊥ + elástica;
+# para cima, inchamento; montagem a 15 ± 2 % de umidade.
 FOLGA_SELA_M    = 0.02      # m — folga entre as duas vigas sobre a sela
+FOLGA_RASGO_MM  = 2.0       # mm — folga de cada lado da chapa embutida no rasgo (issue 70)
 
 # --- Componente metálico das ligações (EN 1993-1-8; issue 21) -----------------
 # Aço S275 (escolha do projeto). A ESPESSURA das chapas não é arbitrada: sai do
@@ -563,6 +629,8 @@ def _imprimir_resumo_export(resultados: dict, load, meta: dict) -> dict:
         "all_ok": all_ok,
         "status": status,
         "n_verif": est["n_linhas"],
+        "n_executadas": est["n_executadas"],
+        "n_nao_aplicaveis": len(est["nao_aplicaveis"]),
         "pendentes": est["pendentes"],
         "tabela": tab,
     }
@@ -588,6 +656,26 @@ def main(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         sys.stdout = _stdout_prev
         log_f.close()
         print(f"  Console export: {log_path}")
+
+
+def arranjo_kwargs(res: dict) -> dict:
+    """Argumentos do arranjo dos desenhos (fonte única para o pipeline e para o
+    teste de equivalência cálculo × desenho, issue 116)."""
+    ob = res["oblongo_L1"]
+    return dict(
+        n_eixos=round(L_COMP_GALPAO / L_T) + 1,
+        L_T=L_T, H_pilar=H_PILAR_ALT, b_pilar=B_PILAR, h_pilar=H_PILAR,
+        b_canto=B_PILAR_CANTO, h_canto=H_PILAR_CANTO, b_terca=B_TERCA,
+        h_terca=H_TERCA, d_chu_mm=D_CHU_MM, h_ef_mm=H_EF_CHU_MM,
+        c_borda_mm=C_BORDA_CHU_MM, h_bloco_mm=H_BLOCO_FUND_MM,
+        chaveta_L_mm=CHAVETA_L_MM, chaveta_H_mm=CHAVETA_H_MM,
+        classe_concreto=CLASSE_CONC_FUND, l_sela_viga_m=L_SELA_POR_VIGA,
+        folga_sela_m=FOLGA_SELA_M, t_chapa_topo_mm=T_CHAPA_TOPO_MM,
+        folga_oblongo_L1_mm=(ob["c_cima_mm"], ob["c_baixo_mm"]),
+        a_oit=A_BAL_TERCA_M, a_beiral_mm=A_BEIRAL_M * 1000,
+        ancoragem_mont={"h_ef_mm": H_EF_CHU_MONT_MM, "c_borda_mm": C_BORDA_CHU_MONT_MM,
+                        "h_bloco_mm": H_BLOCO_FUND_MONT_MM,
+                        "chaveta_L_mm": CHAVETA_L_MONT_MM})
 
 
 def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
@@ -626,12 +714,16 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     vento_kw = dict(VENTO_PARAMS)
     vento_kw["H1"] = geo.h_ap - geo.h0
     vento_kw["L"]  = geo.L
+    vento_kw["l2"] = 2 * geo.L + 2 * geo.a_bal   # profundidade com os beirais (issue 82)
     params_vento = ParametrosVento(**vento_kw)
 
     # θ=90° Tab.25 completo + θ=0° longitudinal (pilares + contraventamento)
     # n_pilares_linha ≈ L_comp/dist + 1; n_linhas = 3 (2 pórticos + central compartilhado)
     L_COMP = 46.0
     n_pil_linha = max(2, round(L_COMP / L_T) + 1)
+    # Dimensões em planta da COBERTURA (atrito §7.2.2), com beirais e oitões
+    B_COB_M = 2 * geo.L + 2 * geo.a_bal
+    L_COB_M = L_COMP + 2 * A_BAL_TERCA_M
     load = carregamentos_com_vento(
         geo=geo, mat=mat_curta,
         g_area=g_area, q_area=Q_AREA,
@@ -639,10 +731,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         n_pilares_linha=n_pil_linha,
         n_linhas_portico=3,
-        L_cob_m=L_COMP,
-        B_cob_m=2 * geo.L,   # dois vãos lado a lado
+        L_cob_m=L_COB_M,     # com os oitões (issue 82)
+        B_cob_m=B_COB_M,     # dois vãos lado a lado + beirais (issue 82)
         empuxo_desenvolve=EMPUXO_DESENVOLVE,   # Opção B (issue 35/38)
         n_pilares_extra=N_PILARES_FRONTAO,     # pilares de frontão (issue 52)
+        # issue 117: terças como linhas de carga nas reações e no beiral
+        P_terca_linha_kN=pp["gamma_kNm3"] * B_TERCA * H_TERCA * L_T, s_terca_m=S,
     )
 
     gov = load.combinacao_ELU_governante()
@@ -776,17 +870,26 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print("\n[FASE 2] Contraventamento — integridade da cobertura (§9.2.5)...")
     print(f"  Layout: {N_MODULOS_CV} baías rígidas (extremos), cruzes em todo o vão | "
           f"ℓ = vão da viga = {geo.L:.2f} m | "
-          f"diagonal ∅{D_BARRA_CV_MM:.0f} mm {ACO_CV}")
+          f"diagonal ≥ ∅{D_BARRA_CV_MM:.0f} mm {ACO_CV} (auto, η ≤ {ETA_CV_COB:.2f})")
     print("  Critério: EC5 §9.2.5.3 — treliça paralela às vigas, ℓ = vão do sistema")
 
-    res_elu["contraventamento"] = verificar_contraventamento(
-        geo=geo, mat=mat_elu, load=load,
-        L_comp=L_COMP_GALPAO, n_modulos_cv=N_MODULOS_CV,
-        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco=ACO_CV,
-        n_porticos=2, dist_portico=L_T,
-        b_terca=B_TERCA, h_terca=H_TERCA,
-        k_crit=1.0,   # 1.ª passagem; refinado após LTB
-    )
+    from mlc_projeto.checks.elu.contraventamento_vertical import D_COMERCIAL_MM as _D_COM
+
+    def _cv_cobertura(k_crit: float) -> dict:
+        """Menor diâmetro comercial ≥ D_BARRA_CV_MM com η_diag ≤ ETA_CV_COB (issue 109)."""
+        r = None
+        for _d in [d for d in _D_COM if d >= D_BARRA_CV_MM]:
+            r = verificar_contraventamento(
+                geo=geo, mat=mat_elu, load=load,
+                L_comp=L_COMP_GALPAO, n_modulos_cv=N_MODULOS_CV,
+                s_terca=S, d_barra_mm=float(_d), aco=ACO_CV,
+                n_porticos=2, dist_portico=L_T,
+                b_terca=B_TERCA, h_terca=H_TERCA, k_crit=k_crit)
+            if r["eta_diag_N"] <= ETA_CV_COB + 1e-9:
+                break
+        return r
+
+    res_elu["contraventamento"] = _cv_cobertura(1.0)   # 1.ª passagem; refinado após LTB
     _print_eta("Cobertura §9.2.5", res_elu["contraventamento"])
     cv0 = res_elu["contraventamento"]
     l_1_ltb = float(cv0["l_1_efetivo_m"])
@@ -807,14 +910,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     # Refinar N_flex do contraventamento com k_crit real do LTB
     k_crit_ltb = float(res_elu["flambagem"].get("k_crit", 1.0))
-    res_elu["contraventamento"] = verificar_contraventamento(
-        geo=geo, mat=mat_elu, load=load,
-        L_comp=L_COMP_GALPAO, n_modulos_cv=N_MODULOS_CV,
-        s_terca=S, d_barra_mm=D_BARRA_CV_MM, aco=ACO_CV,
-        n_porticos=2, dist_portico=L_T,
-        b_terca=B_TERCA, h_terca=H_TERCA,
-        k_crit=k_crit_ltb,
-    )
+    res_elu["contraventamento"] = _cv_cobertura(k_crit_ltb)
     l_1_ltb = float(res_elu["contraventamento"]["l_1_efetivo_m"])
     # Se o refinamento mudou a validade, reavaliar LTB uma vez
     if abs(l_1_ltb - float(res_elu["flambagem"]["l_1_m"])) > 1e-6:
@@ -836,20 +932,47 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     res_elu["flexao"] = verifica_flexao(geo, mat_elu, load, s=l_1_ltb)
     _print_eta("Flexo-comp. §6.3.2+6.35", res_elu["flexao"])
 
-    res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_elu, load)
+    # Rasgo da chapa embutida (issue 70): chapa t ≥ d (rígida, Johansen) na série
+    # comercial + 2 mm de folga de cada lado; confere-se depois com o esquadro.
+    from mlc_projeto.connections.chapas_dim import _adotar_comercial
+    T_CHAPA_L1_MM = _adotar_comercial(float(D_BASE_MM))
+    T_RASGO_M = (T_CHAPA_L1_MM + 2.0 * FOLGA_RASGO_MM) / 1000.0
+    res_elu["cisalhamento"] = verifica_cisalhamento(geo, mat_elu, load, t_rasgo_m=T_RASGO_M)
     _print_eta("Cisalhamento §6.1.7", res_elu["cisalhamento"])
 
     res_elu["apoio"] = verifica_apoio_contato(
-        geo, mat_elu, load, l_apoio_m=L_AP, rotulo="L1 (pilar lateral)")
+        geo, mat_elu, load, l_apoio_m=L_AP, rotulo="L1 (pilar lateral)", t_rasgo_m=T_RASGO_M,
+        a_extremidade_m=A_BEIRAL_M)          # a viga continua no beiral (issue 82)
     # Pilar central: duas vigas sobre a sela — cada uma com L_SELA_POR_VIGA
     res_elu["apoio_central"] = verifica_apoio_contato(
-        geo, mat_elu, load, l_apoio_m=L_SELA_POR_VIGA, rotulo="L1c (sela central)")
+        geo, mat_elu, load, l_apoio_m=L_SELA_POR_VIGA, rotulo="L1c (sela central)",
+        t_rasgo_m=T_RASGO_M)
     res_elu["sela_central"] = verifica_sela_central(
         sigma_contato_MPa=res_elu["apoio_central"]["sigma_c90d_MPa"],
         l_apoio_viga_m=L_SELA_POR_VIGA, h_pilar_m=H_PILAR_C, folga_m=FOLGA_SELA_M)
     _print_eta("Apoio L1 contato §6.1.5", res_elu["apoio"])
     _print_eta("Apoio L1c sela §6.1.5", res_elu["apoio_central"])
+    # Enrijecedores sob os balanços da sela (issue 73): garantem a pressão de
+    # contato uniforme admitida no apoio; a chapa passa a vencer só o vão entre eles.
+    from mlc_projeto.checks.elu.apoio import verifica_enrijecedores_sela
+    _sl0 = res_elu["sela_central"]
+    _enr = verifica_enrijecedores_sela(
+        sigma_contato_MPa=res_elu["apoio_central"]["sigma_c90d_MPa"],
+        balanco_m=_sl0["balanco_m"], b_contato_m=geo.b - T_RASGO_M,
+        t_sela_mm=_sl0["t_adot_mm"],
+        f_c90_d_MPa=mat_elu.com_duracao("media").f_c90_d / 1e6,
+    )
+    _sl0["enrijecedores"] = _enr
+    _sl0["eta_sem_enrijecedor"] = _sl0["eta"]
+    _sl0["eta"] = _enr["eta"]                   # com enrijecedores, governa o conjunto
+    _sl0["ok"] = _enr["ok"]
     _print_eta("Sela central (placa)", res_elu["sela_central"])
+    print(f"  · {_enr['n_enrij']} enrijecedores {_enr['dim_enrij_mm'][0]:.0f}×{_enr['dim_enrij_mm'][1]:.0f}"
+          f"×{_enr['t_enrij_mm']:g} mm sob cada balanço | chapa entre eles: vão {_enr['vao_chapa_mm']:.0f} mm "
+          f"(t_req {_enr['t_req_chapa_mm']:.1f}) | consolo F={_enr['F_enrij_kN']:.1f} kN | "
+          f"flecha da ponta {_enr['flecha_ponta_sem_mm']:.2f} → {_enr['flecha_ponta_com_mm']:.3f} mm "
+          f"| chapas laterais h={_enr['h_lateral_mm']:.0f}: C={_enr['C_face_kN']:.1f} kN, "
+          f"p={_enr['p_face_MPa']:.2f} MPa na face do pilar | governa {_enr['governa']}")
     for _a in (res_elu["apoio"], res_elu["apoio_central"]):
         print(f"  · {_a['rotulo']}: R={_a['R_d_kN']:.1f} kN | l={_a['l_apoio_m']:.3f} → "
               f"l_ef={_a['l_ef_m']:.3f} m | σ={_a['sigma_c90d_MPa']:.3f} ≤ "
@@ -863,7 +986,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     res_elu["flexo_comp"] = verifica_flexo_compressao(
         geo=geo, mat=mat_elu, load=load,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
-        H_pilar=H_PILAR_ALT, s=l_1_ltb,
+        H_pilar=H_PILAR_MAD, s=l_1_ltb,
     )
     _print_eta(
         f"Pilar {B_PILAR}×{H_PILAR}m §6.3.2",
@@ -879,7 +1002,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # governante entre TODAS as combinações ELU (cada uma com o seu k_mod).
     res_elu["pilar_central"] = _verifica_pilar_gov(
         mat=mat_curta, load=load,
-        b=B_PILAR_C, h=H_PILAR_C, H=H_PILAR_ALT,
+        b=B_PILAR_C, h=H_PILAR_C, H=H_PILAR_MAD,
         fator_reacao=2.0,
     )
     _pc = res_elu["pilar_central"]
@@ -898,11 +1021,11 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print("\n[FASE 2] Pilares — vento lateral (estrutura aberta)...")
     _N_lat = load.V_max_ELU()
     res_elu["pilar_vento_0"] = _pilar_vento(
-        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_ALT,
+        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_MAD,
         N_d=_N_lat, params_vento=params_vento, theta_deg=0.0,
     )
     res_elu["pilar_vento_90"] = _pilar_vento(
-        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_ALT,
+        mat=mat_elu, b=B_PILAR, h=H_PILAR, H=H_PILAR_MAD,
         N_d=_N_lat, params_vento=params_vento, theta_deg=90.0,
     )
     _print_eta("Pilar vento θ=0° (// cum.)", res_elu["pilar_vento_0"])
@@ -930,9 +1053,15 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # Issue 64 (Opção A): fachadas e linha central repartem a força longitudinal
     # na proporção das reações das treliças da cobertura (1/2 + 1/2).
     _rep_long = reparticao_alinhamentos(n_porticos=2)
+    # Issue 104: o nó do painel fica no topo da lâmina do pilar bipartido, no nível
+    # da escora — painel mais alto (até h0 − 0,10 acima do topo dos demais pilares)
+    # e mais estreito (o nó fica ao lado da viga, y_nó do eixo do pilar)
+    _gbp = _geo_bipartido(geo.b)
+    H_PAINEL_CVV = H_PILAR_ALT + geo.h0 - DZ_NO_ESCORA_M
+    B_BAIA_CVV = L_T - _gbp["y_no_mm"] / 1000.0
     res_elu["contraventamento_vertical"] = verificar_contraventamento_vertical(
         geo=geo, load=load,
-        H_pilar_m=H_PILAR_ALT,
+        H_pilar_m=H_PAINEL_CVV, b_baia_long_m=B_BAIA_CVV,
         dist_portico=L_T,
         L_comp=L_COMP_GALPAO,
         n_porticos=2,
@@ -948,7 +1077,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     )
     cvv = res_elu["contraventamento_vertical"]
     _print_eta("Contravento vertical §5.4", cvv)
-    print(f"  · F_vento0={cvv['F_vento0_kN']:.1f} kN + H_imp={cvv['H_imp_kN']:.1f} kN "
+    print(f"  · F_vento0,d=1,5×{cvv['F_vento0_k_kN']:.1f}={cvv['F_vento0_kN']:.1f} kN + H_imp={cvv['H_imp_kN']:.1f} kN "
           f"→ V_lat={cvv['V_lat_total_kN']:.1f} kN / {cvv['n_paineis']} painéis")
     print(f"  · Diagonal ∅{cvv['d_mm']:.0f} mm {cvv['aco']}, extremidade recalcada "
           f"M{cvv['d_rosca_mm']} (N_u={cvv['N_u_Rd_kN']:.1f} ≥ N_pl={cvv['N_pl_Rd_kN']:.1f} kN"
@@ -963,7 +1092,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # Linha CENTRAL — recebe a outra metade (issue 64, Opção A)
     res_elu["contraventamento_vertical_central"] = verificar_contraventamento_vertical(
         geo=geo, load=load,
-        H_pilar_m=H_PILAR_ALT,
+        H_pilar_m=H_PAINEL_CVV, b_baia_long_m=B_BAIA_CVV,
         dist_portico=L_T,
         L_comp=L_COMP_GALPAO,
         n_porticos=2,
@@ -987,20 +1116,38 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
 
     # Contraventamento TRANSVERSAL — diafragma + frontões → fundação (issue 31)
     print("\n[FASE 2] Contraventamento transversal (diafragma + frontões → fund.)...")
-    res_elu["contraventamento_transversal"] = verificar_contraventamento_transversal(
-        geo=geo, load=load, params_vento=params_vento,
-        H_pilar_m=H_PILAR_ALT,
-        dist_portico=L_T,
-        L_comp=L_COMP_GALPAO,
-        n_porticos=2,
-        b_pilar=B_PILAR, h_pilar=H_PILAR,
-        n_paineis_por_gable=N_PAINEIS_CV_TRANSV,
-        aco=ACO_CVT,
-        d_mm=D_BARRA_CVT_MM,
-        eta_alvo=ETA_CVT_ALVO,
-        V_Ed_total_kN=V_ED_TOTAL_KN,
-        n_pilares_extra=N_PILARES_FRONTAO,
-    )
+    from mlc_projeto.checks.elu.diafragma_cobertura import verificar_diafragma_cobertura
+    from mlc_projeto.checks.elu.contraventamento_vertical import D_COMERCIAL_MM as _D_COM_T
+    from scipy.integrate import trapezoid as _trap_df
+
+    def _cvt(d_mm):
+        return verificar_contraventamento_transversal(
+            geo=geo, load=load, params_vento=params_vento,
+            H_pilar_m=H_PILAR_ALT, dist_portico=L_T, L_comp=L_COMP_GALPAO,
+            n_porticos=2, b_pilar=B_PILAR, h_pilar=H_PILAR,
+            n_paineis_por_gable=N_PAINEIS_CV_TRANSV, aco=ACO_CVT, d_mm=d_mm,
+            eta_alvo=ETA_CVT_ALVO, V_Ed_total_kN=V_ED_TOTAL_KN,
+            n_pilares_extra=N_PILARES_FRONTAO)
+
+    def _diaf(cvt_):
+        return verificar_diafragma_cobertura(
+            L_T=L_T, n_eixos=round(L_COMP_GALPAO / L_T) + 1, s=S,
+            n_faixas=2 * round(geo.L / S), A_terca_m2=B_TERCA * H_TERCA,
+            A_viga_m2=float(_trap_df(geo.A(geo.x), geo.x)) / geo.L,
+            E_mlc_kPa=mat_elu.E0_mean / 1e3,
+            d_cvh_mm=float(res_elu["contraventamento"]["d_barra_mm"]),
+            C_h_frontao_kNpm=float(cvt_["C_h_kNpm"]), C_h_long_kNpm=float(cvv["C_h_kNpm"]),
+            H_tr_kN=float(cvt_["H_tr_kN"]), H_pilar_m=H_PILAR_ALT)
+
+    # resistência (η ≤ ETA_CVT_ALVO) e rigidez do sistema (η_δ ≤ ETA_DESLOC_TRANSV)
+    _cvt_r = _cvt(D_BARRA_CVT_MM)
+    _df_r = _diaf(_cvt_r)
+    for _d in [d for d in _D_COM_T if d > float(_cvt_r["d_mm"])]:
+        if _df_r["eta_delta"] <= ETA_DESLOC_TRANSV + 1e-9:
+            break
+        _cvt_r = _cvt(float(_d))
+        _df_r = _diaf(_cvt_r)
+    res_elu["contraventamento_transversal"] = _cvt_r
     cvt = res_elu["contraventamento_transversal"]
     _print_eta("Contravento transversal §5.4", cvt)
     print(f"  · Arrasto θ=90° ({cvt['n_colunas']} pilares)={cvt['H_vento_topo_kN']:.1f} kN"
@@ -1019,6 +1166,31 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · α_cr,transv={cvt['alpha_cr']} ({cvt['regime_alpha_cr']}) | "
           f"K_lat={cvt['K_lat_kNpm']:.0f} kN/m | k_II={cvt['k_II']:.3f}")
 
+    # Alma do diafragma da cobertura (issue 110): modelo em planta com as liberações
+    # reais; cruzes CV-D nas baías 2–8 além das CV-H. A rigidez equivalente substitui,
+    # no α_cr transversal, a dos painéis dos frontões com diafragma rígido.
+    print("\n[FASE 2] Diafragma da cobertura — alma nas baías intermediárias (issue 110)...")
+    res_elu["diafragma_cobertura"] = _df_r
+    # base do modelo em planta, reaproveitada na rigidez ao afastamento (issue 113)
+    _N_EIXOS_DF = round(L_COMP_GALPAO / L_T) + 1
+    _BASE_DIAF = dict(
+        L_T=L_T, n_eixos=_N_EIXOS_DF, s=S, n_faixas=2 * round(geo.L / S),
+        A_terca_m2=B_TERCA * H_TERCA, A_viga_m2=float(_trap_df(geo.A(geo.x), geo.x)) / geo.L,
+        E_mlc_kPa=mat_elu.E0_mean / 1e3,
+        C_h_frontao_kNpm=float(cvt["C_h_kNpm"]), C_h_long_kNpm=float(cvv["C_h_kNpm"]),
+        d_diag_mm_por_baia=[float(_df_r["d_cvh_mm"])]
+        + [float(_df_r["d_diafragma_mm"])] * (_N_EIXOS_DF - 3) + [float(_df_r["d_cvh_mm"])])
+    _df = res_elu["diafragma_cobertura"]
+    _print_eta("Diafragma da cobertura (alma)", _df)
+    _c5 = _df["portico_central_100kN"]
+    print(f"  · sem cruzes nas baías 2–8: {'MECANISMO (matriz singular)' if _df['sem_alma_mecanismo'] else 'estável'}")
+    print(f"  · CV-D Ø{_df['d_diafragma_mm']:.0f} ({_df['n_barras_novas']} barras de {_df['L_diag_m']:.2f} m) | "
+          f"F_diag máx {_df['F_diag_max_kN']:.1f} kN η={_df['eta_diag']:.3f} | CV-H ao transversal η={_df['eta_cvh_transversal']:.3f}")
+    print(f"  · H_tr={cvt['H_tr_kN']:.1f} kN → frontões {_df['R_frontoes_kN']} kN | δ_máx={_df['delta_max_mm']:.1f} mm "
+          f"≤ {_df['delta_lim_mm']:.1f} (H/300) η={_df['eta_delta']:.3f} | corda {_df['N_corda_max_kN']:.1f} kN | "
+          f"K_eq={_df['K_eq_kNpm']:.0f} kN/m (painéis sós: {cvt['K_lat_kNpm']:.0f})")
+    print(f"  · 100 kN no pórtico central → frontões {_c5['R_frontoes_kN']} kN | δ={_c5['delta_max_mm']:.1f} mm")
+
     # Ligações de EXTREMIDADE das diagonais — EN 1993-1-8 §3.13 (achado A3)
     #
     # A barra estava verificada (F-11: seção líquida da rosca); o que a segura
@@ -1030,6 +1202,16 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         ("lig_diag_vertical",   "longitudinal", cvv),
         ("lig_diag_vertical_central", "linha central", cvc),
         ("lig_diag_transversal", "frontão",     cvt),
+        # cruzes da alma do diafragma (issue 110)
+        ("lig_diag_diafragma",   "diafragma",   {
+            "N_diag_kN": res_elu["diafragma_cobertura"]["F_diag_max_kN"],
+            "N_t_Rd_kN": res_elu["diafragma_cobertura"]["N_t_Rd_kN"],
+            "d_mm": res_elu["diafragma_cobertura"]["d_diafragma_mm"]}),
+        # diagonais da cobertura (issue 91): terminal pelo mesmo detalhe
+        ("lig_diag_cobertura",   "cobertura",   {
+            "N_diag_kN": res_elu["contraventamento"]["F_diag_kN"],
+            "N_t_Rd_kN": res_elu["contraventamento"]["N_t_Rd_kN"],
+            "d_mm": res_elu["contraventamento"]["d_barra_mm"]}),
     ):
         res_elu[_chave] = dimensionar_ligacao_diagonal(
             N_Ed_kN       = float(_cv["N_diag_kN"]),
@@ -1057,51 +1239,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"η={_ld['eta_capacidade']:.4f}")
         print(f"  ⚠ {_ld['nota_manilha']}")
 
-    # Montante de contraventamento — download ±V_Ed·tanβ no pilar (issue 36)
-    print("\n[FASE 2] Pilar montante de contraventamento (download ±V_Ed·tanβ)...")
-    from mlc_projeto.checks.elu.pilares import verifica_pilar_contraventado
-    # Pilar de CANTO: montante do painel LONGITUDINAL e do FRONTÃO transversal
-    # (integra os dois downloads). N_uplift_kN de cada módulo = V_Ed·tanβ por painel.
-    _D_long   = float(cvv["N_uplift_kN"])
-    _D_transv = float(cvt["N_uplift_kN"])
-    _Rv_comp  = max(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU_fisicas().values())
-    _Rv_min   = min(abs(float(c.V_max_kN)) for c in load.combinacoes_ELU_fisicas().values())
-    # Momento de vento na face (concomitante) — o maior entre θ=0° e θ=90°.
-    _M_vento  = max(
-        float(res_elu.get("pilar_vento_0", {}).get("M_d_kNm", 0.0)),
-        float(res_elu.get("pilar_vento_90", {}).get("M_d_kNm", 0.0)),
-    )
-    res_elu["pilar_contraventado"] = verifica_pilar_contraventado(
-        mat=mat_elu, b=B_PILAR_CANTO, h=H_PILAR_CANTO, H_pilar=H_PILAR_ALT,
-        N_grav_comp_kN=_Rv_comp, N_grav_uplift_kN=_Rv_min,
-        downloads_kN=[_D_long, _D_transv], eixo="min", M_vento_kNm=_M_vento,
-    )
-    _pcv = res_elu["pilar_contraventado"]
-    _print_eta("Pilar canto (grav+brace+vento) §6.2.3/§6.3.2", _pcv)
-    print(f"  · Download: long={_D_long:.1f} + transv={_D_transv:.1f} = "
-          f"{_pcv['download_total_kN']:.1f} kN (canto = 2 painéis) | "
-          f"M_vento={_pcv['M_vento_kNm']:.1f} kNm")
-    print(f"  · Flexo-compressão: N={_pcv['N_comp_kN']:.1f} kN "
-          f"(R_v={_Rv_comp:.1f}+download) + M → η={_pcv['eta_comp']:.3f}")
-    print(f"  · Flexo-tração (uplift, R_v,min={_Rv_min:.1f}): "
-          f"N_t={_pcv['N_tracao_liq_kN']:.1f} kN + M → η={_pcv['eta_tracao']:.3f} "
-          f"| ancoragem={_pcv['N_ancoragem_kN']:.1f} kN (→ sucção/issue 33)")
-    print(f"  · Governa: {_pcv['regime']} | η={_pcv['eta']:.4f} "
-          f"(vs pilar interno ~{res_elu['flexo_comp'].get('eta', 0):.3f})")
-
-    # Pilar CENTRAL montante do painel da linha central (issue 64, Opção A)
-    res_elu["pilar_central_contraventado"] = verifica_pilar_contraventado(
-        mat=mat_elu, b=B_PILAR_C, h=H_PILAR_C, H_pilar=H_PILAR_ALT,
-        N_grav_comp_kN=2.0 * _Rv_comp, N_grav_uplift_kN=2.0 * _Rv_min,
-        downloads_kN=[float(cvc["N_uplift_kN"])], eixo="min",
-        M_vento_kNm=_M_vento,
-    )
-    _pcc = res_elu["pilar_central_contraventado"]
-    _print_eta("Pilar central montante §6.2.3/§6.3.2", _pcc)
-    print(f"  · N={_pcc['N_comp_kN']:.1f} kN (2·R_v={2*_Rv_comp:.1f} + download "
-          f"{cvc['N_uplift_kN']:.1f}) | flexo-compr. η={_pcc['eta_comp']:.3f} | "
-          f"flexo-tração η={_pcc['eta_tracao']:.3f} | ancoragem "
-          f"{_pcc['N_ancoragem_kN']:.1f} kN")
+    # Montantes de contraventamento: pilar bipartido (issue 104), verificado
+    # depois do choque de veículo, que dimensiona o pilarete de cada lâmina.
 
     # Corda do diafragma — elemento de beiral verificado como membro (issue 32)
     print("\n[FASE 2] Corda do diafragma — elemento de beiral (issue 32)...")
@@ -1114,6 +1253,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         alpha_deg=GEO_PARAMS["alpha_deg"],
         g_k_m2=g_area_terca, q_k_m2=Q_AREA, w_kNm2=_w_corda,
         L_comp=L_COMP_GALPAO,
+        # terças biapoiadas entre pórticos: uma junta da corda sobre cada viga
+        # intermediária (issue 91), dimensionada em ligacao_terca_viga
+        L_barra_m=L_T,
     )
     _cb = res_elu["corda_beiral"]
     _print_eta("Corda beiral §6.2.3/§6.3.2", _cb)
@@ -1133,7 +1275,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         # linha central (tributária das duas águas, s)
         return verificar_corda_beiral(
             mat=mat_elu, N_corda_kN=N_kN, L_t=L_T,
-            s_eave=(S / 2.0 if tipo == "beiral" else S), b=B_TERCA, h=H_TERCA,
+            s_eave=(S / 2.0 if tipo == "beiral" else S),
+            b=(B_TERCA if tipo == "beiral" else B_ESCORA_CENTRAL), h=H_TERCA,
             alpha_deg=GEO_PARAMS["alpha_deg"], g_k_m2=g_area_terca,
             q_k_m2=Q_AREA, w_kNm2=_w_corda, L_comp=L_COMP_GALPAO,
         )
@@ -1146,6 +1289,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         N_corda_diafragma_kN=float(cvt["N_corda_kN"]),
         verificar_escora=_verificar_escora,
         d_mm=float(D_ESCORA_MM), b_terca_m=B_TERCA, h_terca_m=H_TERCA,
+        b_escora_central_m=B_ESCORA_CENTRAL,
     )
     _nc = res_elu["no_contraventamento"]
     print("\n[FASE 2] Nó de topo das baías contraventadas (issue 66)...")
@@ -1169,6 +1313,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         H_diafragma_kN=float(cvt["R_gable_kN"]) / _n_tercas_linha,
         # montante interior mais solicitado: cortante do 2.º painel da treliça
         N_montante_kN=float(_cvh["R_ext_proj_kN"]) * (1.0 - 1.0 / int(_cvh["n_paineis_vao"])),
+        N_corda_kN=float(cvt["N_corda_kN"]),
     )
     _tv = res_elu["ligacao_terca_viga"]
     print("\n[FASE 2] Ligação terça–viga (issue 43)...")
@@ -1183,6 +1328,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  · montante (baías rígidas): N={_tv['N_montante_kN']:.1f} kN → "
           f"{_tm['n_pinos']}×Ø{_tm['d_mm']:.0f} ({_tm['n_vert']}×{_tm['n_horiz']}) "
           f"R_d={_tm['R_d_kN']:.0f} kN η={_tm['eta']:.3f}")
+    _te = _tv["emenda_corda"]
+    print(f"  · emenda da corda ({_cb['n_emendas']} por linha de beiral): "
+          f"N={_te['F_Ed_kN']:.1f} kN → {_te['n_pinos']}×Ø{_te['d_mm']:.0f} de cada lado "
+          f"({_te['n_vert']}×{_te['n_horiz']}), chapa {_te['chapa']['L_chapa_mm']:.0f}×"
+          f"{_te['chapa']['h_chapa_mm']:.0f} em rasgo superior de "
+          f"{_te['chapa']['profundidade_rasgo_mm']:.0f} mm "
+          f"(máx. {_tv['rasgo_superior']['profundidade_max_mm']:.0f}) η={_te['eta']:.3f}")
 
     # Estabilidade global — P-Δ, forças nocionais, α_cr (dispensa 2.ª ordem)
     print("\n[FASE 2] Estabilidade global (P-Δ / nocionais / α_cr)...")
@@ -1205,7 +1357,8 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         # painéis de cruz (EN 1993-1-1 Eq. 5.2). Sem estes dados a verificação
         # recusa dispensar a 2.ª ordem — ausência de dado não é aprovação.
         K_lat_long_kNpm=cvv.get("K_lat_kNpm", 0.0) + cvc.get("K_lat_kNpm", 0.0),
-        K_lat_transv_kNpm=cvt.get("K_lat_kNpm"),
+        # issue 110: rigidez do conjunto diafragma + frontões (modelo em planta)
+        K_lat_transv_kNpm=res_elu["diafragma_cobertura"]["K_eq_kNpm"],
         V_Ed_total_kN=V_ED_TOTAL_KN,
         amplificacao_aplicada=bool(
             cvv.get("amplificacao_aplicada") or cvc.get("amplificacao_aplicada")
@@ -1229,7 +1382,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         geo=geo, mat=mat_elu, load=load,
         b_pilar=B_PILAR, h_pilar=H_PILAR,
         b_pilar_c=B_PILAR_C, h_pilar_c=H_PILAR_C,
-        H_pilar_m=H_PILAR_ALT,
+        # o choque (0,50 m acima do piso) atinge a madeira 0,20 m acima do pé,
+        # que está no topo do pilarete (issue 87)
+        H_pilar_m=H_PILAR_MAD, h_imp_m=H_IMP_PISO_M - H_PILARETE_M,
     )
     iv = res_elu["impacto_veiculo"]
     _print_eta("Impacto veículo (A_d)", iv)
@@ -1239,6 +1394,64 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"k_mod={iv['k_mod']:.2f} (instantânea)")
     print(f"  · Gov: {iv['gov']} | η={iv['eta']:.4f}")
     print(f"  · {iv['recomendacao'][:90]}…")
+
+    # ── Pilares montantes das baías rígidas: pilar BIPARTIDO (issue 104) ──────
+    # Duas lâminas de MLC dos dois lados da viga, da base até a escora; o nó da
+    # diagonal CV-V fica no topo da lâmina, no nível da escora (sem binário H·h0),
+    # e a componente vertical desce // às fibras até o pilarete da lâmina.
+    print("\n[FASE 2] Pilares montantes bipartidos (issue 104)...")
+    from mlc_projeto.checks.elu.pilar_bipartido import verificar_pilar_bipartido
+    _combs = load.combinacoes_ELU_fisicas().values()
+    _Rv_comp = max(abs(float(c.V_max_kN)) for c in _combs)
+    _R_up = float(reacao_arrancamento_max(load)["R_up_kN"])
+    _M_v0 = float(res_elu.get("pilar_vento_0", {}).get("M_d_kNm", 0.0))
+    _V_choque = max(float(c["R_base_kN"]) for c in iv["casos"])
+    # arrancamento das duas terças que se apoiam na capa do nó (sucção da cobertura)
+    _F_up_no = 2.0 * float(res_elu["ligacao_terca_viga"]["V_up_kN"])
+    _kw_bp = dict(mat=mat_elu, b_viga_m=geo.b, L_x_m=H_PILAR_MAD, L_y_m=H_PILAR_MAD + geo.h0 + FOLGA_ESCORA_VIGA_MM / 1000,
+                  M_vento_kNm=_M_v0, V_choque_kN=_V_choque, F_up_no_kN=_F_up_no)
+    # Choque de veículo na lâmina (issue 106): a mais carregada na acidental é a do
+    # central montante, com metade das reações de G de duas vigas.
+    from mlc_projeto.checks.elu.pilar_bipartido import verificar_lamina_impacto
+    from mlc_projeto.checks.elu.impacto_veiculo import N_acidental_pilar, F_DX_KN, F_DY_KN
+    _kw_li = dict(
+        mat_inst=mat_elu.com_duracao("instantanea"), b_viga_m=geo.b, L_x_m=H_PILAR_MAD,
+        L_y_m=H_PILAR_MAD + geo.h0 + FOLGA_ESCORA_VIGA_MM / 1000, N_d_kN=N_acidental_pilar(load, fator_pilar=2.0) / 2.0,
+        F_x_kN=F_DX_KN, F_y_kN=F_DY_KN, h_imp_m=iv["forcas"]["h_imp_m"])
+    _lam_imp = verificar_lamina_impacto(**_kw_li)
+    _lam_imp["eta_lamina_sozinha"] = verificar_lamina_impacto(repartido=False, **_kw_li)["eta"]
+    iv["lamina_bipartido"] = _lam_imp
+    if _lam_imp["eta"] > iv["eta"]:
+        iv["eta"], iv["gov"] = _lam_imp["eta"], f"lâmina bipartida, {_lam_imp['gov']['direcao']}"
+    iv["ok"] = iv["ok"] and _lam_imp["ok"]
+    _gl = _lam_imp["gov"]
+    print(f"  · choque na lâmina bipartida (repartido pelo espaçador do pé): F={_gl['F_kN']:.0f} kN, "
+          f"{_gl['direcao']} | "
+          f"M={_gl['M_kNm']:.2f} kN·m V={_gl['V_kN']:.1f} kN | N={_lam_imp['N_d_kN']:.1f} kN "
+          f"k_c={_lam_imp['k_c']:.3f} | η_flexo={_gl['eta_flexo']:.3f} η_V={_gl['eta_v']:.3f} "
+          f"η_espaçador={max(c['eta_espacador'] for c in _lam_imp['casos']):.3f} "
+          f"(lâmina sozinha: η={_lam_imp['eta_lamina_sozinha']:.2f})")
+    res_elu["pilar_contraventado"] = verificar_pilar_bipartido(
+        rotulo="canto (P1, P3, P25, P27)", R_grav_kN=_Rv_comp, R_up_kN=_R_up,
+        D_kN=float(cvv["N_uplift_kN"]), extra_centrado_kN=float(cvt["N_uplift_kN"]), **_kw_bp)
+    res_elu["pilar_lateral_montante"] = verificar_pilar_bipartido(
+        rotulo="lateral montante (P4, P6, P22, P24)", R_grav_kN=_Rv_comp, R_up_kN=_R_up,
+        D_kN=float(cvv["N_uplift_kN"]), **_kw_bp)
+    res_elu["pilar_central_contraventado"] = verificar_pilar_bipartido(
+        rotulo="central montante (P2, P5, P8, P20, P23, P26)", R_grav_kN=2.0 * _Rv_comp,
+        R_up_kN=2.0 * _R_up, D_kN=float(cvc["N_uplift_kN"]), **_kw_bp)
+    for _kb, _rb in (("pilar_contraventado", "Pilar canto bipartido"),
+                     ("pilar_lateral_montante", "Pilar lateral montante bip."),
+                     ("pilar_central_contraventado", "Pilar central montante bip.")):
+        _b = res_elu[_kb]
+        _print_eta(_rb, _b)
+        print(f"  · 2 lâminas {_b['b_lamina_m']:.2f}×{_b['h_lamina_m']:.2f} m | N lâmina="
+              f"{_b['N_lamina_kN']:.0f} kN (R/2 + D {_b['D_kN']:.0f}) | λ_x={_b['lambda_x']:.0f} "
+              f"λ_ef,y={_b['lambda_ef_y']:.0f} k_c={_b['k_c']:.3f} | η={_b['eta_comp']:.3f}")
+        print(f"  · espaçadores: T_d={_b['espacadores']['T_d_kN']:.1f} kN → "
+              f"{_b['espacadores']['n_parafusos']}×M16 η={_b['espacadores']['eta']:.3f} | nó "
+              f"{_b['no']['n_pinos']}×Ø20 η={_b['no']['eta']:.3f} | sela {_b['sela']['n_pinos']}×Ø20 "
+              f"η={_b['sela']['eta']:.3f} (pé e pilarete: base L3a)")
 
     # Situação transitória de IÇAMENTO da viga (montagem — EN 1991-1-6; issue 26)
     print("\n[FASE 2] Içamento da viga (montagem — EN 1991-1-6)...")
@@ -1304,6 +1517,27 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"η_6.23={_tfc['eta_623']:.3f} η_6.24={_tfc['eta_624']:.3f} → "
           f"η={_tfc['eta']:.4f} ({_tfc['verif_gov']})")
 
+    # Calha central sobre a T9 (issue 83): hidráulica e água da calha cheia na terça
+    from mlc_projeto.checks.calha import dimensionar_calha
+    res_elu["calha"] = dimensionar_calha(L_vao_m=geo.L, alpha_deg=GEO_PARAMS["alpha_deg"],
+                                         L_T_m=L_T, s_terca_m=S)
+    _ca = res_elu["calha"]
+    _print_eta("Calha central e condutores", _ca)
+    print(f"  · calha {_ca['B_mm']:.0f}×{_ca['H_mm']:.0f} mm, i = 0,5 %: {_ca['Q_trecho_L_min']:.0f} "
+          f"de {_ca['Q_calha_L_min']:.0f} L/min | saída por pórtico ({_ca['A_por_saida_m2']:.0f} m², "
+          f"I = {_ca['I_mm_h']:.0f} mm/h) {_ca['Q_saida_L_min']:.0f} L/min → condutor "
+          f"Ø{_ca['d_condutor_mm']:.0f} (f ≤ 0,33: {_ca['Q_condutor_L_s']:.1f} L/s, η = {_ca['eta_condutor']:.2f})")
+    print(f"  · borda da calha {_ca['borda_sobre_T9_mm']:.0f} mm acima da T9 → último pano a "
+          f"{100 * _ca['inclinacao_ultimo_pano']:.1f} % (mín. 5 %)")
+    res_elu["terca_calha"] = verifica_terca_flexocompressao(
+        mat=mat_elu, L_t=L_T, s=S, b=B_TERCA, h=H_TERCA,
+        alpha_deg=GEO_PARAMS["alpha_deg"],
+        g_k_m2=g_area_terca + _ca["g_calha_kN_m"] / S,
+        q_k_m2=Q_AREA + _ca["q_agua_kN_m"] / S,
+        w_kNm2=_w_C1bv_m2, N_c_kN=_F_terca,
+    )
+    _print_eta("Terça T9 sob a calha cheia", res_elu["terca_calha"])
+
     # Terça sob carga concentrada Q_k (cat. H — alternativa à UDL; issue 34)
     from mlc_projeto.checks.elu.tercas import verifica_terca_carga_concentrada
     res_elu["terca_Qk_conc"] = verifica_terca_carga_concentrada(
@@ -1319,6 +1553,40 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"(a mais desfavorável governa)")
     print(f"  · Telha: M_local,d={_qk['M_telha_d_kNm']:.3f} kN·m/m → ficha do "
           f"fabricante (issue 17)")
+
+    # Beiral e oitão — balanços da viga e da terça (issue 82)
+    print("\n[FASE 2] Beiral e oitão — balanços (issue 82)...")
+    from mlc_projeto.checks.elu.beiral import verificar_balanco_terca, verificar_balanco_viga
+    # rasgo da L1 na raiz (issue 83): em toda a altura até a geometria do rasgo
+    # ser fixada (FASE 4, geometria_rasgo); recalculado lá com o fundo real
+    res_elu["balanco_viga"] = verificar_balanco_viga(geo, load, mat_curta,
+                                                     t_rasgo_m=T_RASGO_M)
+    _bv = res_elu["balanco_viga"]
+    _print_eta("Balanço da viga (beiral)", _bv)
+    print(f"  · a={_bv['a_m']:.3f} m do eixo do apoio | h {geo.h0:.2f} → {_bv['h_ponta_m']:.3f} m | "
+          f"M_raiz={_bv['M_raiz_kNm']:.2f} kN·m ({_bv['comb']}) | k_m,α={_bv['k_m_alpha']:.3f} | "
+          f"η_ELU={_bv['eta_ELU']:.3f}")
+    print(f"  · ponta: w_inst={_bv['w_inst_mm']:.2f} ≤ {_bv['lim_inst_mm']:.1f} mm | "
+          f"w_fin={_bv['w_fin_mm']:.2f} ≤ {_bv['lim_fin_mm']:.1f} mm (para baixo +; Tab. 7.2) | "
+          f"η_ELS={_bv['eta_ELS']:.3f}")
+    res_elu["balanco_terca"] = verificar_balanco_terca(
+        mat_curta, a_m=A_BAL_TERCA_M, L_t=L_T, s=S, b=B_TERCA, h=H_TERCA,
+        alpha_deg=GEO_PARAMS["alpha_deg"], g_k_m2=g_area_terca, q_k_m2=Q_AREA,
+        w_kNm2=_w_C1bv_m2,
+    )
+    _bt = res_elu["balanco_terca"]
+    _print_eta("Balanço da terça (oitão)", _bt)
+    print(f"  · a={_bt['a_m']:.3f} m | M_y={_bt['M_y_kNm']:.2f} kN·m ({_bt['comb']}) | "
+          f"w_inst={_bt['w_inst_mm']:.2f}/{_bt['lim_inst_mm']:.1f} mm | "
+          f"w_fin={_bt['w_fin_mm']:.2f}/{_bt['lim_fin_mm']:.1f} mm")
+    # Sobrecarga só no vão (EN 1990 §6.4.3.2(2): parte variável desfavorável
+    # aplicada onde desfavorece): o balanço descarregado de Q deixa de aliviar o vão.
+    _gq = load.combinacao_ELU_governante()
+    if _gq.duracao == "media" and geo.a_bal > 0:
+        _dM = 1.5 * load.q_k * geo.a_bal ** 2 / 2.0
+        res_elu["balanco_viga"]["dM_Q_so_vao_kNm"] = round(_dM, 3)
+        print(f"  · Q só no vão: +{_dM:.2f} kN·m no vão "
+              f"({_dM / abs(_gq.M_max_kNm):.1%} de M_max) — absorvido pela margem; ver flexão")
 
     # Fixação telha→terça sob sucção — NBR 6123 (verificação local, issue 17)
     print("\n[FASE 2] Fixação telha→terça (sucção — NBR 6123)...")
@@ -1351,14 +1619,16 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     # guard `parametros_a_confirmar()` mantém-no visível até o projetista o
     # fixar. Combinação acidental EN 1990 Eq. (6.11b): com ψ1,Q = ψ2,W = 0
     # (categoria H) reduz-se ao permanente sem coeficiente parcial.
-    print("\n[FASE 2] Resistência ao fogo (EN 1995-1-2, seção reduzida)...")
+    print("\n[FASE 2] Resistência ao fogo (EN 1995-1-2, seção reduzida) — INFORMATIVA...")
+    print("  · TRRF exigido = 0: térrea, garagem aberta lateralmente (NPT 008 CBPMPR "
+          "A2.3.10 b / A2.4 c); R30 verificado como margem. Item 5.17: retardante ao fogo.")
     _N_fi_lateral = reacao_vertical_incendio(geo, load)
     res_elu["fogo"] = verificar_fogo(
         geo, mat_elu, load, R_req_min=R_FOGO_REQ_MIN, s=S,
         pilares=(
-            dict(b=B_PILAR, h=H_PILAR, H_col_m=H_PILAR_ALT,
+            dict(b=B_PILAR, h=H_PILAR, H_col_m=H_PILAR_MAD,
                  N_fi_kN=_N_fi_lateral, nome="pilar_lateral"),
-            dict(b=B_PILAR_C, h=H_PILAR_C, H_col_m=H_PILAR_ALT,
+            dict(b=B_PILAR_C, h=H_PILAR_C, H_col_m=H_PILAR_MAD,
                  N_fi_kN=2.0 * _N_fi_lateral, nome="pilar_central"),
         ),
     )
@@ -1376,6 +1646,21 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"{_p_fi['b_fi_mm']:.0f}×{_p_fi['h_fi_mm']:.0f} mm "
               f"(−{_p_fi['perda_A_pct']:.1f}% de área) | N_fi={_p_fi['N_fi_kN']:.1f} kN | "
               f"k_c={_p_fi['k_c']:.4f} | η={_p_fi['eta']:.4f}")
+    # Lâmina do pilar bipartido (issue 106): 160 mm, quatro faces expostas; a mais
+    # carregada é a do central montante, com metade das reações de duas vigas.
+    from mlc_projeto.checks.elu.pilar_bipartido import verificar_lamina_fogo
+    _kw_lam_fi = dict(mat=mat_elu, b_viga_m=geo.b, L_x_m=H_PILAR_MAD, L_y_m=H_PILAR_MAD + geo.h0 + FOLGA_ESCORA_VIGA_MM / 1000,
+                      N_fi_kN=_N_fi_lateral)
+    _lam_fi = verificar_lamina_fogo(R_req_min=R_FOGO_REQ_MIN, **_kw_lam_fi)
+    _lam_fi["nome"] = "lamina_bipartido"
+    _fg["lamina_bipartido"] = _lam_fi
+    _fg["eta_por_elemento"]["lamina_bipartido"] = _lam_fi["eta"]
+    if _lam_fi["eta"] > _fg["eta"]:
+        _fg["eta"], _fg["elemento_gov"] = _lam_fi["eta"], "lamina_bipartido"
+    _fg["ok"] = _fg["ok"] and _lam_fi["ok"]
+    print(f"  · lâmina bipartida: {B_LAMINA*1e3:.0f}×{H_LAMINA*1e3:.0f} → {_lam_fi['b_fi_mm']:.0f}×"
+          f"{_lam_fi['h_fi_mm']:.0f} mm (4 faces) | N_fi={_lam_fi['N_fi_kN']:.1f} kN | "
+          f"λ_ef={_lam_fi['lambda_ef_y']:.0f} k_c={_lam_fi['k_c']:.3f} | η={_lam_fi['eta']:.4f}")
     print(f"  · margem por patamar: "
           + " | ".join(f"{k}: η={v}" for k, v in _fg['margem_por_R'].items()))
     print(f"  ⚠ {_fg['nota_R']}")
@@ -1404,17 +1689,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"total={_ab['delta_total_mm']:.2f} mm ≤ {_ab['lim_mm']:.1f} mm "
           f"({_ab['lim_rel']}) | k_arco={_ab['k_arco_kNpm']:,.0f} kN/m")
 
-    # AUD-006 (resíduo B): a cruz do frontão liga os dois topos de pilar, logo
-    # AQUELE pórtico atrai empuxo — demanda adicional no painel e na fundação
-    # do frontão que o modelo H=0 dos pórticos internos não entrega.
-    res_els["empuxo_frontao"] = empuxo_no_frontao(
-        geo, E_Pa=mat_elu.E0_mean, H_rigido_kN=load.H_rigido_ELU(),
-        b_baia_m=geo.L, H_col_m=H_PILAR_ALT, d_diag_mm=D_BARRA_CV_MM,
-    )
-    _ef = res_els["empuxo_frontao"]
-    print(f"  · Frontão atrai H={_ef['H_dev_kN']:.2f} kN "
-          f"({100*_ef['fracao_do_rigido']:.1f}% do rígido {_ef['H_rigido_kN']:.1f} kN) | "
-          f"k_cruz={_ef['k_cruz_kNpm']:,.0f} vs k_arco={_ef['k_arco_kNpm']:,.0f} kN/m")
+    # AUD-006 (resíduo B) e issue 113: o empuxo nos pórticos de frontão e nos internos
+    # sai agora do modelo em planta (rigidez ao afastamento dada pelo sistema), depois
+    # das ligações — ver "Empuxo no sistema espacial".
 
     # ── Fase 4a: Tirante de base (opcional — fecho do empuxo) ─────────────────
     H_arco = float(load.H_ELU())
@@ -1499,6 +1776,24 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         ("L3", f"L3 sapata (n_chu={res_lig['L3']['n_chumbadores']})"),
     ]:
         _print_eta(label, res_lig[key])
+    # Empuxo no sistema espacial (issue 113): rigidez ao afastamento dos apoios dada
+    # pelo diafragma (com as CV-D) e pelos painéis, no modelo em planta.
+    from mlc_projeto.checks.elu.empuxo_sistema import empuxo_no_sistema
+    res_elu["empuxo_sistema"] = empuxo_no_sistema(
+        base_modelo=_BASE_DIAF, n_eixos=_N_EIXOS_DF, n_faixas=_BASE_DIAF["n_faixas"],
+        H_rigido_kN=abs(float(load.H_rigido_ELU())),
+        k_arco_kNm=float(res_elu["empuxo_acoplado"]["k_arco_kNm"]),
+        L_m=geo.L, alpha_rad=geo.alpha_rad,
+        R_d_L1_kN=float(res_lig["L1"]["R_total_kN"]))
+    _es = res_elu["empuxo_sistema"]
+    print("\n[FASE 4a] Empuxo no sistema espacial (issue 113)...")
+    _print_eta("Empuxo no sistema (L1 horiz.)", _es)
+    print(f"  · k_ap (diafragma + painéis) = {_es['k_ap_min_kNpm']:,.0f} a {_es['k_ap_max_kNpm']:,.0f} kN/m "
+          f"vs k_arco = {_es['k_arco_kNm']:,.0f} kN/m")
+    print(f"  · H_dev máx = {_es['H_dev_max_kN']:.2f} kN ({100*_es['fracao_max']:.1f}% do rígido "
+          f"{_es['H_rigido_kN']:.0f} kN), pórtico {_es['portico_gov']} | ΔM cumeeira {_es['dM_cumeeira_kNm']:+.1f} kN·m "
+          f"(favorável) | ΔN viga +{_es['dN_viga_kN']:.1f} kN")
+    print("  · por pórtico: " + ", ".join(f"{x['portico']}: {x['H_dev_kN']:.1f}" for x in _es["porticos"]))
     print(f"  · L1: n={res_lig['L1']['n_pinos']} pinos | "
           f"n_ef,row={res_lig['L1']['n_ef_row']:.2f} | "
           f"n_ef={res_lig['L1']['n_ef']:.1f} | "
@@ -1539,6 +1834,69 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"η_N={L3c.get('eta_N', L3c['eta']):.4f} | "
           f"n_chu={L3c['n_chumbadores']} construtivo (η_H=0)")
 
+    # ── Curso dos furos ovalizados da L1/L1c (issue 72) ───────────────────────
+    print("\n[FASE 4] Furos ovalizados da L1/L1c — curso e posição do pino (issue 72)...")
+    from mlc_projeto.connections.chapas_aco import d0_furo
+    from mlc_projeto.connections.oblongo_L1 import geometria_rasgo
+    from mlc_projeto.core.loads import analisar_biarticulada as _ab
+    _L1 = res_lig["L1"]
+
+    def _R_apoio(qe, qd):
+        r = _ab(q=0.5 * (qe + qd), L=geo.L, h0=geo.h0, h_ap=geo.h_ap,
+                alpha_rad=geo.alpha_rad, b=geo.b, q_esq=qe, q_dir=qd,
+                desenvolve_empuxo=load.empuxo_desenvolve, a_bal=geo.a_bal)
+        return max(float(r["R_A_kN"]), float(r["R_B_kN"]))
+    _R_G = _R_apoio(load.g_k, load.g_k)
+    _R_var = max([_R_apoio(load.q_k, load.q_k)]
+                 + [_R_apoio(pw["w_esq_kNm2"] * load.area_trib, pw["w_dir_kNm2"] * load.area_trib)
+                    for pw in load.padroes_vento])
+    # Issue 71: o grupo sobe o mais possível, deixando a folga no fundo do rasgo
+    # e 100 mm de madeira inteira acima dele (geometria_rasgo)
+    res_elu["oblongo_L1"] = geometria_rasgo(
+        h0_mm=geo.h0 * 1000, d_mm=float(_L1["d_mm"]), d0_mm=d0_furo(float(_L1["d_mm"])),
+        a2_mm=float(_L1["a2_mm"]), n_fileiras=int(_L1["n_linhas"]),
+        R_G_kN=_R_G, R_var_kN=max(_R_var, 0.0), b_m=geo.b,
+        l_apoio_m=min(H_PILAR, L_SELA_POR_VIGA), k_def=mat_longa.k_def,
+    )
+    _ob = res_elu["oblongo_L1"]
+    for _rl in (res_lig["L1"], res_lig_c["L1c"]):
+        _rl["a4c_topo_mm"] = _ob["a4c_topo_mm"]          # lido pelo fendilhamento
+    _print_eta("Furos ovalizados L1/L1c (curso)", _ob)
+    print(f"  · pino mais alto a {_ob['y_pino_alto_mm']:.0f} mm do apoio | montagem "
+          f"{_ob['u_montagem'][0]:.0f}–{_ob['u_montagem'][1]:.0f} %, serviço "
+          f"{_ob['u_servico'][0]:.0f}–{_ob['u_servico'][1]:.0f} %")
+    print(f"  · para baixo: retração {_ob['retracao_mm']:.1f} + fluência {_ob['fluencia_mm']:.1f} "
+          f"+ elástica {_ob['elastica_var_mm']:.1f} + tol. → {_ob['c_baixo_mm']:.0f} mm | "
+          f"para cima: inchamento {_ob['inchamento_mm']:.1f} + tol. → {_ob['c_cima_mm']:.0f} mm")
+    print(f"  · rasgo: pino mais alto a {_ob['a4c_topo_mm']:.0f} mm do extradorso | topo da chapa "
+          f"{_ob['topo_chapa_mm']:.0f} | folga no fundo {_ob['folga_fundo_mm']:.0f} | fundo do rasgo "
+          f"{_ob['fundo_rasgo_mm']:.0f} mm | madeira inteira acima {_ob['madeira_sobre_rasgo_mm']:.0f} mm")
+    print(f"  · levantamento sob arrancamento antes de o pino alto pegar ≤ "
+          f"{_ob['levantamento_max_mm']:.0f} mm (1.º pino {_ob['levantamento_1o_pino_mm']:.0f} mm)")
+    C_CIMA_OBL_MM, C_BAIXO_OBL_MM = _ob["c_cima_mm"], _ob["c_baixo_mm"]
+    # Issue 111: engajamento sequencial dos pinos sob arrancamento, na umidade
+    # mínima de serviço (folga ∝ altura do pino). Mesmo arranjo na L1 e na L1c.
+    from mlc_projeto.connections.oblongo_L1 import verificar_engajamento
+    _ys_pinos = [float(_ob["y_topo_mm"]) - k * float(_L1["a2_mm"])
+                 for k in range(int(_L1["n_linhas"])) for _ in range(int(_L1["n_linha"]))]
+    res_elu["engajamento_L1"] = verificar_engajamento(
+        y_pinos_mm=_ys_pinos, F_v_Rd_pino_kN=float(_L1["F_v_Rd_kN"]),
+        K_ser_plano_Nmm=float(_L1["K_ser_Nmm"]), P_d_kN=float(_L1["V_d_kN"]),
+        d_mm=float(_L1["d_mm"]), d0_mm=d0_furo(float(_L1["d_mm"])), b_mm=geo.b * 1000,
+        h_mm=geo.h0 * 1000, k_mod=float(_L1["k_mod"]), gamma_M=float(_L1["gamma_M"]))
+    _en = res_elu["engajamento_L1"]
+    _print_eta("Engajamento dos pinos L1/L1c", _en)
+    print(f"  · {_L1['n_linha']}×{_L1['n_linhas']} (por fileira × fileiras) | espalhamento "
+          f"Δg = {_en['delta_g_umidade_mm']:.1f} (umidade) + {_en['tol_fab_mm']:.1f} (fabricação) "
+          f"= {_en['delta_g_mm']:.1f} mm ≤ d0 − d = {_en['folga_furo_mm']:.0f} mm | sob P_d: "
+          f"{_en['n_escoados']} pino(s) no patamar, F_el,máx/F_Rd = {_en['F_el_max_sobre_F_Rd']:.2f}, "
+          f"h_e ativo = {_en['h_e_ativo_mm']:.0f} mm")
+    res_elu["balanco_viga"] = verificar_balanco_viga(
+        geo, load, mat_curta, t_rasgo_m=T_RASGO_M, h_rasgo_m=_ob["fundo_rasgo_mm"] / 1000.0)
+    print(f"  · balanço da viga com o rasgo na raiz (W {res_elu['balanco_viga']['W_raiz_m3']:.4f}"
+          f" de {res_elu['balanco_viga']['W_bruto_m3']:.4f} m³) → η = "
+          f"{res_elu['balanco_viga']['eta']:.3f}")
+
     # ── Esquadro de chapas — espessura SAI do dimensionamento (issue 23) ───────
     print("\n[FASE 4] Esquadro de chapas (dimensões + espessura; issue 23)...")
     from mlc_projeto.connections.chapas_dim import esquadro_chapas
@@ -1549,16 +1907,38 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         aco=ACO_CHAPA_LIG,   # d do chumbador lido de cada sapata (não é o pino)
     )
     res_elu["esquadro_chapas"] = esquadro
+    for _k in ("L1", "L1c"):     # o rasgo das verificações de apoio cabe a chapa adotada
+        if float(esquadro[_k]["t_adotada_mm"]) > T_CHAPA_L1_MM + 1e-9:
+            raise ValueError(f"{_k}: chapa {esquadro[_k]['t_adotada_mm']} mm > rasgo previsto "
+                             f"para {T_CHAPA_L1_MM} mm (issue 70)")
+        esquadro[_k]["t_rasgo_mm"] = T_RASGO_M * 1000.0
     # Geometria das chapas embutidas L1/L1c (issues 52 e 43 — a que vai ao
     # desenho): soldada à chapa de topo/sela, sobe do intradorso até e4 = 1,5·d0
     # acima da EXTREMIDADE do furo ovalizado do pino mais alto (EN 1993-1-8
-    # Tab. 3.3, furos ovalizados; d0 = d, cavilha ajustada) e cobre o apoio.
+    # Tab. 3.3, furos ovalizados; d0 = d + folga, issue 79) e cobre o apoio.
     for _k, _l_apoio in (("L1", H_PILAR * 1000), ("L1c", L_SELA_POR_VIGA * 1000)):
         _rl = (res_lig if _k == "L1" else res_lig_c)[_k]
         _d = float(_rl["d_mm"])
-        esquadro[_k]["altura_mm"] = round(geo.h0 * 1000 - 3.0 * _d
-                                          + FOLGA_OBLONGO_L1_MM + 1.5 * _d, 0)
-        esquadro[_k]["largura_mm"] = round(max(_l_apoio, float(_rl["a3t_mm"]) + 1.5 * _d), 0)
+        _d0 = d0_furo(_d)
+        esquadro[_k]["altura_mm"] = float(_ob["topo_chapa_mm"])
+        esquadro[_k]["fundo_rasgo_mm"] = float(_ob["fundo_rasgo_mm"])
+        # Issue 111: n_linha pinos por fileira, a a1. Na L1 a viga é contínua sobre o
+        # pilar (beiral): grupo centrado no apoio, 1,5·d0 às bordas da chapa. Na L1c a
+        # viga termina na sela: primeira coluna a a3,t da extremidade.
+        _nc, _a1 = int(_rl["n_linha"]), float(_rl["a1_mm"])
+        _Lg = (_nc - 1) * _a1
+        if _k == "L1":
+            _larg = math.ceil(max(_l_apoio, _Lg + 3.0 * _d0))
+            _x0 = (_larg - _Lg) / 2.0
+        else:
+            _larg = math.ceil(max(_l_apoio, float(_rl["a3t_mm"]) + _Lg + 1.5 * _d0))
+            _x0 = float(_rl["a3t_mm"])
+        esquadro[_k]["largura_mm"] = _larg
+        esquadro[_k]["x_pinos_mm"] = [round(_x0 + j * _a1, 1) for j in range(_nc)]
+        # issue 116: rasgo além da chapa (ventilação, issue 83) — nos dois lados na L1;
+        # na L1c abre-se na extremidade da viga e passa 30 mm além da chapa
+        from mlc_projeto.connections.oblongo_L1 import E_RASGO_VENTILACAO_MM as _ev
+        esquadro[_k]["L_rasgo_mm"] = _larg + (2 if _k == "L1" else 1) * _ev
     # As chapas de BASE (L3/L3c) saem do detalhe da FASE 4e (issue 52), que
     # substitui aqui as entradas do esquadro.
     for k in ("L1", "L1c"):
@@ -1569,15 +1949,17 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print("  → L1/L1c: t≥d=24 mm (chapa central rígida p/ rótula do pino) → 25 mm; "
           "corrige os 16 mm arbitrados da issue 21.")
 
-    # ── Ruptura de bloco (EC5 Anexo A) — grupos de cavilhas L1/L1c (issue 19) ──
-    print("\n[FASE 4] Ruptura de bloco (EC5 Anexo A) — L1/L1c...")
+    # ── Ruptura de bloco na L1/L1c — informativa (issue 75) ─────────────────
+    # A força nos pinos está a ~84° das fibras: o modo pertinente é o
+    # fendilhamento (§8.1.4). O Anexo A trata força // às fibras; aqui só a
+    # pequena componente axial N_d o solicitaria. Registra-se, fora do catálogo.
+    print("\n[FASE 4] Ruptura de bloco L1/L1c — informativa (componente axial; issue 75)...")
     from mlc_projeto.connections.connections import ruptura_de_bloco_ligacao
     res_bloco_L1 = ruptura_de_bloco_ligacao(res_lig["L1"], geo, mat_elu)
     res_bloco_L1c = ruptura_de_bloco_ligacao(res_lig_c["L1c"], geo, mat_elu)
-    res_elu["ruptura_bloco_L1"] = res_bloco_L1
-    res_elu["ruptura_bloco_L1c"] = res_bloco_L1c
+    res_lig["L1"]["bloco_informativo"] = res_bloco_L1
+    res_lig_c["L1c"]["bloco_informativo"] = res_bloco_L1c
     for lbl, rb in [("L1", res_bloco_L1), ("L1c", res_bloco_L1c)]:
-        _print_eta(f"Ruptura bloco {lbl} (Anexo A)", rb)
         print(f"  · {lbl}: F_par={rb['F_par_kN']:.0f} kN | "
               f"tração={rb['term_tracao_kN']:.0f} kN, cisalh={rb['term_cisalh_kN']:.0f} kN "
               f"→ F_bs,Rk={rb['F_bs_Rk_kN']:.0f} (governa {rb['governa']}) | "
@@ -1606,7 +1988,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         l_apoio_viga_m=L_SELA_POR_VIGA, folga_m=FOLGA_SELA_M,
         t_sela_mm=res_elu["sela_central"]["t_adot_mm"], t_chapa_mm=25.0,
         d_pino_mm=float(D_BASE_MM), n_pinos=int(_L1c["n_pinos"]),
-        a2_mm=float(_L1c["a2_mm"]), a4c_mm=3.0 * D_BASE_MM,
+        a2_mm=float(_L1c["a2_mm"]), a4c_mm=float(res_elu["oblongo_L1"]["a4c_topo_mm"]),
         a3_mm=float(_L1c["a3t_mm"]), alpha_deg=geo.alpha_deg,
     )
     for lbl, rf in [("L1", res_fend_L1), ("L1c", res_fend_L1c)]:
@@ -1654,15 +2036,13 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         (res_lig["L3"],          not _L3_tirante),
         (res_lig_c["L1c"],       True),
         (res_lig_c["L3c"],       False),
-        (res_elu["ruptura_bloco_L1"],  True),
-        (res_elu["ruptura_bloco_L1c"], True),
         (res_elu["fendilhamento_L1"],  True),
         (res_elu["fendilhamento_L1c"], True),
         (res_elu["chapa_aco_L1"],      False),
         (res_elu["chapa_aco_L1c"],     False),
     ]
     _nomes = ["L1", "L3", "L1c", "L3c",
-              "bloco L1", "bloco L1c", "fendilh. L1", "fendilh. L1c",
+              "fendilh. L1", "fendilh. L1c",
               "chapa L1", "chapa L1c"]
     _viol = []
     print(f"  Alvo {ETA_ALVO_LIGACAO:.2f} = margem p/ modos FRÁGEIS (sem redistribuição):")
@@ -1767,6 +2147,9 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             V_persistente_kN=_V_vento_base, V_acidental_kN=_V_impacto,
             n_chumbadores=int(_lig["n_chumbadores"]), d_mm=D_CHU_MM,
             classe=CLASSE_CHU, layout=(2, 2), dados_concreto=DADOS_ANCORAGEM,
+            M_persistente_kNm=_V_vento_base * H_PILARETE_M,
+            M_acidental_kNm=_V_impacto * H_PILARETE_M, s_mm=S_GRUPO_CHU_MM,
+            chaveta=CHAVETA_CRUZ,                  # issue 74: cortante pela chaveta
         )
         _ab = res_elu[_chave]
         # A ligação passa a reportar o maior entre o concreto sob a chapa (η_N)
@@ -1777,10 +2160,12 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         _lig["ok"] = bool(_lig.get("ok", True)) and _ab["ok"]
         aplicar_criterio_eta(_lig, modo_fragil=_ab["eta"] >= float(_lig.get("eta_N", 0.0)),
                              eta_alvo=ETA_LIG_ALVO)
-        print(f"\n[FASE 4c] {_rot}: {int(_lig['n_chumbadores'])}×M{D_CHU_MM} sem chaveta")
+        print(f"\n[FASE 4c] {_rot}: {int(_lig['n_chumbadores'])}×M{D_CHU_MM} + chaveta cruciforme "
+              f"{CHAVETA_L_MM:.0f}×{CHAVETA_H_MM:.0f} (cortante fora dos chumbadores)")
         for _nc, _c in _ab["casos"].items():
             print(f"  · {_nc}: N={_c['N_Ed_kN']:.1f} kN V={_c['V_Ed_kN']:.1f} kN → "
-                  f"η_aço={_c['eta_aco']:.3f} η_concreto={_c['eta_concreto']:.3f}")
+                  f"η_aço={_c['eta_aco']:.3f} η_concreto={_c['eta_concreto']:.3f}"
+                  + (f" | chaveta η={_c['chaveta']['eta']:.3f}" if "chaveta" in _c else ""))
         _print_eta(f"{_rot.split(' —')[0]} (chapa + ancoragem)", _lig)
 
     # ── Pilar de frontão PF (issue 52) — 2º montante da cruz do frontão ─────
@@ -1789,11 +2174,14 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     from mlc_projeto.checks.elu.pilar_frontao import verificar_pilar_frontao
     _cvt = res_elu["contraventamento_transversal"]
     res_elu["pilar_frontao"] = verificar_pilar_frontao(
-        mat=mat_elu, b_m=B_PILAR, h_m=H_PILAR, H_m=H_PILAR_ALT,
+        mat=mat_elu, b_m=B_PILAR, h_m=H_PILAR, H_m=H_PILAR_MAD,
         gamma_kNm3=float(pp["gamma_kNm3"]),
         download_kN=float(_cvt["N_uplift_kN"]), H_base_kN=float(_cvt["H_base_kN"]),
-        M_vento_kNm=_M_vento, V_vento_base_kN=_V_vento_base,
-        V_acidental_kN=_V_impacto, b_viga_m=geo.b,
+        M_vento_kNm=max(float(res_elu.get("pilar_vento_0", {}).get("M_d_kNm", 0.0)),
+                        float(res_elu.get("pilar_vento_90", {}).get("M_d_kNm", 0.0))),
+        V_vento_base_kN=_V_vento_base,
+        V_acidental_kN=_V_impacto, b_viga_m=geo.b, h_pilarete_m=H_PILARETE_M,
+        chaveta=CHAVETA_CRUZ,
         n_chumbadores=4, d_chumbador_mm=D_CHU_MM, classe_chumbador=CLASSE_CHU,
         dados_concreto=DADOS_ANCORAGEM,
     )
@@ -1826,7 +2214,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         d_mm=D_CHU_MM, classe=CLASSE_CHU,
         chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
         layout=LAYOUT_CHU,
-        dados_concreto=DADOS_ANCORAGEM,
+        dados_concreto=DADOS_ANCORAGEM_MONT,
     )
     _anc = res_elu["ancoragem_canto"]
     print("\n[FASE 4d] Ancoragem do canto — chumbadores moldados com cabeça...")
@@ -1839,7 +2227,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"V nos chumbadores={_anc['V_nos_chumbadores_kN']:.1f} kN")
     print(f"  · η_N={_anc['eta_N']:.3f} | η_V={_anc['eta_V']:.3f} | "
           f"η_interação={_anc['eta_interacao']:.3f} → aço {'OK' if _anc['ok_aco'] else 'FALHA'}")
-    print(f"  · Concreto: h_ef={H_EF_CHU_MM:.0f} c={C_BORDA_CHU_MM:.0f} "
+    print(f"  · Concreto: h_ef={H_EF_CHU_MONT_MM:.0f} c={C_BORDA_CHU_MONT_MM:.0f} "
           f"s={S_GRUPO_CHU_MM:.0f} mm | N_Rd,cone={_anc['N_Rd_cone_kN']:.0f} kN | "
           f"N_Rd,pull-out={_anc['N_Rd_pullout_kN']:.0f} kN → governa {_anc['modo_concreto_gov']}")
     print(f"  · β_N={_anc['beta_N']:.3f} | β_V={_anc['beta_V']:.3f} | "
@@ -1865,7 +2253,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     )
     res_elu["chaveta_concreto"] = esmagamento_chaveta(
         V_Ed_kN=float(res_succao["V_canto_kN"]),
-        l_chaveta_mm=CHAVETA_L_MM, h_embutida_mm=CHAVETA_H_MM,
+        l_chaveta_mm=CHAVETA_L_MONT_MM, h_embutida_mm=CHAVETA_H_MM,
         classe_concreto=CLASSE_CONC_FUND,
     )
     _ch = res_elu["chaveta_concreto"]
@@ -1876,17 +2264,17 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
     print(f"  ⚠ {_ch['nota_confinamento']}")
 
     _req_fund = requisitos_de_fundacao_para_ancoragem(
-        H_EF_CHU_MM, C_BORDA_CHU_MM)
+        H_EF_CHU_MONT_MM, C_BORDA_CHU_MONT_MM)
     print("  · REQUISITOS À FUNDAÇÃO (EN 1992-4 §7.2.1.7(2)/§7.2.1.9(1)):")
     print(f"      c1 > {_req_fund['c1_min_dispensa_blowout_mm']:.0f} mm "
-          f"(blow-out) — declarado {C_BORDA_CHU_MM:.0f} mm: "
+          f"(blow-out) — declarado {C_BORDA_CHU_MONT_MM:.0f} mm: "
           f"{'OK' if _req_fund['blowout_dispensado_pela_borda_declarada'] else 'NÃO CUMPRE'}")
     print(f"      h_bloco ≥ "
           f"{_req_fund['h_bloco_min_dispensa_fendilhamento_mm']:.0f} mm "
-          f"(fendilhamento) — adotado {H_BLOCO_FUND_MM:.0f} mm")
-    print(f"  ⚠ A fundação deve garantir bloco com c ≥ {C_BORDA_CHU_MM:.0f} mm "
-          f"em torno do grupo (≈ {(S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f}×"
-          f"{(2*S_GRUPO_CHU_MM+2*C_BORDA_CHU_MM)/1000:.2f} m em planta)")
+          f"(fendilhamento) — adotado {H_BLOCO_FUND_MONT_MM:.0f} mm")
+    print(f"  ⚠ A fundação deve garantir bloco com c ≥ {C_BORDA_CHU_MONT_MM:.0f} mm "
+          f"em torno do grupo (≈ {(S_GRUPO_CHU_MM+2*C_BORDA_CHU_MONT_MM)/1000:.2f}×"
+          f"{(2*S_GRUPO_CHU_MM+2*C_BORDA_CHU_MONT_MM)/1000:.2f} m em planta)")
 
     # ── Ancoragem da base central montante (issue 64) ──────────────────────
     res_elu["ancoragem_central_cv"] = verificar_grupo_ancoragem(
@@ -1896,7 +2284,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         d_mm=D_CHU_MM, classe=CLASSE_CHU,
         chaveta_cisalhamento=CHAVETA_CISALHAMENTO_CANTO,
         layout=LAYOUT_CHU,
-        dados_concreto=DADOS_ANCORAGEM,
+        dados_concreto=DADOS_ANCORAGEM_MONT,
     )
     _ancc = res_elu["ancoragem_central_cv"]
     print("\n[FASE 4d] Ancoragem da base central montante (issue 64)...")
@@ -1906,7 +2294,7 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
           f"| η_concreto={_ancc['eta_concreto']:.3f} ({_ancc['modo_concreto_gov']})")
     res_elu["chaveta_concreto_central"] = esmagamento_chaveta(
         V_Ed_kN=float(res_succao["V_cen_cv_kN"]),
-        l_chaveta_mm=CHAVETA_L_MM, h_embutida_mm=CHAVETA_H_MM,
+        l_chaveta_mm=CHAVETA_L_MONT_MM, h_embutida_mm=CHAVETA_H_MM,
         classe_concreto=CLASSE_CONC_FUND,
     )
     _print_eta("Chaveta central — esmagamento §6.7",
@@ -1929,26 +2317,54 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
          B_PILAR_C, H_PILAR_C, 2, 2),
         ("base_L3f", "L3f — pilar de frontão", _pf_b["base"]["N_t_persistente_kN"],
          _pf_b["montante"]["N_comp_kN"], B_PILAR, H_PILAR, 2, 2),
-        ("base_L3a_canto", "L3a — canto", res_succao["N_uplift_canto_kN"],
-         res_elu["pilar_contraventado"]["N_comp_kN"], B_PILAR_CANTO, H_PILAR_CANTO,
-         LAYOUT_CHU[0], LAYOUT_CHU[1]),
+        # montantes bipartidos (issue 104): grelha girada (3 ⊥ ao pórtico × 2), um
+        # pilarete sob cada lâmina; pé e pilarete com as forças da lâmina
+        ("base_L3a_canto", "L3a — canto e lateral montante", res_succao["N_uplift_canto_kN"],
+         2 * res_elu["pilar_contraventado"]["N_comp_kN"], B_LAMINA, H_LAMINA,
+         LAYOUT_CHU[1], LAYOUT_CHU[0]),
         ("base_L3a_central", "L3a — central montante", res_succao["N_uplift_cen_cv_kN"],
-         res_elu["pilar_central_contraventado"]["N_comp_kN"], B_PILAR_C, H_PILAR_C,
-         LAYOUT_CHU[0], LAYOUT_CHU[1]),
+         2 * res_elu["pilar_central_contraventado"]["N_comp_kN"], B_LAMINA, H_LAMINA,
+         LAYOUT_CHU[1], LAYOUT_CHU[0]),
     )
+    from mlc_projeto.connections.pilarete import TUBOS_CHS_LAMINA
+    from mlc_projeto.connections.tirante_interno import dimensionar_tirante
+    # Tirante interno (concepção revista): nos pilares correntes, o arrancamento desce
+    # por uma barra roscada no furo central do pilar, da chapa de topo ao pilarete; a
+    # madeira fica só à compressão, e o topo e o pé só com o cortante.
+    res_elu["tirante_interno"] = {
+        _k: dimensionar_tirante(rotulo=_r, N_t_kN=float(_Nt))
+        for _k, _r, _Nt, *_ in _BASES if _k in ("base_L3", "base_L3c", "base_L3f")}
+    _tg = max(res_elu["tirante_interno"].values(), key=lambda x: x["eta"])
+    res_elu["tirante_interno"] = {"variantes": res_elu["tirante_interno"], "eta": _tg["eta"],
+                                  "governa": _tg["rotulo"],
+                                  "ok": all(x["ok"] for x in res_elu["tirante_interno"].values()),
+                                  "norma": _tg["norma"]}
+    _yl = _gbp["y_l_mm"]
+    _EXTRA_BASE = {
+        _kb: dict(N_c_pe_kN=float(res_elu[_kp]["N_lamina_kN"]),
+                  N_t_pe_kN=float(res_elu[_kp]["N_t_lamina_kN"]),
+                  x_tubos_mm=(-_yl, _yl), tubos=TUBOS_CHS_LAMINA)
+        for _kb, _kp in (("base_L3a_canto", "pilar_contraventado"),
+                         ("base_L3a_central", "pilar_central_contraventado"))}
+    for _kb, _tir in res_elu["tirante_interno"]["variantes"].items():
+        _EXTRA_BASE[_kb] = dict(N_t_pe_kN=0.0, N_t_pilarete_kN=_tir["N_t_kN"], tirante=_tir)
     for _k, _rot, _Nt, _Nc, _b, _h, _nx, _ny in _BASES:
         res_elu[_k] = verificar_base_pilar(
-            rotulo=_rot, N_t_kN=float(_Nt), N_c_kN=float(_Nc), V_madeira_kN=_V_pe,
+            # pilar bipartido: o espaçador do pé (C.3.1: lâminas ligadas nas extremidades)
+            # reparte o choque, aplicado 0,20 m acima do pé, entre as duas lâminas
+            rotulo=_rot, N_t_kN=float(_Nt), N_c_kN=float(_Nc),
+            V_madeira_kN=_V_pe / 2.0 if _k in ("base_L3a_canto", "base_L3a_central") else _V_pe,
             b_pilar_m=_b, h_pilar_m=_h, mat=mat_elu, n_x=_nx, n_y=_ny,
             s_mm=S_GRUPO_CHU_MM, d_chu_mm=D_CHU_MM, F_t_Rd_chu_kN=_Ft_chu,
             aco=ACO_CHAPA_LIG,
             f_cd_MPa=float(res_elu["chaveta_concreto"]["f_cd_MPa"]),
+            h_pilarete_m=H_PILARETE_M, **_EXTRA_BASE.get(_k, {}),
         )
         _bp = res_elu[_k]
         _print_eta(f"Base {_rot.split(' —')[0]} ({_rot.split('— ')[1]})", _bp)
         _pe, _ts = _bp["pe_pilar"], _bp["tstub"]
         print(f"  · chapa {_bp['B_mm']:.0f}×{_bp['L_mm']:.0f}×{_bp['t_adotada_mm']:g} mm | "
-              f"{_nx}×{_ny} M{D_CHU_MM} @ {S_GRUPO_CHU_MM:.0f} | folga arruela–pilar "
+              f"{_nx}×{_ny} M{D_CHU_MM} @ {S_GRUPO_CHU_MM:.0f} | folga arruela–pilarete "
               f"{_bp['geometria']['folga_arruela_pilar_mm']:.0f} mm")
         print(f"  · T-stub: N_t={_Nt:.1f} kN → {_ts['F_Ed_flange_kN']:.1f}/flange, "
               f"m={_ts['m_mm']:.0f} mm, F_T,Rd={_ts['F_T_Rd_kN']:.1f} kN ({_ts['modo']}) "
@@ -1958,6 +2374,20 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
               f"{_pe['n_horiz']}) em chapa t={_pe['t_chapa_mm']:.0f} | "
               f"tração // η={_pe['eta']:.3f} | cortante ⊥ {_V_pe:.1f} kN "
               f"η={_bp['eta_cortante_pe']:.3f} | L={_pe['L_ocupado_mm']:.0f} mm")
+        # arruela-chapa soldada na montagem (issue 80): cortante por chumbador
+        from mlc_projeto.connections.base_pilar import verificar_arruela_chapa
+        _bp["arruela_chapa"] = verificar_arruela_chapa(
+            V_chu_kN=max(_V_pe, 0.0) / (_nx * _ny), N_chu_kN=float(_Nt) / (_nx * _ny),
+            d_chu_mm=float(D_CHU_MM))
+        _bp["partes"]["arruela_chapa"] = _bp["arruela_chapa"]["eta"]
+        _pl = _bp["pilarete"]
+        if _pl:
+            _ct = _pl["chapa_topo_mm"]
+            print(f"  · pilarete: tubo Ø{_pl['D_mm']:g}×{_pl['t_mm']:g} {_pl['aco']} h={_pl['h_m']:.2f} m "
+                  f"| N_c={_pl['N_c_kN']:.0f} N_t={_pl['N_t_kN']:.0f} V={_pl['V_kN']:.1f} kN "
+                  f"M={_pl['M_base_kNm']:.1f} kN·m | η tubo={max(_pl['etas'].values()):.3f} | "
+                  f"chapa de topo {_ct[0]:.0f}×{_ct[1]:.0f}×{_ct[2]:g} η={_pl['partes']['chapa_topo']:.3f} "
+                  f"| solda base a={_pl['a_solda_base_mm']:g} topo a={_pl['a_solda_topo_mm']:g} mm")
     # O esquadro de chapas (memorial, issue 23) passa a refletir o detalhe.
     for _k_esq, _k_b in (("L3", "base_L3"), ("L3c", "base_L3c")):
         _bp = res_elu[_k_b]
@@ -1965,9 +2395,256 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
             "largura_mm": _bp["B_mm"], "altura_mm": _bp["L_mm"],
             "t_req_mm": _bp["t_adotada_mm"], "t_adotada_mm": _bp["t_adotada_mm"],
             "t_governa": "T-stub §6.2.4 (η ≤ 0,90)",
-            "furacao": (f"4 furos Ø{D_CHU_MM + 2} p/ M{D_CHU_MM} @ "
+            "furacao": (f"4 furos alargados Ø{_bp['geometria'].get('d0_furo_base_mm', 0):.0f} "
+                        f"+ arruela-chapa p/ M{D_CHU_MM} @ "
                         f"{S_GRUPO_CHU_MM:.0f} mm, borda {_bp['geometria']['e_mm']:.0f} mm"),
         })
+
+    # ── Ligação da chapa de topo / sela ao pilar e nó deslizante (issue 69) ──
+    print("\n[FASE 4e'] Chapa de topo e sela → pilar; nó de topo deslizante (issue 69)...")
+    from mlc_projeto.connections.ligacao_topo_pilar import (
+        verificar_interface_deslizante, verificar_ligacao_topo,
+    )
+    # cortante do próprio pilar no topo: vento (metade) ou reação de topo do choque
+    _V_topo = max(_V_vento_base,
+                  float(res_elu["impacto_veiculo"]["forcas"]["F_dx_kN"]) - _V_impacto)
+    _TOPOS = {"base_L3": "L1 — pilar lateral", "base_L3c": "L1c — sela, pilar central",
+              "base_L3f": "L1f — pilar de frontão", "base_L3a_canto": "L1 — pilar de canto",
+              "base_L3a_central": "L1c — pilar central montante"}
+    _lt = {}
+    for _k, _rot, _Nt, _Nc, _b, _h, _nx, _ny in _BASES:
+        if _k in ("base_L3a_canto", "base_L3a_central"):   # bipartido: sela entre lâminas
+            continue
+        # tirante interno: o topo só posiciona e leva o cortante (N_t → barra)
+        _lt[_k] = verificar_ligacao_topo(rotulo=_TOPOS[_k], N_t_kN=0.0, N_c_kN=float(_Nc),
+                                         furo_central_mm=res_elu["tirante_interno"]["variantes"]
+                                         [_k]["furo_pilar_mm"],
+                                         V_kN=_V_topo, b_pilar_m=_b, h_pilar_m=_h, mat=mat_elu)
+    _gov_lt = max(_lt.values(), key=lambda x: x["eta"])
+    res_elu["ligacao_topo_pilar"] = {"variantes": _lt, "eta": _gov_lt["eta"],
+                                     "governa": _gov_lt["rotulo"],
+                                     "ok": all(x["ok"] for x in _lt.values()),
+                                     "norma": _gov_lt["norma"]}
+    _print_eta("Chapa de topo/sela → pilar", res_elu["ligacao_topo_pilar"])
+    for _x in _lt.values():
+        _cv = _x["cavilhas"]
+        print(f"  · {_x['rotulo']}: N_t={_x['N_t_kN']:.0f} kN → {_cv['n_pinos']}×Ø20 "
+              f"({_cv['n_vert']}×{_cv['n_horiz']}, {_cv['L_ocupado_mm']:.0f} mm) η={_cv['eta']:.3f} | "
+              f"V={_x['V_kN']:.1f} kN η={_x['partes']['cavilhas_cortante']:.3f} | solda a={_x['a_solda_mm']:g} "
+              f"η={_x['partes']['solda']:.3f} | σ_c,0={_x['sigma_c0_MPa']:.2f} MPa")
+    # Nó de topo (issue 104): a escora apoia-se no topo das lâminas do pilar
+    # bipartido e não se move em relação ao nó (a viga, sim, fica livre sob ela).
+    # A chapa da escora liga-se à chapa do nó por parafusos 8.8 em furos normais;
+    # a verificação reaproveita a da interface com curso nulo, com a pressão de
+    # contato reduzida a 60 % (conservador para furo normal).
+    _nc = res_elu["no_contraventamento"]
+    _nd = {k: verificar_interface_deslizante(rotulo=f"escora {k}", H_kN=float(_nc[f"N_escora_{k}_kN"]),
+                                             cima_mm=0.0, baixo_mm=0.0)
+           for k in ("beiral", "central")}
+    res_elu["no_escora_parafusos"] = {"interfaces": _nd,
+                                      "eta": max(x["eta"] for x in _nd.values()),
+                                      "ok": all(x["ok"] for x in _nd.values()),
+                                      "norma": _nd["central"]["norma"]}
+    _print_eta("Nó de topo: escora × chapa do nó", res_elu["no_escora_parafusos"])
+    for _x in _nd.values():
+        print(f"  · {_x['rotulo']}: H={_x['H_kN']:.0f} kN → {_x['n_parafusos']}×M{_x['d_mm']:.0f} 8.8 "
+              f"corte duplo, furo Ø{_x['largura_furo_mm']:.0f} η={_x['eta']:.3f}")
+
+    # ── Incêndio localizado de veículo — robustez (issue 89) ───────────────
+    print("\n[FASE 4f'] Incêndio localizado de veículo (EN 1991-1-2 An. C; issue 89)...")
+    from mlc_projeto.checks.elu.incendio_veiculo import avaliar_incendio_veiculo
+    _pl_ref = res_elu["base_L3c"]["pilarete"]
+    res_elu["incendio_veiculo"] = avaliar_incendio_veiculo(
+        mat=mat_elu, h_forro_m=H_PILAR_ALT,
+        pilarete=(float(_pl_ref["D_mm"]), float(_pl_ref["t_mm"]), float(_pl_ref["h_m"])),
+        pilares=tuple(dict(b=_pf["b_mm"] / 1e3, h=_pf["h_mm"] / 1e3, H_col_m=H_PILAR_MAD,
+                           N_fi_kN=_pf["N_fi_kN"], nome=_pf["nome"])
+                      for _pf in res_elu["fogo"]["pilares"]))
+    _iv = res_elu["incendio_veiculo"]
+    from mlc_projeto.checks.elu.pilar_bipartido import tempo_colapso_lamina
+    _t_lam = tempo_colapso_lamina(**_kw_lam_fi)
+    _iv["lamina_bipartido"] = {"nome": "lamina_bipartido", "N_fi_kN": _kw_lam_fi["N_fi_kN"],
+                               "t_colapso_min": {"4 faces": _t_lam},
+                               "eta": round(_iv["t_exposicao_min"] / max(_t_lam, 1.0), 4)}
+    from mlc_projeto.checks.elu.incendio_veiculo import verificar_pilarete_fogo
+    _pl_l = res_elu["base_L3a_central"]["pilarete"]
+    _iv["lamina_bipartido"]["pilarete"] = verificar_pilarete_fogo(
+        N_fi_kN=_kw_lam_fi["N_fi_kN"], D_mm=float(_pl_l["D_mm"]), t_mm=float(_pl_l["t_mm"]),
+        t_exp_min=_iv["t_exposicao_min"], h_m=float(_pl_l["h_m"]))
+    _iv["lamina_bipartido"]["eta"] = max(_iv["lamina_bipartido"]["eta"],
+                                         _iv["lamina_bipartido"]["pilarete"]["eta"])
+    _iv["eta"] = max(_iv["eta"], _iv["lamina_bipartido"]["eta"])
+    _iv["ok"] = _iv["eta"] <= 1.0
+    _print_eta("Incêndio de veículo (robustez)", _iv)
+    print(f"  · carro {_iv['Q_MW']:.1f} MW, D={_iv['D_m']:.2f} m: chama L_f={_iv['L_f_m']:.2f} m < "
+          f"{_iv['H_forro_m']:.2f} m até a viga; pluma sob a viga {_iv['theta_pluma_forro_C']:.0f} °C | "
+          f"{_iv['n_veiculos']} veículos em sequência → {_iv['t_exposicao_min']:.0f} min")
+    for _x in _iv["pilares"]:
+        _pt = _x["pilarete"]
+        print(f"  · {_x['nome']}: madeira colapsa em {_x['t_colapso_min']['4 faces']:.0f} min (4 faces) | "
+              f"pilarete sem proteção {_pt['theta_n_veiculos_C']:.0f} °C → η={_pt['eta_sem_protecao_n']:.2f}; "
+              f"intumescente R{_pt['R_intumescente_min']:.0f}, θ_cr {_pt['theta_cr_projeto_C']:.0f} °C "
+              f"(calc. {_pt['theta_cr_C']:.0f}) → η={_pt['eta']:.2f}")
+    print(f"  · lâmina bipartida: madeira colapsa em {_t_lam:.0f} min (4 faces) | "
+          f"η={_t_lam and _iv['t_exposicao_min'] / _t_lam:.2f} | pilarete Ø{_pl_l['D_mm']:.1f}×{_pl_l['t_mm']:.0f} "
+          f"sem proteção {_iv['lamina_bipartido']['pilarete']['theta_n_veiculos_C']:.0f} °C → "
+          f"η={_iv['lamina_bipartido']['pilarete']['eta_sem_protecao_n']:.2f}; intumescente → "
+          f"η={_iv['lamina_bipartido']['pilarete']['eta']:.2f}")
+
+    # ── Soldas de todas as ligações (issue 78) ─────────────────────────────
+    print("\n[FASE 4g] Soldas de filete (EN 1993-1-8 §4.5.3.3; issue 78)...")
+    from mlc_projeto.connections.soldas import filete
+    _sd = []
+    _esq = res_elu["esquadro_chapas"]
+    _sd.append(filete(peca="L1: chapa embutida × chapa de topo", F_norm_kN=float(res_lig["L1"]["V_d_kN"]),
+                      F_par_kN=abs(float(res_lig["L1"]["N_d_kN"])), l_mm=float(_esq["L1"]["largura_mm"]),
+                      t_min_mm=T_CHAPA_TOPO_MM))
+    _sd.append(filete(peca="L1c: chapa embutida × sela", F_norm_kN=float(res_lig_c["L1c"]["V_d_kN"]),
+                      F_par_kN=abs(float(res_lig_c["L1c"]["N_d_kN"])), l_mm=L_SELA_POR_VIGA * 1000,
+                      t_min_mm=float(res_elu["sela_central"]["t_adot_mm"])))
+    _tpf_ = res_elu["pilar_frontao"]["topo"]
+    _sd.append(filete(peca="L1f: chapa × chapa de topo do PF", F_par_kN=float(_tpf_["F_Ed_kN"]),
+                      l_mm=H_PILAR * 1000, t_min_mm=T_CHAPA_TOPO_MM))
+    for _k, _rot, _Nt, _Nc, _b, _h, _nx, _ny in _BASES:
+        _pil = res_elu[_k]["pilarete"]
+        _Nt_pe = float(_EXTRA_BASE.get(_k, {}).get("N_t_pe_kN", _Nt))
+        _sd.append(filete(peca=f"{_rot}: chapa vertical do pé × chapa de topo do pilarete",
+                          F_norm_kN=_Nt_pe, F_par_kN=_V_pe, l_mm=_h * 1000 - 60.0,
+                          t_min_mm=min(20.0, float(_pil["chapa_topo_mm"][2]))))
+        _sd.append({"peca": f"{_rot}: tubo do pilarete × chapa de base",
+                    "a_mm": _pil["a_solda_base_mm"], "eta": _pil["partes"]["solda_base"]})
+        _sd.append({"peca": f"{_rot}: tubo do pilarete × chapa de topo",
+                    "a_mm": _pil["a_solda_topo_mm"], "eta": _pil["partes"]["solda_topo"]})
+        if _k in res_elu["tirante_interno"]["variantes"]:
+            _ti = res_elu["tirante_interno"]["variantes"][_k]
+            _sd.append({"peca": f"{_rot}: luva do tirante × chapa de topo",
+                        "a_mm": _ti["a_solda_luva_mm"], "eta": _ti["eta_solda_luva"]})
+        if _k in res_elu["ligacao_topo_pilar"]["variantes"]:
+            _vt = res_elu["ligacao_topo_pilar"]["variantes"][_k]
+            _sd.append({"peca": f"{_TOPOS[_k]}: chapa vertical do topo × chapa de topo",
+                        "a_mm": _vt["a_solda_mm"], "eta": _vt["partes"]["solda"]})
+    # pilar bipartido (issue 104): aba da sela × chapa da sela (metade da reação por aba)
+    # e chapa do nó × chapa da escora não é soldada (parafusos, no_escora_parafusos)
+    for _kp, _rp in (("pilar_contraventado", "canto/lateral"), ("pilar_central_contraventado", "central")):
+        _sl = res_elu[_kp]["sela"]
+        _sd.append(filete(peca=f"pilar bipartido ({_rp}): aba da sela × chapa da sela",
+                          F_par_kN=float(_sl["F_Ed_kN"]), l_mm=H_LAMINA * 1000 - 40.0,
+                          t_min_mm=float(_sl["t_chapa_mm"])))
+    # chavetas: cortante a meia altura embutida → momento no binário dos cordões
+    _V_cruz = max(c["V_Ed_kN"] for c in res_elu["pilar_frontao"]["base"]["casos"].values())
+    for _rot, _V, _t, _lc in (("chaveta da base de canto (L3a)", float(res_elu["chaveta_concreto"]["V_Ed_kN"]), 16.0, CHAVETA_L_MONT_MM),
+                              ("chaveta da base central montante (L3a)",
+                               float(res_elu["chaveta_concreto_central"]["V_Ed_kN"]), 16.0, CHAVETA_L_MONT_MM),
+                              ("chaveta em cruz das bases correntes", float(_V_cruz), 12.5, CHAVETA_L_MM)):
+        _sd.append(filete(peca=_rot, F_par_kN=_V, M_kNm=_V * CHAVETA_H_MM / 2.0 / 1e3,
+                          z_mm=T_CHAVETA_MM, l_mm=_lc, t_min_mm=_t))
+    _sd.append({"peca": "sela: enrijecedores × chapa", "a_mm": res_elu["sela_central"]["enrijecedores"]["a_solda_mm"],
+                "eta": res_elu["sela_central"]["enrijecedores"]["partes"]["solda"]})
+    _sd.append({"peca": "arruela-chapa × chapa de base", "a_mm": res_elu["base_L3"]["arruela_chapa"]["a_solda_mm"],
+                "eta": res_elu["base_L3"]["arruela_chapa"]["eta"]})
+    for _kd, _rd in (("lig_diag_vertical", "olhal das diagonais CV-V"),
+                     ("lig_diag_transversal", "olhal das diagonais CV-T"),
+                     ("lig_diag_cobertura", "olhal das diagonais CV-H")):
+        _dd = res_elu[_kd]
+        _sd.append({"peca": _rd, "a_mm": _dd["a_solda_mm"], "l_mm": _dd["l_solda_mm"],
+                    # sob a capacidade da barra (dimensionamento por capacidade, issue 44)
+                    "eta": float(_dd.get("etas_capacidade", _dd.get("etas", {})).get("solda", 0.0))})
+    _sd_gov = max(_sd, key=lambda x: x["eta"])
+    res_elu["soldas"] = {"itens": _sd, "eta": _sd_gov["eta"], "governa": _sd_gov["peca"],
+                         "ok": all(x["eta"] <= 1.0 for x in _sd),
+                         "norma": "EN 1993-1-8 §4.5.2 e §4.5.3.3 (método simplificado)"}
+    _print_eta("Soldas de filete (todas)", res_elu["soldas"])
+    for _x in _sd:
+        print(f"  · {_x['peca']}: a = {_x['a_mm']:g} mm | η = {_x['eta']:.3f}")
+
+    # ── Retração impedida pelas chapas embutidas (issue 81) ────────────────
+    print("\n[FASE 4f] Retração impedida pelas chapas embutidas (issue 81)...")
+    from mlc_projeto.connections.retracao import avaliar_retracao
+    _grupos = [
+        ("escora de beiral", res_elu["no_contraventamento"]["ligacao_escora_beiral"], True),
+        ("escora central", res_elu["no_contraventamento"]["ligacao_escora_central"], True),
+        ("montante terça–viga", res_elu["ligacao_terca_viga"]["montante"], True),
+    ] + [(f"{_k.replace('base_', '')}, pé do pilar", res_elu[_k]["pe_pilar"], False)
+         for _k in ("base_L3", "base_L3c", "base_L3f", "base_L3a_canto", "base_L3a_central")
+         ] + [(f"{_v['rotulo']} (topo)", _v["cavilhas"], False)
+              for _v in res_elu["ligacao_topo_pilar"]["variantes"].values()]
+    _ret = [avaliar_retracao(rotulo=_r, n_perp=int(_g["n_vert"]), a2_mm=float(_g["a2_mm"]),
+                             d_mm=float(_g["d_mm"]), pode_ovalizar=_ov)
+            for _r, _g, _ov in _grupos]
+    # ── Deslocamento sob sucção e compatibilidade (issue 112) ──────────────────
+    from mlc_projeto.checks.elu.apoio import reacao_arrancamento_caracteristica
+    from mlc_projeto.checks.els.deslocamento_succao import verificar_deslocamento_succao
+    from mlc_projeto.connections.chapas_aco import d0_furo as _d0f
+    from mlc_projeto.connections.tirante_interno import comprimento_tirante
+    _Rk = reacao_arrancamento_caracteristica(load)
+    _tv, _pl3 = res_elu["tirante_interno"]["variantes"], res_elu["base_L3"]["pilarete"]
+    for _k, _v in _tv.items():    # issue 116: comprimentos do tirante, fonte única
+        _v.update(comprimento_tirante(
+            H_madeira_mm=H_PILAR_MAD * 1000, d_mm=float(_v["d_mm"]),
+            t_chapa_pilarete_mm=float(res_elu[_k]["pilarete"]["chapa_topo_mm"][2])))
+    _acm = res_elu["ancoragem_central_cv"]
+    _d_pe = float(res_elu["base_L3a_central"]["pe_pilar"]["d_mm"])
+    from mlc_projeto.output.desenhos import detalhe_topo_pf as _dtpf
+    _topo_pf = res_elu["pilar_frontao"]["topo"]
+    for _it in range(5):          # curso do L1f: flecha descendente e subida (≤ 0,90)
+        _tpf = _dtpf(_topo_pf, float(res_els["ELS"]["w_fin_mm"]), L_T, float(geo.L))
+        res_els["deslocamento_succao"] = _ds_kw = verificar_deslocamento_succao(
+            R_up_k_kN=float(_Rk["R_up_k_kN"]),
+            y_fileiras_mm=[float(_ob["y_topo_mm"]) - k * float(_L1["a2_mm"])
+                           for k in range(int(_L1["n_linhas"]))],
+            n_por_fileira=int(_L1["n_linha"]), K_ser_plano_Nmm=float(_L1["K_ser_Nmm"]),
+            h0_mm=geo.h0 * 1000,
+            tirantes={f"corrente ({_k.replace('base_', '')})":
+                      {"n_vigas": 2 if _k == "base_L3c" else 1, "A_s_mm2": float(_tv[_k]["A_s_mm2"]),
+                       "L_mm": float(_tv[_k]["L_livre_mm"]), "r_chapa_mm": float(_pl3["D_mm"]) / 2,
+                       "t_chapa_mm": float(_pl3["chapa_topo_mm"][2])}
+                      for _k in ("base_L3", "base_L3c")},
+            chumb_corrente={"n": int(res_elu["base_L3"]["geometria"]["n_x"])
+                            * int(res_elu["base_L3"]["geometria"]["n_y"]),
+                            "A_s_mm2": float(_acm["A_s_mm2"]),   # mesma barra M24 (D_CHU_MM)
+                            "L_mm": H_EF_CHU_MM + float(res_elu["base_L3"]["t_adotada_mm"])},
+            bipartido={"n_vigas": 2, "A_laminas_mm2": 2 * B_LAMINA * H_LAMINA * 1e6,
+                       "L_mm": (H_PILAR_MAD + geo.h0) * 1000 + FOLGA_ESCORA_VIGA_MM, "E_MPa": mat_longa.E0_mean / 1e6,          # Pa → MPa
+                       "n_cav": int(res_elu["base_L3a_central"]["pe_pilar"]["n_pinos"]),
+                       "K_ser_cav_kNpmm": 4.0 * mat_longa.rho_mean ** 1.5 * _d_pe / 23.0 / 1e3,
+                       "folga_furo_mm": _d0f(_d_pe) - _d_pe,
+                       "chumb": {"n": int(_acm["n_chumbadores"]), "A_s_mm2": float(_acm["A_s_mm2"]),
+                                 "L_mm": H_EF_CHU_MONT_MM + float(res_elu["base_L3a_central"]["t_adotada_mm"])}},
+            w_up_meio_mm=float(res_els["ELS"]["w_char_up_mm"]), L_m=geo.L,
+            pf={"x_m": L_T, "curso_mm": float(_tpf["curso_mm"]),
+                "y_pino_topo_mm": float(_tpf["a4c_mm"]) + (int(_tpf["n_vert"]) - 1) * float(_tpf["a2_mm"])},
+            folga_escora_mm=FOLGA_ESCORA_VIGA_MM)
+        _req = 5.0 * math.ceil(_ds_kw["pf"]["delta_mm"] / 0.90 / 5.0)
+        if _req <= float(_tpf["curso_mm"]) + 1e-9:
+            break
+        _topo_pf["curso_min_mm"] = _req
+    _ds = res_els["deslocamento_succao"]
+    print("\n[FASE 4] Deslocamento sob sucção — compatibilidade (issue 112)...")
+    _print_eta("Deslocamento sob sucção (compat.)", _ds)
+    print(f"  · R_up,k = {_ds['R_up_k_kN']:.1f} kN ({_Rk['padrao']}) | K_ser = {_ds['K_ser_pino_kNpmm']:.1f} kN/mm por pino")
+    for _rot, _c in _ds["caminhos"].items():
+        _cc = _c[min(_c)]
+        print(f"  · {_rot}, u = {min(_c):.0f} %: " + " + ".join(
+            f"{_k.replace('_mm', '')} {_v:.1f}" for _k, _v in _cc.items() if _k != "total_mm")
+            + f" = {_cc['total_mm']:.1f} mm (u = {max(_c):.0f} %: {_c[max(_c)]['total_mm']:.1f})")
+    print(f"  · escora: {_ds['escora']['delta_mm']:.1f} de {_ds['escora']['folga_mm']:.0f} mm | PF: "
+          f"{_ds['pf']['delta_mm']:.1f} de {_ds['pf']['curso_mm']:.0f} mm | condutor: subida "
+          f"{_ds['condutor']['subida_mm']:.1f} → junta deslizante {_ds['condutor']['junta_deslizante_mm']:.0f} mm")
+    # L1f: furos já ovalizados ⊥ às fibras da viga para a flecha (DES-08)
+    _ret.insert(3, avaliar_retracao(
+        rotulo="L1f, topo do pilar de frontão", n_perp=int(_tpf["n_vert"]),
+        a2_mm=float(_tpf["a2_mm"]), d_mm=float(_tpf["d_mm"]), pode_ovalizar=True,
+        curso_existente_mm=float(_tpf["curso_mm"])))
+    _gov_ret = max(_ret, key=lambda x: x["eta"])
+    res_elu["retracao_chapas"] = {
+        "grupos": _ret, "eta": _gov_ret["eta"], "ok": all(x["ok"] for x in _ret),
+        "governa": _gov_ret["rotulo"],
+        "norma": "EC5 §8 (detalhe) + EN 1090-2 (folga do furo); Dietsch e Winter (2018)",
+    }
+    _print_eta("Retração impedida (chapas)", res_elu["retracao_chapas"])
+    for _x in _ret:
+        print(f"  · {_x['rotulo']}: {_x['n_perp']} fileiras ⊥ a {_x['a2_mm']:.0f} → D⊥={_x['D_perp_mm']:.0f} mm, "
+              f"δ=±{_x['delta_mm']:.2f} mm (folga do furo ±{_x['folga_furo_mm']:.0f}) → {_x['solucao']}")
 
     # ── Quadro de cargas para a fundação ───────────────────────────────────
     # O projeto NÃO dimensiona fundações (não há sondagem). O entregável é o
@@ -1987,6 +2664,20 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         pilar_frontao=res_elu["pilar_frontao"], n_pilares_frontao=N_PILARES_FRONTAO,
     )
     imprimir_quadro(quadro_fund)
+    # Esforços característicos por ação (issue 102)
+    from mlc_projeto.output.cargas_fundacao import esforcos_caracteristicos
+    quadro_fund["caracteristicos"] = esforcos_caracteristicos(
+        load=load, geo=geo, gamma_kNm3=float(pp["gamma_kNm3"]),
+        pilares={"lateral": (B_PILAR, H_PILAR), "central": (B_PILAR_C, H_PILAR_C),
+                 "canto": (B_PILAR_CANTO, H_PILAR_CANTO)},
+        H_pilar_mad_m=H_PILAR_MAD, cv_vertical=cvv, cv_vertical_central=cvc,
+        cv_transversal=cvt, pilar_frontao=res_elu["pilar_frontao"],
+        V_impacto_kN=_V_impacto, V_vento_pilar_d_kN=_V_vento_base,
+    )
+    print("  Característicos por ação (kN): base | G | Q | W compr. | W arranc. | W horiz. | A_d")
+    for _l in quadro_fund["caracteristicos"]:
+        print(f"  · {_l['base']}: {_l['G']} | {_l['Q']} | {_l['W_c']} | {_l['W_t']} | "
+              f"{_l['W_H']} | {_l['A_H']}")
 
     # ── Pacote de resultados (terminal / Excel / memorial) ─────────────────────
     todos_para_relatorio = {
@@ -2091,33 +2782,109 @@ def _main_impl(rodar_varredura: bool = False, abrir_viz: bool = True) -> dict:
         _tese = Path(__file__).resolve().parent.parent / "tese"
         if _tese.is_dir():
             gerar_apendice_memoria(todos_para_relatorio, _tese / "apendiceB.tex")
+            # Contagens e tabela de NDP da tese, da mesma execução (issue 99).
+            from mlc_projeto.output.valores_tese import gerar_valores_tese
+            from mlc_projeto.output.custo import Quantidades, gerar_custo
+            from mlc_projeto.predim.varredura_global import volume_mlc_m3
+            _pp = todos_para_relatorio["meta"]["peso_proprio"]
+            _rel = todos_para_relatorio
+            _n_cen_mont = next((l["n"] for l in quadro_fund["linhas"]
+                                if l["Base"].startswith("Central montante")), 0)
+            _n_bip = 2 * N_PAINEIS_CV_VERT + int(_n_cen_mont)
+            _n_pil = 3 * n_pil_linha + N_PILARES_FRONTAO
+            from mlc_projeto.output.custo import volume_espacadores_m3, volume_tercas_m3
+            # issue 117: T1–T17 nos dois vãos e as terças de ponta T0 e T18, com os oitões
+            _n_lin_t = 2 * round(geo.L / S) + 1 + 2
+            _L_terca = L_COMP_GALPAO + 2 * A_BAL_TERCA_M
+            _q = Quantidades(
+                V_vigas=volume_mlc_m3(geo.alpha_deg, geo.h0, geo.b),
+                V_tercas=volume_tercas_m3(
+                    n_linhas=_n_lin_t, L_m=_L_terca, b_m=B_TERCA, h_m=H_TERCA,
+                    n_escoras_largas=4, L_escora_m=L_T, b_escora_m=B_ESCORA_CENTRAL),
+                n_linhas_tercas=_n_lin_t, L_terca=_L_terca,
+                V_espacadores=volume_espacadores_m3(
+                    n_bipartidos=_n_bip,
+                    L_lamina_mm=(H_PILAR_MAD + geo.h0) * 1000 + FOLGA_ESCORA_VIGA_MM,
+                    l1_mm=float(_rel["pilar_central_contraventado"]["espacadores"]["l1_mm"]),
+                    a_mm=float(_rel["pilar_central_contraventado"]["geometria"]["a_mm"]),
+                    h_l_mm=H_LAMINA * 1000),
+                V_pilares=(_n_pil - _n_bip) * B_PILAR * H_PILAR * H_PILAR_MAD
+                          + _n_bip * 2 * B_LAMINA * H_LAMINA * (H_PILAR_MAD + geo.h0),
+                n_vigas=18, n_pilares=_n_pil, n_bipartidos=_n_bip,
+                m_cv_vertical=_rel["contraventamento_vertical"]["peso_total_kg"]
+                              + _rel["contraventamento_vertical_central"]["peso_total_kg"],
+                m_cv_cobertura=_rel["contraventamento"]["peso_total_kg"],
+                m_cv_transversal=_rel["contraventamento_transversal"]["peso_total_kg"],
+                m_cv_diafragma=(_rel["diafragma_cobertura"]["n_barras_novas"]
+                                * _rel["diafragma_cobertura"]["L_diag_m"] * 7850e-6
+                                * 3.14159265 * _rel["diafragma_cobertura"]["d_diafragma_mm"] ** 2 / 4),
+                d_cv_diafragma=float(_rel["diafragma_cobertura"]["d_diafragma_mm"]),
+                d_cv_vertical=_rel["contraventamento_vertical"]["d_mm"],
+                d_cv_cobertura=float(_rel["contraventamento"]["d_barra_mm"]),
+                d_cv_transversal=_rel["contraventamento_transversal"]["d_mm"],
+                area_planta=load.vento_0["A_planta_m2"])
+            _csv = OUTPUT_DIR / "varredura_global_consolidada.csv"
+            _V_min = None
+            if _csv.exists():
+                import pandas as _pd
+                _dv = _pd.read_csv(_csv)
+                _ok = _dv[_dv.status == "APROVADO"]
+                _V_min = float(_ok.volume_mlc_m3.min()) if len(_ok) else None
+            _cu = gerar_custo(_tese, _q, _V_min)
+            print(f"  · custo: {_q.V_mlc:.1f} m³ MLC + {_q.m_aco:.0f} kg aço → "
+                  f"R$ {_cu['total']:,.0f} (R$ {_cu['por_m2']:,.0f}/m²)")
+            # issue 121: casos de referência independentes, tabela de pacotes e versão
+            from mlc_projeto.output.validacao import gerar_tab_referencias
+            from mlc_projeto.output.apendice_programa import gerar_apendice_programa
+            _refs = gerar_tab_referencias(_tese, todos_para_relatorio, load)
+            _falhas = [r["grandeza"] for r in _refs if not r["ok"]]
+            if _falhas:
+                raise RuntimeError(f"casos de referência fora da tolerância: {_falhas}")
+            print(f"  · validação: {len(_refs)} casos de referência independentes conferidos")
+            _mac_prog = gerar_apendice_programa(_tese, _tese.parent, len(_refs))
+            _vt = gerar_valores_tese(tese=_tese, n_verif=resumo["n_verif"],
+                                     n_exec=resumo["n_executadas"],
+                                     n_na=resumo["n_nao_aplicaveis"],
+                                     eta_max=resumo["eta_max"], extra=_cu["macros"] + _mac_prog)
+            print(f"  · valores da tese: {_vt['n_verif']} verificações "
+                  f"({_vt['n_exec']} executadas), {_vt['n_ndp']} NDP, "
+                  f"{_vt['n_testes']} testes → tese/valores_pipeline.tex, tese/tab_ndp.tex")
+            from mlc_projeto.output.tab_retracao import gerar_tab_retracao   # issue 115
+            gerar_tab_retracao(_tese, res_elu["retracao_chapas"]["grupos"])
             # Análise estática por combinação (issue 51) → apêndice C.
             from mlc_projeto.output.apendice_analise import gerar_apendice_analise
             gerar_apendice_analise(load, geo, _tese)
             # Desenhos cotados em escala (issue 52) → tese/fig/des*.pdf
             from mlc_projeto.output.desenhos import arranjo_de_resultados, gerar_desenhos
             gerar_desenhos(arranjo_de_resultados(
-                todos_para_relatorio, geo, n_eixos=round(L_COMP_GALPAO / L_T) + 1,
-                L_T=L_T, H_pilar=H_PILAR_ALT, b_pilar=B_PILAR, h_pilar=H_PILAR,
-                b_canto=B_PILAR_CANTO, h_canto=H_PILAR_CANTO, b_terca=B_TERCA,
-                h_terca=H_TERCA, d_chu_mm=D_CHU_MM, h_ef_mm=H_EF_CHU_MM,
-                c_borda_mm=C_BORDA_CHU_MM, h_bloco_mm=H_BLOCO_FUND_MM,
-                chaveta_L_mm=CHAVETA_L_MM, chaveta_H_mm=CHAVETA_H_MM,
-                classe_concreto=CLASSE_CONC_FUND, l_sela_viga_m=L_SELA_POR_VIGA,
-                folga_sela_m=FOLGA_SELA_M, t_chapa_topo_mm=T_CHAPA_TOPO_MM,
-                folga_oblongo_L1_mm=FOLGA_OBLONGO_L1_MM,
-            ), _tese / "fig")
+                todos_para_relatorio, geo, **arranjo_kwargs(todos_para_relatorio)),
+                _tese / "fig")
+            # Caminho da força transversal pelo diafragma (issue 110)
+            from mlc_projeto.output.figura_diafragma import gerar_figura_diafragma
+            gerar_figura_diafragma(res_elu["diafragma_cobertura"],
+                                   float(res_elu["contraventamento_transversal"]["H_tr_kN"]),
+                                   _tese / "fig" / "diafragma_caminho.pdf")
             # Quadro requerido × adotado dos espaçamentos (issue 43)
             from mlc_projeto.output.quadro_espacamentos import gerar_tex, montar_quadro
             _qe = montar_quadro(
                 todos_para_relatorio, h0_m=geo.h0, L_T=L_T, L=geo.L,
-                folga_oblongo_mm=FOLGA_OBLONGO_L1_MM, d_chu_mm=D_CHU_MM,
+                folga_oblongo_mm=C_CIMA_OBL_MM, d_chu_mm=D_CHU_MM,
                 h_ef_mm=H_EF_CHU_MM, c_borda_mm=C_BORDA_CHU_MM,
                 s_grupo_mm=S_GRUPO_CHU_MM, h_bloco_mm=H_BLOCO_FUND_MM,
                 h_pilar_mm={"lateral": H_PILAR * 1000, "central": H_PILAR_C * 1000,
-                            "PF": H_PILAR * 1000, "canto": H_PILAR_CANTO * 1000},
-                h_terca_mm=H_TERCA * 1000)
+                            "PF": H_PILAR * 1000, "canto": H_PILAR_CANTO * 1000,
+                "lamina": H_LAMINA * 1000},
+                h_terca_mm=H_TERCA * 1000, a_beiral_mm=A_BEIRAL_M * 1000)
             gerar_tex(_qe, _tese / "tab_espacamentos.tex")
+            from mlc_projeto.connections.soldas import gerar_tex as _gerar_tex_soldas
+            _gerar_tex_soldas(todos_para_relatorio["soldas"]["itens"], _tese / "tab_soldas.tex")
+            from mlc_projeto.output.cargas_fundacao import (
+                gerar_tex_calculo, gerar_tex_caracteristicos,
+            )
+            gerar_tex_calculo(todos_para_relatorio["cargas_fundacao"],
+                              _tese / "tab_cargas_fundacao.tex")
+            gerar_tex_caracteristicos(todos_para_relatorio["cargas_fundacao"]["caracteristicos"],
+                                      _tese / "tab_cargas_fundacao_k.tex")
             _falhas = [f"{r['ligacao']} {r['grandeza']}" for r in _qe if not r["ok"]]
             print(f"  Espaçamentos (issue 43): {len(_qe)} itens, "
                   f"{len(_qe) - len(_falhas)} atendidos"

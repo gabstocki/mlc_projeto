@@ -102,6 +102,7 @@ def _envelope_secoes(geo, mat, load, gov, s, posicao_carga) -> dict:
         L=geo.L, h0=geo.h0, h_ap=geo.h_ap, alpha_rad=geo.alpha_rad, b=b,
         q_esq=gov.q_esq, q_dir=gov.q_dir,
         desenvolve_empuxo=load.empuxo_desenvolve,
+        a_bal=geo.a_bal,
     )
     x   = geo.x
     M_x = np.interp(x, r_gov["x"], r_gov["M_x"]) * 1e3     # N·m

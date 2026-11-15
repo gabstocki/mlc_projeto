@@ -356,17 +356,22 @@ def verifica_flambagem_lateral(
 
 # ── Flambagem lateral sob sucção — intradorso comprimido (issue 47) ──────────
 
-def momento_biapoiada(x: float, L: float, q_esq: float, q_dir: float) -> float:
+def momento_biapoiada(x: float, L: float, q_esq: float, q_dir: float,
+                      a_bal: float = 0.0) -> float:
     """
     Momento fletor (kN·m) da viga biapoiada de vão L sob carga q_esq na metade
     esquerda e q_dir na direita (kN/m, positivo para baixo). M > 0 comprime o
-    extradorso; M < 0 comprime o intradorso.
+    extradorso; M < 0 comprime o intradorso. Com beiral (issue 82), soma-se o
+    momento do balanço a_bal no apoio externo A: M_A = −q_esq·a²/2.
     """
     a = L / 2.0
     R_A = (q_esq * a * (L - a / 2.0) + q_dir * a * (a / 2.0)) / L
     if x <= a:
-        return R_A * x - q_esq * x * x / 2.0
-    return R_A * x - q_esq * a * (x - a / 2.0) - q_dir * (x - a) ** 2 / 2.0
+        M = R_A * x - q_esq * x * x / 2.0
+    else:
+        M = R_A * x - q_esq * a * (x - a / 2.0) - q_dir * (x - a) ** 2 / 2.0
+    M_A = -q_esq * a_bal ** 2 / 2.0
+    return M + M_A * (1.0 - x / L)
 
 
 def verifica_flambagem_lateral_succao(
@@ -407,9 +412,14 @@ def verifica_flambagem_lateral_succao(
     for comb in load.combinacoes_ELU_fisicas().values():
         matc = mat.com_duracao(comb.duracao)
         tem_negativo = False
+        # M(x) do mesmo integrador das combinações, com o peso próprio variável
+        # da viga (issue 114); `momento_biapoiada` fica como fórmula de carga uniforme
+        _r = load._analisar(q_esq=comb.q_esq, q_dir=comb.q_dir,
+                            fG=getattr(comb, "fator_G", 0.0))
+        _xr, _Mr = np.asarray(_r["x"], float), np.asarray(_r["M_x"], float)
         for i in range(n_secoes):
             x = L * i / (n_secoes - 1)
-            M = momento_biapoiada(x, L, comb.q_esq, comb.q_dir)
+            M = float(np.interp(x, _xr, _Mr))
             if M >= 0.0:
                 continue
             tem_negativo = True

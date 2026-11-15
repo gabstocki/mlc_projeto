@@ -108,6 +108,7 @@ def verificar_succao_uplift(
         q=q_med, L=geo.L, h0=geo.h0, h_ap=geo.h_ap,
         alpha_rad=geo.alpha_rad, b=geo.b, q_esq=c.q_esq, q_dir=c.q_dir,
         desenvolve_empuxo=load.empuxo_desenvolve,
+        a_bal=geo.a_bal,
     )
     R_A = float(r["R_A_kN"])
     R_B = float(r["R_B_kN"])

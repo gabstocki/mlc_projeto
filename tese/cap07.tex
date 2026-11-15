@@ -35,8 +35,8 @@ calculada, de modo que um valor que reprova não aparece como aprovado. Uma
 taxa de 0,7492, por exemplo, é exibida como 0,75, e atende ao limite de 0,75. O
 programa conserva os valores com a precisão completa.
 
-O conjunto compreende sessenta e quatro verificações, das quais
-sessenta e duas são executadas e duas declaradas não aplicáveis. As não aplicáveis são o tirante de
+O conjunto compreende \nVerifExt{} verificações, das quais
+\nVerifExecExt{} são executadas e \nVerifNAExt{} declaradas não aplicáveis. As não aplicáveis são o tirante de
 base e o tirante de piso de robustez, ambos sem função no modelo de viga
 biapoiada adotado na \autoref{ssec:modelo-apoio}: não havendo empuxo a
 equilibrar, não há tirante a dimensionar.
@@ -93,27 +93,31 @@ em classe de serviço 3, com $k_{mod} = 0{,}65$ para ações de duração média
 \toprule
     \textbf{Verificação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    Cisalhamento                    & EC5 6.1.7          & 0,39 & Atende \\
+    Cisalhamento                    & EC5 6.1.7          & 0,41 & Atende \\
     Tensões na zona de cumeeira     & EC5 6.4.3          & 0,36 & Atende \\
-    Tensões na borda inclinada      & EC5 6.4.2          & 0,32 & Atende \\
-    Compressão no apoio sobre a sela central, L1c & EC5 6.1.5 & 0,49 & Atende \\
-    Compressão no apoio sobre o pilar lateral, L1 & EC5 6.1.5 & 0,46 & Atende \\
-    Flexo-compressão                & EC5 6.3.2 e 6.3.3  & 0,17 & Atende \\
+    Tensões na borda inclinada      & EC5 6.4.2          & 0,33 & Atende \\
+    Compressão no apoio sobre a sela central, L1c & EC5 6.1.5 & 0,58 & Atende \\
+    Compressão no apoio sobre o pilar lateral, L1 & EC5 6.1.5 & 0,49 & Atende \\
+    Flexo-compressão                & EC5 6.3.2 e 6.3.3  & 0,16 & Atende \\
     Flambagem lateral sob sucção, intradorso comprimido & EC5 6.3.3 & 0,16 & Atende \\
     Flambagem lateral por torção    & EC5 6.3.3          & 0,11 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-viga}{}{}
 
-O cisalhamento é a verificação mais solicitada da viga, com $\eta = 0{,}39$.
-Sua relevância decorre da redução da largura efetiva da seção pelo coeficiente
-de fissuração $k_{cr} = 0{,}67$, que retira um terço da largura bruta antes do
-cálculo da tensão. Sem essa redução, a taxa cairia para cerca de 0,26.
+O cisalhamento é a verificação mais solicitada da viga, com $\eta = 0{,}41$.
+Sua relevância decorre de duas reduções da largura da seção junto ao apoio: o
+rasgo da chapa embutida da ligação L1, de 29 mm, e o coeficiente de fissuração
+$k_{cr} = 0{,}67$, que retira um terço da largura restante,
+$b_{ef} = 0{,}67 \times (0{,}32 - 0{,}029) = 0{,}195$ m. Sem as duas reduções, a
+taxa cairia para cerca de 0,25.
 
 As tensões na borda inclinada merecem detalhamento, por ilustrarem a assimetria
 mencionada no início desta seção. Para a inclinação de
 10$^{\circ}$, o coeficiente $k_{m,\alpha}$ vale 0,758 quando a borda inclinada
 está comprimida e apenas 0,414 quando tracionada. A verificação governante
-ocorre a 3,48 m do apoio, sob combinação de sucção, situação em que a borda
+ocorre a 3,48 m do apoio mais próximo, sob combinação de sucção (16,8 m do apoio
+esquerdo no padrão de vento que a governa, e a mesma seção espelhada no padrão
+simétrico), situação em que a borda
 superior passa a tracionada. É por essa razão que a verificação não é governada
 pela seção de maior momento, e sim por uma seção intermediária sob carregamento
 invertido.
@@ -130,8 +134,8 @@ efetivo passaria ao vão da própria viga, de 20,25 m. Mesmo nessa situação a 
 subiria apenas a 0,21, porque a seção de 0,32 m de largura é robusta à
 flambagem lateral, e a verificação continuaria longe de governar.
 
-Nas combinações de sucção o momento inverte, atingindo $-394$ kN$\cdot$m na
-combinação $0{,}9\,G + 1{,}5\,W$, e a borda comprimida passa a ser o intradorso,
+Nas combinações de sucção o momento inverte, atingindo $-390$ kN$\cdot$m na
+combinação $0{,}9\,G + 1{,}5\,W$ mais desfavorável (\autoref{ap:analise-estatica}), e a borda comprimida passa a ser o intradorso,
 que as terças, fixadas no extradorso, não contêm. Essa situação foi verificada
 em separado, com hipóteses conservadoras: contenção lateral apenas nos apoios,
 sem crédito à contenção da borda tracionada pelas terças, e sem a redução de
@@ -145,21 +149,21 @@ tracionada. O comprimento efetivo é, então,
 
 \noindent
 Como a altura da viga varia, a seção crítica foi obtida por varredura ao longo
-do vão, nas quinze combinações com trecho de momento negativo. Governa a seção
-a 15,80 m do apoio, onde $h = 1{,}786$ m e $M_d = -290$ kN$\cdot$m, e não a de
+do vão, nas 27 combinações com trecho de momento negativo. Governa a seção
+a 15,90 m do apoio esquerdo, ou 4,35 m do direito, onde $h = 1{,}768$ m e $M_{Ed} = -288$ kN$\cdot$m, e não a de
 maior momento, mais alta. Nessa seção, pelas fórmulas (6.30) a (6.34) da
 EN 1995-1-1 \cite{EN1995-1-1:2004},
 
 \begin{equation}
     \sigma_{m,crit} = \frac{0{,}78\,b^2 E_{0,05}}{h\,\ell_{ef}}
-    = \frac{0{,}78 \times 0{,}32^2 \times 9.600}{1{,}786 \times 18{,}23}
-    = 23{,}6~\text{MPa},
+    = \frac{0{,}78 \times 0{,}32^2 \times 9.600}{1{,}768 \times 18{,}23}
+    = 23{,}8~\text{MPa},
 \end{equation}
 
 \noindent
-$\lambda_{rel,m} = \sqrt{24/23{,}56} = 1{,}01$ e
-$k_{crit} = 1{,}56 - 0{,}75 \times 1{,}01 = 0{,}80$. A tensão de cálculo, de
-1,71 MPa, compara-se a $k_{crit} f_{m,d} = 0{,}80 \times 13{,}4 = 10{,}8$ MPa,
+$\lambda_{rel,m} = \sqrt{24/23{,}79} = 1{,}00$ e
+$k_{crit} = 1{,}56 - 0{,}75 \times 1{,}00 = 0{,}81$. A tensão de cálculo, de
+1,73 MPa, compara-se a $k_{crit} f_{m,d} = 0{,}81 \times 13{,}4 = 10{,}8$ MPa,
 com $k_{mod} = 0{,}70$ da ação de curta duração, e resulta $\eta = 0{,}16$.
 
 \section{PILARES}\label{sec:verif-pilares}
@@ -178,46 +182,42 @@ lateral e central, e de 0,32 $\times$ 0,32 m no de canto.
 \toprule
     \textbf{Pilar e situação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    De canto, gravidade com contraventamento & EC5 6.2.3 e 6.3.2 & 0,44 & Atende \\
-    Central montante, gravidade com contraventamento & EC5 6.2.3 e 6.3.2 & 0,75 & Atende \\
-    De frontão, montante do contraventamento transversal & EC5 6.2.3 e 6.3.2 & 0,22 & Atende \\
+    De canto, bipartido & EC5 6.3.2 e anexo C & 0,89 & Atende \\
+    Lateral montante, bipartido & EC5 6.3.2 e anexo C & 0,78 & Atende \\
+    Central montante, bipartido & EC5 6.3.2 e anexo C & 0,91 & Atende \\
+    De frontão, montante da cruz CV-T & EC5 6.2.3 e 6.3.2 & 0,23 & Atende \\
     Central, compressão com instabilidade    & EC5 6.3.2         & 0,42 & Atende \\
     Lateral, vento perpendicular à cumeeira  & EC5 6.3.2         & 0,26 & Atende \\
-    Lateral, vento paralelo à cumeeira       & EC5 6.3.2         & 0,25 & Atende \\
+    Lateral, vento paralelo à cumeeira       & EC5 6.3.2         & 0,24 & Atende \\
     Lateral, flexo-compressão                & EC5 6.3.2         & 0,21 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-pilares}{}{}
 
-O pilar central recebe esforço normal de cálculo de 199 kN, correspondente à
+O pilar central recebe esforço normal de cálculo de 208 kN, correspondente à
 soma das reações de duas vigas, e opera com coeficiente de instabilidade
-$k_c = 0{,}445$. Sua taxa de 0,42 é o dobro da do pilar lateral, com 0,21,
+$k_c = 0{,}481$. Sua taxa de 0,40 é o dobro da do pilar lateral, com 0,21,
 o que confirma a decisão registrada na \autoref{sec:predim-pilares} de dimensionar
 a seção comum pelo pilar central.
 
-O pilar de canto, P1, P3, P25 ou P27, dotado de seção maior, recebe
-esforço normal de 299 kN, resultante da reação de gravidade somada ao esforço
-descendente de 200 kN transmitido pelos dois sistemas de contraventamento que
-nele se encontram. Sob sucção, a mesma seção trabalha à flexo-tração com
-$\eta = 0{,}24$, e o esforço de arrancamento de 193 kN determina a ancoragem
-tratada no \autoref{cap:detalhamento}.
+Os pilares montantes das baías contraventadas, de canto (P1, P3, P25 e P27),
+laterais (P4, P6, P22 e P24) e centrais (P2, P5, P8, P20, P23 e P26), são
+bipartidos: duas lâminas de 0,16 por 0,32 m, uma de cada lado da viga, da base até
+a escora, como exposto na \autoref{ssec:pilar-bipartido}. A lâmina do lado do nó
+do painel recebe metade das reações das vigas e toda a componente vertical da
+diagonal, de 258 kN. A mais solicitada é a do pilar central montante, com 370 kN
+e taxa de 0,91 à compressão com instabilidade; nos cantos, que somam o esforço do
+painel do frontão, a taxa é de 0,88.
 
-O pilar central montante, P2, P5, P8, P20, P23 ou P26, situado nas duas baías
-extremas do alinhamento central,
-recebe as reações das duas vigas, de 199 kN, somadas ao esforço descendente de
-130 kN do painel de contraventamento, totalizando 330 kN. Com a seção comum
-de 0,32 $\times$ 0,27 m, resulta $\eta = 0{,}75$, a maior taxa entre os
-pilares.
-
-O pilar de frontão, PF1 ou PF2, não recebe carga da viga. Solicita-o o peso
-próprio, o esforço descendente ou de arrancamento da cruz CV-T, de 69,4 kN, e o
-vento sobre a própria face. Comprimido com 72,8 kN e com o mesmo momento de vento
-dos demais pilares, resulta $\eta = 0{,}22$; tracionado com 67,2 kN, a taxa é
+O pilar de frontão, PF1 ou PF2, não recebe carga da viga. Solicitam-no o peso
+próprio, o esforço descendente ou de arrancamento da cruz CV-T, de 85,0 kN, e o
+vento sobre a própria face. Comprimido com 88,2 kN e com o mesmo momento de vento
+dos demais pilares, resulta $\eta = 0{,}23$; tracionado com 82,9 kN, a taxa é
 menor.
 
 \section{TERÇAS E COBERTURA}\label{sec:verif-tercas}
 
 A \autoref{tab:verif-tercas} reúne as verificações das terças e dos elementos de
-cobertura por elas suportados. As terças são de 0,20 $\times$ 0,58 m em GL24h,
+cobertura por elas suportados. As terças são de 0,20 $\times$ 0,40 m em GL24h, seção dimensionada na \autoref{sec:predim-tercas},
 espaçadas de 2,53 m. A verificação da fixação segue a
 ABNT NBR 6123 \cite{NBR6123:2023}, com coeficiente de pressão local de
 $\pm 2{,}0$; as demais, a EN 1995-1-1 \cite{EN1995-1-1:2004} e a
@@ -229,22 +229,22 @@ EN 1991-1-1 \cite{EN1991-1-1:2002}.
     \textbf{Verificação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
     Fixação da telha sob sucção    & NBR 6123 7.2.6     & 0,68 & Atende \\
-    Terça como biela do diafragma  & EC5 6.3.2          & 0,27 & Atende \\
-    Terça à flexão                 & EC5 6.1.6 e 6.1.7  & 0,10 & Atende \\
-    Terça sob carga concentrada    & EN 1991-1-1 6.3.4.2 & 0,06 & Atende \\
+    Terça como biela do diafragma  & EC5 6.3.2          & 0,59 & Atende \\
+    Terça à flexão                 & EC5 6.1.6 e 6.1.7  & 0,20 & Atende \\
+    Terça sob carga concentrada    & EN 1991-1-1 6.3.4.2 & 0,11 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-tercas}{}{}
 
 A terça acumula duas funções, e a segunda é a mais exigente. Além de resistir à
-flexão devida ao carregamento da cobertura, com taxa de apenas 0,10, ela
+flexão devida ao carregamento da cobertura, com taxa de apenas 0,20, ela
 funciona como biela comprimida do diafragma de contraventamento, recebendo
-esforço normal de 107 kN. Verificada à interação combinada de flexão e
-compressão, a taxa sobe para 0,27, quase o triplo da flexão isolada. A
+esforço normal de 175 kN. Verificada à interação combinada de flexão e
+compressão, a taxa sobe para 0,59, quase o triplo da flexão isolada. A
 esbeltez em torno do eixo de menor inércia, com $\lambda_z = 100$, conduz a
 $k_{c,z} = 0{,}368$ e explica a diferença.
 
 A fixação da telha é a verificação mais solicitada deste grupo, com
-$\eta = 0{,}68$. A pressão dinâmica de 0,890 kN/m\textsuperscript{2}, associada
+$\eta = 0{,}68$. A pressão dinâmica $q_v$, de 0,890 kN/m\textsuperscript{2}, associada
 ao coeficiente local de sucção de $-2{,}0$, exige fixador a cada 0,20 m ao longo
 da terça, isto é, em cada nervura da telha. O espaçamento máximo admissível para
 que a taxa não exceda a unidade é de 0,29 m.
@@ -253,6 +253,39 @@ que a taxa não exceda a unidade é de 0,29 m.
 %% é valor típico de catálogo e não de ficha técnica. Governa o arrancamento da
 %% chapa fina, e não o da madeira, de modo que a confirmação depende da telha
 %% efetivamente adotada. Ver checks/elu/fixacao_telha.py.
+
+\subsection{Balanços do beiral e do oitão}\label{ssec:verif-balancos}
+
+O efeito dos balanços sobre o vão das vigas já está nas verificações da
+\autoref{sec:verif-viga}, pela superposição da \autoref{eq:balanco-superposicao}.
+Resta verificar os balanços como peças, conforme a
+\autoref{tab:verif-balancos}. No beiral, a viga tem 1,00 m de altura na raiz e
+0,800 m na ponta, e o momento na raiz, de 6,04 kN$\cdot$m na combinação de
+sobrecarga dominante, traciona o extradorso inclinado; a tensão de flexão é por
+isso comparada à resistência reduzida por $k_{m,\alpha} = 0{,}414$, da borda
+inclinada tracionada (EN 1995-1-1, item 6.4.2). O que governa é a flecha da
+ponta, que soma a deformação do próprio balanço à rotação do apoio causada pelo
+vão; como o vão gira o apoio no sentido de levantar a ponta, as duas parcelas
+se compensam em parte. Para a ponta adotam-se os limites menos restritivos da
+linha dos balanços da tabela 7.2 da EN 1995-1-1 \cite{EN1995-1-1:2004},
+$a/150$ e $a/125$, coerentes com os adotados para as vigas. No oitão, a terça é
+contínua sobre o pórtico de frontão e tem balanço de 1,16 m.
+
+\tabela{Verificações dos balanços do beiral e do oitão}{\footnotesize
+\begin{tabular}{p{6.2cm}p{3.6cm}cc}
+\toprule
+    \textbf{Verificação} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
+\midrule
+    Viga no beiral: flexão, cisalhamento e flambagem lateral & EC5 6.4.2, 6.1.7 e 6.3.3 & 0,05 & Atende \\
+    Viga no beiral: flecha da ponta & EC5 7.2 & 0,11 & Atende \\
+    Terça no oitão: flexão, cisalhamento e flecha & EC5 6.1.6, 6.1.7 e 7.2 & 0,18 & Atende \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{verif-balancos}{}{}
+
+As terças de ponta T0 e T18, na extremidade dos beirais, recebem a faixa de
+cobertura entre a ponta e a terça do apoio, inferior à metade da que cabe a uma
+terça corrente, e têm a mesma seção destas; a verificação das terças correntes
+cobre-as.
 
 \section{CONTRAVENTAMENTO E ESTABILIDADE GLOBAL}\label{sec:verif-contraventamento}
 
@@ -268,54 +301,68 @@ diagonais são em aço S235, e as suas ligações de extremidade são detalhadas
 \toprule
     \textbf{Sistema} & \textbf{Cláusula} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
+    Contraventamento da cobertura   & EC5 9.2.5           & 0,80 & Atende \\
+    Contraventamento transversal    & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,55 & Atende \\
     Contraventamento vertical, fachadas & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,84 & Atende \\
     Contraventamento vertical, alinhamento central & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,84 & Atende \\
-    Contraventamento transversal    & EC5 5.4.4 e EN 1993-1-1 6.2.3 & 0,85 & Governa o projeto \\
+    Ligação da diagonal da cobertura & EN 1993-1-8 3.13   & 0,79 & Atende \\
+    Ligação da diagonal transversal & EN 1993-1-8 3.13    & 0,81 & Atende \\
     Ligação da diagonal vertical    & EN 1993-1-8 3.13    & 0,82 & Atende \\
-    Ligação da diagonal transversal & EN 1993-1-8 3.13    & 0,82 & Atende \\
-    Contraventamento da cobertura   & EC5 9.2.5           & 0,81 & Atende \\
-    Estabilidade global             & EN 1993-1-1 5.2.1, por analogia & 0,61 & Atende \\
-    Corda do diafragma no beiral    & EC5 6.2.3 e 6.3.2   & 0,07 & Atende \\
+    Estabilidade global             & EN 1993-1-1 5.2.1, por analogia & 0,69 & Atende \\
+    Empuxo pelo diafragma, força horizontal na L1 & EC5 5.4, modelo em planta & 0,03 & Atende \\
+    Diafragma da cobertura, alma CV-D e deslocamento & EC5 5.4 e EN 1993-1-1 6.2.3 & 0,75 & Atende \\
+    Ligação da diagonal do diafragma & EN 1993-1-8 3.13   & 0,52 & Atende \\
+    Corda do diafragma no beiral    & EC5 6.2.3 e 6.3.2   & 0,12 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-contraventamento}{}{}
 
-O contraventamento da cobertura, com $\eta = 0{,}81$, tem a terceira maior
-taxa do projeto. Pelo item 9.2.5.3 da EN 1995-1-1 \cite{EN1995-1-1:2004}, o
+O contraventamento da cobertura tem $\eta = 0{,}80$, com a diagonal escolhida
+automaticamente como o menor diâmetro comercial com taxa até 0,90. Pelo item 9.2.5.3 da EN 1995-1-1 \cite{EN1995-1-1:2004}, o
 sistema resiste à força de estabilização em adição às ações horizontais
 externas, de modo que a reação em cada apoio da treliça soma a parcela do vento
-paralelo à cumeeira, 105 kN, à da estabilização das vigas, 1,4 kN, e vale
-107 kN; a flecha limite de $\ell/500$ é verificada sob a mesma soma. Como a
+paralelo à cumeeira, 173,8 kN, já majorada por $\gamma_Q = 1{,}5$, à da
+estabilização das vigas, 1,3 kN, e vale 175 kN; a flecha limite de $\ell/500$ é verificada sob a mesma soma. Como a
 força de estabilização decorre da envoltória de todas as combinações, e não da
 combinação com vento paralelo à cumeeira, a soma é conservadora. A diagonal de
-28 mm recebe esforço de 116 kN e
-responde por peso de aço da ordem de 1.943 kg, com cruzes nos oito painéis
+36 mm recebe esforço de 191 kN e
+responde por peso de aço da ordem de 3.210 kg, com cruzes nos oito painéis
 do vão de cada baía rígida. Como exposto na
-\autoref{ssec:o-que-governa}, essa taxa é praticamente irrelevante à seção da
-viga, o que a torna o limite efetivo do dimensionamento.
+\autoref{ssec:o-que-governa}, essa taxa responde ao vento e é praticamente
+insensível à seção da viga: o sistema é dimensionado pela própria diagonal.
 
 O contraventamento vertical, com $\eta = 0{,}84$, conduz à fundação a força
-longitudinal de 857 kN, composta pelos 842 kN de vento paralelo à cumeeira e
-por 15,2 kN de força de imperfeição. Metade segue aos quatro painéis das
-fachadas e metade aos quatro do alinhamento central, na proporção das reações das
-treliças da cobertura. Cada painel recebe 107 kN, e a diagonal de 33 mm é
-solicitada a 169 kN. Com extremidades recalcadas, a resistência é a de
-escoamento da seção bruta, 201 kN, e resulta $\eta = 0{,}84$. O
-contraventamento transversal conduz 114 kN, por meio do diafragma de
-cobertura, aos dois frontões, 57,0 kN a cada um. Em cada frontão, a cruz CV-T
-liga o pilar de canto ao pilar de frontão, a 5,75 m dele, e a diagonal de 24 mm
-é solicitada a 89,9 kN contra 106 kN de resistência, com $\eta = 0{,}85$,
-a maior taxa do projeto.
+longitudinal de cálculo de cerca de 1.405 kN, de vento paralelo à cumeeira,
+majorado por $\gamma_Q$, e de força de imperfeição
+(\autoref{eq:cadeia-vento-longitudinal}). Metade segue aos quatro painéis das fachadas e metade aos quatro do
+alinhamento central, na proporção das reações das treliças da cobertura. Cada
+painel recebe 176 kN. O nó do painel fica no topo da lâmina do pilar bipartido,
+no nível da escora (\autoref{ssec:no-topo}), e o painel tem 7,9 m de altura por
+5,37 m de largura; a diagonal de 45 mm, inclinada a 55,8$^{\circ}$, é solicitada a
+313 kN. Com extremidades recalcadas, a resistência é a de escoamento da seção
+bruta, 374 kN, e resulta $\eta = 0{,}84$. O
+contraventamento transversal conduz 140 kN, por meio do diafragma de
+cobertura, aos dois frontões, 69,9 kN a cada um. Em cada frontão, a cruz CV-T
+liga o pilar de canto ao pilar de frontão, a 5,75 m dele, e a diagonal de 33 mm
+é solicitada a 110 kN, para resistência de 201 kN, com $\eta = 0{,}55$: o diâmetro
+não é governado pela resistência, mas pela rigidez que a estabilidade transversal
+pede (\autoref{sec:ordem-analise}).
 
 As ligações de extremidade das diagonais figuram entre as mais solicitadas do
-conjunto, com 0,82 na diagonal vertical e 0,82 na transversal. Elas são
+conjunto, com 0,79 na diagonal da cobertura, 0,82 na vertical e 0,69 na
+transversal, sob o esforço solicitante. Elas são
 dimensionadas por capacidade, isto é, para a resistência da própria barra e não
 para o esforço solicitante. Como as barras têm extremidades recalcadas, essa
 resistência é a de escoamento, e um eventual excesso de solicitação leva ao
 escoamento da barra antes da ruptura do olhal, do pino ou da rosca. O detalhamento consta da \autoref{sec:detalhe-contraventamento}.
 
-A estabilidade global apresenta $\eta = 0{,}61$, valor que traduz a folga do
-fator $\alpha_{cr}$ discutido na \autoref{sec:ordem-analise} em relação ao
-limite normativo.
+O diafragma da cobertura, que leva aos frontões a força transversal de cada
+pórtico (\autoref{sec:ordem-analise}), tem a alma nas cruzes CV-D, de 12 mm, cuja
+diagonal mais solicitada trabalha com 0,23; o que governa é o deslocamento do topo
+do pórtico central, de 17,4 mm, frente ao limite de 23,3 mm, com taxa de 0,75,
+depois de a diagonal dos frontões ser engrossada pela rigidez. A estabilidade global
+apresenta $\eta = 0{,}69$, razão entre o limite de 10 e o $\alpha_{cr} = 14{,}7$ da
+direção transversal, calculado com a
+rigidez real do diafragma e não mais com a dos frontões apenas.
 
 \section{SITUAÇÕES TRANSITÓRIAS E ACIDENTAIS}\label{sec:verif-transitorias}
 
@@ -323,29 +370,221 @@ Três situações fora do uso corrente foram verificadas.
 
 A primeira é o impacto de veículo em pilar, pertinente por tratar-se de
 estacionamento. Sob combinação acidental, com força de 50 kN aplicada a 0,50 m
-do piso na direção de marcha, obteve-se $\eta = 0{,}48$. As seções resistem às
-forças de choque de projeto sem alteração. Ainda assim, a proteção física dos
+do piso na direção de marcha, obteve-se $\eta = 0{,}50$. As seções resistem às
+forças de choque de projeto sem alteração. A lâmina do pilar bipartido, de
+0,16 m, é a peça mais fina atingível. O choque, porém, entra 0,20 m acima do pé,
+na altura do espaçador do pé, um bloco maciço entre as lâminas, de 80 a 530 mm acima
+dele. O bloco leva a força às duas lâminas: por contato, na direção da fachada, e
+pelos dois parafusos M16 que o atravessam, no plano do pórtico. Cada lâmina
+recebe metade do choque, e a taxa resulta em 0,48, governada pelos parafusos do
+espaçador. Sem contar com o espaçador, a lâmina atingida chegaria a 0,84, por
+cisalhamento. Ainda assim, a proteção física dos
 pilares por defensas permanece recomendável, por reduzir dano localizado e custo
 de reparo, ainda que não seja exigida pela verificação.
 
 A segunda é o içamento da viga na montagem, verificado conforme a
-EN 1991-1-6 \cite{EN1991-1-6:2005}. Com dois pontos de içamento situados a
-0,207 do vão, condição que iguala os momentos positivo e negativo, e lingas
-inclinadas a 30$^{\circ}$ da vertical, a peça de 75 kN desenvolve momentos de
-$-21$ e $+63$ kN$\cdot$m e taxa governante de 0,05, por cisalhamento. Note-se
-que nesta fase a viga não dispõe de contraventamento, e o comprimento efetivo de
-flambagem lateral é de 11,9 m, com $k_{crit} = 0{,}797$; ainda assim a taxa
-correspondente é de apenas 0,01.
+EN 1991-1-6 \cite{EN1991-1-6:2005}. A posição clássica dos dois
+pontos de içamento, a 0,207 do vão de cada extremidade, iguala os momentos
+positivo e negativo de uma peça prismática. A viga tem altura crescente para o
+meio do vão, onde se concentra o peso, e a 0,207 do vão os momentos seriam de
+$-21$ e $+63$ kN$\cdot$m. Os pontos ficam, por isso, a 0,247 do vão, posição
+calculada para a viga de seção variável, com 5,0 m de cada extremidade. Com
+lingas inclinadas a 30$^{\circ}$ da vertical, a peça de 75 kN desenvolve momentos
+de $-32$ e $+32$ kN$\cdot$m e taxa governante de 0,04, por cisalhamento. Nesta fase
+a viga não dispõe de contraventamento, e o comprimento efetivo de flambagem
+lateral é de 10,2 m, com $k_{crit} = 0{,}852$; ainda assim a taxa correspondente é
+de apenas 0,01.
 
 A terceira é a situação de incêndio, verificada pelo método da seção
 transversal reduzida do item 4.2.2 da EN 1995-1-2 \cite{EN1995-1-2:2004}, com a
-combinação excepcional da EN 1990 \cite{EN1990:2002}. Para o tempo requerido
-declarado de 30 minutos, a taxa governante é de 0,22, no pilar central. A
+combinação excepcional da EN 1990 \cite{EN1990:2002}. O uso do Eurocódigo tem
+amparo no item 5.5.3 da NPT 008 \cite{CBMPR-NPT008:2026}, que, para materiais
+estruturais sem norma nacional de projeto em situação de incêndio, adota o
+Eurocódigo em sua última edição, remissão que a nota 3 da Tabela A faz para as
+edificações de madeira. A estrutura é isenta de
+tempo requerido de resistência ao fogo, conforme a subseção seguinte. A
+verificação a 30 minutos é, portanto, informativa: mostra a margem da estrutura,
+mas não é exigência. A taxa governante é de 0,21, no pilar central. A lâmina do
+pilar bipartido, verificada com as quatro faces expostas, porque abaixo da viga o
+vão entre as lâminas é aberto, fica com seção residual de 104 por 264 mm e taxa de
+0,18, mesmo refeito o pilar composto com a seção residual. A
 carbonização reduz a seção resistente, mas a combinação excepcional dispensa os
 coeficientes parciais de majoração das ações, e o saldo é favorável nesta
 estrutura, cujas peças de madeira operam com folga ampla em situação normal.
-Conforme exposto na \autoref{sec:delimitacao}, o tempo requerido é declaração de
-projeto, e não prescrição do Eurocódigo.
+
+\subsection{Tempo requerido de resistência ao fogo}\label{ssec:trrf}
+
+O Eurocódigo dá o método de verificação em situação de incêndio, mas não diz se
+a verificação é exigida nem por quanto tempo. Essa exigência vem do regulamento
+de segurança contra incêndio. No Paraná, o tempo requerido é fixado pela NPT 008
+do Corpo de Bombeiros Militar do Paraná, na versão 03, aprovada pela Portaria
+do Comando-Geral n.\textsuperscript{o}~368/2026 \cite{CBMPR-NPT008:2026}, que
+segue a ABNT NBR 14432 \cite{NBR14432:2001}. A carga de incêndio é dada pela
+NPT 014 \cite{CBPMPR-NPT014:2020}. O enquadramento é o seguinte.
+
+\begin{alineas}
+    \item Ocupação: estacionamento de veículos, divisão G-1 ou G-2 do grupo G,
+          serviços automotivos, conforme haja ou não acesso de público. As duas
+          divisões têm o mesmo tratamento nas normas consultadas.
+    \item Carga de incêndio específica: 200 MJ/m\textsuperscript{2}, para as duas
+          divisões, no Anexo A da NPT 014.
+    \item Altura: edificação térrea, com um único nível de piso, na classe P1 da
+          Tabela A da NPT 008, de altura até 6 m.
+    \item Ventilação: aberta lateralmente, pelo item 5.14 da NPT 008, que exige
+          aberturas em pelo menos duas fachadas somando 40~\% do perímetro e 20~\%
+          da superfície das fachadas e, em qualquer caso, ao menos 5~\% da área do
+          piso. Aqui as quatro fachadas são inteiramente abertas.
+    \item Área total construída: 2.067 m\textsuperscript{2} de cobertura, acima dos
+          limites de 750 e 1.500 m\textsuperscript{2} das isenções por área, que
+          não se aplicam.
+\end{alineas}
+
+Com esse enquadramento, a estrutura é isenta por duas vias independentes. A
+primeira é o item A2.3.10 b) da NPT 008: estão isentas as edificações térreas com
+carga de incêndio específica de até 500 MJ/m\textsuperscript{2}, condição atendida
+com 200 MJ/m\textsuperscript{2}. A isenção não se aplica, pelo item A2.3.10.1,
+quando a cobertura serve de piso ou de rota de fuga, ou quando a estrutura é
+essencial à estabilidade de elemento de compartimentação. Nenhuma das três
+situações ocorre, e as exclusões gerais do item A2.2, que tratam de subsolos,
+escadas de segurança, compartimentação e dos grupos L e M, também não se
+aplicam.
+
+A segunda via cobre a dúvida sobre a carga de incêndio. O valor de 200
+MJ/m\textsuperscript{2} é o do conteúdo, os veículos estacionados. Se a
+autoridade somar a madeira da própria estrutura, que é combustível, a carga sobe
+muito. São \custoVolMLC{} m\textsuperscript{3} de madeira lamelada colada, com massa
+específica média de 420 kg/m\textsuperscript{3} e 19 MJ/kg, o valor da NPT 014
+para a madeira, distribuídos em 2.067 m\textsuperscript{2}. Resultam cerca de
+1.200 MJ/m\textsuperscript{2}, e a primeira isenção cai. Resta a Tabela A, que dá
+30 minutos para as divisões G-1 e G-2 abertas lateralmente na classe P1. O item
+A2.4 c) reduz esse tempo em 30 minutos nas edificações térreas lateralmente
+abertas, conforme o item 5.14. O tempo requerido resulta nulo também por essa
+via. Há ainda, no item A2.3.5, uma isenção própria das garagens G-1 e G-2
+abertas lateralmente, condicionada ao dimensionamento das estruturas pelo anexo D
+da ABNT NBR 14432, que não foi necessária ao enquadramento.
+
+Duas exigências independem da isenção. Os itens 5.11 e A2.1 condicionam a
+isenção a que a edificação atenda aos objetivos do código estadual, com saídas de
+emergência, rotas de fuga e ventilação dimensionadas. Isso cabe ao projeto de
+segurança contra incêndio, fora do escopo deste trabalho. O item 5.19.3 exige
+retardante ao fogo nas edificações de mais de 750 m\textsuperscript{2} com
+elementos de construção em madeira, independentemente da resistência da
+estrutura e das isenções. Essa exigência entra na especificação do acabamento, na
+\autoref{ssec:faces-expostas}.
+
+%% TODO: verificar — confirmar com o Corpo de Bombeiros do Paraná (CTPI) dois
+%% pontos de interpretação: (1) se a carga de incêndio de A2.3.10 b) é a da
+%% ocupação (Anexo A da NPT 014) ou inclui a estrutura de madeira; (2) se a
+%% redução de A2.4 c) se aplica sobre a linha "G-1 e G-2 abertos lateralmente"
+%% da Tabela A, sem configurar a sobreposição vedada pelo item A2.6. A nota 3 da
+%% Tabela A (versão 03) remete as edificações de madeira ao item 5.5.3.
+
+A isenção diz respeito ao incêndio generalizado da edificação. O incêndio de um
+veículo junto a um pilar é uma situação localizada, que solicita uma única peça e
+é tratada a seguir.
+
+\subsection{Incêndio localizado de veículo: estudo exploratório}\label{ssec:incendio-veiculo}
+
+Num estacionamento aberto, o cenário de incêndio realista não é o incêndio
+generalizado, e sim o de um veículo junto a um pilar, que pode propagar-se aos
+veículos vizinhos. A isenção da \autoref{ssec:trrf} não o dispensa como questão
+de robustez. Esta subseção é um estudo exploratório desse cenário, e não uma
+verificação regulamentar: as hipóteses são simplificadas, e os resultados indicam
+ordens de grandeza e pontos fracos, não demonstram desempenho.
+
+As hipóteses são as seguintes.
+
+\begin{alineas}
+    \item Fonte: um automóvel representado pela curva de taxa de liberação de calor
+          do programa europeu de ensaios em estacionamentos \cite{Joyeux:2002},
+          com pico de 8,3 MW e fase intensa de cerca de 30 minutos. Há na literatura
+          valores de pico maiores propostos para o projeto, e o de 8,3 MW não é um
+          limite superior.
+    \item Propagação: aos dois veículos vizinhos, com 12 minutos de atraso entre
+          um e o seguinte, como no mesmo programa; três veículos em sequência
+          somam 30 + 12 + 12 = 54 minutos de exposição.
+    \item Chama e pluma: modelo de incêndio localizado do anexo C da EN 1991-1-2
+          \cite{EN1991-1-2:2002}, válido para diâmetro até 10 m e taxa de liberação
+          de calor até 50 MW.
+    \item Exposição das peças atingidas pela chama: tomada como a do
+          incêndio-padrão. É uma substituição, não uma equivalência demonstrada:
+          junto a uma chama localizada, o fluxo de calor pode superar, nos primeiros
+          minutos, o do incêndio-padrão, e ser menor depois.
+\end{alineas}
+
+A área em chamas de 8,1 m\textsuperscript{2}, com diâmetro equivalente de
+3,21 m, dá chama de 5,39 m. A distância da base das chamas à face inferior da viga
+é de 6,50 m, de modo que a chama não alcança a cobertura, e a temperatura do gás
+no eixo da pluma, nesse nível, é de 390~$^{\circ}$C. Isso não exclui o
+aquecimento da viga e da terça diretamente acima do veículo, por convecção da
+pluma e por radiação da chama, e a temperatura do gás não é a da superfície da
+peça. Pode haver carbonização superficial, cuja profundidade este estudo não
+quantifica; a seção de 0,32 m de largura e a borda inferior da viga, de 1,00 m de
+altura no apoio, tornam improvável perda de capacidade relevante, mas não se
+afirma que ela seja nula.
+
+O pilar adjacente à vaga é atingido diretamente pela chama. Na falta de um
+modelo de transferência de calor para a madeira sob chama localizada, tomou-se a
+exposição das faces atingidas como a do incêndio-padrão. Procurou-se então o tempo
+até o colapso pelo método da seção reduzida, com a mesma força normal da
+\autoref{ssec:trrf}. Esse tempo foi comparado aos 54 minutos da exposição a três veículos em
+sequência. Mesmo com as
+quatro faces expostas, o pilar central só colapsa aos 83 minutos, e o pilar de
+perímetro aos 100 minutos. A lâmina do pilar bipartido, com 160 mm de espessura,
+é a peça de madeira mais vulnerável: com metade das reações de duas vigas, colapsa
+aos 61 minutos, e a taxa de robustez é de 0,89. A madeira, que carboniza a uma taxa
+conhecida e conserva o núcleo frio, ainda tem margem.
+
+O ponto fraco é o aço da base. O pilarete, um tubo de 139,7 por 8 mm, fica na
+altura das chamas e tem fator de massividade de 125 m$^{-1}$, o inverso da
+espessura (tabela 4.2 da EN 1993-1-2 \cite{EN1993-1-2:2005}). Sem proteção, pelo
+método incremental do item 4.2.5.1 dessa norma sob a curva-padrão, ele chega a
+798~$^{\circ}$C com um veículo e a 923~$^{\circ}$C com três. Por ser peça comprimida, a
+resistência foi calculada com flambagem pelo item 4.2.3.2, com o comprimento de
+flambagem do balanço engastado na chapa de base, e não pela temperatura crítica
+da equação 4.22, que o item 4.2.4 restringe aos casos sem instabilidade. Com a
+força normal da combinação de incêndio, a temperatura crítica do pilarete
+central é de 835~$^{\circ}$C. Ele resiste a um veículo, com taxa de 0,84, mas não à
+propagação, com taxa de 1,66. O pilar de perímetro, com metade da força normal,
+resiste aos dois cenários, com taxa de 0,83 no mais severo. O pilarete de cada
+lâmina, um tubo de 114,3 por 8 mm, recebe a força de uma lâmina e, sem proteção,
+também não resiste à propagação, com taxa de 1,05.
+
+Adota-se, por isso, pintura intumescente em todos os pilaretes. Ela é aplicada
+sobre a galvanização, com fundo compatível com o zinco, e substitui a pintura de
+acabamento do sistema dúplex (\autoref{sec:protecao-corrosao}). O sistema deve
+ser para uso exterior, com selador de acabamento, e é dimensionado pelo fabricante
+a partir da avaliação do produto segundo a EN 13381-8 \cite{EN13381-8:2013}, para
+60 minutos, fator de massividade de 125 m$^{-1}$ e temperatura crítica de projeto
+de 750~$^{\circ}$C. Esse valor, inferior aos 835~$^{\circ}$C calculados, deixa margem e
+fica na faixa usual dos ensaios. O item 5.5.1 da NPT 008 recomenda, para os aços
+convencionais, temperatura crítica de no máximo 550~$^{\circ}$C, ou a calculada
+para cada elemento estrutural; adota-se a segunda opção, com o cálculo da
+EN 1993-1-2 \cite{EN1993-1-2:2005}. Com o aço limitado a 750~$^{\circ}$C, a taxa do
+pilarete central é de 0,56, e a do pilarete da lâmina, de 0,36. As chapas de base e de topo, mais espessas e em contato
+com o concreto e com a madeira, aquecem mais devagar. O pé do pilar recebe a força
+normal por contato, e as cavilhas, carregadas só pelo arrancamento do vento, ficam
+descarregadas na combinação de incêndio.
+
+As ligações e os contraventamentos completam o quadro. Na combinação de incêndio,
+com $\psi_2 = 0$ para o vento (EN 1990, tabela A1.1), os contraventamentos
+recebem apenas as forças de imperfeição, e a perda de uma diagonal na zona da
+chama reduz a rigidez de um dos painéis da linha, sem retirar o caminho de carga;
+essa redução não foi quantificada. As chapas embutidas das ligações viga--pilar e
+das escoras ficam dentro da madeira, que as protege enquanto houver seção
+residual sobre elas; os tampões das extremidades dos pinos, de 15 mm, são a
+proteção mais delgada. As peças de aço da cobertura, como os olhais e as chapas
+do nó de topo, ficam no nível da pluma, a 390~$^{\circ}$C no gás, temperatura até
+a qual a resistência do aço não se reduz (EN 1993-1-2, tabela 3.1); a sua
+temperatura efetiva, sob a radiação da chama, não foi calculada.
+
+O estudo, portanto, não demonstra a sobrevivência do conjunto ao incêndio de
+veículo. Ele identifica o pilarete como o elemento crítico e justifica a sua
+proteção; indica margem nas peças de madeira sob as hipóteses adotadas; e deixa
+como questões abertas o aquecimento das ligações e dos contraventamentos e a
+validade da exposição pelo incêndio-padrão, que uma análise de transferência de
+calor sob incêndio localizado poderia responder.
+
 
 \section{ESTADOS-LIMITES DE SERVIÇO}\label{sec:verif-els}
 
@@ -353,17 +592,19 @@ A verificação de deformação considera a fluência por meio de $k_{def} = 2{,
 correspondente à classe de serviço 3. A \autoref{tab:verif-els} apresenta os
 resultados, obtidos conforme o item 2.3.2.2 e a tabela 7.2 da
 EN 1995-1-1 \cite{EN1995-1-1:2004}, com combinações da
-EN 1990 \cite{EN1990:2002}. Os limites são parâmetros de determinação nacional,
-registrados na \autoref{tab:ndp}.
+EN 1990 \cite{EN1990:2002}. Os limites são escolha de projeto: a tabela 7.2 dá
+intervalos, e não um valor recomendado, e adotou-se a extremidade menos restritiva
+de cada um, $L/300$ e $L/250$, cabível numa cobertura sem forro nem elementos
+frágeis apoiados.
 
 \tabela{Verificações de estado-limite de serviço}{\footnotesize
 \begin{tabular}{lrrcc}
 \toprule
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Limite} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    Flecha final líquida        & 15,39 mm & 81,0 mm ($L/250$) & 0,19 & Atende \\
-    Flecha instantânea          &  6,56 mm & 67,5 mm ($L/300$) & 0,10 & Atende \\
-    Abertura entre apoios       &  2,56 mm & 40,5 mm ($L/500$) & 0,07 & Atende \\
+    Flecha final líquida        & 15,18 mm & 81,0 mm ($L/250$) & 0,19 & Atende \\
+    Flecha instantânea          &  6,48 mm & 67,5 mm ($L/300$) & 0,10 & Atende \\
+    Abertura entre apoios       &  2,52 mm & 40,5 mm ($L/500$) & 0,07 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{verif-els}{}{}
 
@@ -375,24 +616,28 @@ permanente da flecha, e decorre da altura generosa da seção na região central
 vão.
 
 A segunda diz respeito à composição da flecha. A parcela devida ao cisalhamento
-responde por 21,2\% do total, valor que a prática corrente frequentemente
+responde por 21,5\% do total, valor que a prática corrente frequentemente
 despreza. Em peças de madeira, cuja razão entre módulo de elasticidade e módulo
-de cisalhamento é da ordem de dezessete, essa parcela não é desprezável, e o
+de cisalhamento é da ordem de 17, essa parcela não é desprezável, e o
 cálculo a incorpora explicitamente.
 
 A terceira é que a combinação característica governante é a de sobrecarga, e não
 a de vento, em coerência com o observado para o estado-limite último na
 \autoref{sec:esforcos}. A sucção produz, isoladamente, flecha ascendente de
-7,39 mm, superior em módulo à flecha descendente de 4,42 mm devida às ações
+7,35 mm, superior em módulo à flecha descendente de 4,35 mm devida às ações
 permanentes. O que decide, porém, é a flecha da combinação: descontada a parcela
-permanente, a sucção deixa 2,98 mm de flecha ascendente líquida, contra os
-6,56 mm descendentes da combinação com sobrecarga. É esta última que governa.
+permanente, a sucção deixa 3,00 mm de flecha ascendente líquida, frente aos
+6,48 mm descendentes da combinação com sobrecarga. É esta última que governa.
 
 \section{SÍNTESE}\label{sec:sintese-dimensionamento}
 
 Todas as verificações executadas são atendidas. A taxa de utilização máxima do
-conjunto é de 0,85, correspondente ao contraventamento transversal, e o
-veredito global do dimensionamento é de aprovação.
+conjunto é de \etaMaxGlobal, no engajamento dos pinos das ligações L1 e L1c
+(\autoref{ssec:engajamento-pinos}), critério geométrico que limita o grupo a duas
+fileiras; entre as verificações de resistência, a maior é de 0,91, na compressão
+com instabilidade da lâmina do pilar central montante; entre as peças de aço, a taxa-alvo de 0,90 é alcançada nas soldas
+de filete e na retração impedida das chapas. Todas as verificações executadas
+atendem aos critérios adotados, sob as hipóteses de modelo declaradas.
 
 A \autoref{fig:modelo-eta} ilustra a distribuição da taxa de utilização em
 flexão ao longo das vigas principais, obtida da tensão normal do modelo de
@@ -411,11 +656,15 @@ governam o dimensionamento.
 {}
 
 A distribuição das taxas revela um dimensionamento governado pelos sistemas de
-estabilização, e não pelos elementos. As cinco verificações mais solicitadas são
-os três contraventamentos e as ligações de extremidade das suas diagonais, todas
-entre 0,80 e 0,85, seguidas da fixação da telha, com 0,68. A verificação mais
-solicitada da viga principal, o cisalhamento, fica em 0,39, e a menos
-solicitada, a flambagem lateral, em 0,11.
+estabilização e pelas peças de aço das ligações, e não pelos elementos de
+madeira. Além do engajamento dos pinos, com 0,95, e da lâmina do pilar central
+montante, com 0,91, as verificações mais solicitadas, entre 0,80 e 0,90, são as
+componentes de aço dimensionadas até a taxa-alvo de 0,90, isto é, as soldas, o
+pilarete das bases ancoradas e de frontão e a acomodação da retração nas chapas
+embutidas, e os contraventamentos vertical e da cobertura, com 0,84 e 0,80. A
+verificação
+mais solicitada da viga principal é o apoio sobre a sela central, com 0,58; o
+cisalhamento fica em 0,41, e a menos solicitada, a flambagem lateral, em 0,10.
 
 Em uma edificação aberta, de
 cobertura leve e grande área exposta, a ação do vento paralelo à cumeeira e a

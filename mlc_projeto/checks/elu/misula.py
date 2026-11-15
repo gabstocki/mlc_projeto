@@ -105,6 +105,7 @@ def verifica_misula(
             L=geo.L, h0=geo.h0, h_ap=geo.h_ap, alpha_rad=alpha_rad, b=b,
             q_esq=comb.q_esq, q_dir=comb.q_dir,
             desenvolve_empuxo=load.empuxo_desenvolve,
+            a_bal=geo.a_bal,
         )
         M_x = np.interp(x, r["x"], r["M_x"]) * 1e3       # N·m (sagging > 0)
 

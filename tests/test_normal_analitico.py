@@ -34,7 +34,8 @@ def test_N_igual_S_sen_theta_ao_longo_do_vao():
     assert np.allclose(np.abs(d["N"]), np.abs(d["S"]) * math.sin(theta), atol=1e-6)
     # no apoio: N = R·sen θ ≈ 8,75 kN (S por diferença finita na extremidade:
     # tolerância de 0,05 kN); na cumeeira: ≈ 0
-    R = load.combinacao_ELU_governante().V_max_kN
+    # cortante do lado do vão junto ao apoio (com beiral difere da reação; issue 82)
+    R = d["R_A_vao_kN"]
     assert abs(d["N_max_kN"]) == pytest.approx(R * math.sin(theta), abs=0.05)
     assert load.N_max_ELU() == pytest.approx(R * math.sin(theta), abs=0.01)
     i_cum = int(np.argmin(np.abs(d["x"] - geo.L / 2)))

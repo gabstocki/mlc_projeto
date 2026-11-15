@@ -9,9 +9,9 @@ O memorial apresentado do \autoref{cap:predimensionamento} ao
 desenvolvido para este trabalho. Este apêndice descreve a sua arquitetura, o
 fluxo de execução, o ambiente de reprodução e a forma de acesso ao código.
 
-Optou-se por não reproduzir aqui a listagem integral. O pacote reúne 27.096
-linhas distribuídas por sessenta arquivos, volume que ocuparia cerca de
-cinco vezes a extensão do texto e cuja leitura sequencial em papel não é praticável. O
+Optou-se por não reproduzir aqui a listagem integral. O pacote reúne \nLinhasCodigo{}
+linhas distribuídas por \nArquivosCodigo{} arquivos, volume que ocuparia
+várias vezes a extensão do texto e cuja leitura sequencial em papel não é praticável. O
 código está publicamente disponível, conforme a
 \autoref{sec:ap-disponibilidade}, em forma navegável e com o histórico completo
 de alterações.
@@ -22,41 +22,20 @@ O programa está organizado em pacotes de responsabilidade única. Os dados de
 entrada e as grandezas derivadas concentram-se em um pacote; cada família de
 verificações ocupa o seu; e a geração de saídas é isolada do cálculo. Nenhum
 módulo de verificação escreve arquivos, e nenhum módulo de saída executa
-cálculo. A \autoref{tab:ap-modulos} descreve a divisão. A contagem de linhas
+cálculo. A \autoref{tab:ap-modulos} descreve a divisão; ela é gerada na
+execução, pela contagem dos próprios arquivos, e a suíte de testes aparece em
+linha separada, fora do total do programa. A contagem de linhas
 inclui comentários e documentação embutida, que representam parcela expressiva
 do total, por registrarem a proveniência normativa de cada valor.
 
-\tabela
-{Pacotes do programa e respectivas responsabilidades}
-{\footnotesize
-\begin{tabular}{lcrp{5.6cm}}
-\toprule
-    \textbf{Pacote} & \textbf{Arq.} & \textbf{Linhas} & \textbf{Responsabilidade} \\
-\midrule
-    \texttt{core}          &  7 &  3.381 & Geometria paramétrica, material, ações, vento, proveniência normativa e validação de domínio \\
-    \texttt{predim}        &  3 &    705 & Varredura paramétrica do espaço de geometrias \\
-    \texttt{checks/elu}    & 25 &  9.935 & Verificações de estado-limite último de elementos e sistemas \\
-    \texttt{checks/els}    &  3 &    846 & Verificações de estado-limite de serviço, com fluência \\
-    \texttt{connections}   &  8 &  4.194 & Ligações, chapas metálicas, bases e ancoragem \\
-    \texttt{output}        &  9 &  4.674 & Memorial, planilha, figuras, desenhos, apêndices gerados e cargas de fundação \\
-    \texttt{opensees}      &  3 &    725 & Validação por elementos finitos \\
-    \texttt{visualization} &  1 &    517 & Visualização tridimensional do modelo \\
-    \texttt{main.py}       &  1 &  2.119 & Orquestração do \textit{pipeline} e dados de projeto \\
-\midrule
-    \textbf{Total}         & \textbf{60} & \textbf{27.096} & \\
-\bottomrule
-\end{tabular}}
-{Elaborado pelo autor (2026)}
-{ap-modulos}
-{}
-{}
+\input{tab_ap_modulos}
 
 Três módulos do pacote \texttt{core} merecem menção, por sustentarem decisões
 discutidas no corpo do trabalho. O módulo de geometria calcula altura, área,
 inércia e módulo resistente em qualquer posição do vão, de modo que uma
 alteração de seção se propague a todo o carregamento e a todas as verificações.
 O módulo de proveniência normativa registra, para cada parâmetro, a cláusula de
-origem e a natureza, e é dele que decorre a declaração dos dezenove parâmetros
+origem e a natureza, e é dele que decorre a declaração dos \nNDPExt{} parâmetros
 de determinação nacional da \autoref{tab:ndp}. O módulo de validação impõe
 pré-condições de domínio anteriores a qualquer verificação, impedindo que uma
 geometria sem sentido físico produza taxa de utilização e veredito de aprovação.
@@ -92,8 +71,56 @@ de apoio horizontal, cujo resultado consta da \autoref{tab:rigidez-apoio}.
 A varredura global apresentada na \autoref{sec:varredura-global} não constitui
 fase do \textit{pipeline}, e sim um invólucro que o executa repetidamente. Para cada
 ponto da grade, substitui a geometria e chama a mesma rotina que produz o
-memorial, o que assegura a equivalência entre a avaliação das candidatas e a
-verificação da solução adotada.
+memorial, o que dá equivalência de execução e de resultados entre a avaliação
+das candidatas e a verificação da solução adotada; não se trata de validação
+física, que é a da \autoref{sec:ap-verificacao}.
+
+\section{VERIFICAÇÃO DO PROGRAMA}\label{sec:ap-verificacao}
+
+O mesmo programa calcula, tabela e escreve as equações do memorial. Um erro de
+modelagem ou de implementação se propagaria, por isso, de forma coerente a todas
+as saídas, sem contradição interna que o denunciasse: é o risco de modo comum.
+Testes que apenas fixam o resultado atual do próprio programa protegem contra
+alterações involuntárias, mas não contra esse risco. A resposta a ele são
+verificações cujo valor esperado vem de fora do programa.
+
+A suíte reúne \nTestes{} testes automatizados, de duas classes. Os
+\nTestesUnitarios{} testes unitários exercitam funções isoladas com dados
+fixos; muitos comparam o resultado com o valor calculado à mão no próprio teste. Os
+\nTestesIntegracao{} testes de integração executam o programa completo e
+conferem relações entre as saídas: que cada dimensão de cálculo seja a mesma da
+cota de desenho e da lista de peças, que cada equação do Apêndice B reproduza,
+com os números impressos, o resultado impresso, e que as verificações respeitem
+os critérios declarados.
+
+A esses somam-se \nCasosReferencia{} casos de referência independentes,
+reunidos na \autoref{tab:referencias}. Em cada um, o valor esperado é obtido por
+caminho alheio ao programa: solução analítica fechada da resistência dos
+materiais; fórmula normativa recalculada à mão, com números fixos, sem chamar a
+função do programa; equilíbrio global; refino da discretização; ou modelo de
+elementos finitos independente. A tabela é gerada na execução, e a execução é
+interrompida se algum caso sair da tolerância.
+
+\input{tab_referencias}
+
+O equilíbrio é conferido em todas as combinações de estado-limite último: a soma
+das reações reproduz a soma das cargas aplicadas à viga e ao balanço do beiral. A
+convergência da integração ao longo do vão é conferida pelo refino de 401 para
+3.201 pontos, que altera o momento máximo em menos de $10^{-5}$.
+
+Dois modelos de elementos finitos, construídos no OpenSeesPy de forma
+independente do integrador, conferem hipóteses do cálculo. O da viga representa
+meia viga, por simetria, com 40 elementos \textit{elasticBeamColumn} ao longo do
+eixo baricêntrico inclinado, cada um com a área e a inércia da seção no seu ponto
+médio, rótula no apoio e engaste de simetria na cumeeira, e carga uniforme por
+elemento; reproduz o momento do integrador com diferença de 0,03\%
+(\autoref{tab:referencias}). O do diafragma da cobertura, em planta, tem nós nos
+cruzamentos de terças e vigas, todas as barras rotuladas, cruzes só à tração e os
+painéis dos frontões e verticais como molas; ele demonstra que sem as cruzes a
+grelha é um mecanismo e fornece a rigidez transversal do conjunto
+(\autoref{sec:ordem-analise}). Nenhum dos dois substitui uma verificação por
+programa comercial de terceiros, que permanece recomendada antes da execução da
+obra.
 
 \section{ESTILO DO CÓDIGO}\label{sec:ap-estilo}
 
@@ -127,18 +154,25 @@ def I(self, x: float | NDArray) -> float | NDArray:
 \end{lstlisting}
 
 
-\section{DISPONIBILIDADE}\label{sec:ap-disponibilidade}
+\section{DISPONIBILIDADE E REPRODUÇÃO}\label{sec:ap-disponibilidade}
 
 O código-fonte, a suíte de testes e os arquivos de saída deste trabalho,
 incluindo o resultado integral da varredura paramétrica da
-\autoref{sec:varredura-global}, estão disponíveis no repositório indicado a
-seguir.
+\autoref{sec:varredura-global}, estão no repositório indicado a seguir.
 
 \vspace{\onelineskip}
 \noindent
-\url{https://github.com/gabstocki/VALIDAR}
+\url{https://github.com/gabstocki/mlc_projeto}
 \vspace{\onelineskip}
 
-%% TODO: verificar — confirmar que o repositório está com visibilidade pública
-%% antes da entrega, e considerar a atribuição de um identificador persistente
-%% à versão correspondente a esta monografia.
+A versão que produziu esta monografia é identificada pelo programa na própria
+execução, e o registro abaixo é gerado junto com o memorial: \textit{commit}
+\texttt{\versaoCommit}, de \versaoData, etiqueta \versaoTag, \versaoEstado.
+Os dados de entrada são as constantes de projeto do módulo \texttt{main.py} e os
+valores declarados da \autoref{tab:valores-declarados}. A reprodução
+requer Python 3.12 e as dependências declaradas no arquivo
+\texttt{pyproject.toml}, com os limites de versão nele registrados, e consiste
+em três comandos, executados na raiz do repositório: a instalação do pacote, com
+\texttt{pip install -e .[dev]}; a suíte de testes, com \texttt{pytest}; e o
+\textit{pipeline}, com \texttt{python -m mlc\_projeto.main --sem-viz}, que
+regenera o memorial, as tabelas, as figuras e os desenhos desta monografia.

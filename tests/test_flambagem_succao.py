@@ -32,12 +32,19 @@ def projeto():
 
 
 def test_momento_biapoiada_confere_com_a_analise(projeto):
+    """A fórmula de carga uniforme confere com o integrador quando o peso próprio
+    variável da viga (issue 114) é desligado."""
     geo, _, load = projeto
-    for c in load.combinacoes_ELU_fisicas().values():
-        ms = [momento_biapoiada(geo.L * i / 2000, geo.L, c.q_esq, c.q_dir)
-              for i in range(2001)]
-        alvo = min(ms) if c.M_max_kNm < 0 else max(ms)
-        assert alvo == pytest.approx(c.M_max_kNm, abs=0.05)
+    load.peso_viga_variavel = False
+    try:
+        for c in load.combinacoes_ELU_fisicas().values():
+            r = load._analisar(q_esq=c.q_esq, q_dir=c.q_dir, fG=c.fator_G)
+            ms = [momento_biapoiada(geo.L * i / 2000, geo.L, c.q_esq, c.q_dir, geo.a_bal)
+                  for i in range(2001)]
+            alvo = min(ms) if r["M_max_kNm"] < 0 else max(ms)
+            assert alvo == pytest.approx(r["M_max_kNm"], abs=0.05)
+    finally:
+        load.peso_viga_variavel = True
 
 
 def test_succao_comprime_o_intradorso_e_passa(projeto):

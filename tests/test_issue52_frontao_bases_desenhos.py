@@ -125,13 +125,18 @@ def test_gera_todas_as_folhas_na_largura_da_pagina(pipeline, tmp_path):
         h_bloco_mm=M.H_BLOCO_FUND_MM, chaveta_L_mm=M.CHAVETA_L_MM,
         chaveta_H_mm=M.CHAVETA_H_MM, classe_concreto=M.CLASSE_CONC_FUND,
         l_sela_viga_m=M.L_SELA_POR_VIGA, folga_sela_m=M.FOLGA_SELA_M,
-        t_chapa_topo_mm=M.T_CHAPA_TOPO_MM, folga_oblongo_L1_mm=M.FOLGA_OBLONGO_L1_MM)
+        t_chapa_topo_mm=M.T_CHAPA_TOPO_MM, folga_oblongo_L1_mm=(pipeline["res"]["oblongo_L1"]["c_cima_mm"],
+                             pipeline["res"]["oblongo_L1"]["c_baixo_mm"]),
+        a_oit=M.A_BAL_TERCA_M, a_beiral_mm=M.A_BEIRAL_M * 1000,
+        ancoragem_mont={"h_ef_mm": M.H_EF_CHU_MONT_MM, "c_borda_mm": M.C_BORDA_CHU_MONT_MM,
+                        "h_bloco_mm": M.H_BLOCO_FUND_MONT_MM,
+                        "chaveta_L_mm": M.CHAVETA_L_MONT_MM})
     # L1f: aço entre furos oblongos e curso maior que a flecha no ponto
     t = arr.det["L1f"]
     assert t["a2_mm"] >= 2 * t["curso_mm"] + 2.2 * t["d_mm"]
     assert t["curso_mm"] > t["w_viga_mm"]
     paths = gerar_desenhos(arr, tmp_path)
-    assert len(paths) == len(FOLHAS) == 9        # + DES-09 terça–viga (issue 43)
+    assert len(paths) == len(FOLHAS) == 16       # DES-00 a DES-11, com 05B/C, 07B e 09B
     for p in paths:
         cab = p.read_bytes()[:4096].decode("latin-1")
         assert cab.startswith("%PDF")

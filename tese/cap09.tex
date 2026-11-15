@@ -11,44 +11,75 @@ desenvolvimentos futuros.
 \section{QUANTO AOS OBJETIVOS}\label{sec:quanto-objetivos}
 
 O objetivo enunciado na \autoref{sec:objetivos} foi alcançado. A
-estrutura do galpão em madeira lamelada colada foi dimensionada e verificada
+estrutura da cobertura para estacionamento em madeira lamelada colada foi dimensionada e verificada
 segundo a EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de programa de cálculo
 automatizado, e o memorial resultante consta do
 \autoref{cap:dimensionamento} e do \autoref{cap:detalhamento}. O conjunto de
-sessenta e quatro verificações é atendido, com taxa de utilização máxima de
-0,85.
+\nVerifExt{} verificações implementadas, das quais \nVerifExecExt{} executadas e
+\nVerifNAExt{} não aplicáveis, é atendido, sob as hipóteses adotadas,
+com taxa de utilização máxima de \etaMaxGlobal.
 
-Os objetivos específicos foram cumpridos nos termos seguintes. A geometria da
-viga foi estabelecida por varredura paramétrica de 1.391 candidatas, apresentada
-na \autoref{sec:varredura-global}, e todas as seções atendem às verificações de
-estado-limite último do \autoref{cap:dimensionamento} e às de serviço da
-\autoref{sec:verif-els}. Os sistemas de contraventamento da cobertura, das
-fachadas, do alinhamento central e dos frontões, com o caminho das forças até a
-fundação, constam da \autoref{sec:predim-contraventamento} e da
-\autoref{sec:verif-contraventamento}. As ligações e a ancoragem estão detalhadas no
-\autoref{cap:detalhamento} e nos desenhos do \autoref{ap:desenhos}, e os esforços
-destinados à fundação, na \autoref{sec:cargas-fundacao}. A estimativa de custo
-consta da \autoref{sec:estimativa-custo}. O programa, submetido a suíte de 730
-testes automatizados, é descrito no \autoref{ap:codigo-fonte}.
+Os objetivos específicos foram cumpridos nos termos seguintes.
+
+\begin{alineas}
+    \item Geometria e seções. A geometria da viga foi estabelecida por varredura
+    paramétrica de 3.213 candidatas (\autoref{sec:varredura-global}); a seção das
+    terças, de 0,20 por 0,40 m, por varredura própria
+    (\autoref{sec:predim-tercas}); e os pilares lateral, central, de canto e de
+    frontão, pelas verificações do \autoref{cap:dimensionamento}. Todas as seções
+    atendem aos estados-limite últimos e aos de serviço
+    (\autoref{sec:verif-els}).
+
+    \item Contraventamento. Os sistemas da cobertura, das fachadas, do
+    alinhamento central e dos frontões, com o caminho das forças até a fundação,
+    constam da \autoref{sec:predim-contraventamento} e da
+    \autoref{sec:verif-contraventamento}.
+
+    \item Ligações, ancoragem e esforços para a fundação. As ligações e a
+    ancoragem estão dimensionadas no \autoref{cap:detalhamento} e detalhadas em
+    16 folhas cotadas, a primeira de notas gerais, e em escala no \autoref{ap:desenhos}: a ligação
+    entre viga e pilar com os seus cortes e as chapas em verdadeira grandeza, o
+    topo dos pilares e a sela, as bases com o pilarete e a ancoragem, o topo do
+    pilar de frontão, as juntas das terças com a emenda da corda e o montante, os
+    terminais das diagonais, o pilar bipartido dos montantes, com o nó de topo
+    das baías contraventadas, e a proteção construtiva, com a garganta e o
+    comprimento de cada solda, o aço de cada peça e a proteção contra corrosão.
+    Os esforços
+    característicos e de cálculo destinados à fundação constam da
+    \autoref{sec:cargas-fundacao}.
+
+    \item Custo. A estimativa preliminar consta da
+    \autoref{sec:estimativa-custo}.
+
+    \item Programa. O programa, submetido a suíte de \nTestes{} testes automatizados,
+    reproduz o memorial, os apêndices e os desenhos a partir dos dados de
+    entrada, e é descrito no \autoref{ap:codigo-fonte}.
+\end{alineas}
 
 \section{PRINCIPAIS RESULTADOS}\label{sec:principais-resultados}
 
-Sete resultados merecem destaque, por contrariarem expectativas correntes ou por
-terem determinado decisões de projeto.
+Oito resultados merecem destaque, por contrariarem expectativas correntes ou por
+terem determinado decisões de projeto. Valem para a solução adotada, com os
+critérios de margem e os detalhes escolhidos.
 
 O primeiro é o modelo de apoio horizontal. A verificação da rigidez relativa
-entre a viga, que se opõe ao afastamento com 208.462 kN/m, e o pilar que a
+entre a viga, que se opõe ao afastamento com 208.000 kN/m, e o pilar que a
 apoia, que oferece rigidez nula por ser articulado, demonstrou que o empuxo não
-se desenvolve. A viga trabalha como biapoiada, e o momento de projeto é 71,4\%
+se desenvolve. A viga trabalha como biapoiada, e o momento de projeto é 70,4\%
 superior ao que o modelo de arco indicaria. A consequência favorável é que não
 há esforço horizontal por efeito de arco a transmitir à fundação.
 
-O segundo é que nenhuma verificação da viga governa o dimensionamento. A mais
-solicitada, o cisalhamento, atinge 0,39. O que governa são os
-contraventamentos transversal, vertical e da cobertura, com 0,85, 0,84 e 0,81, cuja solicitação responde à área exposta ao vento e é
-praticamente insensível à seção da viga. Em uma edificação aberta e de cobertura
-leve, a estabilização determina o projeto mais do que a resistência dos
-elementos.
+O segundo é que, na solução adotada, os componentes de estabilização e de aço
+apresentam as maiores utilizações calculadas. Na viga, a verificação mais
+solicitada, o apoio sobre a sela central, atinge 0,58, e o cisalhamento, 0,41;
+as peças de aço das ligações chegam à taxa-alvo de 0,90, os contraventamentos da
+cobertura, vertical e transversal a 0,80, 0,84 e 0,55, este dimensionado pela
+rigidez, e as lâminas dos pilares montantes a 0,91. O contraste resulta em parte
+das políticas adotadas, porque a viga foi escolhida com volume acima do mínimo
+aprovado e o aço é dimensionado até 0,90; na fronteira de menor volume da
+varredura, é a viga que governa. O resultado não se generaliza, portanto, a
+coberturas abertas leves em geral, mas indica que, nelas, os sistemas de
+estabilização merecem a mesma atenção que a viga.
 
 O terceiro é que a combinação governante em momento é a gravitacional, e não a
 de vento. Ainda que a sucção produza carga de módulo comparável, ela atua em
@@ -56,55 +87,72 @@ sentido oposto ao peso próprio e é parcialmente cancelada. A sucção permanec
 determinante para o arrancamento e para a ancoragem.
 
 O quarto é o peso próprio. Calculado por parcelas a partir da geometria,
-resultou em 0,823 kN/m\textsuperscript{2}, cerca de metade do valor que uma
-estimativa global usual atribuiria. Adotar valor único de tabela teria
-sobrecarregado o modelo em aproximadamente oitenta por cento e mascarado a
-leveza própria da solução em madeira.
+resultou em 0,764 kN/m\textsuperscript{2}, com a viga distribuída conforme a sua
+altura, mais pesada no meio do vão, e as terças como linhas de carga sobre os
+apoios e o beiral. Um valor global arbitrado não captaria essas distribuições,
+que alteram o momento no vão e as reações.
 
 O quinto é a força longitudinal de vento. A parcela de atrito sobre a cobertura,
-de 777 kN, equivale a 2,35 vezes o arrasto de bloqueio da silhueta e governa
+de 862 kN, equivale a 2,29 vezes o arrasto de bloqueio da silhueta e governa
 todo o dimensionamento do contraventamento longitudinal, dos pilares de canto e centrais montantes e
 das respectivas ancoragens. A prescrição é envolvente por construção, e a ordem
 de grandeza é característica dela.
 
 O sexto é o caminho da reação de apoio. Transmitida por pinos, a reação de
-gravidade atuaria quase perpendicularmente às fibras, e o fendilhamento chegaria
-a 0,97, acima do limite de projeto de 0,75 para modos frágeis, exigindo reforço
-com parafusos autoperfurantes. Apoiando a viga por contato direto sobre o pilar,
-e no pilar central sobre uma sela metálica, a gravidade deixa de passar pelos
-pinos, que ficam apenas para o arrancamento de sucção. O fendilhamento cai para
-0,339 sem reforço. Foi o ponto em que a concepção do detalhe, e não o
+gravidade empurraria a viga para cima, junto à borda superior, e a resistência
+ao fendilhamento seria cerca de um terço da reação, exigindo reforço. Apoiando a
+viga por contato direto sobre o pilar, e no pilar central sobre uma sela
+metálica, a gravidade não passa pelos pinos, que ficam apenas para o
+arrancamento de sucção, com a borda inferior carregada; o fendilhamento fica em
+0,67, sem reforço. Foi o ponto em que a concepção do detalhe, e não o
 dimensionamento, mais alterou o resultado.
 
 O sétimo é a parcela de cisalhamento na flecha, de 21,2\% do total. Em peças de
 madeira, cuja razão entre os módulos de elasticidade e de cisalhamento é da
-ordem de dezessete, essa parcela não é desprezável, e desprezá-la subestimaria a
+ordem de 17, essa parcela não é desprezável, e desprezá-la subestimaria a
 deformação em mais de um quinto.
+
+O oitavo é o caminho da força transversal. Com vigas, terças e pilares
+rotulados, a grelha da cobertura é um mecanismo no seu plano, e a força
+transversal dos pórticos intermediários só chega aos frontões por um diafragma
+com alma, que exigiu cruzes em todas as baías. O modelo em planta mostrou também
+que a flexibilidade desse diafragma reduz à metade a rigidez transversal do
+conjunto, e as diagonais dos frontões foram dimensionadas pela rigidez, e não
+pela resistência. Do mesmo modo, a ligação entre viga e pilar só pôde ser
+considerada com todos os pinos em carga depois de limitado o grupo a duas
+fileiras, porque, empilhados, os pinos encostariam em sequência com a variação
+de umidade; e a subida do apoio sob a sucção, de até 19 mm, passou a condicionar
+os cursos das peças que ligam a viga a pontos fixos. São três casos em que o
+detalhe, mais que a resistência, decidiu o projeto.
 
 \section{CONTRIBUIÇÕES}\label{sec:contribuicoes}
 
 A contribuição principal do trabalho não está em nenhum dos resultados
 numéricos, e sim no procedimento que os produziu.
 
-A automação da cadeia de verificação permitiu submeter 1.391 geometrias ao mesmo
-conjunto de cinquenta e cinco verificações que produz o memorial final. Essa equivalência
-foi verificada: o mecanismo de varredura reproduz, sobre a geometria adotada, as
+A automação da cadeia de verificação permitiu submeter 3.213 geometrias ao mesmo
+conjunto de \nVerifExt{} verificações que produz o memorial final. Essa equivalência
+de execução e de resultados foi conferida: o mecanismo de varredura reproduz, sobre a geometria adotada, as
 taxas do memorial sem divergência na quarta casa decimal. Não se trata de
 avaliar candidatas por modelo simplificado e depois verificar a escolhida pelo
 modelo completo, prática que introduz descontinuidade entre a fase de concepção
 e a de verificação.
 
-A consequência prática é que o projeto sabe onde está no espaço de soluções. A
+A consequência prática é que se conhece a posição da solução adotada na grade
+examinada, com os detalhes nela mantidos fixos. A
 \autoref{tab:fronteira-volume} mostra que existem geometrias aprovadas com
-metade do volume de madeira da adotada, e a
-\autoref{ssec:o-que-governa} explica por que a seção mais robusta foi mantida.
+cerca de 60~\% do volume de madeira da adotada, e a
+\autoref{sec:geometria-adotada} explica por que a seção mais robusta foi mantida.
 Sem a varredura, a margem existiria do mesmo modo, porém sem que se soubesse da
 sua existência nem da sua dimensão.
 
-A suíte de 736 testes automatizados constitui contribuição de mesma natureza.
-Ela impede que uma alteração em qualquer módulo altere silenciosamente
-resultados de outro, risco real em uma cadeia de verificações mutuamente
-dependentes.
+A suíte de \nTestes{} testes automatizados constitui contribuição de mesma natureza.
+Ela reduz o risco de que uma alteração em um módulo altere, sem ser percebida,
+resultados de outro, nos comportamentos que os testes cobrem. Como o mesmo
+programa calcula, tabela e escreve as equações, a suíte inclui casos de
+referência cujo valor esperado vem de fora do programa, e testes que conferem a
+aritmética do memorial e a equivalência entre o cálculo e os desenhos
+(\autoref{sec:ap-verificacao}).
 
 \section{LIMITAÇÕES}\label{sec:limitacoes}
 
@@ -113,11 +161,11 @@ resultados e que se declaram a seguir.
 
 \subsection{Dependência de anexo nacional}\label{ssec:lim-ndp}
 
-Dezenove parâmetros de determinação nacional adotam o valor recomendado pelo
+Os \nNDP{} parâmetros de determinação nacional adotam o valor recomendado pelo
 respectivo Eurocódigo, por inexistir anexo nacional brasileiro, conforme
 registrado na \autoref{tab:ndp}. Entre eles figuram os coeficientes parciais dos
-materiais e os limites de deformação, que incidem diretamente sobre as taxas de
-utilização. Submetida sob um anexo nacional concreto, a estrutura deve ser
+materiais e os coeficientes de combinação, que incidem diretamente sobre as taxas de
+utilização. Submetida a um anexo nacional concreto, a estrutura deve ser
 reverificada.
 
 \subsection{Ancoragem sem validação por ensaio}\label{ssec:lim-ancoragem}
@@ -130,12 +178,27 @@ de avaliação técnica do produto efetivamente especificado. A ancoragem entre
 chumbador e concreto só se considera validada mediante dados certificados do
 fabricante.
 
+\subsection{Verificação independente e hipóteses de modelo}\label{ssec:lim-modelo}
+
+O programa foi conferido por casos de referência independentes e por dois
+modelos de elementos finitos próprios, mas não por programa comercial de
+terceiros, verificação que permanece recomendada antes da execução. Algumas
+conclusões dependem de hipóteses de modelo declaradas, e não de prescrição
+normativa: o limite de espalhamento do engajamento dos pinos, a rigidez dos pinos
+sem redução perpendicular às fibras, os cursos dos detalhes deslizantes como
+limite de deslocamento e a representação do incêndio de veículo pelo
+incêndio-padrão.
+
 \subsection{Escopo não coberto}\label{ssec:lim-escopo}
 
 A fundação não é dimensionada, por inexistir sondagem; entregam-se os esforços
-por base, conforme a \autoref{tab:cargas-fundacao}. A resistência ao fogo é
-verificada, porém o tempo requerido é declaração de projeto e não prescrição do
-Eurocódigo, conforme a \autoref{sec:delimitacao}. Não integram o escopo o projeto
+por base, conforme a \autoref{tab:cargas-fundacao}. A estrutura é isenta
+de tempo requerido de resistência ao fogo pela NPT 008 do Corpo de Bombeiros do
+Paraná, na versão de 2026, conforme a \autoref{ssec:trrf}; a verificação a 30
+minutos é informativa, e o enquadramento depende de confirmação da interpretação
+junto ao Corpo de Bombeiros. O incêndio de veículo foi tratado
+como estudo exploratório, que justifica a proteção dos pilaretes, mas não
+demonstra a sobrevivência das ligações e dos contraventamentos. Não integram o escopo o projeto
 de instalações, o detalhamento de vedações e o plano de montagem.
 
 \section{RECOMENDAÇÕES PARA TRABALHOS FUTUROS}\label{sec:recomendacoes}
@@ -151,8 +214,9 @@ normativa.
 
 A segunda é a otimização conjunta da viga e dos sistemas de estabilização. A
 varredura conduzida tratou a seção da viga como variável e os sistemas de
-contraventamento como fixos. Como se demonstrou que estes últimos é que governam
-o projeto, o ótimo do conjunto não coincide necessariamente com o obtido, e uma
+contraventamento como fixos. Como estes últimos apresentam as maiores
+utilizações na solução adotada, a solução de menor volume do conjunto não
+coincide necessariamente com a obtida, e uma
 varredura que inclua o número de painéis e os diâmetros das diagonais como
 variáveis produziria resposta mais bem fundamentada.
 

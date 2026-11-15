@@ -10,7 +10,10 @@ gerando esforços com sinais/posições distintos dos de serviço:
     contraventamento (terças ainda não montadas). Costuma GOVERNAR.
 
 Esquema adotado (confirmado com o projetista):
-  · 2 pontos simétricos a a = 0,207·L (posição que equilibra |M⁻| e |M⁺|);
+  · 2 pontos simétricos a a·L, com a posição que IGUALA |M⁻| e |M⁺| calculada
+    para a viga de seção variável (issue 100). O valor clássico a = 0,207·L só
+    iguala os momentos de uma peça prismática; aqui o peso concentra-se no meio
+    (h_ap > h0) e o ponto ótimo fica mais para dentro;
   · lingas INCLINADAS direto ao gancho (introduzem compressão axial N_c);
   · viga NÃO contraventada → l_ef,LTB = vão entre pontos (L − 2a).
 
@@ -45,7 +48,7 @@ G_GRAV = 9.81   # m/s²
 def verificar_icamento(
     geo:           GeometriaViga,
     mat:           GlulamMaterial,
-    a_rel:         float = 0.207,
+    a_rel:         float | None = None,
     gamma_G:       float = 1.35,
     phi_dyn:       float = 1.10,
     psi_sling_deg: float = 30.0,
@@ -58,7 +61,8 @@ def verificar_icamento(
     Args:
         geo   : Geometria da viga (seção variável A(x), h(x))
         mat   : Material GL — usado na duração INSTANTÂNEA internamente
-        a_rel : posição dos pontos de içamento (fração de L a partir de cada ponta)
+        a_rel : posição dos pontos de içamento (fração de L a partir de cada ponta);
+                None = a que iguala |M⁻| e |M⁺| na viga de seção variável
         gamma_G : coef. do peso próprio (desfavorável)
         phi_dyn : amplificação dinâmica do içamento (EN 1991-1-6)
         psi_sling_deg : ângulo da linga com a VERTICAL (compressão axial se >0)
@@ -89,15 +93,30 @@ def verificar_icamento(
     w_d = gamma_G * phi_dyn * w                     # kN/m (cálculo)
 
     # ── Estática do içamento em 2 pontos (a·L e (1−a)·L) ──────
-    x1 = a_rel * L
-    x2 = (1.0 - a_rel) * L
     W_tot = float(trapezoid(w_d, x))             # kN
     R = W_tot / 2.0                                 # reação por ponto (kN)
-
-    # Cortante e momento por integração (extremos livres → M(0)=M(L)=0)
     carga_acum = cumulative_trapezoid(w_d, x, initial=0.0)   # ∫w dx
-    V = R * (x >= x1).astype(float) + R * (x >= x2).astype(float) - carga_acum
-    M = cumulative_trapezoid(V, x, initial=0.0)     # kN·m
+
+    def _esforcos(a):
+        # cortante e momento por integração (extremos livres → M(0)=M(L)=0)
+        V_ = R * (x >= a * L).astype(float) + R * (x >= (1.0 - a) * L).astype(float) - carga_acum
+        M_ = cumulative_trapezoid(V_, x, initial=0.0)
+        return V_, M_
+
+    if a_rel is None:
+        # bissecção: |M⁻| cresce e M⁺ cai com a
+        lo, hi = 0.10, 0.40
+        for _ in range(60):
+            mid = 0.5 * (lo + hi)
+            _, M_ = _esforcos(mid)
+            if abs(float(np.min(M_))) < float(np.max(M_)):
+                lo = mid
+            else:
+                hi = mid
+        a_rel = 0.5 * (lo + hi)
+    x1 = a_rel * L
+    x2 = (1.0 - a_rel) * L
+    V, M = _esforcos(a_rel)
 
     M_neg = float(np.min(M))                        # hogging (nos pontos)
     M_pos = float(np.max(M))                        # sagging (vão central)
@@ -165,6 +184,7 @@ def verificar_icamento(
         "k_mod":       mat_i.k_mod,
         "W_total_kN":  round(W_tot, 2),
         "R_ponto_kN":  round(R, 2),
+        "a_rel":       round(a_rel, 4),
         "x1_m":        round(x1, 3),
         "x2_m":        round(x2, 3),
         # Esforços

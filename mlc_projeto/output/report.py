@@ -51,8 +51,9 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("pilar_central",       "Pilar central (N)",         "EC5 §6.3.2"),
     ("pilar_vento_0",       "Pilar vento θ=0°",          "NBR 6123+EC5 §6.3.2"),
     ("pilar_vento_90",      "Pilar vento θ=90°",         "NBR 6123+EC5 §6.3.2"),
-    ("pilar_contraventado", "Pilar canto (grav+brace+vento)","EC5 §6.2.3+§6.3.2"),
-    ("pilar_central_contraventado", "Pilar central montante", "EC5 §6.2.3+§6.3.2"),
+    ("pilar_contraventado", "Pilar canto bipartido",     "EC5 §6.3.2+An. C+§8"),
+    ("pilar_lateral_montante", "Pilar lateral montante bip.", "EC5 §6.3.2+An. C+§8"),
+    ("pilar_central_contraventado", "Pilar central montante bip.", "EC5 §6.3.2+An. C+§8"),
     ("terca",               "Terça flexão",              "EC5 §6.1.6+§6.1.7"),
     ("terca_flexocomp",     "Terça-biela flexo-comp.",   "EC5 §6.3.2 Eq.6.23/6.24"),
     ("terca_Qk_conc",       "Terça Q_k concentrado",     "EN 1991-1-1 Tab.6.10"),
@@ -61,7 +62,8 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     # outra sustenta c_p = ±2,0 para elementos de vedação. A rota executada pelo
     # módulo é §7.2.6, e é essa que o memorial passa a citar.
     ("fixacao_telha",       "Fixação telha (sucção)",    "NBR 6123 §7.2.6"),
-    ("fogo",                "Fogo (seção reduzida)",     "EN 1995-1-2 §4.2.2"),
+    ("fogo",                "Fogo R30 (informativa)",    "EN 1995-1-2 §4.2.2"),
+    ("incendio_veiculo",    "Incêndio de veículo (robustez)", "EN 1991-1-2 An. C"),
     ("contraventamento",    "Contraventamento cobertura","EC5 §9.2.5"),
     ("contraventamento_vertical", "Contravento vertical", "EC5 §5.4.4+EN 1993-1-1 §6.2.3"),
     ("contraventamento_vertical_central", "Contravento vert. central", "EC5 §5.4.4+EN 1993-1-1 §6.2.3"),
@@ -70,8 +72,21 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("lig_diag_vertical",   "Lig. diagonal longitudinal","EN 1993-1-8 §3.13+§4.5"),
     ("lig_diag_vertical_central", "Lig. diagonal central", "EN 1993-1-8 §3.13+§4.5"),
     ("lig_diag_transversal","Lig. diagonal frontão",     "EN 1993-1-8 §3.13+§4.5"),
+    ("lig_diag_cobertura",  "Lig. diagonal cobertura",   "EN 1993-1-8 §3.13+§4.5"),
+    ("diafragma_cobertura", "Diafragma da cobertura (alma)", "EC5 §5.4+EN 1993-1-1 §6.2.3"),
+    ("lig_diag_diafragma",  "Lig. diagonal diafragma",   "EN 1993-1-8 §3.13+§4.5"),
+    ("empuxo_sistema",      "Empuxo no sistema (L1 horiz.)", "EC5 §5.4 + modelo em planta"),
     ("corda_beiral",        "Corda beiral (diafragma)",  "EC5 §6.2.3+§6.3.2"),
+    # [issue 82] beirais (viga em balanço) e oitões (terça em balanço)
+    ("balanco_viga",        "Balanço da viga (beiral)",  "EC5 §6.4.2+§6.1.7+§7.2"),
+    ("balanco_terca",       "Balanço da terça (oitão)",  "EC5 §6.1.6+§6.1.7+§7.2"),
+    ("terca_calha",         "Terça T9 sob a calha cheia", "EC5 §6.3.2 Eq.6.23/6.24"),
+    ("calha",               "Calha central e condutores", "NBR 10844 + EN 12056-3"),
     ("no_contraventamento", "Nó contravent. (escoras)",  "EC5 §6.3.2+§8.2.3+An. A"),
+    ("ligacao_topo_pilar",  "Chapa de topo/sela → pilar", "EC5 §8.2.3+An. A + EN 1993-1-8"),
+    ("tirante_interno",     "Tirante interno (arranc.)", "EN 1993-1-8 Tab. 3.4"),
+    ("no_escora_parafusos", "Nó de topo: escora × chapa", "EN 1993-1-8 Tab. 3.4"),
+    ("soldas",              "Soldas de filete (todas)",  "EN 1993-1-8 §4.5"),
     ("ligacao_terca_viga",  "Ligação terça–viga",        "EC5 §8.7+§8.2.3 (issue 43)"),
     # [issue 52] 2º montante da cruz do frontão (não existia no plano do frontão).
     ("pilar_frontao_montante", "Pilar de frontão PF",    "EC5 §6.2.3+§6.3.2"),
@@ -94,14 +109,19 @@ VERIFICACOES_EXPORT: list[tuple[str, str, str]] = [
     ("ancoragem_L3c",       "Ancoragem L3c (sucção/impacto)", "EN 1993-1-8 + EN 1992-4"),
     ("ancoragem_central_cv", "Ancoragem central montante", "EN 1993-1-8 + EN 1992-4"),
     ("chaveta_concreto_central", "Chaveta central — esmag.", "EN 1992-1-1 §6.7"),
-    ("succao_uplift",       "Sucção/uplift (ancoragem)", "EN 1990+EN 1992-4"),
+    # "succao_uplift" saiu do quadro (issue 109): R_anc = n·80 kN era resistência
+    # "lumped" sem base normativa e duplicava as ancoragens verificadas pela
+    # EN 1992-4 (aço, cone, fendilhamento, chaveta). O módulo continua a calcular
+    # o arrancamento de cada tipo de base, que alimenta essas verificações.
     ("tirante_base",        "Tirante de base",           "EN 1993-1-1 §6.2.3"),
     ("tirante_piso_robustez","Robustez tirante piso",    "EN 1991-1-7+335+1993-1-2"),
     ("ELS",                 "ELS flechas",               "EC5 §2.3.2.2+Tab.7.2"),
-    ("ruptura_bloco_L1",    "Ruptura de bloco L1",       "EC5 Anexo A"),
-    ("ruptura_bloco_L1c",   "Ruptura de bloco L1c",      "EC5 Anexo A"),
+    ("deslocamento_succao", "Deslocamento sob sucção",   "EN 1990 A1.4 + EC5 §7.1"),
     ("fendilhamento_L1",    "Fendilhamento L1 (perp.)",  "EC5 §8.1.4 Eq.8.4"),
     ("fendilhamento_L1c",   "Fendilhamento L1c (perp.)", "EC5 §8.1.4 Eq.8.4"),
+    ("oblongo_L1",          "Furos ovalizados L1/L1c",   "EN 14080 + EC5 §2.3.1.3/Tab. 3.2"),
+    ("engajamento_L1",      "Engajamento pinos L1/L1c",  "EC5 §8.5.1.1 + EN 1090-2 (d0 − d)"),
+    ("retracao_chapas",     "Retração impedida (chapas)", "EC5 §8 + EN 1090-2 (issue 81)"),
     ("chapa_aco_L1",        "Chapa aço L1 (furos/solda)","EN 1993-1-8+1-1"),
     ("chapa_aco_L1c",       "Chapa aço L1c (furos/solda)","EN 1993-1-8+1-1"),
     ("L1",                  "Ligação L1 base",           "EC5 §8.2+§8.5.1.1+§8.6"),
@@ -119,6 +139,12 @@ _META_KEYS = frozenset({
     # catálogo como verificações próprias
     "pilar_frontao",
 })
+
+#: Resultados que são CÁLCULO DE DEMANDA, não verificação: não entram no quadro de
+#: taxas. `succao_uplift` dá o arrancamento por tipo de base; a sua "η" usava uma
+#: resistência lumped de 80 kN/chumbador, substituída pelas ancoragens da EN 1992-4
+#: (issue 109).
+_DEMANDAS = {"succao_uplift"}
 
 
 #: Chaves aceites como taxa de utilização, por ordem de precedência.
@@ -236,7 +262,7 @@ def tabela_verificacoes(
 
     # Verificações fora do catálogo — continuam a ser reportadas.
     for chave, res in resultados.items():
-        if chave in vistos or chave in _META_KEYS:
+        if chave in vistos or chave in _META_KEYS or chave in _DEMANDAS:
             continue
         if not isinstance(res, dict):
             continue
@@ -2441,7 +2467,7 @@ def gerar_tex(
             'e ELU\\_S ($0{,}9G{+}1{,}5W$); mais ELU\\_Q ($1{,}35G{+}1{,}5Q$, sem '
             'vento). A cat.~H reduziu de 24 para '
             f'{len(_tab_comb)} (Q e vento não concomitantes -- issue~3). '
-            '$C_{esq}/C_{dir}$ = Cpe em cada meia-água (Cpb/Cps conforme o padrão).\n\n'
+            '$C_{esq}/C_{dir}$ = Cpe em cada água (Cpb/Cps conforme o padrão).\n\n'
             '{\\scriptsize\\setlength{\\tabcolsep}{3.2pt}\n'
             '\\begin{tabular}{@{}llcrrrrrl@{}}\n'
             '  \\toprule\n'

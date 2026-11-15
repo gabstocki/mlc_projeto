@@ -55,8 +55,10 @@ from mlc_projeto.main import (                                    # noqa: E402
     B_PILAR, H_PILAR, H_PILAR_ALT,
     B_TERCA, H_TERCA, S, L_T as L_TERCA,
     L_COMP_GALPAO, Q_AREA, G_TELHA_KNM2, G_INSTALACOES_KNM2,
-    EMPUXO_DESENVOLVE,
+    EMPUXO_DESENVOLVE, A_BEIRAL_M, B_LAMINA, H_LAMINA, N_PAINEIS_CV_VERT,
+    N_PAINEIS_CV_CENTRAL,
 )
+from mlc_projeto.checks.elu.pilar_bipartido import geometria as _geo_bip  # noqa: E402
 from mlc_projeto.core.geometry import GeometriaViga               # noqa: E402
 from mlc_projeto.core.materials import GlulamMaterial             # noqa: E402
 
@@ -101,11 +103,13 @@ def _cargas_lineares() -> dict[str, float]:
     )
     g = pp["g_k_viga_kNm2"] * L_TERCA
     q = Q_AREA * L_TERCA
+    # (carga média, fator de G): o fator multiplica a correção do peso próprio
+    # variável da viga (issue 114), aplicada elemento a elemento
     return {
-        "ELU_C2": 1.35 * g + 1.50 * q,   # ELU governante
-        "ELS_S1": g + q,                 # combinação característica
-        "ELS_S3": g,                     # quase permanente (ψ₂ = 0)
-        "G_only": g,                     # ação permanente isolada
+        "ELU_C2": (1.35 * g + 1.50 * q, 1.35),   # ELU governante
+        "ELS_S1": (g + q, 1.0),                  # combinação característica
+        "ELS_S3": (g, 1.0),                      # quase permanente (ψ₂ = 0)
+        "G_only": (g, 1.0),                      # ação permanente isolada
     }
 
 
@@ -181,9 +185,25 @@ def sigma_viga(x, Rv, H, q):
     return (abs(Mx)/(B_V*hx**2/6) + abs(Nx)/(B_V*hx)) * 1e-3
 
 
+def _esforcos_fem(rv: dict, x: float) -> tuple[float, float, float]:
+    """M, V, N do modelo OpenSees na abscissa x (simetria: V antissimétrico)."""
+    xs = x if x <= L/2 else L - x
+    s = 1.0 if x <= L/2 else -1.0
+    M = float(np.interp(xs, rv["xm"], rv["M_el"]))
+    V = float(np.interp(xs, rv["xm"], rv["V_el"]))
+    N = float(np.interp(xs, rv["xm"], rv["N_el"]))
+    return M, s * V, N
+
+
 # ── Análise OpenSeesPy — Viga ─────────────────────────────────────────────────
 
-def analisar_viga(q: float) -> dict:
+def analisar_viga(q: float, fG: float = 0.0) -> dict:
+    """
+    Meia viga com simetria. A carga é a média q mais a correção do peso próprio
+    variável, fG·γ·b·(h(x) − h̄), elemento a elemento (issue 114). Devolve também
+    M, V e N dos próprios elementos (localForce), que colorem a malha 3D e aferem o
+    integrador do pipeline de forma independente.
+    """
     ops.wipe()
     ops.model('basic', '-ndm', 2, '-ndf', 3)
 
@@ -210,8 +230,13 @@ def analisar_viga(q: float) -> dict:
 
     ops.timeSeries('Linear', 1)
     ops.pattern('Plain', 1, 1)
-    F = q*(L/2)/N_V/2
+    gamma = _mat.rho_mean * 9.81 / 1000.0                     # kN/m³
+    xs_m = [(xn[i] + xn[i+1]) / 2 for i in range(N_V)]
+    h_med = sum(h_secao(x) for x in xs_m) / N_V
+    dx = (L/2) / N_V
     for i in range(N_V):
+        qi = q + fG * gamma * B_V * (h_secao(xs_m[i]) - h_med)
+        F = qi * dx / 2
         ops.load(i+1, 0, -F, 0)
         ops.load(i+2, 0, -F, 0)
 
@@ -226,11 +251,17 @@ def analisar_viga(q: float) -> dict:
     H  = ops.nodeReaction(1, 1)
     ux_h = [ops.nodeDisp(i+1, 1) for i in range(N_V+1)]
     uz_h = [ops.nodeDisp(i+1, 2) for i in range(N_V+1)]
+    Mel, Vel, Nel = [], [], []
+    for i in range(N_V):
+        N1, V1, M1, N2, V2, M2 = ops.eleResponse(i+1, 'localForce')
+        Mel.append((-M1 + M2) / 2.0)      # momento no meio do elemento (tração embaixo +)
+        Vel.append((V1 - V2) / 2.0)
+        Nel.append((-N1 + N2) / 2.0 * -1.0)   # compressão +
     ops.wipe()
 
     xfull = xn + [L-x for x in xn[-2::-1]]
     return dict(
-        Ry=Ry, H=H, xfull=xfull,
+        Ry=Ry, H=H, xfull=xfull, xm=xs_m, M_el=Mel, V_el=Vel, N_el=Nel,
         ux=ux_h + [u for u in ux_h[-2::-1]],
         uz=uz_h + [u for u in uz_h[-2::-1]],
     )
@@ -340,12 +371,43 @@ def construir_malha(rv: dict, rt: dict, q: float) -> pv.UnstructuredGrid:
             y = iy*DIST_MOD
             for i in range(n_elem_v):
                 xi=xfull[i]; xj=xfull[i+1]; xm=(xi+xj)/2
-                sm=sigma_viga(xm,Ry,H,q)
+                Mx, Vx, Nx = _esforcos_fem(rv, xm)
+                hx = h_secao(xm)
+                sm = (abs(Mx)/(B_V*hx**2/6) + abs(Nx)/(B_V*hx)) * 1e-3
                 add_hex([x_off+xi,y,z_intrados(xi)],
                         [x_off+xj,y,z_intrados(xj)],
                         B_V, h_secao(xi), h_secao(xj),
-                        M_viga(xm,Ry,H,q), V_viga(xm,Ry,H,q),
-                        N_viga(xm,Ry,H,q), sm, sm/F_MD)
+                        Mx, Vx, Nx, sm, sm/F_MD)
+
+    # Beirais (A e C): a viga continua em balanço além do pilar, com a altura
+    # decrescendo com a inclinação do extradorso; momento de balanço −q·d²/2.
+    a_b = A_BEIRAL_M + H_PIL_SEC / 2.0
+    nb = 6
+    for x_ap, sg in ((0.0, -1.0), (N_X * L, 1.0)):
+        for i in range(nb):
+            d0, d1 = a_b * i / nb, a_b * (i + 1) / nb
+            hi, hj = h0 - d0 * math.tan(ALPHA), h0 - d1 * math.tan(ALPHA)
+            dm = (d0 + d1) / 2
+            Mb = -q * (a_b - dm) ** 2 / 2.0
+            W = B_V * ((hi + hj) / 2) ** 2 / 6.0
+            sb = abs(Mb) / W * 1e-3
+            for iy in range(N_PORT):
+                y = iy * DIST_MOD
+                add_hex([x_ap + sg * d0, y, H_PIL + hi / 2], [x_ap + sg * d1, y, H_PIL + hj / 2],
+                        B_V, hi, hj, Mb, q * (a_b - dm), 0.0, sb, sb / F_MD)
+
+    # Pilares montantes das baías contraventadas: bipartidos (duas lâminas dos
+    # lados da viga, até a escora); demais pilares maciços.
+    gb = _geo_bip(B_V, B_LAMINA, H_LAMINA)
+    y_l = gb["y_l_mm"] / 1000.0
+    baias_f = (1, N_PORT - 1)
+    baias_c = (1, 2, N_PORT - 2, N_PORT - 1)
+    mont_f = {e for b in baias_f for e in (b, b + 1)}
+    mont_c = {e for b in baias_c for e in (b, b + 1)}
+
+    def _montante(x_pil, eixo):
+        central = 0.0 < x_pil < N_X * L
+        return eixo in (mont_c if central else mont_f)
 
     # Pilares — uma peça por posição. O laço anterior percorria os dois vãos e
     # criava DUAS células coincidentes no apoio partilhado (x = L): além de
@@ -359,10 +421,21 @@ def construir_malha(rv: dict, rt: dict, q: float) -> pv.UnstructuredGrid:
         sp = Np / (B_PIL*H_PIL_SEC) * 1e-3
         for iy in range(N_PORT):
             y = iy*DIST_MOD
-            add_hex([x_pil, y, 0.0],
-                    [x_pil, y, H_PIL],
-                    B_PIL, H_PIL_SEC, H_PIL_SEC,
-                    0.0, abs(H), Np, sp, sp/F_MD, up=up_pil)
+            if _montante(x_pil, iy + 1):
+                sl = Np / 2 / (B_LAMINA * H_LAMINA) * 1e-3
+                for sg in (-1.0, 1.0):
+                    add_hex([x_pil, y + sg * y_l, 0.0], [x_pil, y + sg * y_l, H_PIL + h0],
+                            B_LAMINA, H_LAMINA, H_LAMINA, 0.0, abs(H), Np / 2, sl, sl / F_MD,
+                            up=up_pil)
+            else:
+                add_hex([x_pil, y, 0.0],
+                        [x_pil, y, H_PIL],
+                        B_PIL, H_PIL_SEC, H_PIL_SEC,
+                        0.0, abs(H), Np, sp, sp/F_MD, up=up_pil)
+    # Pilares de frontão (PF1 no eixo 1, junto a A; PF2 no eixo 9, junto a C)
+    for x_pf, y_pf in ((L_TERCA, 0.0), (N_X * L - L_TERCA, (N_PORT - 1) * DIST_MOD)):
+        add_hex([x_pf, y_pf, 0.0], [x_pf, y_pf, H_PIL], B_PIL, H_PIL_SEC, H_PIL_SEC,
+                0.0, 0.0, 0.0, 0.0, 0.0, up=up_pil)
 
     # Terças
     yn = rt['yn']
@@ -408,10 +481,10 @@ def gerar_vtk() -> None:
           f"Tercas: {len(posicoes_tercas())} por modulo")
     print(f"  Saida: {OUTPUT_DIR}\n")
 
-    for nome, q in COMBOS.items():
+    for nome, (q, fG) in COMBOS.items():
         print(f"  [{nome}] q={q:.4f} kN/m ... ", end="", flush=True)
 
-        rv = analisar_viga(q)
+        rv = analisar_viga(q, fG)
         rt = analisar_terca((q/L_T)*S_TERCA)
         malha = construir_malha(rv, rt, q)
 
@@ -423,7 +496,11 @@ def gerar_vtk() -> None:
         # sempre 100% de erro, o que não afere coisa nenhuma.
         from mlc_projeto.core.loads import analisar_biarticulada
         ref = analisar_biarticulada(q, L, h0, h_ap, ALPHA, B_V,
-                                    desenvolve_empuxo=EMPUXO_DESENVOLVE)
+                                    desenvolve_empuxo=EMPUXO_DESENVOLVE,
+                                    g_var_kNm3=fG * _mat.rho_mean * 9.81 / 1000.0)
+        M_fem = max(abs(m) for m in rv["M_el"])
+        print(f"M_FEM={M_fem:.1f} × M_integrador={abs(ref['M_cumeeira_kNm']):.1f} kN·m | ",
+              end="")
         if EMPUXO_DESENVOLVE:
             grandeza, obtido, esperado = "H", rv["H"], ref["H_kN"]
         else:

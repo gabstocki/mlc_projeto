@@ -36,7 +36,7 @@ import math
 
 from mlc_projeto.core.geometry import GeometriaViga
 from mlc_projeto.connections.connections import distancias_minimas, F_U_K_PINO
-from mlc_projeto.connections.chapas_aco import ACO_CHAPA, GAMMA_M0, GAMMA_M2
+from mlc_projeto.connections.chapas_aco import ACO_CHAPA, GAMMA_M0, GAMMA_M2, d0_furo
 
 
 # Espessuras comerciais de chapa (mm) — laminadas a quente
@@ -69,7 +69,7 @@ def espessura_chapa_embutida(
     f_u = ACO_CHAPA[aco]["f_u"]
 
     d = float(res_lig["d_mm"])
-    d0 = d                                   # cavilha ajustada (close-fit)
+    d0 = d0_furo(d)                          # furo com folga (issue 79)
     n_pinos = int(res_lig["n_pinos"])
     n_linha = int(res_lig["n_linha"])
     n_linhas = int(res_lig["n_linhas"])
@@ -131,7 +131,7 @@ def espessura_chapa_embutida(
         "t_governa":   t_gov,
         "t_adotada_mm": t_adot,
         "furacao": (
-            f"{n_pinos} furos Ø{d0:.0f} mm (ajustado); "
+            f"{n_pinos} furos Ø{d0:.0f} mm (d + {d0 - d:.0f}); "
             f"{n_linha}×{n_linhas} @ a1={a1:.0f}/a2={a2:.0f} mm"
         ),
         "norma": "EN 1995-1-1 §8.2.3 + EN 1993-1-1 §6.2.3 + EN 1993-1-8 Tab.3.4",

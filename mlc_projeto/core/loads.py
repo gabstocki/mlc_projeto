@@ -48,13 +48,13 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.integrate import trapezoid
+from scipy.integrate import cumulative_trapezoid, trapezoid
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
 from mlc_projeto.core.normativo import CONFIG_NORMATIVA, ConfiguracaoNormativa
 from mlc_projeto.core.validacao import (
-    DominioInvalidoError, exigir_finito, exigir_positivo,
+    DominioInvalidoError, exigir_finito, exigir_nao_negativo, exigir_positivo,
 )
 
 
@@ -190,6 +190,9 @@ class Combinacao:
     # vertical já está em q_esq/q_dir, mas a horizontal não se cancela entre as
     # duas águas quando w_esq ≠ w_dir. Positiva no sentido +x (apoio esq. → dir.).
     H_cob_kN:        float = 0.0   # kN   — por pórtico, valor de CÁLCULO
+    # Fator da ação permanente na combinação (γ_G, ou 1 no ELS): multiplica a
+    # correção do peso próprio variável da viga (issue 114).
+    fator_G:         float = 0.0
 
 
 # ── Análise estrutural — viga biarticulada (MLC monolítica) ───────────────────
@@ -238,9 +241,28 @@ def analisar_biarticulada(
     q_dir:     float | None = None,
     *,
     desenvolve_empuxo: bool,
+    a_bal:     float = 0.0,
+    g_var_kNm3: float = 0.0,
+    P_terca_kN: float = 0.0,
+    s_terca_m:  float = 0.0,
 ) -> dict:
     """
     Viga de seção variável biarticulada (rótulas só nos apoios).
+
+    Beiral (issue 82): com a_bal > 0 a viga prolonga-se em balanço além do
+    apoio A — o EXTERNO, sobre o pilar de fachada —, com a carga da meia-água
+    adjacente (o beiral continua a água). No apoio B a viga termina na sela do
+    pilar central, sem balanço. A viga do outro vão é a imagem espelhada desta,
+    e os padrões de vento cobrem as duas incidências. O balanço entra por
+    superposição — momento de extremidade M_A = −q_esq·a²/2 somado ao
+    isostático do vão:
+
+        M(x) = M_0(x) + M_A·(1 − x/L)
+        R_A  = R_A,0 − M_A/L + q_esq·a ,    R_B = R_B,0 + M_A/L
+
+    O cortante e o normal no eixo junto ao apoio (V_apoio, N_apoio) são os do
+    lado do VÃO, que governa (o do balanço é q·a); R_A, R_B e R_v são as
+    reações totais, que vão ao pilar e à ligação.
 
     Peça monolítica de MLC — continuidade na cumeeira (sem rótula).
     Uma vez hiperestática: H por compatibilidade (projeção horizontal dx).
@@ -280,6 +302,8 @@ def analisar_biarticulada(
     elif q_dir is None:
         q_dir = q_esq
 
+    a_bal = exigir_nao_negativo("a_bal", a_bal, unidade="m")
+
     if abs(q_esq) < 1e-12 and abs(q_dir) < 1e-12:
         return {
             "R_v_kN": 0.0, "R_A_kN": 0.0, "R_B_kN": 0.0, "H_kN": 0.0,
@@ -291,6 +315,9 @@ def analisar_biarticulada(
             "theta_rad": math.atan(math.tan(alpha_rad) / 2.0),
             "sistema": "biarticulada",
             "q_esq": 0.0, "q_dir": 0.0,
+            "a_bal_m": a_bal, "M_apoio_A_kNm": 0.0, "M_apoio_B_kNm": 0.0,
+            "V_bal_A_kN": 0.0, "V_bal_B_kN": 0.0,
+            "R_A_vao_kN": 0.0, "R_B_vao_kN": 0.0,
             "M_x": np.zeros(n_pts),
             "M0_x": np.zeros(n_pts),
             "y_c": np.zeros(n_pts),
@@ -326,6 +353,53 @@ def analisar_biarticulada(
     else:
         M0, R_A, R_B = _M0_carga_assimetrica(x, L, q_esq, q_dir)
 
+    # Peso próprio VARIÁVEL da viga (issue 114). As cargas q_esq/q_dir trazem o peso
+    # da viga como média γ·b·h̄; a madeira, porém, concentra-se no meio do vão. Soma-se
+    # a correção Δg(x) = g_var·b·(h(x) − h̄), com g_var = γ_G·γ (kN/m³) da combinação:
+    # resultante nula no vão (reações do vão inalteradas, por simetria), mas momento
+    # maior no meio do vão.
+    h_med = float(trapezoid(h_x, x)) / L
+    dM_A_bal = dF_bal = 0.0
+    if g_var_kNm3:
+        dg = g_var_kNm3 * b * (h_x - h_med)                  # kN/m
+        S1 = cumulative_trapezoid(dg, x, initial=0.0)        # ∫₀ˣ Δg
+        S2 = cumulative_trapezoid(dg * x, x, initial=0.0)    # ∫₀ˣ Δg·ξ
+        dR_A0 = (S1[-1] * L - S2[-1]) / L
+        dR_B0 = S2[-1] / L
+        M0 = M0 + dR_A0 * x - (x * S1 - S2)
+        R_A, R_B = R_A + dR_A0, R_B + dR_B0
+        if a_bal > 0.0:
+            # beiral: altura de h0 a h0 − a·tg α, abaixo da média do vão
+            u = np.linspace(0.0, a_bal, 101)
+            dq = g_var_kNm3 * b * (h0 - u * tan_a - h_med)
+            dF_bal = float(trapezoid(dq, u))
+            dM_A_bal = -float(trapezoid(dq * u, u))
+
+    # Terças como linhas de carga (issue 117). A carga g_terças = γ·b·h/s, uniforme,
+    # reproduz exatamente o momento do vão (7 linhas internas a s: M = 8·s·P, como
+    # w·L²/8), mas não as reações: a terça sobre o apoio A (T1) e metade da terça
+    # sobre o apoio B (T9, comum às duas vigas) somam 0,5·P a A e nada a B; a terça
+    # de ponta T0 é uma força P na ponta do beiral, no lugar de w·a distribuído.
+    dR_A_terca = 0.0
+    if P_terca_kN and s_terca_m > 0.0:
+        w_t = P_terca_kN / s_terca_m
+        dR_A_terca = 0.5 * P_terca_kN
+        if a_bal > 0.0:
+            dF_bal += P_terca_kN - w_t * a_bal
+            dM_A_bal += -(P_terca_kN * a_bal - w_t * a_bal ** 2 / 2.0)
+
+    # Balanço do beiral (issue 82), só no apoio externo A — superposição.
+    M_A = -q_esq * a_bal ** 2 / 2.0 + dM_A_bal
+    M_B = 0.0
+    if a_bal > 0.0:
+        M0 = M0 + M_A * (1.0 - x / L) + M_B * x / L
+        dR = (M_B - M_A) / L
+        R_A_vao, R_B_vao = R_A + dR, R_B - dR          # cortante do lado do vão
+        R_A, R_B = R_A_vao + q_esq * a_bal + dF_bal + dR_A_terca, R_B_vao
+    else:
+        R_A_vao, R_B_vao = R_A, R_B
+        R_A = R_A + dR_A_terca
+
     # Empuxo H por Castigliano — inclui flexibilidade de FLEXÃO e AXIAL.
     # Integração ao longo do eixo do centroide: ds = dx / cos θ (θ constante ⇒
     # ds/dx cancela em H, mas mantido explícito por rigor). Ver docstring.
@@ -360,8 +434,8 @@ def analisar_biarticulada(
 
     # theta (inclinação do eixo do centroide) já definido acima.
     # Esforços no eixo no apoio A (reação R_A)
-    N_apoio = H * math.cos(theta) + R_A * math.sin(theta)
-    V_apoio = R_A * math.cos(theta) - H * math.sin(theta)
+    N_apoio = H * math.cos(theta) + R_A_vao * math.sin(theta)
+    V_apoio = R_A_vao * math.cos(theta) - H * math.sin(theta)
 
     return {
         "R_v_kN":          round(R_v, 4),
@@ -380,6 +454,13 @@ def analisar_biarticulada(
         "sistema":         "biarticulada",
         "q_esq":           q_esq,
         "q_dir":           q_dir,
+        "a_bal_m":         a_bal,
+        "M_apoio_A_kNm":   round(M_A, 4),
+        "M_apoio_B_kNm":   round(M_B, 4),
+        "V_bal_A_kN":      round(q_esq * a_bal + dF_bal, 4),
+        "V_bal_B_kN":      0.0,
+        "R_A_vao_kN":      round(R_A_vao, 4),
+        "R_B_vao_kN":      round(R_B_vao, 4),
         "M_x":             M_x,
         "M0_x":            M0,
         "y_c":             y_c,
@@ -392,6 +473,7 @@ def componente_horizontal_cobertura(
     w_dir: float,
     L: float,
     alpha_rad: float,
+    a_bal: float = 0.0,
 ) -> float:
     """
     Componente HORIZONTAL da pressão de vento na cobertura — achado F-01.
@@ -421,12 +503,15 @@ def componente_horizontal_cobertura(
         L            : vão do pórtico (m)
         alpha_rad    : inclinação do extradorso (rad)
 
+        a_bal        : balanço do beiral (m) — a água ESQUERDA (externa) estende-
+                       -se a L/2 + a_bal; a direita termina na linha central
+
     Returns:
         H_cob (kN), positivo no sentido +x (do apoio esquerdo para o direito).
 
     Referência: equilíbrio de forças; NBR 6123 (campo de pressões ⊥ à superfície).
     """
-    return (w_esq - w_dir) * (L / 2.0) * math.tan(alpha_rad)
+    return (w_esq * (L / 2.0 + a_bal) - w_dir * L / 2.0) * math.tan(alpha_rad)
 
 
 # ── Classe principal de carregamentos ────────────────────────────────────────
@@ -472,6 +557,18 @@ class Carregamentos:
     # Opção B (issue 35/38): empuxo NÃO se desenvolve (viga biapoiada). Default
     # True mantém o modelo de apoio rígido (retrocompatível).
     empuxo_desenvolve: bool = True
+    # Issue 114: o peso próprio da viga segue a altura h(x) (a madeira concentra-se
+    # no meio do vão); g_area traz só a média, e o integrador soma a diferença.
+    peso_viga_variavel: bool = True
+    #: peso de uma linha de terça sobre a viga, γ·b·h·L_T (kN), e o espaçamento s
+    #: (issue 117): corrige as reações e o beiral da carga g_terças uniforme
+    P_terca_linha_kN: float = 0.0
+    s_terca_m: float = 0.0
+
+    @property
+    def gamma_mlc_kNm3(self) -> float:
+        """Peso específico médio da MLC (kN/m³), ρ_mean·g — o mesmo do peso próprio."""
+        return self.mat.rho_mean * 9.81 / 1000.0
 
     # ── Base normativa declarada — AUD-015 ───────────────────────────────
     # Sem isto, γG/γQ/ψ/γM/k_cr e limites eram constantes de módulo sem edição,
@@ -555,6 +652,7 @@ class Carregamentos:
         q: float | None = None,
         q_esq: float | None = None,
         q_dir: float | None = None,
+        fG: float = 0.0,
     ) -> dict:
         """Viga biarticulada — q uniforme ou (q_esq, q_dir) assimétrico."""
         if q is None:
@@ -572,6 +670,10 @@ class Carregamentos:
             q_esq     = q_esq,
             q_dir     = q_dir,
             desenvolve_empuxo = self.empuxo_desenvolve,
+            a_bal     = self.geo.a_bal,
+            g_var_kNm3 = fG * self.gamma_mlc_kNm3 if self.peso_viga_variavel else 0.0,
+            P_terca_kN = fG * self.P_terca_linha_kN,
+            s_terca_m  = self.s_terca_m,
         )
 
     # ── Montagem das combinações ──────────────────────────────
@@ -582,9 +684,9 @@ class Carregamentos:
 
         def _comb(
             nome, tipo, desc, q_esq, q_dir, duracao, padrao: str = "",
-            w_esq_d: float = 0.0, w_dir_d: float = 0.0,
+            w_esq_d: float = 0.0, w_dir_d: float = 0.0, fG: float = 0.0,
         ) -> Combinacao:
-            r = self._analisar(q_esq=q_esq, q_dir=q_dir)
+            r = self._analisar(q_esq=q_esq, q_dir=q_dir, fG=fG)
             q_med = 0.5 * (q_esq + q_dir)
             # F-01: só a PRESSÃO DE VENTO é normal à superfície inclinada e gera
             # componente horizontal. As parcelas gravíticas (G, Q) são verticais
@@ -592,6 +694,7 @@ class Carregamentos:
             # cálculo, não q_esq/q_dir. Ver `componente_horizontal_cobertura`.
             H_cob = componente_horizontal_cobertura(
                 w_esq_d, w_dir_d, self.geo.L, self.geo.alpha_rad,
+                a_bal=self.geo.a_bal,
             )
             return Combinacao(
                 nome            = nome,
@@ -611,6 +714,7 @@ class Carregamentos:
                 x_Mmax_m        = r["x_Mmax_m"],
                 duracao         = duracao,
                 H_cob_kN        = H_cob,
+                fator_G         = fG,
             )
 
         # ── Padrões de vento Tab.25 (θ=90°) ───────────────────
@@ -656,7 +760,7 @@ class Carregamentos:
                 GAMMA_G_sup * g + GAMMA_Q * we,
                 GAMMA_G_sup * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
-                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd,
+                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd, fG=GAMMA_G_sup,
             )
             c[c_w.nome] = c_w
             elu_vento.append(c_w)
@@ -673,7 +777,7 @@ class Carregamentos:
                 GAMMA_G_EQU_estab * g + GAMMA_Q * we,
                 GAMMA_G_EQU_estab * g + GAMMA_Q * wd,
                 "curta", padrao=pid,
-                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd,
+                w_esq_d=GAMMA_Q * we, w_dir_d=GAMMA_Q * wd, fG=GAMMA_G_EQU_estab,
             )
             c[c_s.nome] = c_s
             elu_vento.append(c_s)
@@ -686,7 +790,7 @@ class Carregamentos:
             "1,35G+1,5Q (cat.H: sem vento)",
             GAMMA_G_sup * g + GAMMA_Q * q,
             GAMMA_G_sup * g + GAMMA_Q * q,
-            "media",
+            "media", fG=GAMMA_G_sup,
         )
         c[c_q_grav.nome] = c_q_grav
         elu_vento.append(c_q_grav)
@@ -709,7 +813,7 @@ class Carregamentos:
             "1,35G + 1,5Q  (Q dominante, cat.H: sem vento)",
             GAMMA_G_sup * g + GAMMA_Q * q,
             GAMMA_G_sup * g + GAMMA_Q * q,
-            "media",
+            "media", fG=GAMMA_G_sup,
         )
         # ELU_C2 = alias (chave estável) do governante por |M| — Tab.25 (vento,
         # duração "curta") OU sobrecarga Q (duração "media"). Herda a duração REAL
@@ -725,7 +829,7 @@ class Carregamentos:
             V_max_kN=gov_m.V_max_kN, N_viga_kN=gov_m.N_viga_kN,
             V_viga_kN=gov_m.V_viga_kN, H_kN=gov_m.H_kN,
             H_rigido_kN=gov_m.H_rigido_kN, H_cob_kN=gov_m.H_cob_kN,
-            x_Mmax_m=gov_m.x_Mmax_m, duracao=gov_m.duracao,
+            x_Mmax_m=gov_m.x_Mmax_m, duracao=gov_m.duracao, fator_G=gov_m.fator_G,
         )
         c["ELU_C3"] = Combinacao(
             nome="ELU_C3", tipo="ELU",
@@ -740,7 +844,7 @@ class Carregamentos:
             # para outra combinação: herdar a duração dela é a única leitura
             # coerente — caso contrário o alias oferece um k_mod que a
             # combinação de origem não tem (EC5 §3.1.3).
-            x_Mmax_m=gov_s.x_Mmax_m, duracao=gov_s.duracao,
+            x_Mmax_m=gov_s.x_Mmax_m, duracao=gov_s.duracao, fator_G=gov_s.fator_G,
         )
         c["ELU_C4"] = Combinacao(
             nome="ELU_C4", tipo="ELU",
@@ -751,7 +855,7 @@ class Carregamentos:
             V_max_kN=gov_h.V_max_kN, N_viga_kN=gov_h.N_viga_kN,
             V_viga_kN=gov_h.V_viga_kN, H_kN=gov_h.H_kN,
             H_rigido_kN=gov_h.H_rigido_kN, H_cob_kN=gov_h.H_cob_kN,
-            x_Mmax_m=gov_h.x_Mmax_m, duracao=gov_h.duracao,   # [F-10]
+            x_Mmax_m=gov_h.x_Mmax_m, duracao=gov_h.duracao, fator_G=gov_h.fator_G,   # [F-10]
         )
 
         # ELS característico — categoria H: Q e W NÃO concomitantes
@@ -761,7 +865,7 @@ class Carregamentos:
             "ELS_S1", "ELS",
             "G + Q  (característico, cat.H: sem vento)",
             g + q, g + q,
-            "longa",
+            "longa", fG=1.0,
         )
         # Frequente e quase-permanente — categoria H: ψ1=ψ2=0 (EN 1990 Tab. A1.1)
         # ⇒ AMBAS reduzem-se a G (a sobrecarga não entra). Ver issue 5.
@@ -769,13 +873,13 @@ class Carregamentos:
             "ELS_S2", "ELS",
             "G  (frequente; cat.H ψ1=0 ⇒ sem Q)",
             g + PSI_1_Q * q, g + PSI_1_Q * q,
-            "longa",
+            "longa", fG=1.0,
         )
         c["ELS_S3"] = _comb(
             "ELS_S3", "ELS",
             "G  (quase-permanente ψ2=0; base da fluência)",
             g + PSI_2_Q * q, g + PSI_2_Q * q,
-            "permanente",
+            "permanente", fG=1.0,
         )
 
         # Metadados da varredura
@@ -985,7 +1089,7 @@ class Carregamentos:
             wd = max(0.0, p["w_dir_kNm2"]) * A
             q_e = GAMMA_G_sup * g + GAMMA_Q * q + GAMMA_Q * PSI_0_W * we
             q_d = GAMMA_G_sup * g + GAMMA_Q * q + GAMMA_Q * PSI_0_W * wd
-            r = self._analisar(q_esq=q_e, q_dir=q_d)
+            r = self._analisar(q_esq=q_e, q_dir=q_d, fG=GAMMA_G_sup)
             linhas.append({
                 "padrao": p["id"],
                 "w_esq_kNm2": p["w_esq_kNm2"], "w_dir_kNm2": p["w_dir_kNm2"],
@@ -1083,7 +1187,7 @@ class Carregamentos:
     def M_ELU(self) -> NDArray:
         """Diagrama M(x) da combinação ELU governante (kN·m)."""
         gov = self.combinacao_ELU_governante()
-        r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
+        r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir, fG=gov.fator_G)
         return r["M_x"]
 
     def diagramas_MVN_ELU(self, comb: Combinacao | None = None) -> dict:
@@ -1103,7 +1207,7 @@ class Carregamentos:
         Coincide, nos apoios, com N_apoio/V_apoio de `analisar_biarticulada`.
         """
         gov = comb if comb is not None else self.combinacao_ELU_governante()
-        r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir)
+        r = self._analisar(q_esq=gov.q_esq, q_dir=gov.q_dir, fG=gov.fator_G)
         x   = np.asarray(r["x"], dtype=float)
         M   = np.asarray(r["M_x"], dtype=float)
         M0  = np.asarray(r["M0_x"], dtype=float)
@@ -1121,6 +1225,9 @@ class Carregamentos:
             "x": x, "M": M, "V": V, "N": N, "S": S,
             "H_kN": H, "comb": gov.nome,
             "R_A_kN": float(r["R_A_kN"]), "R_B_kN": float(r["R_B_kN"]),
+            # cortante do lado do vão junto aos apoios (= R sem beiral; issue 82)
+            "R_A_vao_kN": float(r.get("R_A_vao_kN", r["R_A_kN"])),
+            "R_B_vao_kN": float(r.get("R_B_vao_kN", r["R_B_kN"])),
             "M_max_kNm": float(M[np.argmax(np.abs(M))]),
             "V_max_kN":  float(V[np.argmax(np.abs(V))]),
             "N_max_kN":  float(N[np.argmax(np.abs(N))]),
@@ -1132,14 +1239,14 @@ class Carregamentos:
         return self.diagramas_MVN_ELU()["V"]
 
     def M_g(self) -> NDArray:
-        return self._analisar(self.g_k)["M_x"]
+        return self._analisar(self.g_k, fG=1.0)["M_x"]
 
     def M_q(self) -> NDArray:
         return self._analisar(self.q_k)["M_x"]
 
     def M_ELS_car(self) -> NDArray:
         s1 = self._combinacoes["ELS_S1"]
-        return self._analisar(q_esq=s1.q_esq, q_dir=s1.q_dir)["M_x"]
+        return self._analisar(q_esq=s1.q_esq, q_dir=s1.q_dir, fG=s1.fator_G)["M_x"]
 
     # ── Relatório ─────────────────────────────────────────────
 
@@ -1218,6 +1325,8 @@ def carregamentos_com_vento(
     B_cob_m:      float | None = None,
     empuxo_desenvolve: bool = True,
     n_pilares_extra: int = 0,
+    P_terca_linha_kN: float = 0.0,
+    s_terca_m: float = 0.0,
 ) -> Carregamentos:
     """
     Cria Carregamentos com varredura completa Tab.25 (θ=90°) e θ=0°.
@@ -1260,6 +1369,7 @@ def carregamentos_com_vento(
         padroes_vento=padroes,
         vento_0=vento_0,
         empuxo_desenvolve=empuxo_desenvolve,
+        P_terca_linha_kN=P_terca_linha_kN, s_terca_m=s_terca_m,
     )
 
 

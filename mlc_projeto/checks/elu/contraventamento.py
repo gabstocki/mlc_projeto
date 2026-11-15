@@ -55,7 +55,7 @@ from dataclasses import dataclass
 
 from mlc_projeto.core.geometry  import GeometriaViga
 from mlc_projeto.core.materials import GlulamMaterial
-from mlc_projeto.core.loads     import Carregamentos
+from mlc_projeto.core.loads     import Carregamentos, GAMMA_Q
 
 
 # ── Fatores de modificação EC5 §9.2.5 — Tabela 9.2 ────────────────────────────
@@ -528,8 +528,11 @@ def verificar_contraventamento(
     # 4) Vento θ=0° (// cumeeira) — força longitudinal na estrutura aberta.
     #    Repartida pelos n_planos planos e pelas n_modulos_cv baías rígidas;
     #    chega à treliça distribuída ao longo do vão (uma terça por nó).
+    #    `vento_0` é CARACTERÍSTICO (q = 0,613·V_k², NBR 6123); a combinação de ELU
+    #    com o vento dominante leva γ_Q = 1,5 (EN 1990 Tab. A1.2(B)) — issue 109.
     vento_0 = getattr(load, "vento_0", None) or {}
-    F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
+    F_vento0_k_kN = float(vento_0.get("F_total_kN", 0.0))
+    F_vento0_kN = GAMMA_Q * F_vento0_k_kN              # valor de cálculo
     F_vento0_baia = F_vento0_kN / (max(n_planos, 1) * max(n_modulos_cv, 1))
     R_vento0 = F_vento0_baia / 2.0                    # reação por apoio da treliça
     # Reação de projeto em cada apoio da treliça — EC5 §9.2.5.3(1): o sistema
@@ -642,7 +645,9 @@ def verificar_contraventamento(
         # Compressão a estabilizar + vento longitudinal
         "N_d_kN":         ncomp["N_d_kN"],
         "N_axial_kN":     ncomp["N_axial_kN"],
-        "F_vento0_kN":    round(F_vento0_kN, 3),
+        "F_vento0_k_kN":  round(F_vento0_k_kN, 3),
+        "gamma_Q_vento":  GAMMA_Q,
+        "F_vento0_kN":    round(F_vento0_kN, 3),       # de cálculo (γ_Q·F_k)
         "R_ext_estab_kN": round(R_ext_estab, 3),
         "R_ext_proj_kN":  round(R_ext_proj, 3),
         "gov_forca":      gov_forca,

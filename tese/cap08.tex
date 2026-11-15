@@ -19,11 +19,11 @@ Johansen, incorporada ao item 8.2 da EN 1995-1-1 \cite{EN1995-1-1:2004}. O
 método examina os mecanismos cinematicamente admissíveis de uma ligação, que
 combinam o esmagamento da madeira sob o pino e a formação de rótulas plásticas
 no próprio pino, e adota como resistência o menor valor entre eles. Os modos
-que envolvem plastificação do pino são dúcteis e permitem redistribuição de
-esforços.
+que envolvem plastificação do pino desenvolvem, em geral, deformação apreciável
+antes da ruptura, mas o grau dessa ductilidade depende da esbeltez do pino e da
+espessura da madeira, e a norma de projeto não a quantifica nem a garante.
 
-A esses mecanismos somam-se modos de ruptura frágeis, que não admitem
-redistribuição e cuja ocorrência é súbita. O item 8.1.4 trata do fendilhamento
+A esses mecanismos somam-se modos de ruptura frágeis, de ocorrência súbita. O item 8.1.4 trata do fendilhamento
 provocado por componentes de força perpendiculares às fibras, e o anexo A trata
 da ruptura de bloco, em que um volume de madeira delimitado pelo grupo de pinos
 se destaca da peça. O item 8.1.2 introduz ainda o número efetivo de pinos
@@ -39,8 +39,8 @@ taxas de utilização máximas distintas para cada natureza.
 \toprule
     \textbf{Natureza} & \textbf{Modo de ruptura} & \textbf{Prescrição} \\
 \midrule
-    Dúctil  & Plastificação do pino com esmagamento da madeira & Item 8.2 \\
-    Dúctil  & Escoamento da chapa metálica                     & EN 1993-1-8 \\
+    Com plastificação & Plastificação do pino com esmagamento da madeira & Item 8.2 \\
+    Com plastificação & Escoamento da chapa metálica                     & EN 1993-1-8 \\
     Frágil  & Esmagamento localizado sem plastificação do pino  & Item 8.2 \\
     Frágil  & Fendilhamento por tração perpendicular às fibras  & Item 8.1.4 \\
     Frágil  & Ruptura de bloco no grupo de pinos                & Anexo A \\
@@ -51,19 +51,28 @@ taxas de utilização máximas distintas para cada natureza.
 {}
 {}
 
-As ligações recebem tratamento distinto do dispensado aos elementos. A razão
-está na natureza da ruptura. Uma viga que atinge a resistência à flexão escoa
-progressivamente e redistribui esforço; um grupo de pinos que provoca o
-fendilhamento da madeira rompe de forma súbita, sem aviso e sem redistribuição.
+As ligações recebem tratamento distinto do dispensado aos elementos. Não porque
+os elementos de madeira sejam dúcteis: a ruptura por tração das fibras, que
+governa a flexão, também é frágil. A distinção é de critério. Nos modos frágeis
+das ligações, como o fendilhamento e a ruptura de bloco, somam-se à fragilidade
+incertezas próprias do modelo, como a repartição da força entre os pinos e a
+concentração de tensões perpendiculares às fibras, e a ruptura de uma ligação
+retira o apoio de uma peça inteira.
 
 Adotou-se, por isso, limite de projeto de $\eta \leq 0{,}75$ para os modos
-frágeis, mantendo-se $\eta \leq 1{,}00$ para os dúcteis. A margem adicional de
-vinte e cinco por cento não decorre de prescrição normativa, e sim de decisão de
-projeto justificada pelo uso público da edificação. A
+frágeis, mantendo-se $\eta \leq 1{,}00$ para os dúcteis. Esse limite é critério
+do autor, e não exigência normativa: a EN 1995-1-1 aplica aos modos frágeis o
+mesmo coeficiente $\gamma_M = 1{,}30$ das ligações em geral, e um modo frágil com
+$\eta = 1{,}00$ atenderia à norma. A margem adicional de 25~\% é uma reserva de
+resistência sobre a exigência normativa, justificada pelo uso público da
+edificação; não transforma o modo frágil em dúctil nem garante um mecanismo de
+ruptura com aviso. A
 \autoref{tab:modos-margem} apresenta a classificação aplicada e o resultado de
 cada modo, segundo a \autoref{tab:modos-ruptura}. As exceções admitidas ao
-limite de 0,75 são a compressão no concreto e na madeira e o escoamento do aço,
-por serem modos dúcteis com capacidade de redistribuição.
+limite de 0,75 são a compressão no concreto e na madeira, que apresenta grande
+deformação antes da ruptura, e o escoamento do aço, que tem patamar de
+escoamento; a sua classificação como dúcteis na tabela refere-se ao modo
+isolado, e não a um mecanismo dúctil garantido do conjunto.
 
 \tabela
 {Classificação dos modos de ruptura das ligações e taxas obtidas}
@@ -72,21 +81,24 @@ por serem modos dúcteis com capacidade de redistribuição.
 \toprule
     \textbf{Modo de ruptura} & \textbf{Natureza} & \textbf{Limite} & \textbf{$\eta$} & \textbf{Situação} \\
 \midrule
-    Pinos de L1                  & Frágil & 0,75 & 0,70 & Atende \\
-    Pinos de L1c                 & Frágil & 0,75 & 0,70 & Atende \\
-    Fendilhamento em L1          & Frágil & 0,75 & 0,34 & Atende \\
-    Fendilhamento em L1c         & Frágil & 0,75 & 0,34 & Atende \\
-    Ruptura de bloco em L1       & Frágil & 0,75 & 0,01 & Atende \\
-    Ruptura de bloco em L1c      & Frágil & 0,75 & 0,01 & Atende \\
-    Ancoragem de L3              & Frágil & 0,75 & 0,34 & Atende \\
-    Ancoragem de L3c             & Frágil & 0,75 & 0,36 & Atende \\
-    Ancoragem de L3f             & Frágil & 0,75 & 0,49 & Atende \\
-    Pinos de L1f                 & Frágil & 0,75 & 0,69 & Atende \\
-    Parafusos da terça–viga      & Frágil & 0,75 & 0,56 & Atende \\
-    Cavilhas do montante terça–viga & Frágil & 0,75 & 0,75 & Atende \\
-    Cavilhas do pé do pilar, L3a & Frágil & 0,75 & 0,75 & Atende \\
-    Cavilhas do pé do pilar, L3f & Frágil & 0,75 & 0,73 & Atende \\
-    Chapa de base, T-stub de L3  & Dúctil & 1,00 & 0,84 & Atende \\
+    Pinos de L1                  & Frágil & 0,75 & 0,69 & Atende \\
+    Pinos de L1c                 & Frágil & 0,75 & 0,69 & Atende \\
+    Fendilhamento em L1          & Frágil & 0,75 & 0,67 & Atende \\
+    Fendilhamento em L1c         & Frágil & 0,75 & 0,67 & Atende \\
+    Ruptura de bloco, lâminas, escoras e montante & Frágil & 0,75 & 0,74 & Atende \\
+    Tirante interno, via única de tração & Aço & 0,75 & 0,70 & Atende \\
+    Cavilhas do nó do pilar bipartido & Frágil & 0,75 & 0,75 & Atende \\
+    Ancoragem de L3              & Frágil & 0,75 & 0,24 & Atende \\
+    Ancoragem de L3c             & Frágil & 0,75 & 0,41 & Atende \\
+    Ancoragem de L3f             & Frágil & 0,75 & 0,27 & Atende \\
+    Ancoragem das bases L3a, concreto & Frágil & 0,75 & 0,69 & Atende \\
+    Esmagamento sob a chaveta, L3a & Frágil & 0,75 & 0,71 & Atende \\
+    Pinos de L1f                 & Frágil & 0,75 & 0,63 & Atende \\
+    Parafusos da terça–viga      & Frágil & 0,75 & 0,49 & Atende \\
+    Cavilhas do montante terça–viga & Frágil & 0,75 & 0,73 & Atende \\
+    Cavilhas do pé da lâmina, L3a & Frágil & 0,75 & 0,66 & Atende \\
+    Cavilhas do pé, bases correntes (cortante) & Frágil & 0,75 & 0,56 & Atende \\
+    Chapa de base, T-stub de L3  & Dúctil & 1,00 & 0,31 & Atende \\
     Chapa metálica de L1         & Dúctil & 1,00 & 0,10 & Atende \\
     Chapa metálica de L1c        & Dúctil & 1,00 & 0,10 & Atende \\
     Apoio da base central L3c    & Dúctil & 1,00 & 0,14 & Atende \\
@@ -97,78 +109,143 @@ por serem modos dúcteis com capacidade de redistribuição.
 {}
 {}
 
-Todos os modos frágeis situam-se abaixo de 0,75, e os dois mais solicitados são
-os pinos das ligações viga-pilar, com 0,70.
+Todos os modos frágeis situam-se no limite de 0,75 ou abaixo dele.
 
 \section{LIGAÇÃO ENTRE VIGA E PILAR}\label{sec:ligacao-viga-pilar}
 
 \subsection{Concepção}\label{ssec:concepcao-l1}
 
-A ligação entre a viga e o pilar separa as duas funções que lhe cabem. A reação
-vertical de gravidade é transmitida por contato direto: a viga apoia-se sobre a
-chapa de topo do pilar lateral (L1) e, no pilar central, sobre uma sela metálica
-que recebe as duas vigas (L1c). Os pinos passantes, em chapa metálica embutida
-em rasgo central da viga, recebem apenas o arrancamento de sucção e o pequeno
-esforço axial. Para que a gravidade não passe pelos pinos, os furos da chapa são
-ovalizados na vertical.
+A ligação entre a viga e o pilar recebe dois esforços verticais de sentidos
+opostos, que não ocorrem na mesma combinação: a reação de gravidade, de 107 kN
+para baixo, e o arrancamento da sucção, de 100,5 kN para cima. A concepção dá a
+cada um deles um caminho único. A gravidade passa por contato direto: a viga
+apoia-se sobre a chapa de topo do pilar lateral (L1) e, no pilar central, sobre
+uma sela metálica que recebe as duas vigas (L1c). O arrancamento passa pelos
+pinos, em chapa metálica embutida em rasgo central da viga, que recebem também o
+pequeno esforço axial. Os furos da chapa são ovalizados na vertical: sob
+gravidade, a viga assenta no contato e os pinos ficam livres no furo; sob
+arrancamento, a viga descola da chapa e os pinos entram em carga
+(\autoref{ssec:curso-oblongos}). Se os dois caminhos trabalhassem em paralelo, a
+parcela de cada um dependeria da rigidez do contato, das folgas e da umidade da
+madeira, que o projeto não controla; com caminhos únicos, cada verificação recebe
+o esforço inteiro.
 
-A separação tem uma razão precisa. Transmitida pelos pinos, a reação de
-gravidade, de 99,6 kN, atua a 85$^{\circ}$ das fibras e tende a separá-las. Era
-essa a solicitação que levava o fendilhamento, verificado pelo item 8.1.4 da
-EN 1995-1-1 \cite{EN1995-1-1:2004}, a 0,97, acima do limite de projeto de 0,75
-para modos frágeis, e que exigia reforço com oito parafusos autoperfurantes.
-Por contato, a mesma reação comprime a madeira perpendicularmente às fibras,
-modo dúctil e de verificação direta.
+A separação decorre da anisotropia da madeira. Na GL24h, a resistência
+característica à tração perpendicular às fibras, de 0,5 MPa, é cinco vezes
+menor que a de compressão perpendicular, de 2,5 MPa (\autoref{tab:gl24h}). Por
+contato, a reação comprime a madeira perpendicularmente às fibras, modo com grande deformação antes da ruptura:
+a madeira esmaga-se progressivamente e avisa por deformação. Pelos pinos, a
+mesma reação atuaria a 85$^{\circ}$ das fibras e tracionaria a madeira
+perpendicularmente, o que leva ao fendilhamento do item 8.1.4 da
+EN 1995-1-1 \cite{EN1995-1-1:2004}, modo frágil. O que decide a resistência ao
+fendilhamento é a distância $h_e$ da borda carregada, aquela para a qual a força
+dos pinos empurra a madeira, até o pino mais afastado. A gravidade nos pinos
+empurraria a viga para cima, a borda carregada seria a superior, e com os pinos
+no terço superior $h_e$ seria de apenas 182 mm: a resistência ao fendilhamento
+cairia para cerca de 33 kN, um terço da reação, e exigiria reforço. O
+arrancamento empurra a viga para baixo; a borda carregada é a inferior,
+$h_e = 818$ mm e a taxa é de 0,67 (\autoref{ssec:pinos-l1}), sem reforço.
 
 \subsection{Apoio por contato}\label{ssec:apoio-contato}
 
 A compressão perpendicular às fibras segue o item 6.1.5 da
 EN 1995-1-1 \cite{EN1995-1-1:2004}. O comprimento de apoio no pilar lateral é a
-própria dimensão do pilar no plano do pórtico, 0,27 m. Ao lado do vão acrescentam-se
-30 mm, e do lado da extremidade nada, porque a viga termina sobre o pilar.
-Para madeira lamelada colada sobre apoio discreto com comprimento até 400 mm,
-$k_{c,90} = 1{,}75$:
+própria dimensão do pilar no plano do pórtico, 0,27 m, e acrescentam-se 30 mm de
+cada lado, porque a viga continua além do apoio, no vão e no beiral. A largura
+de contato não é a da viga: o rasgo da chapa embutida, com 29 mm, a espessura de
+25 mm da chapa mais 2 mm de folga de cada lado, corta a face de apoio, e só as
+duas faixas laterais tocam a chapa de topo. Para madeira lamelada colada sobre
+apoio discreto com comprimento até 400 mm, $k_{c,90} = 1{,}75$:
 
 \begin{equation}
-    \sigma_{c,90,d} = \frac{R_d}{b\,\ell_{ef}}
-    = \frac{99{,}6}{0{,}32 \times 0{,}30} = 1{,}04~\text{MPa}
-    \;\leq\; k_{c,90}\,f_{c,90,d} = 1{,}75 \times 1{,}30 = 2{,}28~\text{MPa},
+    \begin{aligned}
+    \sigma_{c,90,d} &= \frac{R_d}{(b - t_r)\,\ell_{ef}}
+    = \frac{104}{(0{,}32 - 0{,}029) \times 0{,}33} = 1{,}08~\text{MPa} \\
+    &\leq\; k_{c,90}\,f_{c,90,d} = 1{,}75 \times 1{,}30 = 2{,}28~\text{MPa},
+    \end{aligned}
     \label{eq:apoio-l1}
 \end{equation}
 
 \noindent
-com $\eta = 0{,}46$, ou 0,80 sem o benefício de $k_{c,90}$. O valor anterior,
-de 0,27, decorria de um comprimento de apoio de 0,90 m, maior que o pilar, e
-não correspondia à geometria construída.
+com $\eta = 0{,}48$, ou 0,84 sem o benefício de $k_{c,90}$. O mesmo rasgo reduz a
+largura que resiste ao cisalhamento junto ao apoio, que passa a ser verificado
+com $b_{ef} = k_{cr}\,(b - t_r)$ (\autoref{sec:verif-viga}).
 
 No pilar central, os 0,27 m teriam de ser divididos entre as duas vigas, e cada
-uma disporia de cerca de 0,13 m, com taxa de 1,50 sem $k_{c,90}$. Por isso o
+uma disporia de cerca de 0,13 m, com taxa de 1,5 sem $k_{c,90}$. Por isso o
 pilar central recebe uma sela metálica de 520 mm, com 250 mm de apoio para cada
-viga e 20 mm de folga entre elas. A compressão resulta em 1,11 MPa e
-$\eta = 0{,}49$, ou 0,86 sem $k_{c,90}$. A sela balança 125 mm além de cada face do
-pilar; verificada como placa em balanço sob a pressão de contato, exige 13,8 mm,
-e adotou-se chapa de 16 mm em aço S275, com $\eta = 0{,}74$. No pilar lateral,
-a chapa de topo, que cobre toda a seção do pilar e não balança, é construtiva,
-com 16 mm. A \autoref{fig:des-l1} apresenta as duas ligações.
+viga e 20 mm de folga entre elas. Com a largura de contato reduzida pelo rasgo e
+30 mm acrescidos do lado do vão, a compressão resulta em 1,28 MPa e
+$\eta = 0{,}57$.
+
+A sela projeta-se em balanço 125 mm além de cada face do pilar. Verificada como
+placa em balanço sob a pressão de contato, a chapa de 16 mm em aço S275 resiste,
+com $\eta = 0{,}87$, mas a ponta desceria 0,54 mm, valor da ordem do próprio
+encurtamento da madeira sob o apoio: a pressão concentrar-se-ia junto ao pilar e
+deixaria de ser a pressão uniforme admitida na \autoref{eq:apoio-l1}. Por isso
+cada balanço recebe três enrijecedores triangulares de 125 por 125 mm e 12,5 mm
+de espessura, sob as duas bordas e sob o eixo da sela, soldados à chapa com
+filete de 4 mm. A chapa passa a vencer o vão de 146 mm entre enrijecedores, o
+que exigiria só 8,6 mm, e a flecha da ponta cai para 0,013 mm. Cada enrijecedor
+trabalha como consolo, com 23,2 kN no centro do balanço; governa a esbeltez da
+sua borda livre, com $c/t = 10$ frente ao limite $14\,\varepsilon = 12{,}9$ da
+tabela 5.2 da EN 1993-1-1 \cite{EN1993-1-1:2005}, com $\eta = 0{,}78$. O momento
+dos consolos fecha-se em um binário: a tração pela chapa da sela, equilibrada pelo
+balanço oposto, e a compressão contra a face do pilar, perpendicular às fibras,
+por uma chapa lateral de 250 mm de altura soldada à sela e aos enrijecedores em
+cada face; a pressão máxima, de 0,73 MPa, fica abaixo de $f_{c,90,d}$. No pilar
+lateral, a chapa de topo, que cobre toda a seção do pilar e não tem balanço, é
+construtiva, com 16 mm. As folhas de desenho reproduzidas neste capítulo estão
+reduzidas à largura da figura, e a escala indicada no carimbo vale para as folhas
+do \autoref{ap:desenhos}; em qualquer reprodução, a escala gráfica de cada folha
+permite medir. A \autoref{fig:des-l1} e a \autoref{fig:des-l1c}
+apresentam as duas ligações, com os cortes transversais pela fileira de pinos. Os
+cortes mostram o rasgo, a chapa embutida com os furos ovalizados em volta dos
+pinos, a folga no fundo do rasgo e as duas faixas de madeira que se apoiam por
+contato na chapa de topo ou na sela. A \autoref{fig:des-chapa-l1} dá as chapas
+embutidas em verdadeira grandeza, com os furos ovalizados cotados e a tabela de
+montagem dos pinos.
 
 \figura
-{Ligações L1 e L1c entre as vigas e os pilares}
+{Ligação L1 entre a viga e o pilar lateral: elevação e corte A--A}
 {1.0}
-{fig/des05_ligacoes_L1_L1c.pdf}
+{fig/des05_ligacao_L1.pdf}
 {Elaborado pelo autor (2026)}
 {des-l1}
 {}
 {}
 
+\figura
+{Ligação L1c entre as vigas e o pilar central: elevação e corte B--B}
+{0.96}
+{fig/des05b_ligacao_L1c.pdf}
+{Elaborado pelo autor (2026)}
+{des-l1c}
+{}
+{}
+
+\figura
+{Chapas embutidas das ligações L1 e L1c em verdadeira grandeza}
+{1.0}
+{fig/des05c_chapa_L1.pdf}
+{Elaborado pelo autor (2026)}
+{des-chapa-l1}
+{}
+{}
+
 \subsection{Pinos e arrancamento}\label{ssec:pinos-l1}
 
-Os pinos são dimensionados para a maior reação de arrancamento, de 86,1 kN, na
+Os pinos são dimensionados para a maior reação de arrancamento, de 100,5 kN, na
 combinação de sucção, conforme os itens 8.2, 8.5.1.1 e 8.6 da
 EN 1995-1-1 \cite{EN1995-1-1:2004}, com $\gamma_M = 1{,}30$. A
 \autoref{tab:ligacao-l1-arranjo} apresenta o arranjo adotado, e a
 \autoref{tab:ligacao-l1} o resultado da verificação. O diâmetro situa-se na faixa de
 6 a 30 mm exigida pela norma, e a chapa embutida é em aço S275 de 25 mm de
-espessura.
+espessura. Na madeira o furo é ajustado ao pino; na chapa, o furo ovalizado tem
+largura $d_0 = d + 2 = 26$ mm, a folga normal da EN 1090-2 \cite{EN1090-2:2018}
+para diâmetros de 16 a 24 mm, que respeita o limite de $\max(2\ \text{mm};
+0{,}1\,d)$ do item 10.4.3 da EN 1995-1-1 \cite{EN1995-1-1:2004}. Todas as
+distâncias e espaçamentos das chapas são calculados com esse $d_0$.
 
 \tabela{Arranjo adotado dos pinos da ligação entre viga e pilar}{\footnotesize
 \begin{tabular}{lcrl}
@@ -176,11 +253,15 @@ espessura.
     \textbf{Grandeza} & \textbf{Símbolo} & \textbf{Valor} & \textbf{Unidade} \\
 \midrule
     Diâmetro do pino                   & $d$       &  24    & mm \\
-    Número de pinos                    & $n$       &   5    & -- \\
+    Número de pinos                    & $n$       &   6    & -- \\
+    Pinos por fileira, paralela às fibras & --     &   3    & -- \\
+    Fileiras na altura                 & $n_{fil}$ &   2    & -- \\
     Número de planos de corte por pino & --        &   2    & -- \\
-    Espaçamento entre pinos            & $a_2$     &  72    & mm \\
-    Distância à extremidade            & $a_{3,t}$ & 168    & mm \\
-    Distância à borda superior         & $a_{4,c}$ &  72    & mm \\
+    Largura do furo ovalizado na chapa & $d_0$     &  26    & mm \\
+    Espaçamento paralelo às fibras     & $a_1$     &  76    & mm \\
+    Espaçamento entre fileiras         & $a_2$     &  72    & mm \\
+    Distância à extremidade da viga (L1c) & $a_{3,t}$ & 168 & mm \\
+    Fileira superior à borda superior  & $a_{4,c}$ & 182    & mm \\
     Altura disponível na seção         & $h_0$     & 1.000  & mm \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1-arranjo}{}{}
@@ -190,43 +271,303 @@ espessura.
 \toprule
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} \\
 \midrule
-    Força resultante de cálculo (arrancamento e axial) &  86,6 & kN \\
-    Ângulo da resultante com as fibras &  84,2 & graus \\
+    Força resultante de cálculo (arrancamento e axial) & 100,9 & kN \\
+    Ângulo da resultante com as fibras &  85,2 & graus \\
     Resistência de cálculo por pino, dois planos de corte & 25,0 & kN \\
-    Resistência total da ligação       & 125   & kN \\
-    Taxa de utilização, $\eta$         & 0,70 & \\
+    Número efetivo de pinos            & 5,88  & -- \\
+    Resistência total da ligação       & 147   & kN \\
+    Taxa de utilização, $\eta$         & 0,69 & \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ligacao-l1}{}{}
 
-A força nos pinos permanece quase perpendicular às fibras, agora dirigida para
-baixo. O coeficiente $k_{90}$ vale 1,71, e a resistência ao embutimento cai de
-24,0 MPa na direção paralela para 14,1 MPa na direção da força. A teoria de
+A força nos pinos é quase perpendicular às fibras, dirigida para baixo. O
+coeficiente $k_{90}$ vale 1,71, e a resistência ao embutimento cai de 24,0 MPa
+na direção paralela para 14,1 MPa na direção da força, pela fórmula (8.31) do
+item 8.5.1.1, aplicável às cavilhas pelo item 8.6. Para chapa de aço central em
+corte duplo, o item 8.2.3 dá a resistência pela fórmula (8.11), com os modos
+(f), sem rótula, (g), com uma rótula plástica no pino junto à chapa, e (h), com
+duas. A norma aplica essa fórmula à chapa central de qualquer espessura: com a
+chapa no plano de simetria da ligação, o pino não gira junto a ela, e a rótula
+não depende de a chapa o engastar. Por isso a distinção entre chapa fina e
+espessa do item 8.2.3(1), com a sua folga de furo menor que $0{,}1\,d$, não se
+aplica, e o furo alongado na direção da força não altera os modos. A teoria de
 Johansen resulta governada pelo modo com uma rótula plástica no pino, com
-12,5 kN de cálculo por plano de corte, ou 25,0 kN por pino nos dois planos, e
-a ligação apresenta $\eta = 0{,}69$.
+12,5 kN de cálculo por plano de corte, ou 25,0 kN por pino nos dois planos.
 
-O fendilhamento continua a ser verificado, mas em condição muito mais
-favorável. Sob arrancamento, a borda carregada é a inferior, e os pinos estão no
-terço superior da viga, com a fileira mais alta a 72 mm do topo. A altura
-efetiva é, então, $h_e = 1.000 - 72 = 928$ mm, e
+Os seis pinos formam duas fileiras de três, paralelas às fibras, no terço
+superior da viga; a razão de não empilhá-los numa coluna está na
+\autoref{ssec:engajamento-pinos}. Para uma fileira paralela às fibras, o item
+8.5.1.1(4) dá o número efetivo pela fórmula (8.34) quando a força é paralela
+às fibras, $n_{ef} = n$ quando é perpendicular, e interpolação linear entre os
+dois para ângulos intermediários. Com a força a 85,2$^{\circ}$ das fibras, cada
+fileira de três vale 2,94 pinos, o grupo vale 5,88, e a ligação apresenta
+$\eta = 0{,}69$.
+
+O fendilhamento é verificado com a borda carregada inferior, como exposto na
+\autoref{ssec:concepcao-l1}. Os pinos estão no terço superior da viga, com a
+fileira mais alta a 182 mm do topo, posição definida pela altura do rasgo
+(\autoref{ssec:altura-rasgo}). A altura efetiva, medida da borda inferior até o
+pino mais afastado dela, é $h_e = 1.000 - 182 = 818$ mm, com $h_e/h = 0{,}82$, e
 
 \begin{equation}
     F_{90,Rd} = \frac{k_{mod}}{\gamma_M}\, 14\, b\, w \sqrt{\frac{h_e}{1 - h_e/h}}
-    = \frac{0{,}65}{1{,}30} \times 14 \times 320 \times \sqrt{\frac{928}{1 - 0{,}928}}
-    = 254~\text{kN},
+    = \frac{0{,}65}{1{,}30} \times 14 \times 320 \times \sqrt{\frac{818}{1 - 0{,}818}}
+    = 150~\text{kN},
     \label{eq:fendilhamento-l1}
 \end{equation}
 
 \noindent
-contra 86,1 kN solicitantes, com $\eta = 0{,}34$ e sem necessidade de reforço.
+frente a 101 kN solicitantes, com $\eta = 0{,}67$ e sem necessidade de reforço.
+
+\subsection{Curso dos furos ovalizados}\label{ssec:curso-oblongos}
+
+O contato só leva a gravidade enquanto o pino não toca o fundo do furo
+ovalizado. Como a chapa embutida é fixa, soldada à chapa de topo ou à sela, toda
+variação da altura da viga entre a face de apoio e o pino desloca o pino em
+relação à chapa. O pino mais alto, a 818 mm da face de apoio, posição definida na
+\autoref{ssec:altura-rasgo}, é o que mais se desloca, e o seu deslocamento tem duas parcelas de sentidos opostos.
+
+A primeira é a variação de umidade. A MLC é produzida com as lamelas entre 8\%
+e 15\% de umidade, conforme a EN 14080 \cite{EN14080:2013}, e especifica-se a
+montagem com $15 \pm 2$\%, com aclimatação em obra. Sob a cobertura, na classe de
+serviço 3, a madeira entra em equilíbrio com o ar, cuja umidade relativa varia
+entre cerca de 70\% e 85\%, o que corresponde a umidade da madeira entre 14\% e
+19\%. Com a variação dimensional perpendicular às fibras das coníferas da ordem de
+0,25\% por ponto percentual de umidade \cite{thelandersson:2003}, a viga montada
+a 13\% que chegue a 19\% incha
+$0{,}0025 \times 6 \times 818 = 12{,}3$ mm na altura do pino, e a montada a 17\%
+que seque até 14\% retrai 6,1 mm. Para a madeira colada, que sai seca da fábrica,
+o movimento dominante é o inchamento, que leva o pino para cima. A segunda parcela
+é a deformação por compressão perpendicular sob o apoio, que leva o pino para
+baixo: com a tensão dispersa a 45$^{\circ}$ a partir do comprimento de apoio, a
+reação permanente encurta a altura em 0,5 mm, ou 1,6 mm com a fluência
+($k_{def} = 2{,}00$), e a variável, em 0,3 mm.
+
+O furo tem, por isso, curso nos dois sentidos, conforme a
+\autoref{tab:curso-oblongos}, com 2 mm de tolerância de montagem em cada um, em
+múltiplos de 5 mm e com taxa entre o exigido e o adotado não superior a 0,90. Abaixo do pino, o curso absorve a retração e
+a fluência, de modo que a gravidade nunca passa pelos pinos; acima, absorve o
+inchamento, que de outro modo seria impedido pelo topo do furo e comprimiria a
+madeira perpendicularmente às fibras. Na montagem, o pino é posicionado pela
+umidade medida da viga, deixando acima de cada pino a folga
+$\alpha_\perp\,(u_{max} - u_{medido})\,y_i + 2$ mm, em que $y_i$ é a sua altura
+sobre a face de apoio: 14 mm no pino mais alto para a viga montada a 13\%, 10 mm
+a 15\% e 6 mm a 17\%.
+
+\tabela{Curso dos furos ovalizados da chapa embutida das ligações L1 e L1c}{\footnotesize
+\begin{tabular}{p{6.4cm}rr}
+\toprule
+    \textbf{Parcela} & \shortstack{\textbf{Abaixo do}\\\textbf{pino (mm)}} & \shortstack{\textbf{Acima do}\\\textbf{pino (mm)}} \\
+\midrule
+    Retração, de 17\% para 14\%            & 6,1 & -- \\
+    Inchamento, de 13\% para 19\%          & --  & 12,3 \\
+    Compressão perpendicular, permanente com fluência & 1,6 & -- \\
+    Compressão perpendicular, variável     & 0,3 & -- \\
+    Tolerância de montagem                 & 2,0 & 2,0 \\
+\midrule
+    Exigido                                & 10,0 & 14,3 \\
+    \textbf{Adotado}                       & \textbf{15} & \textbf{20} \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{curso-oblongos}{}{}
+
+O curso superior tem uma consequência que precisa ser declarada: sob o
+arrancamento, a viga sobe a folga que houver acima do pino antes que ele entre em
+carga. A folga é máxima quando a madeira está na umidade mínima de serviço, e
+então a viga sobe até 11 mm antes que a fileira inferior pegue e até 12 mm antes
+que a superior pegue. Esse levantamento é maior que as flechas da própria viga e
+só ocorre na combinação de sucção; somado às demais parcelas do caminho de carga,
+ele é verificado contra as peças que ligam a viga a pontos fixos na
+\autoref{ssec:deslocamento-succao}. A taxa de 0,72 da verificação registra a
+relação entre o curso exigido e o adotado.
+
+
+\subsection{Engajamento dos pinos}\label{ssec:engajamento-pinos}
+
+A regra de montagem iguala as folgas acima dos pinos apenas na umidade máxima de
+serviço. Quando a madeira seca, cada pino desce com a retração da altura que o
+separa da face de apoio, e a folga acima dele cresce na proporção dessa altura,
+$\alpha_\perp\,(u_{max} - u)\,y_i$. Pinos em alturas diferentes encostam, sob
+o arrancamento, em sequência, e os primeiros são os mais baixos, justamente os de
+menor $h_e$ no fendilhamento. A soma $n_{ef}\,F_{v,Rd}$ da norma pressupõe que o
+grupo entre em carga junto, a menos das folgas normais de furo; não pressupõe
+uma defasagem sistemática de vários milímetros.
+
+Com os seis pinos numa só coluna, de 458 a 818 mm sobre a face de apoio, a
+defasagem na umidade mínima seria de
+$0{,}0025 \times 5 \times (818 - 458) = 4{,}5$ mm. Um modelo do grupo, com cada
+pino elástico e perfeitamente plástico, de rigidez $K_u = \frac{2}{3}K_{ser}$
+pelo item 7.1 e patamar em $F_{v,Rd}$, mostra que, sob o arrancamento de cálculo,
+o pino mais alto ainda não teria encostado, três pinos estariam no patamar, e o
+fendilhamento, com $h_e$ medido até o pino mais alto em carga, 746 mm, teria
+taxa de 0,83, acima do limite de 0,75. O arranjo em coluna não foi mantido.
+
+Adotou-se como critério que a defasagem total entre os pinos caiba na folga
+normal do furo, $d_0 - d = 2$ mm, para a qual a regra de grupo da norma é
+empregada em qualquer ligação. A defasagem soma a parcela da umidade, que cresce
+com a distância vertical entre as fileiras, e 1,0 mm de fabricação, $\pm 0{,}5$ mm
+na posição da extremidade de cada furo ovalizado e do furo na madeira, tolerância
+especificada nos desenhos. Pinos numa mesma fileira estão na mesma altura e não
+têm a parcela da umidade. Duas fileiras a $a_2 = 72$ mm dão
+$0{,}0025 \times 5 \times 72 + 1{,}0 = 1{,}9$ mm, com taxa de 0,95; três já
+dariam 2,8 mm. Daí o arranjo de duas fileiras de três pinos, ambas no topo do
+grupo, que cabe na chapa de 270 mm sobre o pilar lateral e, na L1c, numa chapa de
+359 mm, que avança além da sela, por dentro do rasgo. No modelo do grupo, as duas
+fileiras entram em carga antes do arrancamento de cálculo, de modo que o
+fendilhamento é verificado com $h_e = 818$ mm, a altura da fileira superior. Com
+a rigidez da norma, que não é reduzida perpendicularmente às fibras e por isso
+concentra a força nos primeiros pinos, a fileira inferior chega ao patamar antes
+da superior; a redistribuição que isso exige é a mesma que a regra de grupo já
+admite dentro da folga normal do furo.
+
+\subsection{Deslocamento sob sucção}\label{ssec:deslocamento-succao}
+
+Sob a sucção, a viga sobe em relação à fundação pela soma das parcelas do
+caminho do arrancamento. Na combinação característica do item 6.5.3 da
+EN 1990 \cite{EN1990:2002}, com o vento dominante e o peso próprio, o
+arrancamento num apoio é de 48,7 kN. As parcelas são a folga acima dos pinos
+(\autoref{ssec:curso-oblongos}), o deslizamento dos pinos em carga, com
+$K_{ser}$ do item 7.1 da EN 1995-1-1 \cite{EN1995-1-1:2004}, dobrado para a
+ligação de aço com madeira, 35,9 kN/mm por pino nos dois planos de corte, e,
+dali até a base, o alongamento do tirante interno nos pilares correntes ou, nos
+montantes bipartidos, o das lâminas, a folga dos furos das cavilhas do pé, que
+passam da compressão à tração, e o seu deslizamento. A
+\autoref{tab:deslocamento-succao} reúne as parcelas nas duas umidades extremas de
+serviço.
+
+\tabela{Subida do apoio da viga sob a sucção característica (mm)}{\footnotesize
+\begin{tabular}{lcccccc}
+\toprule
+    & \multicolumn{2}{c}{\textbf{Corrente, L3}} & \multicolumn{2}{c}{\textbf{Central, L3c}} & \multicolumn{2}{c}{\textbf{Montante}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    \textbf{Parcela} & 14\% & 19\% & 14\% & 19\% & 14\% & 19\% \\
+\midrule
+    Folga acima dos pinos            & 11,3 & 2,0 & 11,3 & 2,0 & 11,3 & 2,0 \\
+    Deslizamento dos pinos           & 0,5 & 0,2 & 0,5 & 0,2 & 0,5 & 0,2 \\
+    Tirante interno                  & 6,7 & 6,7 & 7,1 & 7,1 & -- & -- \\
+    Lâminas e pé do montante         & -- & -- & -- & -- & 2,9 & 2,9 \\
+    Chapas e chumbadores             & 0,2 & 0,2 & 0,3 & 0,3 & 0,1 & 0,1 \\
+\midrule
+    \textbf{Total}                  & \textbf{18,6} & \textbf{9,1} & \textbf{19,2} & \textbf{9,7} & \textbf{14,8} & \textbf{5,3} \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{deslocamento-succao}{}{}
+
+A madeira seca governa, pela folga dos pinos, e a segunda parcela é a do tirante,
+uma barra de 6,7 m. A flecha ascendente líquida da viga, de 3,0 mm no meio do vão
+(\autoref{sec:verif-els}), soma-se a isso ao longo do vão. O levantamento é da
+ordem de seis vezes essa flecha, e por isso não pode ser tratado como pequeno.
+
+A EN 1990 \cite{EN1990:2002}, no item A1.4.2 do anexo A1, deixa ao projeto os
+critérios de funcionalidade. Adotou-se como limite, para cada peça que liga a
+viga a um ponto que não sobe com ela, o curso disponível no seu próprio detalhe.
+
+\begin{alineas}
+    \item Escora dos montantes. A escora apoia-se no topo das lâminas, com 25 mm
+          de folga sobre a viga (\autoref{ssec:no-topo}). O apoio da viga e a
+          escora estão nas mesmas lâminas, e contam só a subida nos pinos e o
+          inchamento de toda a altura da viga, a partir da montagem mais seca:
+          17,2 mm na madeira a 19\%, com taxa de 0,69.
+    \item Topo dos pilares de frontão. O curso do furo ovalizado da L1f
+          (\autoref{ssec:pilar-frontao}) cobre a flecha descendente e também esta
+          subida, em múltiplos de 5 mm e com taxa até 0,90, como os furos da L1; na
+          geometria adotada, 20 mm. No ponto do pilar, a viga do
+          frontão sobe com o apoio bipartido, mais a flecha ascendente, de 2,4 mm
+          ali, e o inchamento entre o intradorso e o pino mais alto da L1f:
+          18,0 mm, com taxa de 0,90.
+    \item Condutor da calha. A calha apoia-se nas terças e sobe com o apoio
+          central, até 19,2 mm. O condutor, que desce ao lado do pilar central,
+          leva junta deslizante de 30 mm junto à saída.
+    \item Terças e telhas. A diferença de subida entre pórticos vizinhos, de até
+          15,6 mm entre a escora de um montante e a viga corrente seguinte, gira a
+          terça em cerca de 1/370, rotação que a ligação rotulada entre terça e
+          viga e as fixações da telha acomodam.
+\end{alineas}
+
+\subsection{Altura do rasgo}\label{ssec:altura-rasgo}
+
+O rasgo que recebe a chapa embutida é aberto a partir do intradorso, e o seu
+fundo fica acima do topo da chapa. Como a madeira desce em relação à chapa, por
+retração e fluência, o fundo do rasgo precisa manter folga sobre o topo da
+chapa: se a chapa encostasse nele, a gravidade passaria pela ponta da chapa, e
+não pelo contato. A folga é o curso inferior calculado à altura do topo da
+chapa, 15 mm. Acima do fundo do rasgo, a viga deve conservar seção inteira que
+mantenha unidas as duas lâminas de madeira que o rasgo separa; adotam-se ao
+menos 100 mm, duas lamelas e meia.
+
+Essas condições, somadas ao curso superior do furo e à distância $1{,}5\,d_0$
+entre o furo e o topo da chapa, limitam a altura do grupo de pinos. Com a fileira
+mais alta a $3d = 72$ mm do extradorso, o fundo do rasgo ficaria acima da própria
+viga. O grupo é posicionado na maior altura que atende às duas condições: o pino
+mais alto a 818 mm da face de apoio, ou 182 mm do extradorso; a chapa embutida
+com 877 mm de altura; o fundo do rasgo a 892 mm; e 108 mm de madeira inteira
+acima dele. O preço é a redução da distância $h_e$ do fendilhamento, de 928 para
+818 mm, que leva a taxa de 0,40 a 0,67, ainda abaixo do limite de 0,75 dos modos
+frágeis.
+
+O rasgo tem 29 mm de largura e 892 mm de altura, e passa 30 mm além da chapa
+embutida, para ventilar a cavidade: 330 mm na L1, 30 mm além de cada face do
+pilar, e 389 mm na L1c, a partir da extremidade da viga, e separa a viga, nessa região, em duas lâminas de 146 mm. Com o beiral,
+ele deixa de estar na extremidade da viga: as lâminas estão ligadas pela seção
+inteira acima do fundo do rasgo e pela viga contínua dos dois lados, no vão e no
+balanço. O cisalhamento no apoio é verificado com a largura reduzida pelo rasgo
+na \autoref{ssec:apoio-contato}.
+
+\subsection{Tirante interno: do topo do pilar à base}\label{ssec:topo-pilar}
+
+O arrancamento que os pinos entregam à chapa embutida chega à chapa de topo ou à
+sela e precisa, daí, de um caminho até a base. As ligações do projeto seguem uma
+regra: a compressão passa por contato, de topo de fibra, sem conectores, e a
+tração passa por uma única peça de aço. No pilar corrente, essa peça é um tirante
+interno, uma barra roscada da classe 8.8, galvanizada, que corre num furo central
+do pilar, do topo ao pilarete. No topo, a barra rosqueia numa luva soldada sob a
+chapa de topo ou sob a sela, diretamente abaixo da chapa embutida da viga, de
+modo que o arrancamento atravessa a chapa na espessura, sem flexioná-la; para
+isso, especifica-se aço com propriedades na direção da espessura, classe Z da
+EN 1993-1-10 \cite{EN1993-1-10:2005}. No pé, a barra atravessa a chapa de topo do
+pilarete e recebe porca e arruela-chapa por dentro do tubo, apertadas por uma
+janela de acesso na parede; o tubo leva a tração à chapa de base e aos
+chumbadores. O furo central, de diâmetro $d + 16$ mm, é feito pelo fabricante por
+ranhuras nas duas lamelas centrais antes da colagem, e drena pela janela do
+pilarete.
+
+Com isso, o pilar de madeira nunca trabalha à tração, e o topo e o pé deixam de
+precisar de grupos de cavilhas paralelas às fibras. No topo ficam duas abas de aço,
+uma de cada lado do furo, com duas cavilhas de 20 mm que posicionam a chapa e
+levam o cortante do próprio pilar, de 1,6 kN; no pé, as abas recebem quatro
+cavilhas, dimensionadas pelo cortante do choque de veículo
+(\autoref{ssec:chapa-base}). Nos dois casos, as fileiras ficam afastadas o
+bastante para contornar o furo do tirante. A barra é verificada à tração pela
+tabela 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, $F_{t,Rd} = 0{,}9\,f_{ub}\,A_s/
+\gamma_{M2}$, com taxa limitada a 0,75, como os modos frágeis, por ser a única via
+de tração, sem redundância; a solda da luva, pelo item 4.5.3.3. A
+\autoref{tab:topo-pilar} resume o resultado.
+
+\tabela{Tirante interno dos pilares correntes}{\footnotesize
+\begin{tabular}{lrcrccc}
+\toprule
+    \textbf{Variante} & \textbf{$N_t$ (kN)} & \textbf{Barra} & \textbf{$F_{t,Rd}$ (kN)} & \textbf{$\eta$ barra} & \textbf{$\eta$ solda} & \textbf{Furo (mm)} \\
+\midrule
+    L1, pilar lateral         &  98,3 & M20 & 141 & 0,70 & 0,70 & 36 \\
+    L1c, pilar central (sela) &   169 & M27 & 264 & 0,64 & 0,78 & 43 \\
+    L1f, pilar de frontão     &  82,8 & M20 & 141 & 0,59 & 0,59 & 36 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{topo-pilar}{}{}
+
+A compressão de topo sob a chapa, descontados o rasgo das abas e o furo, não
+passa de 2,6 MPa. Nas baías contraventadas, os pilares montantes são bipartidos
+(\autoref{ssec:pilar-bipartido}), e o arrancamento das vigas vai da sela às
+lâminas por cavilhas. A \autoref{fig:des-l1} e a \autoref{fig:des-l1c} mostram o
+topo dos pilares, com o tirante, a luva e as abas.
 
 \subsection{Modos verificados e não governantes}\label{ssec:modos-nao-governantes}
 
-A ruptura de bloco, verificada conforme o anexo A, apresenta taxa de 0,01, com
-resistência característica de 2.650 kN, governada pela parcela de tração. O
-arranjo em linha única de cinco pinos, com apenas um pino por fileira paralela
-às fibras, é o responsável por essa folga, e é também o que faz o número efetivo
-de pinos igualar o real.
+A ruptura de bloco do anexo A da EN 1995-1-1 trata grupos de conectores com
+força paralela às fibras junto à extremidade da peça. Na L1 e na L1c, a força
+nos pinos atua a cerca de 84$^{\circ}$ das fibras, e o modo pertinente é o
+fendilhamento, verificado na \autoref{ssec:pinos-l1}; a componente paralela às
+fibras é apenas o pequeno esforço normal no eixo da viga, de cerca de 9 kN, e não
+mobiliza o bloco. A verificação do anexo A não se aplica, portanto, a essas
+ligações. O arranjo em linha única, com um pino por fileira paralela às fibras,
+faz também o número efetivo de pinos igualar o real.
 
 A chapa metálica, verificada conforme a EN 1993-1-8 \cite{EN1993-1-8:2005},
 apresenta taxa de 0,10, governada pelo cisalhamento do pino. A espessura de
@@ -246,28 +587,49 @@ As terças são biapoiadas entre pórticos e se apoiam por contato sobre o
 extradorso da viga, de modo que as extremidades de duas terças consecutivas se
 encontram sobre o eixo da viga, cada uma com meia largura de apoio. A gravidade
 passa pelo contato. A ligação recebe o que o contato não transmite: o
-arrancamento da sucção, de 14,7 kN por extremidade de terça, na combinação
+arrancamento da sucção, de 15,1 kN por extremidade de terça, na combinação
 $0{,}9\,G + 1{,}5\,W$ com o coeficiente de pressão mais desfavorável da
 cobertura; a força de contenção lateral da viga, pelo item 9.2.5.2 da
 EN 1995-1-1 \cite{EN1995-1-1:2004}, ao longo da terça; e a parcela do
 cisalhamento do diafragma que leva o vento perpendicular às cumeeiras aos
-frontões, de 3,4 kN, ao longo da viga.
+frontões, de 4,1 kN, ao longo da viga; e a torção do apoio em garfo.
 
 A junta corrente emprega parafusos autoatarraxantes de rosca total de 8 mm,
 inseridos pelas faces laterais da terça a 45$^{\circ}$ e cruzados, com penetração
-efetiva de 120 mm em cada peça. A resistência ao arrancamento segue o item 8.7.2,
+efetiva de 160 mm em cada peça, o que corresponde a parafusos de cerca de 340 mm. A resistência ao arrancamento segue o item 8.7.2,
 com o número efetivo $n^{0,9}$ do grupo; a resistência lateral, o item 8.7.1 com
 a teoria de Johansen; e a interação, a fórmula (8.28) do item 8.7.3. São
 necessários oito parafusos por extremidade de terça, quatro por face, com taxa de
-0,56. A resistência à tração do aço, o diâmetro de núcleo e o momento de
+0,49; quatro por face é o máximo que cabe na altura de 400 mm da terça. A resistência à tração do aço, o diâmetro de núcleo e o momento de
 plastificação do parafuso são dados de catálogo, declarados e a confirmar com a
 avaliação técnica do produto, como no fixador da telha.
 
 Nas baías contraventadas, a terça é também montante da treliça da cobertura e
-conduz ao nó das diagonais a força de 93,3 kN do montante interior mais
-solicitado. Essa força é transmitida por chapa metálica embutida na terça, com
-cinco cavilhas de 20 mm paralelas às fibras, como nas escoras, com taxa de 0,75.
-A \autoref{fig:des-terca-viga} apresenta a junta corrente.
+conduz ao nó das diagonais a força de 153 kN do montante interior mais
+solicitado. Essa força é transmitida por duas chapas metálicas embutidas nas duas
+terças, atravessando a junta, com 14 cavilhas de 20 mm de cada lado, paralelas
+às fibras, como nas escoras, em duas fileiras de sete, com taxa de 0,73. As chapas
+ficam em rasgos abertos pelo topo das terças, e esse rasgo não pode descer até os
+parafusos a 45$^{\circ}$ da junta corrente, que atravessam o plano médio da terça
+entre 41 e 217 mm acima da sua face inferior. Com 10 mm de folga, o rasgo tem no
+máximo 173 mm de profundidade, o que limita as cavilhas a duas fileiras na
+altura; o montante usa rasgos de 171 mm.
+
+A verificação da terça e a sua estabilidade lateral pressupõem apoio em garfo,
+isto é, extremidades impedidas de girar em torno do eixo da peça, e a terça de
+0,20 por 0,40 m apoia-se em apenas meia largura da viga, 160 mm. Sob gravidade, o
+banzo comprimido, o superior, é contido pela telha; sob sucção, o inferior fica
+livre entre pórticos. Com $\ell_{ef} = 0{,}9\,L_T = 5{,}18$ m (tabela 6.1 da
+EN 1995-1-1), $\lambda_{rel,m} = 0{,}41$ e $k_{crit} = 1$, de modo que a terça não
+flamba lateralmente, com taxa de flexão sob sucção de 0,31. A contenção exigida
+do garfo segue o item 9.2.5.2: a força de contenção é $F_{Ed} = N_{Ed}/k_{f,2}$, com
+$N_{Ed} = (1 - k_{crit})\,M_{Ed}/h$ e $k_{f,2} = 80$ para MLC; tomando o limite superior
+$k_{crit} = 0$, o momento de torção no apoio é $M_{tor} = F_{Ed}\,h = M_{Ed}/80$,
+0,27 kN$\cdot$m para o momento de cálculo de 21,7 kN$\cdot$m da sucção. A terça
+tende a tombar em torno da aresta inferior, e o giro é impedido pelos parafusos
+da face oposta, a 45$^{\circ}$, com braço igual à largura da terça: o acréscimo de
+tração, de 0,48 kN por parafuso, entra no dimensionamento dos parafusos e está
+incluído na taxa de 0,49. A \autoref{fig:des-terca-viga} apresenta a junta corrente.
 
 \figura
 {Ligação corrente entre a terça e a viga}
@@ -280,100 +642,264 @@ A \autoref{fig:des-terca-viga} apresenta a junta corrente.
 
 \section{LIGAÇÃO ENTRE PILAR E FUNDAÇÃO}\label{sec:ligacao-base}
 
-A base dos pilares emprega chapa metálica soldada a quatro chumbadores moldados
-com cabeça, de 24 mm e classe 8.8. Nas bases correntes, de extremidade (L3) e
+A chapa de base dos pilares é fixada a quatro chumbadores moldados com cabeça, de
+24 mm e classe 8.8, por porca sobre arruela-chapa, e não por solda: o aço 8.8 não
+é adequado à soldagem. A chapa é nivelada por porcas de nivelamento e assente
+sobre graute. Nas bases correntes, de extremidade (L3) e
 centrais (L3c), o empuxo de arco é nulo, em consequência do modelo adotado, mas
 isso não dispensa a verificação da ancoragem. Ela é solicitada em duas
 situações de projeto que não ocorrem simultaneamente, conforme a EN 1990
 \cite{EN1990:2002}.
 
-A primeira é persistente: a combinação de sucção arranca a base, com 83,9 kN em
-L3 e 152 kN em L3c, e o vento no próprio pilar leva à base metade do seu
-arrasto, 1,7 kN. A segunda é acidental: o choque de veículo, com força de 50 kN
-aplicada a 0,50 m do piso, conforme a EN 1991-1-7 \cite{EN1991-1-7:2006}, chega à
-base do pilar birrotulado como
+A primeira é persistente: a combinação de sucção arranca a base, com 98,3 kN em
+L3 e 169 kN em L3c, e o vento no próprio pilar leva à base metade do seu
+arrasto, 1,6 kN. A segunda é acidental: o choque de veículo, com força de 50 kN
+aplicada a 0,50 m do piso, conforme a EN 1991-1-7 \cite{EN1991-1-7:2006}, atinge o
+pilar de madeira, que começa no topo do pilarete, a 0,30 m do piso
+(\autoref{ssec:chapa-base}), e chega à base do pilar birrotulado como
 
 \begin{equation}
-    V_{Ed} = F\,\frac{H - h_{imp}}{H}
-           = 50 \times \frac{7{,}0 - 0{,}5}{7{,}0} = 46{,}4~\text{kN}.
+    V_{Ed} = F\,\frac{H_m - h_{imp}}{H_m}
+           = 50 \times \frac{6{,}70 - 0{,}20}{6{,}70} = 48{,}5~\text{kN},
     \label{eq:corte-impacto}
 \end{equation}
 
 \noindent
-As bases correntes não têm chaveta, de modo que esse cortante vai aos
-chumbadores. Não se credita o atrito sob a chapa, que a compressão do peso
-próprio mobilizaria na situação acidental, e mantêm-se nela os coeficientes
-parciais da situação persistente, ambos a favor da segurança. A
+em que $H_m = 6{,}70$ m é o comprimento da peça de madeira e
+$h_{imp} = 0{,}50 - 0{,}30 = 0{,}20$ m a altura do choque acima do seu pé.
+
+\noindent
+Com porca de nivelamento, o graute tem espessura maior que $d/2 = 12$ mm, e um
+cortante transmitido pelos chumbadores agiria com braço de alavanca, pelo item
+6.2.2.3 da EN 1992-4 \cite{EN1992-4:2018}: o chumbador ficaria fletido no trecho
+entre o concreto e a chapa, com uma taxa que depende do grau de restrição da
+chapa ao giro, de 0,56 se ela não puder girar a 1,11 se puder. Para não depender
+dessa premissa, as bases correntes recebem, como as ancoradas, uma chaveta
+soldada sob a chapa, aqui em cruz, com dois braços de 200 por 80 mm, porque o
+choque pode vir de qualquer direção: o cortante vai ao concreto pelo braço
+perpendicular a ele, verificado ao esmagamento pelo item 6.7 da
+EN 1992-1-1 \cite{EN1992-1-1:2004}, e os chumbadores ficam só com a tração. Não se
+considera o atrito sob a chapa, e mantêm-se na situação acidental os coeficientes
+parciais da persistente, ambos a favor da segurança. A
 \autoref{tab:ancoragem-bases-correntes} resume a verificação do aço, pela
 tabela 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, e do concreto, pela
 EN 1992-4 \cite{EN1992-4:2018}, com a mesma geometria de bloco das demais bases.
 
 \tabela{Verificação da ancoragem das bases correntes}{\footnotesize
-\begin{tabular}{llrrcc}
+\begin{tabular}{llrrccc}
 \toprule
-    \textbf{Base} & \textbf{Situação} & \textbf{$N_{Ed}$ (kN)} & \textbf{$V_{Ed}$ (kN)} & \textbf{$\eta$ aço} & \textbf{$\eta$ concreto} \\
+    \textbf{Base} & \textbf{Situação} & \textbf{$N_{Ed}$ (kN)} & \textbf{$V_{Ed}$ (kN)} & \textbf{$\eta$ aço} & \textbf{$\eta$ concreto} & \textbf{$\eta$ chaveta} \\
 \midrule
-    L3  & Persistente, sucção & 83,9  & 1,7  & 0,13 & 0,20 \\
-    L3  & Acidental, impacto  & 0,0   & 46,4 & 0,09 & 0,34 \\
-    L3c & Persistente, sucção & 152 & 1,7  & 0,23 & 0,36 \\
-    L3c & Acidental, impacto  & 0,0   & 46,4 & 0,09 & 0,34 \\
+    L3  & Persistente, sucção & 101 & 1,6  & 0,15 & 0,24 & 0,01 \\
+    L3  & Acidental, impacto  & 72,8 & 48,5 & 0,11 & 0,18 & 0,19 \\
+    L3c & Persistente, sucção & 171 & 1,6  & 0,26 & 0,41 & 0,01 \\
+    L3c & Acidental, impacto  & 72,8 & 48,5 & 0,11 & 0,18 & 0,19 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-bases-correntes}{}{}
 
-No impacto governa a ruptura da borda de concreto sob cortante, com resistência
-de 140 kN, e no arrancamento governa o cone, com 422 kN. A taxa da ligação
-é a maior entre a ancoragem e a compressão do concreto sob a chapa, que vale
-0,07 em L3 e 0,14 em L3c, sob o esforço normal de 199 kN. Resultam 0,34
-em L3 e 0,36 em L3c, ambas abaixo do limite de 0,75 dos modos frágeis. As
-bases de canto e central montante, que já dispõem de chaveta e de seis
+Na situação acidental, a tração nos chumbadores é a do binário do momento do
+pilarete (\autoref{ssec:chapa-base}). Governa o cone de arrancamento nas duas
+situações, e resultam 0,24 em L3 e 0,41 em L3c, abaixo do limite de 0,75 dos
+modos frágeis; a chaveta, no choque, trabalha com 0,19, e na base L3f, onde
+recebe também o cortante do painel do frontão, com 0,27. As
+bases dos pilares montantes, que já dispõem de chaveta e de seis
 chumbadores para o cortante dos painéis de contraventamento, absorvem o choque
 com folga maior.
 
-\subsection{Chapa de base e pé do pilar}\label{ssec:chapa-base}
+\subsection{Chapa de base, pilarete e pé do pilar}\label{ssec:chapa-base}
 
-O desenho cotado das bases mostrou que a chapa de 400 por 400 mm, adotada
-inicialmente pelo critério de cobrir o pilar com borda de 40 mm, era incompatível
-com a própria verificação da ancoragem, feita com chumbadores espaçados de
-400 mm: com essa chapa, os chumbadores cairiam na face do pilar. A chapa passou a
-ser definida pela grelha de chumbadores, com lado igual ao espaçamento acrescido
-de duas bordas de 60 mm. Resultam 520 por 520 mm nas bases L3, L3c e L3f, com
-quatro chumbadores, e 520 por 920 mm na base ancorada L3a, com seis. A arruela de
-cada chumbador fica a 18 mm da face do pilar.
+A chapa de base é definida pela grelha de chumbadores, com lado igual ao
+espaçamento de 400 mm acrescido de duas bordas de 60 mm: 520 por 520 mm nas bases
+L3, L3c e L3f, com quatro chumbadores, e 520 por 920 mm na base ancorada L3a, com
+seis. O pilar de madeira não se apoia nela. Como a chapa é maior que a seção do
+pilar, formaria uma bandeja que reteria água junto ao topo da madeira. Entre a
+chapa e o pé do pilar há um pilarete metálico, que eleva a madeira a 0,30 m do
+piso acabado, acima da zona de respingo, altura usual nessa função. O piso
+acabado coincide com o topo do bloco de fundação. Nos pilares correntes, a cadeia
+que leva o arrancamento à fundação é, portanto,
+\begin{center}
+pinos da L1 $\rightarrow$ chapa de topo $\rightarrow$ luva $\rightarrow$ tirante
+interno $\rightarrow$ chapa de topo do pilarete $\rightarrow$ tubo $\rightarrow$
+chapa de base $\rightarrow$ chumbadores $\rightarrow$ concreto,
+\end{center}
+toda em aço depois dos pinos, e a resistência da ligação é a do elo mais fraco.
 
-Faltavam ainda duas verificações. A primeira é a da própria chapa sob o
-arrancamento. O pilar de madeira transmite a tração por uma chapa vertical
-embutida em rasgo no seu pé e soldada à chapa de base, e a chapa de base flete
-entre essa chapa vertical e os chumbadores, a 183 mm dela. A verificação segue o
-modelo de T-stub do item 6.2.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, com os
-três modos de ruptura, e a espessura é a menor comercial que mantém a taxa abaixo
-de 0,90. A compressão segue o item 6.2.5, pela área efetiva em torno do pilar, e
-não governa. A segunda é a ligação do pé do pilar: cavilhas de 20 mm em corte
-duplo atravessam a madeira e a chapa vertical, com a força de arrancamento
-paralela às fibras, pelos itens 8.2.3 e 8.5.1.1 e pelo anexo A da
-EN 1995-1-1 \cite{EN1995-1-1:2004}. O cortante do choque de veículo cruza as
-mesmas cavilhas perpendicularmente às fibras; o cortante dos painéis de
-contraventamento não passa pela madeira, porque a diagonal se liga à chapa de
-base pelo olhal. A \autoref{tab:bases} resume o resultado.
+O pilarete é um tubo circular de aço S355, soldado à chapa de base, com chapa de
+topo de dimensões menores que a seção do pilar, recuada 10 mm de cada face, para
+que também ela não forme bandeja. A seção circular resiste igualmente ao choque
+de veículo em qualquer direção. Ele é verificado à compressão com flambagem, à
+tração, ao cortante e à flexão com esforço normal, pelos itens 6.2 e 6.3 da
+EN 1993-1-1 \cite{EN1993-1-1:2005}, como balanço engastado na chapa de base. O
+momento vem do cortante na base do pilar de madeira, $M = V\,h$, que no choque de
+veículo vale $48{,}5 \times 0{,}30 = 14{,}6$ kN$\cdot$m. Com a madeira a 0,30 m do
+piso, o choque, aplicado a 0,50 m, atinge o pilar de madeira e não o pilarete; um
+pilarete de 0,50 m ou mais o receberia diretamente. As diagonais de
+contraventamento continuam ligadas à chapa de base, abaixo do pilarete, de modo
+que o cortante dos painéis vai à chaveta sem fleti-lo; só o esforço normal do
+montante o atravessa. A chapa de topo recebe o arrancamento da chapa vertical, ao
+longo de um diâmetro, e o entrega à parede do tubo; verifica-se como faixa
+biengastada na parede. As soldas de filete do tubo às duas chapas seguem o
+método simplificado do item 4.5.3.3 da EN 1993-1-8 \cite{EN1993-1-8:2005}.
 
-\tabela{Chapa de base e ligação do pé do pilar}{\footnotesize
-\begin{tabular}{lrcccc}
+Os chumbadores moldados no concreto têm tolerância de posição que um furo de
+folga normal, de 26 mm para o M24, não acomoda. Exige-se da execução da fundação
+a posição dos chumbadores com tolerância de $\pm 6$ mm, e os furos da chapa de
+base são alargados, com 36 mm. Sobre cada furo, uma arruela-chapa de 80 por
+80 por 10 mm em aço S275, com furo normal, é posicionada na montagem e soldada à
+chapa de base com filete de 5 mm no contorno; a porca aperta-se sobre ela. A
+arruela-chapa devolve ao chumbador o furo de folga normal e elimina, no caminho
+do cortante, a folga do furo alargado; o cortante de cada chumbador, de até
+12 kN no choque de veículo, passa à chapa de base pela solda, com taxa de 0,06.
+Com o furo alargado, as distâncias mínimas da tabela 3.3 da EN 1993-1-8 passam
+a $e_1 = e_2 \geq 1{,}2 \times 36 = 43$ mm e $p \geq 2{,}4 \times 36 = 86$ mm,
+atendidas pelas bordas de 60 mm e pelo espaçamento de 400 mm; o T-stub não se
+altera, porque a porca apoia-se na arruela-chapa, que se apoia em todo o
+contorno do furo. Para o aperto, o obstáculo junto à porca deixa de ser o pilar
+de madeira, que começa 0,30 m acima, e passa a ser o tubo do pilarete: o eixo
+do chumbador fica a 130 mm da face do tubo, e a arruela-chapa a 90 mm, folga
+ampla para o soquete de uma porca M24.
+
+A chapa de base recebe a tração pela parede do tubo. Cada chumbador trabalha como
+um T-stub isolado junto ao canto da chapa, com os padrões de charneira da
+fileira de extremidade da tabela 6.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, e a
+espessura é a menor comercial que mantém a taxa abaixo de 0,90, com o mínimo
+construtivo de 12,5 mm e a espessura exigida pela garganta da solda do tubo. O
+binário do momento do pilarete traciona os chumbadores da fileira oposta e é
+somado ao arrancamento na verificação da chapa e na da ancoragem. A compressão
+segue o item 6.2.5, pela área efetiva em coroa sob a parede do tubo. Nos pilares
+correntes, a chapa de topo do pilarete recebe o tirante no centro, pela porca e
+pela arruela-chapa de 80 mm: é verificada como placa circular engastada na parede
+do tubo, e o tubo, na seção da janela de acesso. O pé do pilar corrente não
+recebe tração, que vai pelo tirante: as duas abas e as quatro cavilhas de 20 mm
+levam o cortante do choque de veículo, perpendicular às fibras. Nos montantes
+bipartidos, o pé de cada lâmina recebe também a sua parcela do arrancamento das
+vigas, com a força paralela às fibras, pelos itens 8.2.3 e 8.5.1.1 e pelo anexo A
+da EN 1995-1-1 \cite{EN1995-1-1:2004}. A \autoref{tab:bases} resume o resultado.
+
+\tabela{Chapa de base, pilarete e ligação do pé do pilar}{\scriptsize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrcccccc}
 \toprule
-    \textbf{Base} & \textbf{$N_t$ (kN)} & \textbf{Chapa (mm)} & \textbf{$\eta$ T-stub} & \textbf{Cavilhas} & \textbf{$\eta$ pé} \\
+    \textbf{Base} & \shortstack{\textbf{$N_t$}\\(kN)} & \shortstack{\textbf{Chapa de base}\\(mm)} & \shortstack{\textbf{$\eta$}\\\textbf{chapa}} & \shortstack{\textbf{Chapa de topo}\\(mm)} & \shortstack{\textbf{$\eta$}\\\textbf{pilarete}} & \textbf{Cavilhas} & \shortstack{\textbf{$\eta$}\\\textbf{pé}} \\
 \midrule
-    L3                 &  83,9 & 520 $\times$ 520 $\times$ 8    & 0,84 &  6 $\varnothing$ 20 & 0,69 \\
-    L3c                & 152 & 520 $\times$ 520 $\times$ 12,5 & 0,63 & 12 $\varnothing$ 20 & 0,67 \\
-    L3f                &  67,2 & 520 $\times$ 520 $\times$ 8    & 0,68 &  5 $\varnothing$ 20 & 0,73 \\
-    L3a, canto         & 284 & 520 $\times$ 920 $\times$ 12,5 & 0,69 & 21 $\varnothing$ 20 & 0,75 \\
-    L3a, central montante & 282 & 520 $\times$ 920 $\times$ 12,5 & 0,69 & 21 $\varnothing$ 20 & 0,75 \\
+    L3                    &  98,3 & 520 $\times$ 520 $\times$ 12,5 & 0,31 & 300 $\times$ 250 $\times$ 19   & 0,86 &  4 $\varnothing$ 20 & 0,56 \\
+    L3c                   &   169 & 520 $\times$ 520 $\times$ 12,5 & 0,58 & 300 $\times$ 250 $\times$ 25   & 0,78 &  4 $\varnothing$ 20 & 0,56 \\
+    L3f                   &  82,8 & 520 $\times$ 520 $\times$ 12,5 & 0,27 & 300 $\times$ 250 $\times$ 19   & 0,83 &  4 $\varnothing$ 20 & 0,56 \\
+    L3a, canto/lat.$^{a}$ & 442 & 920 $\times$ 520 $\times$ 16 & 0,83 & 140 $\times$ 300 $\times$ 16 & 0,75 &  6 $\varnothing$ 20$^{b}$ & 0,63 \\
+    L3a, central$^{a}$    &   427 & 920 $\times$ 520 $\times$ 16   & 0,85 & 140 $\times$ 300 $\times$ 19 & 0,87 & 12 $\varnothing$ 20$^{b}$ & 0,66 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{bases}{}{}
 
-A chapa é dúctil e trabalha com taxa de até 0,84, na base L3, governada pelo
-modo 1 do T-stub, isto é, pela formação de charneiras plásticas na própria chapa.
-A ligação do pé do pilar é modo frágil e fica abaixo de 0,75 em todas as bases;
-nas ancoradas, com 21 cavilhas em três fileiras verticais de sete, ocupa 740 mm
-do pé do pilar. A \autoref{fig:des-bases} e a \autoref{fig:des-base-l3a}
-apresentam os detalhes.
+Nas bases L3a, marcadas com $a$, dos montantes bipartidos, há dois pilaretes de
+114,3 por 8 mm, um sob cada lâmina, e as cavilhas, marcadas com $b$, são as do pé
+de cada lâmina.
+
+O choque de veículo pode atingir o pilar em qualquer direção e solicita o pé
+com 48,5 kN perpendiculares às fibras. A componente no plano da chapa vertical vai
+às cavilhas, ao corte, e torna as duas faces do pilar bordas carregadas: pela
+tabela 8.5 da EN 1995-1-1 \cite{EN1995-1-1:2004}, a distância das cavilhas a cada
+face é de pelo menos $a_{4,t} = \max[(2 + 2\sin 90^{\circ})\,d;\ 3d] = 80$ mm, o que,
+no pilar de 270 mm, admite duas fileiras perpendiculares às fibras, a 105 mm das
+faces. A mesma componente exige a verificação ao fendilhamento do item 8.1.4: com o
+grupo centrado, $h_e = 165$ mm, e $F_{90,Rd} = 83$ kN, com $k_{mod} = 0{,}90$ e
+$\gamma_M = 1{,}0$ da situação acidental (tabela 2.3 da EN 1995-1-1), e taxa de
+0,58. A componente perpendicular ao plano da chapa não é resistida pelas
+cavilhas ao corte; vencida a folga de 2 mm do rasgo, as faces da chapa apoiam-se
+nas paredes do rasgo, e a compressão perpendicular às fibras sobre a área da chapa
+embutida não passa de 0,59 MPa, com taxa de até 0,26. Por fim, a seção líquida do
+pé à tração, descontados o rasgo de 24 mm e uma fileira de furos, pelo item 6.1.2,
+fica abaixo de 4,6 MPa, com taxa de até 0,45. Nas bases ancoradas dos montantes
+bipartidos, o pé de cada lâmina recebe só a sua parcela do arrancamento das vigas,
+até 106 kN, e metade do choque, que o espaçador do pé reparte entre as lâminas; o
+arrancamento do painel de contraventamento, de até 442 kN com as vigas, vai da diagonal à
+chapa de base e aos chumbadores, sem passar pela madeira.
+
+Nas bases correntes, o pilarete é um tubo de 139,7 por 8 mm; nas dos montantes
+bipartidos, um tubo de 114,3 por 8 mm sob cada lâmina, que tem 160 mm de
+espessura. Como barra, a sua taxa
+não passa de 0,34 na seção bruta e de 0,63 na seção líquida dos quatro furos de
+respiro de 16 mm exigidos pela galvanização a fogo, dois junto a cada chapa
+(\autoref{sec:protecao-corrosao}), onde a tração e o momento do engaste se somam
+linearmente; quem governa o pilarete são a chapa de topo e a solda do tubo à
+chapa de base, componentes dúcteis dimensionados para taxa até 0,90. A ligação
+do pé do pilar é modo frágil e fica abaixo de 0,75 em todas as bases. Com a
+madeira começando a 0,30 m do piso, o comprimento do pilar de madeira, que
+entra na sua verificação à flambagem e à flexão, passa a 6,70 m; os painéis de
+contraventamento vertical, ligados à chapa de base e ao topo das lâminas dos
+montantes, têm 7,90 m de altura. A
+\autoref{fig:des-bases} e a \autoref{fig:des-base-l3a} apresentam os detalhes,
+com os níveis do piso acabado, que coincide com o topo do bloco, e do topo do
+pilarete, a camada de graute de 30 mm sob a chapa de base, o plano da chapa
+vertical, que é o do pórtico, a direção do choque, que pode ser qualquer uma, e,
+nas bases correntes, o tirante interno, com a porca apertada pela janela do
+pilarete. O quadro da \autoref{fig:des-bases} reúne o pilarete, as soldas e o
+tirante de cada variante.
+
+Cada elo da cadeia do arrancamento é verificado para a mesma tração, e a
+\autoref{tab:cadeia-base} reúne as taxas nas duas bases correntes mais
+solicitadas. Depois dos pinos da L1, a madeira sai da cadeia. Os elos frágeis, os
+pinos e o concreto, e o tirante, que é a via única, ficam abaixo de 0,75; o elo
+mais solicitado é a solda do tubo à chapa de base em L3, componente de aço com
+limite de 1,00 e alvo de dimensionamento de 0,90. As taxas indicam a reserva de
+cada elo sob a mesma tração de cálculo, com os coeficientes parciais de cada
+material; não estabelecem a ordem de ruptura sob sobrecarga. Uma hierarquia por
+capacidade exigiria comparar resistências compatíveis, considerar a
+sobrerresistência do elo dúctil e caracterizar o mecanismo, o que não se fez
+nesta cadeia.
+
+\tabela{Cadeia de transmissão do arrancamento nas bases correntes}{\footnotesize
+\begin{tabular}{llcc}
+\toprule
+    \textbf{Elo} & \textbf{Natureza} & \textbf{L3} & \textbf{L3c} \\
+\midrule
+    Pinos da L1, arrancamento                 & Frágil & 0,69 & 0,69 \\
+    Solda da luva sob a chapa de topo         & Aço    & 0,70 & 0,78 \\
+    Tirante interno (via única)               & Aço    & 0,70 & 0,64 \\
+    Chapa de topo do pilarete                 & Aço    & 0,78 & 0,78 \\
+    Solda do tubo à chapa de topo             & Aço    & 0,27 & 0,38 \\
+    Tubo do pilarete, seção na janela         & Aço    & 0,22 & 0,29 \\
+    Solda do tubo à chapa de base             & Aço    & 0,86 & 0,73 \\
+    Chapa de base, T-stub                     & Aço    & 0,31 & 0,53 \\
+    Chumbadores, aço                          & Aço    & 0,15 & 0,26 \\
+    Concreto, cone de arrancamento            & Frágil & 0,24 & 0,41 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{cadeia-base}{}{}
+
+\subsection{Ruptura de bloco nas ligações à tração paralela às fibras}\label{ssec:bloco-pilares}
+
+Com o tirante interno, o pé e o topo dos pilares correntes não recebem tração.
+Ela permanece no pé das lâminas dos montantes bipartidos, nas escoras e no
+montante da ligação terça--viga, o caso típico do anexo A da EN 1995-1-1
+\cite{EN1995-1-1:2004}: tração paralela às fibras, junto à extremidade da peça,
+transmitida por um grupo de cavilhas em chapa central. A resistência é o maior
+dos dois mecanismos da fórmula A.1, a tração na face transversal do bloco e o
+cisalhamento nas suas faces longitudinais, calculados para a madeira de cada
+lado da chapa, com $t_1 = (b - t)/2$. Os comprimentos são líquidos, descontados
+os furos, conforme a figura A.1. Para a área de cisalhamento, a fórmula A.3
+admite $L_{net,v}\,t_1$ quando a cavilha embute sem formar rótula, e
+$L_{net,v}\,(L_{net,t} + 2\,t_{ef})/2$ quando forma rótulas plásticas, com
+$t_{ef}$ dependente do modo; como o modo governante de Johansen, na madeira
+lateral de 150 mm com chapa grossa, é o de duas rótulas plásticas, o modo (h),
+adota-se a segunda forma, com $t_{ef} = 2\sqrt{M_{y,Rk}/(f_{h,k}\,d)} = 47{,}9$ mm,
+pela fórmula A.7.
+
+A distância entre as fileiras perpendiculares às fibras é escolhida junto com a
+malha, dentro dos limites que a retração impedida e a distância às bordas
+carregadas impõem. A \autoref{tab:bloco-pilares} resume o resultado no pé das
+lâminas.
+
+\tabela{Ruptura de bloco no pé das lâminas dos montantes}{\footnotesize
+\begin{tabular}{lcrrrrc}
+\toprule
+    \textbf{Base} & \textbf{Malha} & \textbf{$a_2$ (mm)} & \textbf{$L_{net,t}$ (mm)} & \textbf{$L_{net,v}$ (mm)} & \textbf{$F_{bs,Rd}$ (kN)} & \textbf{$\eta$} \\
+\midrule
+    L3a, lâmina canto/lat. & $3 \times 2$ &  60 &  80 & 420 & 161 & 0,35 \\
+    L3a, lâmina central   & $3 \times 4$ &  60 &  80 & 740 & 161 & 0,66 \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{bloco-pilares}{}{}
+
+Nas escoras do nó de topo e no montante da ligação terça--viga, com o mesmo
+tratamento, com as duas chapas embutidas, a ruptura de bloco resulta em 0,63 e
+0,73.
 
 \figura
 {Bases correntes L3, L3c e L3f}
@@ -385,7 +911,7 @@ apresentam os detalhes.
 {}
 
 \figura
-{Base ancorada L3a dos pilares de canto e centrais montantes}
+{Base ancorada L3a dos pilares montantes bipartidos}
 {1.0}
 {fig/des07_base_ancorada.pdf}
 {Elaborado pelo autor (2026)}
@@ -401,26 +927,31 @@ A sucção do vento inverte a reação vertical nas bases, e o arrancamento
 resultante depende da posição da base na edificação. A
 \autoref{tab:arrancamento} apresenta os valores, na combinação de sucção da
 EN 1990 \cite{EN1990:2002}. A base de canto acumula o arrancamento de sucção, de
-83,9 kN, com o esforço descendente dos dois painéis de contraventamento, de
-200 kN, invertido sob a mesma combinação. A base central montante soma o
-arrancamento de sucção das duas vigas, de 152 kN, ao esforço do painel do
-alinhamento central, de 130 kN, e recebe ainda o cortante de 107 kN.
+98,3 kN, com o esforço descendente dos dois painéis de contraventamento, de
+343 kN, invertido sob a mesma combinação. A base central montante soma o
+arrancamento de sucção das duas vigas, de 169 kN, ao esforço do painel do
+alinhamento central, de 258 kN, e recebe ainda o cortante de 176 kN. A taxa da
+tabela é a da ancoragem completa, verificada pela EN 1992-4, e não a de uma
+resistência por chumbador.
 
 \tabela{Esforço de arrancamento por posição de base}{\footnotesize
 \begin{tabular}{lcrc}
 \toprule
-    \textbf{Posição da base} & \textbf{Quantidade} & \textbf{Arrancamento (kN)} & \textbf{$\eta$} \\
+    \textbf{Posição da base} & \textbf{Quantidade} & \textbf{Arrancamento (kN)} & \textbf{$\eta$ da ancoragem} \\
 \midrule
-    Extremidade & 14 &  83,9 & 0,27 \\
-    Central     &  3 & 152 & 0,48 \\
-    Central montante & 6 & 282 & 0,59 \\
-    Canto       &  4 & 284 & 0,60 \\
+    Extremidade & 14 &  98,3 & 0,24 \\
+    Central     &  3 & 169 & 0,41 \\
+    Central montante & 6 & 427 & 0,67 \\
+    Canto       &  4 & 442 & 0,69 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{arrancamento}{}{}
 
-As bases de canto e central montante são as mais solicitadas, por acumularem
+As bases dos pilares montantes são as mais solicitadas, por acumularem
 efeitos que não coincidem nas demais. Ambas recebem a mesma ancoragem, com seis
-chumbadores e chaveta de cisalhamento. A verificação é apresentada para a base de
+chumbadores e chaveta de cisalhamento, mais profunda que a das bases correntes:
+os modos do concreto são frágeis e limitados a $\eta \leq 0{,}75$, e, com o vento
+longitudinal majorado, a profundidade de 400 mm das bases correntes levaria o cone
+a 0,85. A verificação é apresentada para a base de
 canto, que tem o maior cortante.
 
 \subsection{Verificação da ancoragem de canto}\label{ssec:ancoragem-canto}
@@ -432,7 +963,7 @@ concreto que o envolve, segundo a EN 1992-4 \cite{EN1992-4:2018}. A
 \autoref{tab:ancoragem-canto} apresenta ambas. O aço segue a tabela 3.4 e o item
 3.4 da EN 1993-1-8 \cite{EN1993-1-8:2005}, com $\gamma_{Ms} = 1{,}5$; o concreto
 C25/30 segue as fórmulas (7.1) a (7.12) da EN 1992-4 \cite{EN1992-4:2018}, com
-profundidade efetiva de 400 mm, afastamento de borda de 600 mm e espaçamento de
+profundidade efetiva de 500 mm, afastamento de borda de 750 mm e espaçamento de
 400 mm; e o esmagamento sob a chaveta segue o item 6.7 da
 EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas parcialmente carregadas.
 
@@ -442,39 +973,40 @@ EN 1992-1-1 \cite{EN1992-1-1:2004}, para áreas parcialmente carregadas.
     \textbf{Grandeza} & \textbf{Valor} & \textbf{Unidade} & \textbf{$\eta$} \\
 \midrule
     \multicolumn{4}{l}{\textit{Resistência do aço}} \\
-    Tração solicitante          &   284 & kN & \\
-    Tração resistente do grupo  & 1.020 & kN & 0,28 \\
-    Cortante solicitante        &   164 & kN & \\
+    Tração solicitante          &   442 & kN & \\
+    Tração resistente do grupo  & 1.017 & kN & 0,44 \\
+    Cortante solicitante        &   245 & kN & \\
     Cortante nos chumbadores    &     0,00 & kN & 0,00 \\
-    Interação                   &          &    & 0,20 \\
+    Interação                   &          &    & 0,32 \\
 \addlinespace
     \multicolumn{4}{l}{\textit{Resistência do concreto}} \\
-    Cone de arrancamento        &   527 & kN & 0,54 \\
+    Cone de arrancamento        &   644 & kN & 0,69 \\
     Extração pela cabeça        & 1.780    & kN & \\
-    Fendilhamento               &   527 & kN & 0,54 \\
-    Esmagamento sob a chaveta   &   267 & kN & 0,62 \\
+    Fendilhamento               &   644 & kN & 0,69 \\
+    Esmagamento sob a chaveta   &   347 & kN & 0,71 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{ancoragem-canto}{}{}
 
-O cortante de 164 kN não solicita os chumbadores. Ele é transmitido ao bloco
+O cortante de 245 kN não solicita os chumbadores. Ele é transmitido ao bloco
 por chaveta de cisalhamento soldada sob a chapa de base, solução que evita
 submeter os chumbadores a esforço combinado e que é usual em bases sujeitas a
-força horizontal relevante. A chaveta, de 200 mm de comprimento e 80 mm de
+força horizontal relevante. A chaveta, de 260 mm de comprimento e 80 mm de
 embutimento, transfere esse cortante ao concreto por compressão localizada:
 verificada como área parcialmente carregada, resulta em resistência de
-267 kN e taxa de 0,62. Adotou-se fator de confinamento unitário, isto é, sem
+347 kN e taxa de 0,71. Adotou-se fator de confinamento unitário, isto é, sem
 o ganho que a norma permitiria, por depender a razão entre as áreas carregada e
 de distribuição da geometria da sapata, fora do escopo.
 
-A verificação do concreto é governada pelo cone de arrancamento, com 527 kN
-de resistência de cálculo contra 1.780 kN da extração pela cabeça, resultando em
-taxa de 0,54. Para que essa resistência se verifique, o bloco de fundação deve
-garantir afastamento de borda não inferior a 600 mm em torno do grupo, o que
-corresponde a dimensões aproximadas de 1,60 por 2,00 m em planta.
+A verificação do concreto é governada pelo cone de arrancamento, com 644 kN
+de resistência de cálculo, frente a 1.780 kN da extração pela cabeça, resultando em
+taxa de 0,69. Para que essa resistência se verifique, o bloco de fundação deve
+garantir afastamento de borda não inferior a 750 mm em torno do grupo e altura de
+pelo menos 1,00 m, o que corresponde a dimensões aproximadas de 1,90 por 2,30 m em
+planta.
 
-A base central montante emprega a mesma ancoragem. Sob tração de 282 kN e
-cortante de 107 kN, transmitido pela chaveta, resultam taxas de 0,28 na
-tração do aço, de 0,54 no cone de arrancamento e de 0,41 no esmagamento sob a
+A base central montante emprega a mesma ancoragem. Sob tração de 427 kN e
+cortante de 176 kN, transmitido pela chaveta, resultam taxas de 0,43 na
+tração do aço, de 0,67 no cone de arrancamento e de 0,51 no esmagamento sob a
 chaveta. O bloco de fundação dessas seis bases deve atender às mesmas exigências
 de afastamento de borda.
 
@@ -485,11 +1017,11 @@ EN 1992-4 \cite{EN1992-4:2018}, dois são dispensados por critério da própria
 norma e o terceiro é verificado.
 
 O arrancamento lateral é dispensado pelo item 7.2.1.9, por ser o afastamento de
-borda de 600 mm superior a metade da profundidade efetiva, que vale 200 mm. A
+borda de 750 mm superior a metade da profundidade efetiva, que vale 250 mm. A
 ruptura de borda sob cortante é dispensada por não haver cortante nos
-chumbadores, transmitido que é pela chaveta. O fendilhamento do concreto,
-esse, é aplicável e foi verificado pela fórmula (7.26), com afastamento crítico
-de 1.200 mm, resultando na mesma resistência de cálculo do cone, que permanece o
+chumbadores, já que a chaveta o transmite ao bloco. O fendilhamento do
+concreto é aplicável e foi verificado pela fórmula (7.26), com afastamento crítico
+de 1.500 mm, resultando na mesma resistência de cálculo do cone, que permanece o
 modo governante.
 
 Resta uma limitação, e ela deve ser declarada. A ancoragem entre chumbador e
@@ -500,26 +1032,34 @@ avaliação técnica do produto efetivamente especificado.
 \section{CONTRAVENTAMENTO}\label{sec:detalhe-contraventamento}
 
 O contraventamento da cobertura emprega cruzes de Santo André em barras redondas
-de 28 mm em aço S235, dispostas nas duas baías de extremidade, pelas razões
+de 36 mm em aço S235, dispostas nas duas baías de extremidade, pelas razões
 expostas na \autoref{ssec:predim-cv-cobertura}. Em cada baía e em cada água, as
 cruzes ocupam os oito painéis entre terças ao longo do vão da viga, de modo que
 o conjunto forma uma treliça de 20,25 m de vão apoiada no beiral e na linha
 central. São 64 barras de 6,28 m, e o peso de aço do sistema é de
-aproximadamente 1.943 kg.
+aproximadamente 3.210 kg.
 
-O contraventamento vertical emprega oito painéis de cruz com diagonais de 33 mm no
+Nas seis baías intermediárias, de 2--3 a 7--8, todos os painéis entre terças
+recebem cruzes de 12 mm, as CV-D, que formam a alma do diafragma horizontal pelo
+qual a força transversal de cada pórtico chega aos frontões
+(\autoref{sec:ordem-analise}). São 192 barras de 6,28 m, cerca de 1.070 kg de
+aço, com o mesmo terminal de olhal e pino das demais diagonais, dimensionado por
+capacidade e com taxa de 0,52. As cordas do diafragma são as terças de beiral,
+T1 e T17, contínuas por emendas ao longo dos 46 m.
+
+O contraventamento vertical emprega oito painéis de cruz com diagonais de 45 mm no
 mesmo aço: quatro nas fachadas, um em cada extremidade de cada fachada, e quatro
 no alinhamento central, dois contíguos em cada extremidade, conforme a
 \autoref{ssec:predim-cv-vertical}. Os painéis do alinhamento central recebem as
 reações que as treliças da cobertura entregam à linha central, por meio da
 escora longitudinal descrita na \autoref{ssec:no-topo}. O contraventamento
 transversal emprega um painel por frontão, CV-T1 e CV-T2, com diagonais de
-24 mm, entre o pilar de canto e o pilar de frontão, conforme a
+33 mm, entre o pilar de canto e o pilar de frontão, conforme a
 \autoref{ssec:predim-cv-frontao}.
 
 Todas as diagonais têm extremidades recalcadas, isto é, a rosca é aberta numa
-extremidade de diâmetro maior que o da barra: M30 na diagonal de 28 mm da
-cobertura, M36 na de 33 mm e M27 na de 24 mm. A medida é necessária para que a
+extremidade de diâmetro maior que o da barra: M39 na diagonal de 36 mm da
+cobertura, M48 na de 45 mm e M36 na de 33 mm. A medida é necessária para que a
 barra seja dúctil. Com rosca cortada no próprio diâmetro, a área resistente da
 rosca é cerca de 81\% da bruta, e a ruptura na rosca precede o escoamento: para
 uma barra de 36 mm, a resistência da rosca, de $0{,}9 f_u A_s/\gamma_{M2} =
@@ -535,10 +1075,17 @@ métrica que satisfaz o item 6.2.3(3) da EN 1993-1-1 \cite{EN1993-1-1:2005},
 \end{equation}
 
 \noindent
-o que, para o aço S235, exige $A_s \geq 0{,}907\,A$. Na diagonal de 33 mm, a
-rosca M36 resiste a 212 kN, acima dos 201 kN de escoamento da barra. Todas as
+o que, para o aço S235, exige $A_s \geq 0{,}907\,A$. Na diagonal de 36 mm, a
+rosca M39 resiste a 253 kN, acima dos 239 kN de escoamento da barra. Todas as
 diagonais são, assim, verificadas pelo mesmo critério,
 $N_{t,Rd} = \min(N_{pl,Rd};\, N_{u,Rd})$, que nelas resulta igual a $N_{pl,Rd}$.
+Este é o único ponto do projeto com dimensionamento por capacidade propriamente
+dito: a rosca e as ligações de extremidade (\autoref{ssec:lig-diagonais}) são
+dimensionadas para a resistência de escoamento da barra, e não para o esforço
+solicitante. A comparação é feita entre resistências de cálculo, sem fator de
+sobrerresistência do material; a margem disponível é a das próprias taxas, 0,88
+e 0,89 nas ligações, que cobre uma resistência real da barra até cerca de 12~\%
+acima da de cálculo.
 
 \subsection{Nó de topo das baías contraventadas}\label{ssec:no-topo}
 
@@ -547,38 +1094,196 @@ apoio uma força longitudinal, perpendicular ao plano do pórtico. Essa força n
 passa pela ligação entre viga e pilar, cuja chapa embutida trabalha no plano do
 pórtico. O caminho adotado é outro: a terça situada sobre o apoio, que é ao
 mesmo tempo o montante de extremidade da treliça e o banzo superior do painel
-vertical, funciona como escora e conduz a força a um nó metálico no topo do
-pilar. Nesse nó, uma chapa soldada à chapa de topo do pilar lateral, ou à sela
-do pilar central, recebe a escora, a diagonal da cobertura e a diagonal do painel
-vertical.
+vertical, funciona como escora e conduz a força ao nó do painel vertical.
+
+A dificuldade deste nó é geométrica. A escora está sobre o extradorso da viga,
+$h_0 = 1{,}00$ m acima do topo do pilar, enquanto o painel vertical, formado pelos
+pilares e pelas diagonais, termina no topo do pilar. A força longitudinal chega,
+portanto, num nível e precisa sair noutro, e no meio está a viga, cruzada
+perpendicularmente às fibras e sujeita a variações de altura com a umidade, de
+até 15 mm entre a montagem e o serviço
+(\autoref{ssec:curso-oblongos}). Quatro soluções foram examinadas, esquematizadas
+na \autoref{fig:esq-no-topo} e comparadas na \autoref{tab:solucoes-no-topo}.
+
+\figura
+{Nó de topo das baías contraventadas: soluções examinadas, no plano da fachada}
+{1.0}
+{fig/esq04_no_topo.pdf}
+{Elaborado pelo autor (2026)}
+{esq-no-topo}
+{}
+{}
+
+\begin{alineas}
+    \item Nó no topo do pilar. A força da escora e a da diagonal atuam em níveis
+          diferentes, e resta um binário $H\,h_0$, de 176 kN$\cdot$m no beiral e de
+          351 kN$\cdot$m na linha central, que nenhuma peça equilibra: o pilar é
+          rotulado, a viga não resiste a esse giro no apoio, e uma ligação
+          deslizante entre a escora e o nó, necessária para o movimento da viga, não
+          transmite força vertical. A solução não atende ao equilíbrio.
+    \item Nó no nível da escora, apoiado na viga. O binário desaparece, mas a
+          componente vertical da diagonal passa a descer pela viga,
+          perpendicularmente às fibras. A compressão da viga acrescenta cerca de
+          10 mm ao deslocamento do painel, que chega a 26,5 mm, acima do limite de
+          23,3 mm; e a diagonal impede o inchamento da viga, o que lhe acrescenta
+          cerca de 168 kN e a leva a 374 kN, acima dos 239 kN de resistência.
+          Engrossar a diagonal não resolve, porque a torna mais rígida e aumenta a
+          força de restrição.
+    \item Pórtico de aço ao lado da viga. Montantes de aço levam a força vertical
+          da escora ao topo do pilar sem passar pela madeira da viga, mas chegam a
+          cerca de 0,25 m do eixo do pilar, e o topo recebe momento de 42
+          kN$\cdot$m. Os 14 pilares montantes teriam de passar a 0,40 por 0,32 m, e
+          o topo exigiria chapas laterais para o momento, além do próprio pórtico.
+    \item Pilar bipartido. O pilar é formado por duas lâminas, uma de cada lado da
+          viga, que sobem até a escora. A escora apoia-se no topo das lâminas, e a
+          diagonal prende-se na lâmina do seu lado, no mesmo nível: as forças
+          concorrem no mesmo ponto, sem binário. A componente vertical desce pela
+          lâmina, paralela às fibras, direção em que a variação de umidade é
+          desprezável; cada lâmina tem o seu pilarete, e o pilar não recebe momento.
+          A viga apoia-se entre as lâminas e fica livre para inchar sob a escora.
+\end{alineas}
+
+\tabela{Soluções examinadas para o nó de topo}{\footnotesize
+\begin{tabular}{p{3.0cm}p{2.6cm}p{6.4cm}}
+\toprule
+    \textbf{Solução} & \textbf{Equilíbrio} & \textbf{Consequência} \\
+\midrule
+    (a) Nó no topo do pilar & Não fecha & Binário de 176 a 351 kN$\cdot$m sem peça que o equilibre \\
+    (b) Nó na escora, pela viga & Fecha & Deslocamento de 26,5 mm (limite 23,3) e diagonal com 374 kN (resistência 239) pelo inchamento da viga \\
+    (c) Pórtico de aço & Fecha & Momento de 42 kN$\cdot$m no topo do pilar; montantes de 0,40 $\times$ 0,32 m e pórtico de aço \\
+    (d) Pilar bipartido & Fecha & Lâminas de 0,16 $\times$ 0,32 m, taxa até 0,91; no modelo idealizado, sem momento no topo e sem o inchamento da viga entre os níveis \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{solucoes-no-topo}{}{}
+
+Os números das soluções (b) e (c) vêm do estudo feito antes da majoração do vento
+longitudinal por $\gamma_Q$; com ela, as forças das duas crescem na mesma proporção,
+ambas ficam mais desfavoráveis, e a comparação não se altera.
+
+Adotou-se o pilar bipartido. É a única das soluções que fecha o equilíbrio sem
+fazer passar força vertical pela madeira perpendicular às fibras e sem introduzir
+momento no pilar; usa praticamente o mesmo volume de madeira da solução (c), cerca
+de 0,79 m\textsuperscript{3} por pilar, frente a 0,86 m\textsuperscript{3}, sem a
+estrutura de aço adicional; e enquadra-se num caso previsto na norma, o pilar
+composto com espaçadores do anexo C da EN 1995-1-1 \cite{EN1995-1-1:2004}. O
+custo é concentrado nos 14 pilares montantes das baías contraventadas, que passam
+a ter duas lâminas e uma ligação própria com a viga
+(\autoref{ssec:pilar-bipartido}); os demais 15 pilares permanecem maciços.
 
 A força na escora de beiral, trecho das terças T1 ou T17 sobre o apoio, é o
-cortante do painel da fachada, de 107 kN. No
+cortante do painel da fachada, de 176 kN. No
 alinhamento central, a escora T9 entre os dois painéis contíguos de cada
 extremidade recebe as reações das duas águas e alimenta os dois painéis, e
-adota-se, como envoltória, 214 kN. As escoras são terças de 0,20 por 0,58 m,
-verificadas como peças flexo-axiais pelos itens 6.2.3 e 6.3.2 da
+adota-se, como envoltória, 351 kN. A escora de beiral é a própria terça, de 0,20
+por 0,40 m; a escora central, mais comprimida, é uma peça de 0,24 por 0,40 m, só
+nas quatro baías contraventadas do alinhamento central, porque com 0,20 m a
+flambagem em torno do eixo de menor inércia levaria a sua taxa a 1,03. Verificadas
+como peças flexo-axiais pelos itens 6.2.3 e 6.3.2 da
 EN 1995-1-1 \cite{EN1995-1-1:2004}, com a flexão da cobertura concomitante,
-resultando em 0,23 no beiral e 0,46 na linha central.
+resultam em 0,52 no beiral e 0,65 na linha central.
 
-A ligação de cada escora ao nó emprega cavilhas de 20 mm em chapa embutida,
-com a força paralela às fibras. Cada cavilha resiste, em corte duplo, a 25,0 kN,
-e o número efetivo segue o item 8.5.1.1. A \autoref{tab:no-topo} resume o
-resultado; a ruptura de bloco, pelo anexo A, não governa.
+Como a escora se apoia nas lâminas, e não na viga, ela não acompanha o
+movimento vertical da viga, que fica livre sob ela, com folga de 25 mm para o
+inchamento. A chapa da escora liga-se à chapa do nó por dois parafusos M24 da
+classe 8.8 em corte duplo, em furos normais; a verificação, pela tabela 3.4 da
+EN 1993-1-8 \cite{EN1993-1-8:2005}, adota, a favor da segurança, a pressão de
+contato reduzida a 60\%, e as taxas resultam em 0,36 no beiral e 0,71 na linha
+central.
+
+A ligação de cada escora ao nó emprega cavilhas de 20 mm em duas chapas
+embutidas, com a força paralela às fibras. Cada cavilha tem quatro planos de
+corte (item 8.1.3): os dois externos pela fórmula (8.11), com a chapa entre
+madeira, e os dois da parte central pela fórmula (8.13), madeira entre chapas
+espessas; resiste a 33,1 kN, frente a 25,0 kN com uma chapa. O número efetivo segue
+o item 8.5.1.1. A \autoref{tab:no-topo} resume o
+resultado, com a ruptura de bloco do anexo A (\autoref{ssec:bloco-pilares}).
 
 \tabela{Ligações das escoras ao nó de topo}{\footnotesize
 \begin{tabular}{lcccccc}
 \toprule
     \textbf{Escora} & \textbf{$N_{Ed}$ (kN)} & \textbf{Cavilhas} & \textbf{Arranjo} & \textbf{$R_d$ (kN)} & \textbf{$\eta$ bloco} & \textbf{$\eta$} \\
 \midrule
-    Beiral        & 107 &  6 $\times \varnothing$ 20 & $1 \times 6$ & 150 & 0,12 & 0,72 \\
-    Linha central & 214 & 16 $\times \varnothing$ 20 & $2 \times 8$ & 294 & 0,17 & 0,73 \\
+    Beiral        & 176 & 10 $\times \varnothing$ 20 & $5 \times 2$ & 243 & 0,47 & 0,73 \\
+    Linha central & 351 & 20 $\times \varnothing$ 20 & $5 \times 4$ & 525 & 0,74 & 0,74 \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{no-topo}{}{}
 
 Ambas atendem ao limite de 0,75 dos modos frágeis. As cavilhas dispõem-se em
 fileiras com espaçamento de 60 mm na altura da terça e 100 mm ao longo das
-fibras, a 140 mm da extremidade carregada.
+fibras, a 140 mm da extremidade carregada; com cinco fileiras na altura, os furos
+das chapas são ovalizados perpendicularmente às fibras, para a retração
+(\autoref{ssec:retracao-impedida}).
+
+\subsection{Pilar bipartido dos montantes}\label{ssec:pilar-bipartido}
+
+Os pilares montantes das baías contraventadas, isto é, os de canto (P1, P3, P25
+e P27), os laterais P4, P6, P22 e P24 e os centrais P2, P5, P8, P20, P23 e P26,
+são formados por duas lâminas de MLC de 0,16 por 0,32 m, uma de cada lado da
+viga, com distância livre de 340 mm, a largura da viga mais 10 mm de cada lado. As
+lâminas vão da base até a escora, 7,7 m, e ligam-se por espaçadores de MLC a
+cada 1,5 m e no pé, o que caracteriza o pilar composto com espaçadores do
+anexo C da EN 1995-1-1 \cite{EN1995-1-1:2004}; a distância livre de 340 mm
+respeita o limite de três vezes a espessura da lâmina. A viga apoia-se numa sela
+de aço entre as lâminas, no nível do topo dos demais pilares, cujas abas entram
+em rasgos das lâminas e recebem cavilhas paralelas às fibras; a chapa embutida da
+viga solda-se à sela, como na L1. A \autoref{fig:des-pilar-bipartido} apresenta o
+topo do pilar.
+
+A lâmina do lado do nó é a mais solicitada: recebe metade das reações das vigas
+e toda a componente vertical da diagonal, de 173 kN, que desce até o seu
+pilarete. Cada lâmina tem pilarete próprio, de modo que a excentricidade dessa
+força em relação ao eixo do pilar se resolve como binário axial entre as lâminas,
+sem flexão. A compressão com instabilidade segue o item 6.3.2: no plano do
+pórtico, a lâmina é verificada isolada, com comprimento de 6,7 m até a sela,
+onde a viga a trava ($\lambda = 72$); no plano da fachada, como pilar composto,
+com a esbeltez efetiva
+\begin{equation}
+    \lambda_{ef} = \sqrt{\lambda^2 + \eta\,\frac{n}{2}\,\lambda_1^2} = 68,
+    \label{eq:lambda-ef-bipartido}
+\end{equation}
+
+\noindent
+pelas fórmulas (C.10) a (C.12), com $\eta = 3{,}5$, espaçadores parafusados sob
+carga de longa duração, a favor da segurança. Os espaçadores são verificados
+pela força da fórmula (C.13). O nó trabalha por contato: a componente vertical da
+diagonal é sempre para baixo, porque com o vento invertido aquela diagonal fica
+frouxa, e uma chapa-capa apoiada no topo da lâmina a leva por compressão de topo
+de fibra, com 6,0 MPa. Uma aba com duas cavilhas posiciona a capa e ancora o
+arrancamento das terças que nela se apoiam, de 30 kN. A sela liga-se às lâminas,
+como as escoras, por cavilhas de 20 mm paralelas às fibras. A \autoref{tab:pilar-bipartido}
+reúne o resultado.
+
+\tabela{Pilar bipartido dos montantes das baías contraventadas}{\footnotesize
+\begin{tabular}{lccc}
+\toprule
+    \textbf{Verificação} & \textbf{Canto} & \textbf{Lateral montante} & \textbf{Central montante} \\
+\midrule
+    Força na lâmina do nó (kN)            & 359  & 317  & 370  \\
+    Compressão com instabilidade          & 0,89 & 0,78 & 0,91 \\
+    Espaçadores, parafusos M16 8.8 (C.13) & 0,57 (3) & 0,69 (2) & 0,59 (3) \\
+    Nó: contato no topo da lâmina (6,0 MPa) & 0,48 & 0,48 & 0,48 \\
+    Nó: aba com 2 cavilhas $\varnothing$ 20 & 0,75 & 0,75 & 0,75 \\
+    Sela: cavilhas $\varnothing$ 20 por lâmina       & 0,66 (4) & 0,66 (4) & 0,62 (12) \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{pilar-bipartido}{}{}
+
+O pé de cada lâmina e o seu pilarete, de 114,3 por 8 mm, são verificados na base
+L3a (\autoref{ssec:chapa-base}), que nesses pilares tem dois pilaretes e
+grelha de chumbadores girada, com três chumbadores no sentido da fachada. O
+espaçador do pé reparte entre as lâminas o choque de veículo, aplicado 0,20 m
+acima delas. Por ser a peça de madeira mais fina da estrutura, a lâmina foi
+verificada também ao choque e ao incêndio de um veículo, com as quatro faces
+expostas, na \autoref{sec:verif-transitorias}. Com o nó no nível da escora, o painel vertical passa a ter 7,9 m de
+altura e 5,37 m de largura; a diagonal de 45 mm recebe 313 kN, com taxa de 0,84,
+e o deslocamento do painel, de 15,9 mm, fica dentro do limite de 26,3 mm.
+
+\figura
+{Topo do pilar bipartido dos montantes}
+{1.0}
+{fig/des07b_pilar_bipartido.pdf}
+{Elaborado pelo autor (2026)}
+{des-pilar-bipartido}
+{}
+{}
 
 \subsection{Ligações de extremidade das diagonais}\label{ssec:lig-diagonais}
 
@@ -589,10 +1294,12 @@ da própria barra. Como as extremidades são recalcadas, essa resistência é a 
 escoamento da seção bruta, e o critério assegura que, num evento que exceda a
 previsão, a barra escoe antes que a rosca, o olhal ou o pino rompam.
 
-Na diagonal vertical, o esforço solicitante é de 169 kN e a resistência da
-barra, de 201 kN, do que resulta sobre-resistência de 1,19. O
+Na diagonal vertical, o esforço solicitante é de 312 kN e a resistência da
+barra, de 374 kN, do que resulta sobre-resistência de 1,20. O
 dimensionamento adota este último valor. A \autoref{tab:lig-diagonais} reúne as
-duas ligações, conforme o item 3.13 e o item 4.5.3.3 da
+quatro ligações, a das diagonais verticais, a dos frontões, a da cobertura e a da
+alma do diafragma,
+conforme o item 3.13 e o item 4.5.3.3 da
 EN 1993-1-8 \cite{EN1993-1-8:2005}, com chapa do olhal em aço S235 e pino em
 S355. As taxas referem-se ao esforço de capacidade da barra, superior ao
 solicitante.
@@ -604,8 +1311,10 @@ solicitante.
 \toprule
     \textbf{Diagonal} & \textbf{Barra} & \textbf{Pino} & \textbf{Modo governante} & \textbf{$\eta$} \\
 \midrule
-    Vertical    & $\varnothing$ 33 mm & $\varnothing$ 33 mm & Geometria do olhal & 0,82 \\
-    Transversal & $\varnothing$ 24 mm & $\varnothing$ 24 mm & Geometria do olhal & 0,82 \\
+    Vertical    & $\varnothing$ 45 mm & $\varnothing$ 45 mm & Geometria do olhal & 0,88 \\
+    Transversal & $\varnothing$ 33 mm & $\varnothing$ 33 mm & Geometria do olhal & 0,88 \\
+    Cobertura   & $\varnothing$ 36 mm & $\varnothing$ 36 mm & Geometria do olhal & 0,89 \\
+    Diafragma (CV-D) & $\varnothing$ 12 mm & $\varnothing$ 16 mm & Geometria do olhal & 0,85 \\
 \bottomrule
 \end{tabular}}
 {Elaborado pelo autor (2026)}
@@ -613,38 +1322,61 @@ solicitante.
 {}
 {}
 
-A manilha e a rosca de extremidade são peças de catálogo e não são
-dimensionadas neste trabalho.
+A forquilha e o esticador são peças de catálogo e não são dimensionados neste
+trabalho; a \autoref{fig:des-terminais} dá o olhal, o pino e a forquilha de cada
+diagonal, com a resistência mínima que o fabricante deve certificar.
 
-%% TODO: dado ausente — especificar manilha e rosca com resistência de cálculo
-%% à tração certificada pelo fabricante, não inferior a 201 kN na diagonal
-%% vertical e a 106 kN na transversal (resistência de escoamento da barra).
+%% TODO: dado ausente — especificar forquilha, esticador e rosca com resistência de
+%% cálculo à tração certificada pelo fabricante, não inferior a 374 kN na diagonal
+%% vertical, 201 kN na transversal e 239 kN na da cobertura (escoamento da barra).
+
+\figura
+{Terminais das diagonais de contraventamento}
+{1.0}
+{fig/des11_terminais.pdf}
+{Elaborado pelo autor (2026)}
+{des-terminais}
+{}
+{}
 
 A corda do diafragma merece registro construtivo. A terça de beiral acumula a
-função de corda, recebendo esforço normal de 16,2 kN em ambos os sentidos, e sua
-continuidade ao longo dos 46,0 m é condição para que o diafragma funcione. São
-necessárias três emendas, e cada uma deve ser capaz de transmitir os 16,2 kN. A
-omissão dessas emendas invalidaria o modelo de diafragma adotado, ainda que a
-taxa de utilização da corda seja de apenas 0,07.
+função de corda, recebendo esforço normal de 19,8 kN em ambos os sentidos, e sua
+continuidade ao longo dos 46,0 m é condição para que o diafragma funcione. Como
+as terças são biapoiadas entre pórticos, a corda tem uma junta sobre cada viga
+intermediária, sete por linha de beiral, e cada uma deve transmitir os 19,8 kN.
+A emenda usa o detalhe do montante: chapa de 20 mm no rasgo superior das duas
+terças, atravessando a junta, com duas cavilhas de 20 mm de cada lado, uma acima
+da outra, e taxa de 0,40. A omissão dessas emendas invalidaria o modelo de
+diafragma adotado, ainda que a taxa de utilização da corda seja de apenas 0,12. A
+\autoref{fig:des-juntas-tercas} apresenta a emenda e o montante.
+
+\figura
+{Junta das terças sobre a viga: emenda da corda e montante}
+{1.0}
+{fig/des09b_juntas_tercas.pdf}
+{Elaborado pelo autor (2026)}
+{des-juntas-tercas}
+{}
+{}
 
 \subsection{Pilar de frontão}\label{ssec:pilar-frontao}
 
 Os pilares de frontão PF1 e PF2 são o segundo montante dos painéis CV-T1 e CV-T2.
 O topo, ligação L1f, recebe a força horizontal que a viga do frontão, funcionando
-como escora, entrega ao painel: 57,0 kN, paralela às fibras da viga. Uma chapa
+como escora, entrega ao painel: 69,9 kN, paralela às fibras da viga. Uma chapa
 embutida em rasgo no intradorso da viga, soldada à chapa de topo do pilar, recebe
-três cavilhas de 20 mm em corte duplo, com 27,8 kN por cavilha e
-$\eta = 0{,}69$; a ruptura de bloco não governa.
+quatro cavilhas de 20 mm em corte duplo, com 27,8 kN por cavilha e
+$\eta = 0{,}63$; a ruptura de bloco não governa.
 
 Os furos da chapa são oblongos na vertical, para que o pilar não se torne apoio
 intermediário da viga. A flecha final da viga no ponto do pilar, a 5,75 m do
-apoio, vale 12,1 mm, obtida da flecha de 15,39 mm no meio do vão pela forma da
+apoio, vale 11,3 mm, obtida da flecha de 14,34 mm no meio do vão pela forma da
 elástica da viga biapoiada. Adotou-se curso de $\pm 20$ mm e folga de 25 mm entre a
 viga e a chapa de topo. Para que reste aço entre furos oblongos, as cavilhas
 distam 90 mm entre si, acima do mínimo de 60 mm da madeira, o que só favorece a
 ruptura de bloco. A base, L3f, segue o detalhe das bases correntes, com quatro
-chumbadores sem chaveta: a ancoragem resulta em 0,49, governada pelo cone sob o
-arrancamento de 67,2 kN concomitante ao cortante de 58,7 kN do painel. A
+chumbadores sem chaveta: a ancoragem resulta em 0,27, governada pelo cone sob o
+arrancamento de 82,9 kN concomitante ao cortante de 71,4 kN do painel. A
 \autoref{fig:des-l1f} apresenta o topo do pilar.
 
 \figura
@@ -655,6 +1387,29 @@ arrancamento de 67,2 kN concomitante ao cortante de 58,7 kN do painel. A
 {des-l1f}
 {}
 {}
+
+\section{SOLDAS}\label{sec:soldas}
+
+Todas as ligações metálicas soldadas do projeto empregam soldas de filete em aço
+S275, com eletrodo de resistência compatível com a do metal de base, verificadas
+pelo método simplificado do item 4.5.3.3 da EN 1993-1-8 \cite{EN1993-1-8:2005}: a
+resultante por unidade de comprimento das forças paralela e normal ao cordão não
+excede $f_{vw,d}\,a$, com $f_{vw,d} = f_u/(\sqrt{3}\,\beta_w\,\gamma_{M2}) = 234$ MPa.
+Quando a força tem excentricidade fora do plano, como na chaveta, cujo cortante
+atua a meia altura embutida, o momento é resistido pelo binário entre os dois
+cordões. A garganta é a menor da série de 4 a 12 mm que mantém a taxa abaixo de
+0,90, componente dúctil, entre o mínimo de 3 mm e o máximo de 0,7 vez a
+espessura da chapa mais fina (item 4.5.2). As chapas embutidas, a chapa do nó de
+topo e as chapas verticais do pé e do topo dos pilares são soldadas com cordões
+duplos ao longo da borda de contato; o tubo do pilarete, em todo o perímetro.
+As \autoref{tab:soldas-1} e \autoref{tab:soldas-2} reúnem todas as soldas.
+
+\input{tab_soldas}
+
+A taxa mais alta é a da solda do tubo do pilarete à chapa de base das bases
+ancoradas, de 0,90, em que a tração e o momento do choque se somam; nas chapas
+embutidas da ligação viga--pilar, a garganta mínima de 4 mm basta, com taxa de
+até 0,22.
 
 \section{ATENDIMENTO DOS ESPAÇAMENTOS}\label{sec:espacamentos}
 
@@ -672,54 +1427,454 @@ direção da força em cada ligação.
 
 \input{tab_espacamentos}
 
-Todas as exigências são atendidas. A conferência levou a uma correção no
-detalhe da ligação L1: a chapa embutida, que terminava 26 mm acima da
-extremidade do furo ovalizado do pino mais alto, passou a terminar a 36 mm,
-o mínimo de $1{,}5\,d_0$ exigido para furos ovalizados. No pilar de frontão, o
-passo das cavilhas na chapa, de 90 mm, excede o mínimo da madeira para que reste
-aço entre os furos ovalizados.
+Todas as exigências são atendidas. Nas chapas, os mínimos são calculados com o
+diâmetro do furo $d_0 = d + \Delta$, em que $\Delta$ é a folga normal da
+EN 1090-2 \cite{EN1090-2:2018}: 1 mm até 14 mm de diâmetro, 2 mm de 16 a 24 mm e
+3 mm a partir de 27 mm. Na ligação L1, a chapa embutida termina
+$1{,}5\,d_0 = 39$ mm acima do centro do raio da extremidade do furo ovalizado do
+pino mais alto, com o curso superior de 20 mm da \autoref{ssec:curso-oblongos}, o que
+leva a sua altura a 877 mm. No pilar de frontão, o passo
+das cavilhas na chapa, de 90 mm, excede o mínimo da madeira para que reste aço
+entre os furos ovalizados.
 
 \section{PROTEÇÃO CONSTRUTIVA}\label{sec:protecao-construtiva}
 
 A classe de serviço 3 impõe exigências que não se resolvem por cálculo, e sim
-por detalhe. O tratamento preservativo conforme a EN 351-1
-\cite{EN351-1:2007} e o adesivo do tipo I conforme a EN 301 \cite{EN301:2017}
-são condições necessárias, porém não suficientes.
+por detalhe. O tratamento preservativo das lamelas e o adesivo Tipo I,
+especificados na \autoref{ssec:classe-servico}, são condições necessárias, porém
+não suficientes.
+
+A primeira medida é de concepção: a cobertura projeta-se 1,00 m além da face
+dos pilares de perímetro, em beirais nos alinhamentos A e C e em oitões nos
+eixos 1 e 9, conforme a \autoref{sec:descricao-edificacao}. Com isso, a ligação
+L1, o rasgo da chapa embutida e os pinos deixam de estar na extremidade da viga
+e passam a ficar sob a cobertura, 1,00 m recuados do topo, e o topo do pilar
+fica protegido da chuva vertical; restam expostos os topos das vigas e das
+terças na ponta dos balanços e as faces externas dos pilares de perímetro, cuja
+proteção se trata a seguir.
 
 O detalhamento deve assegurar que a água não permaneça em contato com a madeira.
-As medidas pertinentes a esta edificação compreendem o afastamento das bases de
-pilar em relação ao piso, por meio de pedestal de concreto que eleve a madeira
-acima do nível de acúmulo de água; a proteção do topo das peças expostas; o
-escoamento na calha central, que corre sobre a linha de pilares intermediários e
-constitui o ponto mais crítico da cobertura; e a ventilação dos rasgos das
-chapas embutidas, para que não retenham umidade.
+As medidas pertinentes a esta edificação são quatro: o afastamento das bases em
+relação ao piso, a proteção dos topos expostos, a vedação e a ventilação dos
+rasgos das chapas embutidas e o escoamento na calha central. O afastamento das
+bases é feito pelo pilarete metálico da \autoref{ssec:chapa-base}, que eleva a
+madeira a 0,30 m do piso, acima da zona de respingo, com chapa de topo menor que
+a seção do pilar. As outras três medidas são tratadas a seguir e desenhadas na
+\autoref{fig:des-protecao}.
+
+\figura
+{Detalhes de proteção construtiva: ponta do beiral, oitão e calha central}
+{1.0}
+{fig/des10_protecao.pdf}
+{Elaborado pelo autor (2026)}
+{des-protecao}
+{}
+{}
+
+\subsection{Topos das vigas e das terças}\label{ssec:topos-expostos}
+
+O topo é a face mais vulnerável de uma peça de madeira: a água penetra ao longo
+das fibras com velocidade muito maior que pelas faces laterais. Ficam expostos os
+topos das vigas na ponta dos beirais, nos alinhamentos A e C, com a terça de ponta
+sobre eles, e os topos das terças em balanço nos oitões, nos eixos 1 e 9.
+
+Cada topo recebe dois níveis de proteção. O primeiro é a selagem do próprio topo
+com selante microporoso para madeira, aplicado depois do corte e do preservativo
+de aplicação superficial, que reduz a absorção sem impedir a secagem. O segundo é
+um rufo de chapa de aço galvanizada e pintada, que cobre o topo da viga e a face
+externa da terça de ponta, no beiral, ou o topo das terças e a última onda da
+telha, no oitão. O rufo não toca a madeira: fixa-se sobre sarrafos verticais que
+deixam uma folga de 20 mm, aberta embaixo e em cima, por onde o ar circula e a
+água que eventualmente entrar escorre. Na borda inferior, o rufo desce 30 mm abaixo
+da madeira e dobra-se para fora, formando a pingadeira, que impede a água de
+voltar por capilaridade para a face inferior da peça. No beiral, a telha avança
+70 mm além do rufo, e a água da cobertura cai livre, fora do plano da fachada.
+
+Um capeamento colado ou pregado diretamente sobre o topo seria pior que nenhum: a
+água que passasse pela junta ficaria retida entre a chapa e a madeira, sem
+possibilidade de secar. Por isso a folga ventilada é parte da especificação, e não
+uma tolerância de montagem.
+
+\subsection{Rasgos das chapas embutidas}\label{ssec:vedacao-rasgo}
+
+O rasgo da L1 é aberto a partir do intradorso e apoia-se na chapa de topo. Se
+coincidisse com a área da chapa de topo, formaria uma cavidade fechada: a água
+que entrasse pela junta entre a madeira e a chapa não teria saída, e a madeira em
+volta da chapa embutida não secaria. Por isso o rasgo foi prolongado 30 mm além
+das duas faces do pilar, para os dois lados ao longo do eixo da viga. Nesses
+trechos ele se abre para baixo, fora da chapa de topo, e cada extremidade funciona
+como uma chaminé de 29 mm de largura e da altura do rasgo, que ventila a cavidade
+e drena por gravidade a água que nela entrar. A abertura voltada para baixo e
+recuada 1,00 m sob o beiral não recebe chuva. O prolongamento não altera as
+verificações, que já consideram a largura líquida $b - t_r$ no apoio e no
+cisalhamento, e o balanço do beiral é verificado com a seção líquida do rasgo na
+raiz.
+
+A vedação fica nos pontos por onde a água pode entrar, e não na cavidade. Ao longo
+das faces da viga, na junta com a chapa de topo, aplica-se um cordão de selante
+elástico, que impede a água que escorre pelas faces de penetrar por capilaridade
+na junta. As cabeças dos pinos, nas faces laterais, recebem tampões removíveis,
+porque os pinos são posicionados na montagem conforme a umidade medida
+(\autoref{ssec:curso-oblongos}) e precisam ser inspecionados. As extremidades
+ventiladas do rasgo não são seladas.
+
+Na L1c, cada chapa embutida começa no topo da viga, e o rasgo abre-se para o vão
+entre as extremidades das duas vigas sobre a sela. Esse vão fica sob a terça T9 e
+sob a calha central, e a sua ventilação é natural. A proteção dele contra a água
+é a da calha, tratada a seguir.
+
+\subsection{Calha central}\label{ssec:calha-central}
+
+As duas águas duplas lado a lado descarregam numa calha central, sobre a linha de
+pilares B, que corre por cima da terça T9 e das ligações L1c. É o ponto mais
+crítico da cobertura: um vazamento ou um transbordamento cairia diretamente sobre
+a madeira das ligações. A concepção adotada parte de duas regras. Nenhuma junta,
+saída ou extravasor fica sobre um pórtico. A calha não toca a madeira.
+
+A calha é de chapa de aço galvanizada e pintada, retangular, de 300 por 150 mm.
+Apoia-se em suportes fixados nas faces da T9, com o fundo 50 mm acima da terça. A
+terça recebe uma capa de chapa com pingadeiras laterais afastadas 35 mm das faces,
+que lança para fora qualquer gotejamento. As telhas do último pano, entre a T8 e
+a calha, apoiam-se em perfis de borda fixados aos suportes. Com isso, a borda da
+calha fica 232 mm acima da T9 e o último pano tem inclinação de 9,2~\%, acima do
+mínimo de 5~\% usual dos fabricantes de telha trapezoidal.
+
+Há uma saída por pórtico, deslocada 0,40 m do eixo, para que o bocal não fique
+sobre a L1c, e o condutor vertical desce ao lado do pilar central, afastado da
+madeira. Os pontos altos da calha ficam a meio vão entre pórticos, e as juntas de
+dilatação ficam nesses pontos altos. Assim, uma junta que vaze goteja no vão livre,
+e não sobre uma ligação.
+
+O dimensionamento segue a ABNT NBR 10844 \cite{NBR10844:1989}, com intensidade
+pluviométrica de 228 mm/h para período de retorno de 25 anos, o exigido onde o
+transbordamento não pode ser tolerado. O valor é o da tabela 5 da norma para
+Curitiba, adotado como premissa por não estar definido o local de implantação, e
+deve ser revisto para o local definitivo.
+
+\begin{alineas}
+    \item A área de contribuição de cada saída é a das duas águas ao longo
+          de um pórtico, acrescida de metade da altura do telhado, conforme a
+          norma: 127 m\textsuperscript{2}, com vazão de 481 L/min.
+    \item Cada lado da calha leva metade dessa vazão até a saída. Pela fórmula de
+          Manning-Strickler, com coeficiente de rugosidade de 0,011,
+          declividade de 0,5~\% e lâmina de metade da altura, a calha conduz
+          1.178 L/min, com taxa de 0,20. A seção é maior que a exigida pela vazão,
+          para a limpeza e para o acúmulo de folhas.
+    \item O condutor vertical de 100 mm, calculado pela equação de Wyly-Eaton da
+          EN 12056-3 \cite{EN12056-3:2000} com enchimento de um terço, conduz
+          10,7 L/s, com taxa de 0,75.
+\end{alineas}
+
+%% TODO: dado ausente — a intensidade de 228 mm/h corresponde a Curitiba, na
+%% Tabela 5 da NBR 10844, e foi adotada porque o local de implantação não está
+%% definido. Confirmar o valor na norma e no local definitivo.
+
+O extravasor tem duas formas. As extremidades da calha, nos oitões, são abertas e
+descarregam fora da cobertura. Junto a cada saída há um ladrão, com entrada 100 mm
+acima do fundo e descarga livre, visível. Se o condutor entupir, a água sai pelo
+ladrão antes de atingir a borda da calha, e o jorro denuncia o entupimento sem que
+a água transborde para a cobertura.
+
+A água da calha cheia, até a borda, pesa 0,45 kN/m e se apoia na T9. Foi somada à
+sobrecarga e ao vento na verificação da terça à flexão com compressão, com o peso
+da calha e dos suportes, de 0,10 kN/m, como carga permanente. A taxa da T9 passa
+de 0,59 para 0,62. Na viga e no pilar central, a calha acrescenta cerca de 3 kN
+por pórtico, desprezível diante das reações de apoio.
+
+\subsection{Faces expostas: acabamento e manutenção}\label{ssec:faces-expostas}
+
+O beiral e o oitão de 1,00 m protegem as faces verticais apenas na parte
+superior. Com chuva inclinada a 45$^{\circ}$, hipótese usual para chuva conduzida
+pelo vento, a sombra de chuva de um balanço de 1,00 m alcança 1,00 m abaixo da
+cobertura. Abaixo disso a face recebe chuva e, conforme a orientação, sol direto.
+Ficam expostas as seguintes faces.
+
+\begin{alineas}
+    \item As faces externas e laterais dos pilares de perímetro, nos alinhamentos
+          A e C, nos cantos e nos pilares de frontão PF1 e PF2. Da peça de
+          madeira de 6,70 m, cerca de 5,7 m ficam abaixo da sombra de chuva.
+    \item A face externa das vigas dos pórticos de frontão, nos eixos 1 e 9, na
+          parte que fica mais de 1,00 m abaixo da telha. A viga tem 1,00 m de
+          altura no apoio e 2,785 m na cumeeira, de modo que a exposição cresce
+          em direção à cumeeira.
+    \item A face inferior das terças de ponta, nos beirais, e das terças em
+          balanço, nos oitões. As faces externas e os topos dessas peças ficam
+          sob o rufo da \autoref{ssec:topos-expostos}.
+\end{alineas}
+
+As faces voltadas para o interior e as peças do alinhamento central ficam sob a
+cobertura e recebem o mesmo acabamento, por uniformidade e para que todas as faces
+absorvam e percam umidade de modo semelhante, mas com manutenção menos frequente.
+
+O tratamento preservativo protege contra fungos e insetos, mas não contra a
+radiação ultravioleta. A radiação degrada a lignina da superfície em poucos meses,
+e a chuva lava os produtos degradados. A madeira sem acabamento escurece primeiro
+e, ao fim de um a dois anos, fica cinza e com a superfície fibrosa. O processo é
+superficial e não reduz a resistência, mas é desigual: as faces ao sol e à chuva
+acinzentam antes das faces abrigadas e da parte alta dos pilares, e a estrutura
+passa a mostrar manchas diferenciais entre faces, entre a base e o topo dos pilares
+e entre os pilares de perímetro e os centrais. Na madeira tratada com
+preservativo à base de cobre, o tom esverdeado inicial também se perde de modo
+desigual.
+
+Adota-se, por isso, acabamento pigmentado, do tipo impregnante semitransparente,
+de baixa ou média espessura de película e permeável ao vapor. A classificação e o
+desempenho seguem a EN 927-1 \cite{EN927-1:2013} e a EN 927-2
+\cite{EN927-2:2014}. A peça estrutural de madeira lamelada colada é elemento sem
+estabilidade dimensional exigida, e a exposição das faces de perímetro é severa,
+o que conduz a esse tipo de produto. Três razões justificam a escolha.
+
+\begin{alineas}
+    \item O pigmento é o que filtra a radiação ultravioleta. Verniz ou
+          impregnante incolor deixa a radiação atingir a madeira sob a película,
+          que perde aderência, descasca e exige lixamento até a madeira para ser
+          refeita.
+    \item O impregnante não forma película rígida, acompanha a variação
+          dimensional da madeira na classe de serviço 3 e, quando envelhece,
+          desgasta-se em vez de descascar. A manutenção é uma nova demão sobre a
+          superfície limpa, sem lixamento.
+    \item A permeabilidade ao vapor deixa a madeira secar. Uma película fechada
+          reteria a umidade que entra pelas fissuras e pelas juntas.
+\end{alineas}
+
+A cor deve ser de tom médio. Tons escuros aquecem a superfície ao sol acima de
+60~$^{\circ}$C, o que aumenta as fissuras de secagem e faz o pinus exsudar resina.
+Tons muito claros têm pouco pigmento e protegem menos.
+
+O sistema de acabamento incorpora também o retardante ao fogo exigido pelo item
+5.19.3 da NPT 008 \cite{CBMPR-NPT008:2026} para edificações de mais de 750
+m\textsuperscript{2} com elementos de madeira, ainda que isentas de tempo requerido
+de resistência (\autoref{ssec:trrf}). O retardante atua na reação ao fogo: retarda
+a ignição e reduz a propagação da chama na superfície. Não altera a resistência
+ao fogo, e a EN 1995-1-2 \cite{EN1995-1-2:2004} não o considera na taxa de
+carbonização. Adota-se retardante de superfície, aplicado como parte do sistema
+de acabamento, e não impregnação das lamelas, que somaria um segundo tratamento
+em autoclave ao preservativo e exigiria nova demonstração de compatibilidade com o
+adesivo. O produto deve atender a três condições: ser declarado pelo fabricante
+para uso exterior, porque a chuva lixivia os retardantes comuns; ser compatível
+com o impregnante pigmentado, como fundo ou como demão intermediária; e ter laudo
+de ensaio de reação ao fogo. A manutenção do retardante segue a do acabamento.
+
+%% TODO: verificar — confirmar com o Corpo de Bombeiros do Paraná a classe de
+%% reação ao fogo exigida do retardante (NPT 010) e se a exigência do item 5.19.3
+%% se aplica também aos pilares de perímetro, expostos à chuva.
+
+A primeira demão, de fundo com fungicida e hidrorrepelente, e a segunda são
+aplicadas na fábrica, em todas as faces, antes da montagem. A terceira é aplicada
+na obra, depois da montagem, sobre as faces expostas e sobre os danos de
+transporte e içamento. Cortes e furos feitos depois do tratamento recebem
+preservativo superficial antes do acabamento.
+
+As fissuras superficiais de secagem são esperadas nas faces de perímetro, pelos
+ciclos de umedecimento e secagem, e não são defeito por si mesmas. Devem ser
+registradas e acompanhadas nas inspeções. Exigem avaliação estrutural as fissuras
+que atravessem a linha de cola, as que se aproximem das ligações e as que
+ultrapassem um sexto da largura da peça em profundidade.
+
+%% TODO: verificar — o limite de profundidade de um sexto da largura é critério
+%% usual de inspeção de MLC, sem norma específica consultada. Confirmar a fonte
+%% ou apresentá-lo como critério do projeto.
+
+A \autoref{tab:plano-manutencao} reúne o plano de inspeção e manutenção. Os
+intervalos de repintura são de referência e devem ser ajustados pela ficha técnica
+do produto e pelo estado observado nas inspeções. Para os topos, os rufos, a
+calha e o aço, o plano retoma as especificações da \autoref{ssec:topos-expostos},
+da \autoref{ssec:calha-central} e da \autoref{sec:protecao-corrosao}.
+
+\tabela{Plano de inspeção e manutenção}{\footnotesize
+\begin{tabular}{p{4.6cm}p{2.2cm}p{7.0cm}}
+\toprule
+    \textbf{Item} & \textbf{Intervalo} & \textbf{Ação} \\
+\midrule
+    Calha central, saídas e ladrões & 6 meses & Limpeza; verificação de juntas e de jorro nos ladrões \\
+    Faces expostas dos pilares de perímetro e das vigas de frontão & 1 ano & Inspeção visual do acabamento, das fissuras e de manchas de umidade \\
+    Topos, rufos, tampões dos pinos e cordões de selante & 1 ano & Inspeção; refazer selante e fixação dos rufos \\
+    Ligações e peças de aço & 1 ano & Inspeção de corrosão; reparo do zinco com tinta rica em zinco \\
+    Pintura intumescente dos pilaretes & 1 ano & Inspeção de danos de choque; reparo pelo sistema do fabricante \\
+    Acabamento das faces expostas & 2 a 3 anos & Limpeza e nova demão do impregnante \\
+    Acabamento das faces abrigadas & 5 a 6 anos & Limpeza e nova demão do impregnante \\
+    Fissuras e ligações & 5 anos & Inspeção detalhada por profissional habilitado, com medição da profundidade das fissuras \\
+\bottomrule
+\end{tabular}}
+{Elaborado pelo autor (2026)}
+{plano-manutencao}
+{}
+{}
+
+\subsection{Retração impedida pelas chapas embutidas}\label{ssec:retracao-impedida}
+
+Uma chapa rígida que liga cavilhas afastadas entre si perpendicularmente às fibras
+impede a variação dimensional da madeira nessa direção e provoca fissuras ao
+longo das fibras, uma das causas de dano mais frequentes no levantamento de
+\textcite{dietsch:2018}. Em relação ao centro do grupo, a cavilha extrema
+desloca-se $\delta = \alpha_\perp\,\Delta u\,D_\perp/2$, em que $D_\perp$ é a
+distância entre as cavilhas extremas perpendicularmente às fibras e $\Delta u$ a
+maior variação de umidade depois da montagem, 6 pontos percentuais na faixa
+adotada na \autoref{ssec:curso-oblongos}. O furo da chapa, com folga de 2 mm
+(\autoref{ssec:pinos-l1}), absorve $\pm 1$ mm, o que corresponde a
+$D_\perp \leq 2/(0{,}0025 \times 6) = 133$ mm, isto é, até três fileiras de
+cavilhas de 20 mm a 60 mm.
+
+Nas escoras e no montante da ligação terça--viga, a força é paralela às fibras, e
+os furos da chapa são ovalizados perpendicularmente a elas quando $D_\perp$
+excede esse limite: a força apoia-se nas faces longas do furo, de modo que a
+resistência da madeira não muda, e a do aço, reduzida a 60\% para furo
+ovalizado perpendicular à força pela tabela 3.4 da EN 1993-1-8
+\cite{EN1993-1-8:2005}, permanece folgada com chapa de espessura igual ao
+diâmetro. No pé dos pilares, o cortante do choque de veículo cruza as mesmas
+cavilhas perpendicularmente às fibras, e o furo não pode ser ovalizado; ali, a
+malha é limitada a três fileiras; no pé e no topo dos pilares, a distância às bordas
+carregadas pelo choque (\autoref{ssec:chapa-base}) a reduz ainda a duas, e o grupo
+cresce ao longo das fibras. A
+\autoref{tab:retracao} resume a solução de cada ligação.
+
+\input{tab_retracao}
+
+\section{PROTEÇÃO CONTRA CORROSÃO}\label{sec:protecao-corrosao}
+
+A EN 1995-1-1 \cite{EN1995-1-1:2004}, em 4.2, exige que os elementos metálicos
+das ligações sejam resistentes à corrosão ou protegidos contra ela, e dá na sua
+Tabela 4.1 as proteções mínimas por classe de serviço. Na classe de serviço 3,
+adotada na \autoref{ssec:classe-servico}, as chapas de mais de 5 mm, os pinos, as
+cavilhas, os parafusos e os parafusos autoatarraxantes de diâmetro maior que 4 mm
+exigem pelo menos zincagem Fe/Zn 25c, ou o revestimento por imersão a quente
+equivalente. A mesma tabela recomenda revestimentos mais espessos ou aço
+inoxidável em condições especialmente corrosivas. Duas condições do projeto
+pedem essa margem. A primeira é que todas as peças embutidas ficam em contato
+com madeira tratada com preservativo à base de cobre
+(\autoref{ssec:classe-servico}), e o cobre acelera a corrosão do zinco e do aço
+quando a madeira se umedece. A segunda é que as bases ficam na zona de respingo
+do piso, sujeitas a sujeira e a água acumulada.
+
+A categoria de corrosividade atmosférica foi tomada como C3, de média
+corrosividade, típica de ambiente urbano e de interior, segundo a EN ISO 12944-2
+\cite{ENISO12944-2:2017}. O local de implantação não está definido; se a
+edificação ficar próxima ao litoral ou a uma fonte industrial de poluição, a
+categoria passa a C4 ou C5, e as espessuras abaixo devem ser revistas.
+
+A proteção básica é a galvanização a fogo, feita depois de toda a fabricação,
+segundo a EN ISO 1461 \cite{ENISO1461:2022} para as peças e a EN ISO 10684
+\cite{ENISO10684:2004} para as roscas. Todas as chapas do projeto têm mais de 6 mm
+e recebem revestimento de 85~$\mu$m em média e de pelo menos 70~$\mu$m em qualquer
+ponto. As roscas a partir de 20 mm, centrifugadas, recebem 55~$\mu$m em média. Na
+categoria C3, o zinco perde de 0,7 a 2,1~$\mu$m por ano, segundo a EN ISO 14713-1
+\cite{ENISO14713-1:2017}. A espessura das chapas dá, assim, pelo menos 40 anos
+até a primeira manutenção, e a das roscas, pelo menos 26 anos.
+
+A \autoref{tab:protecao-corrosao} reúne a especificação por componente.
+
+\tabela{Proteção contra corrosão dos componentes de aço}{\footnotesize
+\begin{tabular}{p{5.2cm}p{8.6cm}}
+\toprule
+    \textbf{Componente} & \textbf{Proteção} \\
+\midrule
+    Chapas embutidas, chapas de topo, sela, enrijecedores, nó de topo, olhais
+        & Galvanização a fogo após corte, furação e solda; 85~$\mu$m em média
+          (EN ISO 1461) \\
+    Pinos e cavilhas $\varnothing$20
+        & Galvanização a fogo; o diâmetro de cálculo é o do aço antes do
+          revestimento \\
+    Parafusos M24 8.8 do nó de topo, chumbadores M24 8.8
+        & Galvanização a fogo com centrifugação, porca com rosca sobredimensionada
+          após o revestimento (EN ISO 10684) \\
+    Barras das diagonais, rosca recalcada e porcas
+        & Galvanização a fogo após a laminação da rosca (EN ISO 10684) \\
+    Manilhas das diagonais
+        & Peças forjadas galvanizadas a fogo pelo fabricante \\
+    Parafusos autoatarraxantes $\varnothing$8 da ligação terça--viga
+        & Revestimento mínimo Fe/Zn 25c, declarado na avaliação técnica do
+          produto para a classe de serviço 3 \\
+    Chapa de base, chaveta, arruela-chapa e trecho exposto dos chumbadores
+        & Sistema dúplex: galvanização a fogo e pintura de acabamento
+          (EN ISO 12944-5) \\
+    Pilarete
+        & Galvanização a fogo e pintura intumescente para exterior, 60 min
+          (\autoref{ssec:incendio-veiculo}) \\
+\bottomrule
+\end{tabular}}
+{Elaborado pelo autor (2026)}
+{protecao-corrosao}
+{}
+{}
+
+Os parafusos autoatarraxantes não podem ser galvanizados a fogo, porque o zinco
+preencheria a rosca fina e o banho a cerca de 450~°C altera o aço temperado. O
+revestimento eletrolítico de 25~$\mu$m é o mínimo da Tabela 4.1. A ligação
+terça--viga fica sob a cobertura, na classe de uso 3.1, e os parafusos ficam
+inteiramente embutidos na madeira, exceto a cabeça. As resistências
+características adotadas na \autoref{sec:ligacao-terca-viga} são as do catálogo
+do mesmo produto revestido. A alternativa em aço inoxidável daria margem maior
+contra o cobre do preservativo. A sua avaliação técnica, porém, declara em geral
+resistência à tração e momento de plastificação menores, e a ligação teria de
+ser verificada outra vez com esses valores.
+
+As bases recebem proteção adicional. Ficam a menos de 0,50 m do piso, na zona
+de respingo, onde a água e a sujeira se acumulam e o choque de veículos pode
+lascar o revestimento. Sobre a galvanização aplica-se pintura, no chamado
+sistema dúplex, que soma a durabilidade das duas camadas. O trecho embutido dos
+chumbadores é galvanizado junto com o exposto, sem prejuízo da ancoragem: o
+chumbador moldado com cabeça transmite a tração pela cabeça, e não pela
+aderência (\autoref{sec:ancoragem}).
+
+A fabricação precisa seguir três condições, para que a galvanização seja
+possível e não seja danificada.
+\begin{alineas}
+    \item Todos os cortes, furos e soldas de oficina são feitos antes do banho.
+          As folgas dos furos, de 1 a 3 mm conforme o diâmetro, absorvem o
+          revestimento, de menos de 0,2 mm no diâmetro.
+    \item Peças fechadas precisam de respiro. O pilarete é um tubo fechado pelas
+          duas chapas e explodiria no banho de zinco. Leva dois furos de 16 mm,
+          diametralmente opostos, junto a cada chapa, segundo a EN ISO 14713-2
+          \cite{ENISO14713-2:2019}. Os furos inferiores ficam abertos depois da
+          galvanização e drenam a condensação. A seção líquida resultante foi
+          verificada na \autoref{ssec:chapa-base}.
+    \item A única solda de obra, a da arruela-chapa sobre a chapa de base, é
+          feita depois de remover o zinco na região do cordão. Depois de soldada,
+          a região é reparada com tinta rica em zinco, com espessura pelo menos
+          30~$\mu$m maior que a mínima local, conforme a EN ISO 1461
+          \cite{ENISO1461:2022}. O mesmo reparo vale para qualquer dano de
+          transporte ou de montagem.
+\end{alineas}
+
+A proteção também preserva a aparência da madeira. Aço sem proteção, ou com o
+revestimento danificado, mancha a madeira exposta. A água que escorre sobre a
+ferrugem deixa manchas alaranjadas abaixo das chapas e das bases. As limalhas
+de furação deixadas sobre a madeira úmida formam manchas escuras pela reação do
+ferro com os extrativos. Por essa razão, não se admite furar ou cortar aço sobre
+as peças de madeira na obra. A especificação de proteção, o aço de cada peça e a
+convenção das soldas constam da folha de notas gerais (DES-00, no
+\autoref{ap:desenhos}); cada folha de detalhe traz a lista das suas peças e a
+garganta e o comprimento de cada solda.
 
 \section{ESFORÇOS ENTREGUES À FUNDAÇÃO}\label{sec:cargas-fundacao}
 
 Conforme delimitado na \autoref{sec:delimitacao}, a fundação não é dimensionada
 neste trabalho. O programa encerra a cadeia de verificações entregando, por
-base, os esforços de cálculo que constituem dado de entrada para o projeto
-geotécnico. A \autoref{tab:cargas-fundacao} os reúne, nos valores de cálculo das
-combinações governantes de cada efeito, conforme a EN 1990 \cite{EN1990:2002}. A
-tração corresponde a arrancamento, sem desconto do peso próprio da sapata nem do
-solo sobrejacente, e a força horizontal total transmitida é de 857 kN na
-direção longitudinal e de 57,0 kN em cada frontão, na transversal.
+base, os esforços que constituem dado de entrada para o projeto geotécnico, em
+duas formas. A \autoref{tab:cargas-fundacao-k} traz os valores característicos,
+separados por ação, para que o projeto de fundações componha as suas próprias
+combinações, inclusive as de estado-limite de serviço que governam recalques:
+a ação permanente $G_k$, que soma a reação da viga, com o beiral, e o peso
+próprio do pilar; a sobrecarga de cobertura $Q_k$; o vento $W_k$, com a maior
+compressão e o maior arrancamento entre os padrões de coeficientes de pressão e a
+força horizontal; e o choque de veículo $A_d$, ação acidental. Nas bases que são
+montantes dos painéis de contraventamento, a parcela dos painéis é governada pelo
+vento e entra em $W_k$ como o valor de cálculo dividido por $\gamma_Q = 1{,}5$;
+ela inclui a pequena força das imperfeições, de origem gravitacional, o que a
+deixa do lado da segurança.
 
-\tabela{Esforços de cálculo entregues ao projeto de fundação}{\footnotesize
-\begin{tabular}{lcrrr}
-\toprule
-    \textbf{Base} & \textbf{Quantidade} & \textbf{Compressão} & \textbf{Tração} & \textbf{Horizontal} \\
-    & & \textbf{(kN)} & \textbf{(kN)} & \textbf{(kN)} \\
-\midrule
-    Extremidade &  14 &  99,6 &  83,9 &  46,4 \\
-    Central     &   3 & 199 & 152 &  46,4 \\
-    Central montante & 6 & 330 & 282 & 107 \\
-    Canto       &   4 & 299 & 284 & 164 \\
-    Pilar de frontão & 2 & 72,8 & 67,2 & 58,7 \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{cargas-fundacao}{}{}
+\input{tab_cargas_fundacao_k}
 
-O cortante das bases correntes é o do choque de veículo, de 46,4 kN, e
+A \autoref{tab:cargas-fundacao} traz os valores de cálculo das combinações
+governantes de cada efeito, conforme a EN 1990 \cite{EN1990:2002}, que serviram às
+verificações deste trabalho. A tração corresponde a arrancamento, sem desconto do
+peso próprio da sapata nem do solo sobrejacente, e a força horizontal total
+transmitida é de 943 kN na direção longitudinal e de 69,9 kN em cada frontão, na
+transversal.
+
+\input{tab_cargas_fundacao}
+
+O cortante das bases correntes é o do choque de veículo, de 48,5 kN, e
 corresponde à situação acidental. Ele não se combina com a tração da sucção,
 que é de situação persistente.
 
@@ -736,17 +1891,18 @@ estimativa de custo da estrutura. Trata-se de estimativa de anteprojeto,
 destinada a situar a ordem de grandeza do investimento e a comparar
 alternativas, e não de orçamento executivo: as parcelas que não decorrem
 diretamente das quantidades calculadas são percentuais declarados, e os preços
-unitários são valores de mercado que exigem cotação formal de fornecedor. A
+unitários são premissas do autor, de ordem de grandeza, que exigem cotação
+formal de fornecedor. A
 \autoref{tab:custo-entrada} reúne esses dados de entrada, que não decorrem do
 cálculo estrutural.
 
-\tabela{Preços unitários e percentuais adotados como dados de entrada}{\footnotesize
+\tabela{Preços unitários e percentuais adotados como premissas do autor}{\footnotesize
 \begin{tabular}{lrl}
 \toprule
     \textbf{Item} & \textbf{Valor} & \textbf{Base} \\
 \midrule
-    Madeira lamelada colada GL24h, posta na obra & R\$ 5.200/m\textsuperscript{3} & Valor de mercado \\
-    Aço S235 em barra redonda, fabricado e montado & R\$ 18,00/kg & Valor de mercado \\
+    Madeira lamelada colada GL24h, posta na obra & R\$ 5.200/m\textsuperscript{3} & Ordem de grandeza \\
+    Aço S235 em barra redonda, fabricado e montado & R\$ 18,00/kg & Ordem de grandeza \\
     Ligações e ferragens & 15\% & Do custo da madeira \\
     Montagem & 12\% & Do subtotal de materiais \\
     BDI & 25\% & Do subtotal direto \\
@@ -755,48 +1911,35 @@ cálculo estrutural.
 
 \subsection{Quantidades}\label{ssec:custo-quantidades}
 
-O volume de madeira lamelada colada distribui-se pelos três tipos de elemento
-conforme a \autoref{tab:custo-quantidades}. O volume das vigas é o apurado na
+O volume de madeira lamelada colada é apurado por lista de peças, conforme a
+\autoref{tab:custo-quantidades}. O volume das vigas é o apurado na
 \autoref{sec:geometria-adotada}, por integração da seção ao longo do vão. O dos
-pilares decorre das seções da \autoref{tab:criterios-predim} e das quantidades
-da \autoref{tab:arrancamento}, com os
-7,0 m de altura. O das terças decorre da seção de 0,20 por 0,58 m e do
-espaçamento de 2,53 m aplicados à área de 1.863 m\textsuperscript{2} em planta,
-relação que reproduz a parcela de 0,189 kN/m\textsuperscript{2} registrada na
-\autoref{tab:peso-proprio}.
+pilares soma os 15 maciços, de 0,32 por 0,27 m e 6,70 m de madeira, com os de
+frontão tomados com a mesma seção e altura, e os 14 bipartidos, com duas lâminas
+de 0,16 por 0,32 m até a escora; os espaçadores das lâminas, de 0,34 por 0,32 por
+0,45 m a cada 1,5 m, contam à parte. As terças são as 19 linhas, T0 a T18,
+inclusive as de ponta dos beirais, de 48,3 m cada, com os oitões, na seção de 0,20
+por 0,40 m, mais o acréscimo de largura das quatro escoras centrais de 0,24 m. A
+relação entre a parcela de 0,130 kN/m\textsuperscript{2} e a área em planta, que
+supõe o espaçamento uniforme até os beirais, daria 12\% a menos. As tabelas desta
+seção são geradas pelo programa na mesma execução que produz o memorial.
 
-\tabela{Quantidades de madeira lamelada colada e de aço de contraventamento}{\footnotesize
-\begin{tabular}{llrr}
-\toprule
-    \textbf{Material} & \textbf{Elemento} & \textbf{Quantidade} & \textbf{Unidade} \\
-\midrule
-    MLC GL24h & Vigas principais (18)      & 220,8 & m\textsuperscript{3} \\
-              & Terças                     &  85,4 & m\textsuperscript{3} \\
-              & Pilares (29)               &  18,0 & m\textsuperscript{3} \\
-\addlinespace
-    \textbf{Subtotal MLC} & & \textbf{324,2} & \textbf{m\textsuperscript{3}} \\
-\midrule
-    Aço S235 & Contraventamento vertical, $\varnothing$ 33 mm    &   973,2 & kg \\
-             & Contraventamento da cobertura, $\varnothing$ 28 mm & 1.943,4 & kg \\
-             & Contraventamento transversal, $\varnothing$ 24 mm  &   128,7 & kg \\
-\addlinespace
-    \textbf{Subtotal aço} & & \textbf{3.045,3} & \textbf{kg} \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{custo-quantidades}{}{}
+\input{tab_custo_quantidades}
 
 As massas de aço não são estimadas por percentual: decorrem do comprimento
 total de barra de cada sistema, obtido da geometria dos painéis, multiplicado
 pela área da seção circular e pela massa específica de 7.850 kg/m\textsuperscript{3}.
-A massa do contraventamento da cobertura, de 1.943,4 kg, é a mesma registrada na
+A massa do contraventamento da cobertura, de 3.210 kg, é a mesma registrada na
 \autoref{sec:detalhe-contraventamento}. A do contraventamento vertical
-corresponde ao diâmetro de 33 mm, com resistência de escoamento da seção bruta
+corresponde ao diâmetro de 45 mm, com resistência de escoamento da seção bruta
 graças às extremidades recalcadas; o acréscimo de aço das extremidades é
 desprezável nesta estimativa.
 
 \subsection{Preços unitários adotados}\label{ssec:custo-unitarios}
 
-O mercado brasileiro pratica dois patamares distintos para a madeira lamelada
-colada. O primeiro, entre R\$ 2.000 e R\$ 2.800 por metro cúbico, corresponde à
+Os preços da madeira lamelada colada são premissas do autor, sem fonte
+publicada citável, e assim devem ser lidos. Admitiram-se dois patamares
+distintos. O primeiro, entre R\$ 2.000 e R\$ 2.800 por metro cúbico, corresponde à
 peça trabalhada em oficina, sem montagem, e representa o custo de produção
 interno de um fabricante. O segundo, entre R\$ 4.000 e R\$ 6.400 por metro
 cúbico, corresponde ao preço de venda comercial do produto estrutural acabado,
@@ -808,22 +1951,19 @@ que adquire a estrutura, e não na de quem a fabrica: o custo relevante é o de
 aquisição, não o de produção. O intervalo completo é examinado adiante, na
 \autoref{ssec:custo-sensibilidade}.
 
-Duas ressalvas incidem sobre esse valor. A primeira é que os preços de mercado
-reunidos referem-se a setembro de 2026 e variam com a região, o fornecedor e o
+Duas ressalvas incidem sobre esse valor. A primeira é que os preços admitidos
+correspondem a setembro de 2026 e variam com a região, o fornecedor e o
 volume contratado, de modo que a estimativa envelhece. A segunda é de natureza
 técnica: a classe GL24h especificada no \autoref{cap:definicao-problema} decorre
 da EN 14080 \cite{EN14080:2013}, ao passo que os preços praticados no Brasil
-correspondem a madeira lamelada colada de pinus ou de eucalipto, cuja
+correspondem a madeira lamelada colada de pinus, cuja
 certificação segue outra referência. A equivalência entre ambas é hipótese de
 orçamento assumida aqui, e não resultado do dimensionamento.
 
-%% TODO: referência — inserir em referencias.bib a fonte dos preços de mercado
-%% da MLC (gerador de preços de construção civil ou tabela de fabricante
-%% nacional), com data de coleta, e substituir a menção genérica por \cite{}.
-
-%% TODO: dado ausente — o preço unitário do aço S235 em barra redonda,
-%% fabricada e montada, de R$ 18,00/kg, é valor declarado de ordem de grandeza e
-%% não decorre de cotação. Confirmar com fornecedor antes da entrega.
+O preço do aço em barra redonda, de R\$ 18,00 por quilograma fabricado e
+montado, é igualmente premissa de ordem de grandeza. A sua incerteza pesa pouco
+no total, porque o aço de contraventamento responde por cerca de
+\custoPctAco~\% do custo.
 
 %% TODO: verificar — confirmar junto a fabricante nacional de MLC se a classe
 %% GL24h da EN 14080 é fornecida no Brasil, e a que preço, ou identificar a
@@ -834,43 +1974,21 @@ orçamento assumida aqui, e não resultado do dimensionamento.
 A \autoref{tab:custo-composicao} compõe o custo em cinco parcelas, aplicando os
 dados da \autoref{tab:custo-entrada}. As duas
 primeiras decorrem das quantidades apuradas e dos preços unitários. A terceira,
-relativa às chapas, pinos e chumbadores das ligações, adota quinze por cento do
-custo da madeira, percentual de ordem usual em estruturas de madeira lamelada
-colada com ligações por chapa metálica embutida, e não foi apurada peça a peça.
+relativa às chapas, pinos e chumbadores das ligações, adota 15~\% do
+custo da madeira, premissa do autor que não foi apurada peça a peça.
 A quarta cobre a mão de obra de montagem, que não está incluída no preço de
-venda do produto acabado, e adota doze por cento do subtotal de materiais. A
+venda do produto acabado, e adota, também como premissa, 12~\% do subtotal de materiais. A
 quinta corresponde aos \criarsigla*{BDI}{benefícios e despesas indiretas},
-adotados em vinte e cinco por cento, dentro da faixa usual de orçamento de
-edificações.
+adotados em 25~\%, premissa do autor que o orçamento executivo deve
+substituir pela composição da construtora.
 
-\tabela{Composição do custo estimado da estrutura}{\footnotesize
-\begin{tabular}{llr}
-\toprule
-    \textbf{Parcela} & \textbf{Origem} & \textbf{Valor (R\$)} \\
-\midrule
-    Material MLC            & \autoref{tab:custo-quantidades} & 1.685.840 \\
-    Aço de contraventamento & \autoref{tab:custo-quantidades} &    54.815 \\
-    Ligações e ferragens    & Percentual                      &   252.876 \\
-    Montagem                & Percentual                      &   239.224 \\
-\addlinespace
-    \textbf{Subtotal direto} & & \textbf{2.232.755} \\
-\midrule
-    BDI                     & Percentual                      &   558.189 \\
-\addlinespace
-    \textbf{Total estimado} & & \textbf{2.790.943} \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{custo-composicao}{}{}
+\input{tab_custo_composicao}
 
-O total corresponde a R\$ 1.498 por metro quadrado de área coberta, tomada a
-projeção em planta de 1.863 m\textsuperscript{2}. A madeira responde por
-sessenta por cento do total, e o aço de contraventamento, apesar de
-governar o dimensionamento com as taxas de 0,85, 0,84 e 0,81 da
-\autoref{tab:verif-contraventamento}, responde por cerca de dois por cento.
-
-%% TODO: verificar — os percentuais de 15\% para ligações, 12\% para montagem e
-%% 25\% para BDI são valores declarados de prática usual e não decorrem de
-%% composição de custo unitário. Confirmar com referência de orçamento (CUB,
-%% CBIC ou tabela de composições) e registrar a fonte em referencias.bib.
+O total corresponde a R\$ \custoPorMetro{} por metro quadrado de área coberta,
+tomada a projeção em planta de \custoArea{} m\textsuperscript{2}. A madeira
+responde por \custoPctMadeira~\% do total, e o aço de contraventamento, apesar de
+governar o dimensionamento com as taxas de 0,80, 0,84 e 0,55 da
+\autoref{tab:verif-contraventamento}, responde por cerca de \custoPctAco~\%.
 
 \subsection{Sensibilidade ao preço unitário}\label{ssec:custo-sensibilidade}
 
@@ -878,21 +1996,12 @@ A incerteza dominante não está nas quantidades, que decorrem do dimensionament
 e sim no preço unitário da madeira. A \autoref{tab:custo-sensibilidade} percorre
 o intervalo de mercado, mantidas as quantidades e os percentuais.
 
-\tabela{Custo total estimado em função do preço unitário da MLC}{\footnotesize
-\begin{tabular}{lrrr}
-\toprule
-    \textbf{Cenário} & \textbf{R\$/m\textsuperscript{3}} & \textbf{Total (R\$)} & \textbf{R\$/m\textsuperscript{2}} \\
-\midrule
-    Limite inferior de mercado & 4.000 & 2.164.589 & 1.162 \\
-    \textbf{Adotado}           & \textbf{5.200} & \textbf{2.790.943} & \textbf{1.498} \\
-    Limite superior de mercado & 6.400 & 3.417.298 & 1.834 \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{custo-sensibilidade}{}{}
+\input{tab_custo_sensibilidade}
 
 A varredura da \autoref{sec:varredura-global} identificou
-geometrias aprovadas com cerca de metade do volume de madeira da adotada, o que
-corresponde, aos preços aqui empregados, a uma diferença da ordem de meio
-milhão de reais no material. As razões que sustentaram a geometria mais robusta,
-expostas na \autoref{ssec:o-que-governa}, são de margem nos sistemas de
-estabilização e de construtibilidade, e é contra essa ordem de grandeza que
-devem ser pesadas.
+geometrias aprovadas com \custoPctVolMin~\% do volume de madeira das vigas da
+adotada, o que corresponde, aos preços aqui empregados, a uma diferença de cerca de
+R\$ \custoDifVolMin{} mil no material. As razões que sustentaram a geometria mais
+robusta, expostas na \autoref{sec:geometria-adotada}, são de margem na viga e de
+construtibilidade das ligações, e é com essa ordem de grandeza que
+devem ser comparadas.

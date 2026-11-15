@@ -8,6 +8,6 @@ def test_gera_os_tres_esquemas(tmp_path):
     paths = gerar_esquemas(geo, tmp_path, H_pilar=7.0, faixas="varredura")
     assert [p.name for p in paths] == ["esq01_variaveis_viga.pdf",
                                        "esq02_modelo_portico.pdf",
-                                       "esq03_apoio_horizontal.pdf"]
+                                       "esq03_apoio_horizontal.pdf", "esq04_no_topo.pdf"]
     for p in paths:
         assert p.read_bytes()[:4] == b"%PDF" and p.stat().st_size > 5000

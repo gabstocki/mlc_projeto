@@ -48,6 +48,8 @@ def verificar_pilar_frontao(
     V_acidental_kN: float,
     b_viga_m:       float,
     h_chapa_topo_m: float = 0.40,
+    h_pilarete_m:   float = 0.0,
+    chaveta:        dict | None = None,
     d_cavilha_mm:   float = 20.0,
     n_chumbadores:  int = 4,
     d_chumbador_mm: int = 24,
@@ -92,6 +94,10 @@ def verificar_pilar_frontao(
         V_acidental_kN=float(V_acidental_kN),
         n_chumbadores=n_chumbadores, d_mm=d_chumbador_mm,
         classe=classe_chumbador, layout=(2, 2), dados_concreto=dados_concreto,
+        # só o cortante do próprio pilar flete o pilarete (issue 87)
+        M_persistente_kNm=float(V_vento_base_kN) * h_pilarete_m,
+        M_acidental_kNm=float(V_acidental_kN) * h_pilarete_m,
+        chaveta=chaveta,                        # issue 74
     )
     partes = {"montante": montante["eta"], "L1f": topo["eta"], "L3f": base["eta"]}
     gov = max(partes, key=partes.get)

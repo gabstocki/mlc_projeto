@@ -160,7 +160,7 @@ def test_envelope_nunca_subestima_a_escolha_anterior(tab25):
     eta_proxy = (k_p * 6 * abs(gov.M_cumeeira_kNm) * 1e3
                  / (geo.b * geo.h_ap ** 2)) / (1.4 * k_vol * mat_gov.f_t90_d)
 
-    assert verifica_cumeeira(geo, mat, load)["eta_t90"] >= eta_proxy - 1e-9
+    assert verifica_cumeeira(geo, mat, load)["eta_t90"] >= eta_proxy - 1e-4   # η arredondado a 4 casas
 
 
 def test_na_rota_tab25_o_apice_sobe_face_a_procuracao():
@@ -171,4 +171,4 @@ def test_na_rota_tab25_o_apice_sobe_face_a_procuracao():
     assert gov.duracao == "curta"                 # governante por |M| é vento
     assert r["comb_gov"] == "ELU_Q"               # mas o ápice governa em Q
     assert r["duracao"] == "media"
-    assert r["eta_t90"] == pytest.approx(0.3526, abs=1e-3)
+    assert r["eta_t90"] == pytest.approx(0.3715, abs=1e-3)   # issue 114: peso variável

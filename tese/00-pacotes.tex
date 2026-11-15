@@ -18,16 +18,15 @@
 % Pacotes de citações BibLaTeX
 % ----------------------------------------------------------
 \usepackage[style=abnt,
-	backref=true,
+	backref=false,      % sem "Citado n vezes nas páginas" (issue 95, item 8.4)
 	backend=biber,
-	citecounter=true,
-	backrefstyle=three, 
+	citecounter=false,
+	extradate=true,     % letra de desambiguação também na lista: 2002a, 2004b (item 8.1)
  	repeatfields=true,
 	url=true,
 	maxbibnames=99,
     mincitenames=1,
     maxcitenames=2,
-    backref=true,
     hyperref=true,
     giveninits=true,
     uniquename=false,

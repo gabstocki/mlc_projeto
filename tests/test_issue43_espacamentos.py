@@ -30,11 +30,12 @@ def res():
 
 def _quadro(r, geo):
     return montar_quadro(
-        r, h0_m=geo.h0, L_T=M.L_T, L=geo.L, folga_oblongo_mm=M.FOLGA_OBLONGO_L1_MM,
+        r, h0_m=geo.h0, L_T=M.L_T, L=geo.L, folga_oblongo_mm=r["oblongo_L1"]["c_cima_mm"],
         d_chu_mm=M.D_CHU_MM, h_ef_mm=M.H_EF_CHU_MM, c_borda_mm=M.C_BORDA_CHU_MM,
         s_grupo_mm=M.S_GRUPO_CHU_MM, h_bloco_mm=M.H_BLOCO_FUND_MM,
         h_pilar_mm={"lateral": M.H_PILAR * 1000, "central": M.H_PILAR_C * 1000,
-                    "PF": M.H_PILAR * 1000, "canto": M.H_PILAR_CANTO * 1000},
+                    "PF": M.H_PILAR * 1000, "canto": M.H_PILAR_CANTO * 1000,
+                    "lamina": M.H_LAMINA * 1000},
         h_terca_mm=M.H_TERCA * 1000)
 
 
@@ -71,9 +72,11 @@ def test_quadro_todos_atendidos(res):
 
 
 def test_quadro_detecta_chapa_L1_curta(res):
-    """A chapa antiga (h0 − 1,5d = 964 mm) deixava e4 = 26 < 1,5·d0 = 36 mm."""
+    """Uma chapa 20 mm mais baixa que a adotada deixa e4 < 1,5·d0."""
     r = {**res["res"], "esquadro_chapas": {**res["res"]["esquadro_chapas"]}}
-    r["esquadro_chapas"]["L1"] = {**r["esquadro_chapas"]["L1"], "altura_mm": 964.0}
+    ob = res["res"]["oblongo_L1"]
+    H = ob["topo_chapa_mm"] - 20.0
+    r["esquadro_chapas"]["L1"] = {**r["esquadro_chapas"]["L1"], "altura_mm": H}
     q = _quadro(r, res["geo"])
     e4 = [x for x in q if x["ligacao"] == "L1" and x["grandeza"].startswith("$e_4$")][0]
-    assert e4["adot"] == pytest.approx(26.0) and not e4["ok"]
+    assert e4["adot"] == pytest.approx(H - (ob["y_topo_mm"] + ob["c_cima_mm"])) and not e4["ok"]

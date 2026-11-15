@@ -370,9 +370,22 @@ def ruptura_de_bloco(
     k_mod:      float,
     gamma_M:    float,
     F_par_kN:   float,
+    d_m:        float = 0.0,
+    n_lados:    int = 1,
+    t_ef_m:     float | None = None,
 ) -> dict:
     """
     Ruptura de bloco (block shear) — EN 1995-1-1 Anexo A, Eq. (A.1)–(A.3).
+
+    Issue 75 — forma completa do Anexo A para chapa central (corte duplo):
+      · comprimentos LÍQUIDOS (Σ l_i entre furos, Fig. A.1): com d_m > 0,
+            L_net,t = (n_perp − 1)·(a2 − d)
+            L_net,v = 2·[(n_par − 1)·(a1 − d) + (a3,t − d/2)]
+      · t_1 = espessura de UM lado de madeira, e o bloco forma-se nos n_lados;
+      · A_net,v pela Eq. (A.3): L_net,v·t_1 nos modos (c, f, j/l, k, m) e
+        L_net,v/2·(L_net,t + 2·t_ef) nos demais, com t_ef do modo de Johansen
+        governante (Eq. A.6/A.7).
+    Sem d_m e t_ef (chamadas antigas), reproduz-se a forma bruta anterior.
 
     Falha frágil do bloco de madeira delimitado por um grupo de conectores sob
     força PARALELA às fibras, próximo ao extremo da peça (Figura A.1).
@@ -399,13 +412,15 @@ def ruptura_de_bloco(
     Returns:
         dict com áreas líquidas, os dois termos, F_bs,Rk, F_bs,Rd, η e ok.
     """
-    L_net_t = max(0.0, (n_perp - 1)) * a2_m
-    L_net_v = 2.0 * (max(0.0, (n_par - 1)) * a1_m + a3t_m)
-    A_net_t = L_net_t * t1_m                    # m²
-    A_net_v = L_net_v * t1_m                    # m²
+    L_net_t = max(0.0, (n_perp - 1)) * (a2_m - d_m)
+    L_net_v = 2.0 * (max(0.0, (n_par - 1)) * (a1_m - d_m) + a3t_m - d_m / 2.0)
+    A_net_t = L_net_t * t1_m                    # m² (um lado)
+    A_net_v = L_net_v * t1_m                    # m² — Eq. (A.3), modos (c, f, j/l, k, m)
+    if t_ef_m is not None:                      # demais modos: Eq. (A.3) 2.ª forma
+        A_net_v = L_net_v / 2.0 * (L_net_t + 2.0 * t_ef_m)
 
-    F_t = 1.5 * A_net_t * f_t0_k                # N (tração // fibras)
-    F_v = 0.7 * A_net_v * f_v_k                 # N (cisalhamento // fibras)
+    F_t = n_lados * 1.5 * A_net_t * f_t0_k      # N (tração // fibras)
+    F_v = n_lados * 0.7 * A_net_v * f_v_k       # N (cisalhamento // fibras)
     F_bs_Rk = max(F_t, F_v)                     # N — Eq. (A.1)
     F_bs_Rd = k_mod * F_bs_Rk / gamma_M         # N
     F_bs_Rd_v = k_mod * F_v / gamma_M           # N — só cisalhamento (transparência)
@@ -420,6 +435,8 @@ def ruptura_de_bloco(
         "L_net_t_mm":     round(L_net_t * 1e3, 1),
         "L_net_v_mm":     round(L_net_v * 1e3, 1),
         "t1_mm":          round(t1_m * 1e3, 1),
+        "n_lados":        n_lados,
+        "t_ef_mm":        None if t_ef_m is None else round(t_ef_m * 1e3, 1),
         "A_net_t_cm2":    round(A_net_t * 1e4, 1),
         "A_net_v_cm2":    round(A_net_v * 1e4, 1),
         "term_tracao_kN": round(F_t / 1e3, 1),
@@ -431,7 +448,7 @@ def ruptura_de_bloco(
         "eta":            round(eta, 4),
         "eta_so_cisalh":  round(eta_v, 4),
         "ok":             eta <= 1.0,
-        "norma":          "EN 1995-1-1 Anexo A Eq. (A.1)–(A.3)",
+        "norma":          "EN 1995-1-1 Anexo A Eq. (A.1)–(A.5)",
         "nota": (
             "Eq. (A.1) usa max{} — governado por "
             f"{governa}. η só-cisalhamento={eta_v:.2f} (transparência). "
@@ -582,7 +599,8 @@ def fendilhamento_ligacao(
         # mais alta a a4,c = 3d da borda superior (descarregada; EC5 Tab. 8.5),
         # logo h_e = h − a4,c (borda inferior → fileira mais distante).
         d_pino = float(res_lig.get("d_mm_pino", res_lig.get("d_mm", 24.0)))
-        a4c_mm = 3.0 * d_pino
+        # posição do grupo vinda da geometria do rasgo (issue 71), ou 3d
+        a4c_mm = float(res_lig.get("a4c_topo_mm", 3.0 * d_pino))
         h_e_mm = h_mm - a4c_mm
         posicao_grupo = (f"terço superior: fileira mais alta a a4,c={a4c_mm:.0f} mm "
                          "do topo; borda carregada (arrancamento) = inferior")
@@ -747,6 +765,17 @@ def n_ef(n: int, a1_mm: float, d_mm: float) -> float:
     return min(n ** 0.9 * (a1_mm / (13 * d_mm)) ** 0.25, float(n))
 
 
+def n_ef_angulo(n: int, a1_mm: float, d_mm: float, theta_deg: float) -> float:
+    """
+    n_ef de uma fileira // fibras com a força a θ das fibras — EC5 §8.5.1.1(4),
+    aplicável às cavilhas pelo §8.6(1): n_ef = n para força ⊥ às fibras (8.35) e
+    interpolação linear entre (8.34) e (8.35) para 0° < θ < 90° (issue 111).
+    """
+    n0 = n_ef(n, a1_mm, d_mm)
+    th = min(max(abs(theta_deg), 0.0), 90.0)
+    return n0 + (float(n) - n0) * th / 90.0
+
+
 # ── Distâncias mínimas — EC5 §8.3.1.2 Tabela 8.2 ────────────────────────────
 
 def distancias_minimas(d_mm: float, theta_deg: float = 0.0) -> dict:
@@ -876,6 +905,13 @@ def verificar_geometria_grupo(
     }
 
 
+def _n_fileiras_engajamento(d_mm: float, a2_mm: float) -> int:
+    """Fileiras admissíveis pelo engajamento sob arrancamento (issue 111)."""
+    from mlc_projeto.connections.chapas_aco import d0_furo
+    from mlc_projeto.connections.oblongo_L1 import n_fileiras_max
+    return n_fileiras_max(a2_mm, d0_furo(d_mm) - d_mm)
+
+
 # ── LIGAÇÃO 1 — Viga-pilar (rótula base) ─────────────────────────────────────
 
 def dimensionar_ligacao_base(
@@ -967,13 +1003,19 @@ def dimensionar_ligacao_base(
 
     # Máximo de fileiras na altura (⊥ fibras)
     n_vert_max = max(1, int((h0_mm - 2 * a4_mm) / a2_mm) + 1) if a2_mm > 0 else 1
+    # Issue 111: com apoio por contato os furos da chapa são ovalizados e os pinos
+    # só encostam no arrancamento; fileiras em alturas diferentes encostam em
+    # sequência (folga ∝ altura × variação de umidade). Limita-se o número de
+    # fileiras para que o espalhamento caiba na folga normal do furo.
+    if apoio_por_contato:
+        n_vert_max = min(n_vert_max, _n_fileiras_engajamento(d_mm, a2_mm))
 
     # Procura malha (n_horiz × n_vert) com n_ef por fileira // fibras
     # EC5 §8.5.1.1 (pernos/pinos): n_ef = n^0,9·(a1/(13d))^1/4 ≤ n
     best = None
     for n_vert in range(1, n_vert_max + 1):
         for n_horiz in range(1, 21):  # limite prático ao longo da viga
-            nef_row = n_ef(n_horiz, a1_mm, d_mm)
+            nef_row = n_ef_angulo(n_horiz, a1_mm, d_mm, theta_deg)
             R_N = n_vert * nef_row * F_v_Rd
             if R_N < R_req_N:
                 continue
@@ -989,9 +1031,10 @@ def dimensionar_ligacao_base(
                 "n_horiz": n_horiz, "n_vert": n_vert, "n_tot": n_tot,
                 "nef_row": nef_row, "R_N": R_N, "eta": eta_i, "geo": geo_ok,
             }
-            if best is None or n_tot < best["n_tot"] or (
-                n_tot == best["n_tot"] and eta_i < best["eta"]
-            ):
+            # menor nº de pinos; empate → grupo mais compacto ao longo da viga
+            # (issue 111: chapa menor); depois menor η
+            _ch = (n_tot, geo_ok["L_ocupado_mm"], eta_i)
+            if best is None or _ch < (best["n_tot"], best["geo"]["L_ocupado_mm"], best["eta"]):
                 best = cand
 
     if best is None:
@@ -999,7 +1042,7 @@ def dimensionar_ligacao_base(
         best_norm = None
         for n_vert in range(1, n_vert_max + 1):
             for n_horiz in range(1, 21):
-                nef_row = n_ef(n_horiz, a1_mm, d_mm)
+                nef_row = n_ef_angulo(n_horiz, a1_mm, d_mm, theta_deg)
                 R_N = n_vert * nef_row * F_v_Rd
                 if R_N < F_res_N:
                     continue
@@ -1022,7 +1065,7 @@ def dimensionar_ligacao_base(
         else:
             n_horiz = 12
             n_vert  = n_vert_max
-            nef_row = n_ef(n_horiz, a1_mm, d_mm)
+            nef_row = n_ef_angulo(n_horiz, a1_mm, d_mm, theta_deg)
             R_N     = n_vert * nef_row * F_v_Rd
             geo_ok  = verificar_geometria_grupo(
                 n_horiz=n_horiz, n_vert=n_vert, d_mm=d_mm,
@@ -1525,11 +1568,13 @@ def dimensionar_ligacao_base_central(
     a4_mm = dist["a4t_mm"]
     h0_mm = geo.h0 * 1000
     n_vert_max = max(1, int((h0_mm - 2 * a4_mm) / a2_mm) + 1) if a2_mm > 0 else 1
+    if res.get("apoio_por_contato"):                       # issue 111
+        n_vert_max = min(n_vert_max, _n_fileiras_engajamento(d_mm, a2_mm))
 
     best = None
     for n_vert in range(1, n_vert_max + 1):
         for n_horiz in range(1, 21):
-            nef_row = n_ef(n_horiz, a1_mm, d_mm)
+            nef_row = n_ef_angulo(n_horiz, a1_mm, d_mm, theta_deg)
             R_N = n_vert * nef_row * F_v_Rd
             if R_N < R_req_N:
                 continue
@@ -1540,7 +1585,8 @@ def dimensionar_ligacao_base_central(
             if not geo_ok["ok_geometria"]:
                 continue
             n_tot = n_horiz * n_vert
-            if best is None or n_tot < best["n_tot"]:
+            _ch = (n_tot, geo_ok["L_ocupado_mm"], F_res_N / R_N)       # issue 111
+            if best is None or _ch < (best["n_tot"], best["geo"]["L_ocupado_mm"], best["eta"]):
                 best = dict(
                     n_horiz=n_horiz, n_vert=n_vert, n_tot=n_tot,
                     nef=n_vert * nef_row, nef_row=nef_row,

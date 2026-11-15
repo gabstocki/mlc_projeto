@@ -259,12 +259,14 @@ NDP_SOURCE: Mapping[str, ParametroNormativo] = MappingProxyType({
     # nacional de segurança contra incêndio (ABNT NBR 14432 / IT do CBM
     # estadual). É por isso "PROJETO", e não "EN-recomendado".
     "R_fogo_req_min": _p(
-        30.0, "regulamento nacional (ABNT NBR 14432 / IT do CBM); método por "
-              "EN 1995-1-2:2004 §4.2.2", "PROJETO-A-CONFIRMAR",
-        "Tempo requerido de resistência ao fogo. R30 adotado para a "
-        "verificação; a exigência efetiva depende da classificação de ocupação, "
-        "área e altura da edificação e TEM de ser confirmada com o corpo de "
-        "bombeiros do estado. O memorial publica também a margem em R60."),
+        30.0, "NPT 008 CBPMPR (2012) Anexo A, itens A2.3.10 b) e A2.4 c); método "
+              "por EN 1995-1-2:2004 §4.2.2", "PROJETO",
+        "TRRF EXIGIDO = 0 (issue 88): edificação térrea, G-1/G-2 aberta "
+        "lateralmente — isenta por A2.3.10 b) (q_fi = 200 MJ/m², NPT 014) e, "
+        "se a CTPI somar a madeira da estrutura à carga de incêndio (~1.250 "
+        "MJ/m²), TRRF da Tabela A de 30 min reduzido em 30 min por A2.4 c). A "
+        "verificação a R30 (e a margem a R60) é INFORMATIVA. Independe disso o "
+        "item 5.17: área > 750 m² com madeira exige retardante ao fogo."),
     "beta_n_MLC": _p(
         0.70, "EN 1995-1-2:2004 Tab. 3.1", "EN",
         "taxa de carbonização NOCIONAL (mm/min) para MLC de coníferas com "

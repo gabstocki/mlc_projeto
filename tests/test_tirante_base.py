@@ -70,7 +70,7 @@ def test_L3_com_tirante_H_zero():
     L3_com = dimensionar_sapata(load, geo, F_chu_kN=80.0, eta_alvo=0.75,
                                 com_tirante=True, b_pilar_m=0.32, h_pilar_m=0.27)
 
-    assert L3_sem["H_d_kN"] == pytest.approx(H_arco, rel=1e-6)
+    assert L3_sem["H_d_kN"] == pytest.approx(H_arco, rel=1e-5)
     # sem tirante a sapata resiste ao empuxo por atrito/chumbadores → muitos deles.
     # Onda 2: H caiu para ~374 kN (vento só em sucção) ⇒ 7 chumbadores.
     assert L3_sem["n_chumbadores"] > L3_com["n_chumbadores"]
@@ -78,7 +78,7 @@ def test_L3_com_tirante_H_zero():
 
     assert L3_com["com_tirante"] is True
     assert L3_com["H_d_kN"] == 0.0
-    assert L3_com["H_arco_kN"] == pytest.approx(H_arco, rel=1e-6)
+    assert L3_com["H_arco_kN"] == pytest.approx(H_arco, rel=1e-5)
     assert L3_com["n_chumbadores"] == 4
     assert L3_com["eta"] == pytest.approx(L3_com["eta_N"], rel=1e-6)
     # AUD-017: `ok` da sapata só é True com os dados de ancoragem

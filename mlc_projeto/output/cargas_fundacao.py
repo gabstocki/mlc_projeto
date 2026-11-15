@@ -32,6 +32,7 @@ efeito, salvo indicação em contrário na linha.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -205,3 +206,123 @@ def imprimir_quadro(q: dict) -> None:
     print(f"  H transversal  total = {t['H_transversal_total_kN']:.1f} kN "
           f"({t['n_paineis_transv']} painéis/frontão)")
     print(f"\n  ⚠ {q['escopo']}")
+
+
+# ── Esforços CARACTERÍSTICOS por ação (issue 102) ─────────────────────────────
+
+def esforcos_caracteristicos(*, load, geo, gamma_kNm3: float, pilares: dict,
+                             H_pilar_mad_m: float, cv_vertical: dict,
+                             cv_vertical_central: dict, cv_transversal: dict,
+                             pilar_frontao: dict, V_impacto_kN: float,
+                             V_vento_pilar_d_kN: float, gamma_Q: float = 1.5) -> list[dict]:
+    """
+    Esforços característicos em cada tipo de base, separados por ação, para que
+    o projeto de fundações faça as suas próprias combinações (EN 1990):
+
+      · G — reação da viga sob g_k (com o beiral) + peso próprio do pilar;
+      · Q — reação sob q_k (sobrecarga de cobertura, categoria H);
+      · W — vento: maior compressão e maior arrancamento entre os padrões de
+        Cpe (reações da viga), mais a parcela dos painéis de contraventamento
+        nas bases montantes e a força horizontal; para os painéis, cuja ação
+        dominante é o vento, toma-se o valor de cálculo dividido por γ_Q;
+      · A_d — choque de veículo (acidental, já característico): horizontal.
+
+    Convenção: compressão > 0; arrancamento informado positivo na coluna própria.
+    """
+    from mlc_projeto.core.loads import analisar_biarticulada
+
+    def _R(qe, qd, fG=0.0):
+        # fG: fator da ação permanente, para o peso próprio variável (issue 114)
+        r = analisar_biarticulada(q=0.5 * (qe + qd), L=geo.L, h0=geo.h0, h_ap=geo.h_ap,
+                                  alpha_rad=geo.alpha_rad, b=geo.b, q_esq=qe, q_dir=qd,
+                                  desenvolve_empuxo=load.empuxo_desenvolve, a_bal=geo.a_bal,
+                                  g_var_kNm3=fG * load.gamma_mlc_kNm3
+                                  if getattr(load, "peso_viga_variavel", False) else 0.0)
+        return float(r["R_A_kN"]), float(r["R_B_kN"])      # A = externo, B = central
+
+    RG = _R(load.g_k, load.g_k, fG=1.0)
+    RQ = _R(load.q_k, load.q_k)
+    RW = [_R(p["w_esq_kNm2"] * load.area_trib, p["w_dir_kNm2"] * load.area_trib)
+          for p in load.padroes_vento]
+    WA_c, WA_t = max(max(r[0] for r in RW), 0.0), max(-min(r[0] for r in RW), 0.0)
+    WB_c, WB_t = max(max(r[1] for r in RW), 0.0), max(-min(r[1] for r in RW), 0.0)
+
+    def _pp(chave):
+        b, h = pilares[chave]
+        return gamma_kNm3 * b * h * H_pilar_mad_m
+
+    cvv_V = float(cv_vertical.get("N_uplift_kN", 0.0)) / gamma_Q
+    cvv_H = float(cv_vertical.get("H_base_kN", 0.0)) / gamma_Q
+    cvc_V = float(cv_vertical_central.get("N_uplift_kN", 0.0)) / gamma_Q
+    cvc_H = float(cv_vertical_central.get("H_base_kN", 0.0)) / gamma_Q
+    cvt_V = float(cv_transversal.get("N_uplift_kN", 0.0)) / gamma_Q
+    cvt_H = float(cv_transversal.get("H_base_kN", 0.0)) / gamma_Q
+    W_pil = V_vento_pilar_d_kN / gamma_Q
+    linhas = [
+        dict(base="Extremidade", G=RG[0] + _pp("lateral"), Q=RQ[0], W_c=WA_c, W_t=WA_t,
+             W_H=W_pil, A_H=V_impacto_kN),
+        dict(base="Central", G=2 * RG[1] + _pp("central"), Q=2 * RQ[1], W_c=2 * WB_c,
+             W_t=2 * WB_t, W_H=W_pil, A_H=V_impacto_kN),
+        dict(base="Central montante", G=2 * RG[1] + _pp("central"), Q=2 * RQ[1],
+             W_c=2 * WB_c + cvc_V, W_t=2 * WB_t + cvc_V, W_H=cvc_H, A_H=V_impacto_kN),
+        dict(base="Canto", G=RG[0] + _pp("canto"), Q=RQ[0], W_c=WA_c + cvv_V + cvt_V,
+             W_t=WA_t + cvv_V + cvt_V, W_H=math.hypot(cvv_H, cvt_H), A_H=V_impacto_kN),
+        dict(base="Pilar de frontão", G=float(pilar_frontao.get("G_k_kN", _pp("lateral"))), Q=0.0,
+             W_c=cvt_V, W_t=cvt_V, W_H=cvt_H, A_H=V_impacto_kN),
+    ]
+    for l in linhas:
+        for k in ("G", "Q", "W_c", "W_t", "W_H", "A_H"):
+            l[k] = round(l[k], 1)
+    return linhas
+
+
+def gerar_tex_caracteristicos(linhas: list[dict], caminho) -> "Path":
+    """Tabela LaTeX dos esforços característicos por ação (gerada pelo pipeline)."""
+    from pathlib import Path
+    from mlc_projeto.output.formatacao import fmt_sig
+
+    def n(x):
+        return fmt_sig(x, 3) if abs(x) >= 0.05 else "--"
+
+    P = ["% tab_cargas_fundacao_k.tex — GERADO por mlc_projeto/output/cargas_fundacao.py "
+         "(issue 102). NÃO EDITAR À MÃO.\n",
+         "\\tabela{Esforços característicos por ação entregues ao projeto de fundação}"
+         "{\\footnotesize\n\\begin{tabular}{lrrrrrr}\n\\toprule\n"
+         "    & \\multicolumn{3}{c}{\\textbf{Vertical (kN)}} & \\textbf{Arranc. (kN)} & "
+         "\\multicolumn{2}{c}{\\textbf{Horizontal (kN)}} \\\\\n"
+         "    \\cmidrule(lr){2-4}\\cmidrule(lr){5-5}\\cmidrule(lr){6-7}\n"
+         "    \\textbf{Base} & \\textbf{$G_k$} & \\textbf{$Q_k$} & \\textbf{$W_k$} & "
+         "\\textbf{$W_k$} & \\textbf{$W_k$} & \\textbf{$A_d$} \\\\\n\\midrule\n"]
+    for l in linhas:
+        P.append(f"    {l['base']} & {n(l['G'])} & {n(l['Q'])} & {n(l['W_c'])} & "
+                 f"{n(l['W_t'])} & {n(l['W_H'])} & {n(l['A_H'])} \\\\\n")
+    P.append("\\bottomrule\n\\end{tabular}}{Elaborado pelo autor (2026)}"
+             "{cargas-fundacao-k}{}{}\n")
+    caminho = Path(caminho)
+    caminho.write_text("".join(P), encoding="utf-8")
+    return caminho
+
+
+def gerar_tex_calculo(q: dict, caminho) -> "Path":
+    """Tabela LaTeX dos esforços de CÁLCULO por tipo de base (gerada pelo pipeline)."""
+    from pathlib import Path
+    from mlc_projeto.output.formatacao import fmt_sig
+    nomes = {"Extremidade (pilar lateral)": "Extremidade",
+             "Central (pilar do apoio partilhado)": "Central",
+             "Central montante (contraventamento)": "Central montante",
+             "Canto (montante de contraventamento)": "Canto",
+             "Pilar de frontão (montante do CV-T)": "Pilar de frontão"}
+    P = ["% tab_cargas_fundacao.tex — GERADO por mlc_projeto/output/cargas_fundacao.py "
+         "(issue 102). NÃO EDITAR À MÃO.\n",
+         "\\tabela{Esforços de cálculo entregues ao projeto de fundação}{\\footnotesize\n"
+         "\\begin{tabular}{lcrrr}\n\\toprule\n"
+         "    \\textbf{Base} & \\textbf{Quantidade} & \\textbf{Compressão} & \\textbf{Tração} & "
+         "\\textbf{Horizontal} \\\\\n    & & \\textbf{(kN)} & \\textbf{(kN)} & \\textbf{(kN)} \\\\\n"
+         "\\midrule\n"]
+    for c in q["cargas"]:
+        P.append(f"    {nomes.get(c.tipo, c.tipo)} & {c.n_bases} & {fmt_sig(c.N_comp_kN, 3)} & "
+                 f"{fmt_sig(c.N_tracao_kN, 3)} & {fmt_sig(c.H_kN, 3)} \\\\\n")
+    P.append("\\bottomrule\n\\end{tabular}}{Elaborado pelo autor (2026)}{cargas-fundacao}{}{}\n")
+    caminho = Path(caminho)
+    caminho.write_text("".join(P), encoding="utf-8")
+    return caminho

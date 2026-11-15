@@ -2,6 +2,12 @@
 core/geometry.py — Geometria paramétrica da viga de duplo-bisel.
 
 Calcula h(x), A(x), I(x) e W(x) para n pontos ao longo do vão.
+
+Beiral (issue 82): a viga pode prolongar-se em BALANÇO além de cada apoio, de
+a_bal (projeção horizontal medida do eixo do apoio). O extradorso continua a
+água, de modo que a altura decresce até h_ponta = h0 − a_bal·tg α na ponta. O
+vão 0 ≤ x ≤ L continua a ser o domínio de h(x) e das verificações; o balanço
+entra na análise pelos momentos e reações que transmite aos apoios.
 """
 
 from dataclasses import dataclass, field
@@ -10,6 +16,7 @@ from numpy.typing import NDArray
 
 from mlc_projeto.core.validacao import (
     exigir_inteiro_minimo,
+    exigir_nao_negativo,
     exigir_no_intervalo,
     exigir_positivo,
 )
@@ -26,12 +33,15 @@ class GeometriaViga:
         alpha_deg : Ângulo de inclinação da cumeeira (graus)
         b         : Largura da seção transversal (m)
         n_pts     : Número de pontos ao longo do vão para integração
+        a_bal     : Balanço do beiral além de cada apoio, projeção horizontal
+                    a partir do eixo do apoio (m); 0 = viga sem beiral
     """
     L:         float
     h0:        float
     alpha_deg: float
     b:         float
     n_pts:     int = 100
+    a_bal:     float = 0.0
 
     # Calculados automaticamente
     alpha_rad: float = field(init=False)
@@ -62,6 +72,19 @@ class GeometriaViga:
 
         # Coerência do resultado derivado.
         exigir_positivo("h_ap (derivado de h0, L e alpha_deg)", self.h_ap, unidade="m")
+        self.a_bal = exigir_nao_negativo("a_bal", self.a_bal, unidade="m")
+        exigir_positivo("h_ponta (derivado de h0, a_bal e alpha_deg)",
+                        self.h_ponta, unidade="m")
+
+    @property
+    def h_ponta(self) -> float:
+        """Altura na ponta do balanço do beiral (m); = h0 sem beiral."""
+        return float(self.h0 - self.a_bal * np.tan(self.alpha_rad))
+
+    def h_balanco(self, u: float | NDArray) -> float | NDArray:
+        """Altura no balanço à distância horizontal u do eixo do apoio (m)."""
+        u = np.asarray(u, dtype=float)
+        return self.h0 - u * np.tan(self.alpha_rad)
 
     def h(self, x: float | NDArray) -> float | NDArray:
         """
@@ -95,6 +118,8 @@ class GeometriaViga:
             "h_ap_m":     self.h_ap,
             "alpha_deg":  self.alpha_deg,
             "b_m":        self.b,
+            "a_bal_m":    self.a_bal,
+            "h_ponta_m":  self.h_ponta,
             "L_h0":       self.L / self.h0,
             "h0_b":       self.h0 / self.b,
         }

@@ -13,55 +13,55 @@ Este apêndice apresenta, para cada elemento, as verificações que governam o s
 
 \subsection*{Cisalhamento no apoio (item 6.1.7)}
 
-A largura efetiva considera o coeficiente de fissuração $k_{cr}$; a força é o cortante no eixo da peça.
+A largura efetiva considera o coeficiente de fissuração $k_{cr}$ e desconta o rasgo da chapa embutida; a força é o cortante no eixo da peça.
 
 \begin{align}
-    \tau_d &= \frac{1{,}5\,V_d}{k_{cr}\,b\,h} = \frac{1{,}5 \times 99{,}2}{0{,}67 \times 0{,}32 \times 1} \times 10^{-3} = 0{,}694 \nonumber \\
+    \tau_d &= \frac{1{,}5\,V_{Ed}}{k_{cr}\,(b - t_{rasgo})\,h} = \frac{1{,}5 \times 95}{0{,}67 \times (0{,}32 - 0{,}029) \times 1} \times 10^{-3} = 0{,}731 \nonumber \\
     f_{v,d} &= \frac{k_{mod}\,f_{v,k}}{\gamma_M} = 1{,}82 \nonumber \\
-    \eta &= \frac{\tau_d}{f_{v,d}} = \frac{0{,}694}{1{,}82} = 0{,}39
+    \eta &= \frac{\tau_d}{f_{v,d}} = \frac{0{,}731}{1{,}82} = 0{,}41
     \label{eq:mem-cisalhamento}
 \end{align}
 \subsection*{Tração perpendicular às fibras na cumeeira (itens 6.4.3, fórmulas 6.54 e 6.55)}
 
 \begin{align}
-    \sigma_{t,90,d} &= k_p\,\frac{6\,M_{ap,d}}{b\,h_{ap}^2} = 0{,}0353 \times \frac{6 \times 504}{0{,}32 \times 2{,}79^2} \times 10^{-3} = 0{,}043 \nonumber \\
+    \sigma_{t,90,d} &= k_p\,\frac{6\,M_{ap,d}}{b\,h_{ap}^2} = 0{,}0353 \times \frac{6 \times 505}{0{,}32 \times 2{,}79^2} \times 10^{-3} = 0{,}043 \nonumber \\
     k_{dis}\,k_{vol}\,f_{t,90,d} &= 1{,}4 \times 0{,}335 \times 0{,}26 = 0{,}122 \nonumber \\
     \eta &= 0{,}36
     \label{eq:mem-cumeeira}
 \end{align}
 \subsection*{Tensão na borda inclinada (item 6.4.2)}
 
-Governa a seção a 3{,}48 m do apoio, sob sucção, com a borda inclinada tracionada.
+Governa a seção a 3{,}48 m do apoio mais próximo (16{,}8 m do apoio esquerdo, na combinação de sucção com o padrão de vento que a governa; o padrão espelhado dá a mesma seção a partir do outro apoio), com a borda inclinada tracionada.
 
 \begin{align}
-    \sigma_{m,\alpha,d} &= \frac{6\,|M_d|}{b\,h^2} = \frac{6 \times 243}{0{,}32 \times 1{,}61^2} \times 10^{-3} = 1{,}75 \nonumber \\
+    \sigma_{m,\alpha,d} &= \frac{6\,|M_{Ed}|}{b\,h^2} = \frac{6 \times 251}{0{,}32 \times 1{,}61^2} \times 10^{-3} = 1{,}81 \nonumber \\
     k_{m,\alpha} &= \left[1 + \left(\frac{f_{m,d}}{0{,}75\,f_{v,d}}\operatorname{tg}\alpha\right)^2 + \left(\frac{f_{m,d}}{f_{t,90,d}}\operatorname{tg}^2\alpha\right)^2\right]^{-1/2} = 0{,}414 \nonumber \\
-    \eta &= \frac{\sigma_{m,\alpha,d}}{k_{m,\alpha}\,f_{m,d}} = \frac{1{,}75}{0{,}414 \times 13{,}4} = 0{,}32
+    \eta &= \frac{\sigma_{m,\alpha,d}}{k_{m,\alpha}\,f_{m,d}} = \frac{1{,}81}{0{,}414 \times 13{,}4} = 0{,}33
     \label{eq:mem-borda-inclinada}
 \end{align}
 \subsection*{Flexo-compressão (item 6.3.2, fórmula 6.23)}
 
 \begin{align}
-    \eta &= \frac{\sigma_{c,0,d}}{k_{c,y}\,f_{c,0,d}} + \frac{\sigma_{m,y,d}}{f_{m,d}} = \frac{0{,}0166}{0{,}938 \times 12{,}5} + \frac{2{,}07}{12{,}5} = 0{,}17
+    \eta &= \frac{\sigma_{c,0,d}}{k_{c,y}\,f_{c,0,d}} + \frac{\sigma_{m,y,d}}{f_{m,d}} = \frac{0{,}0159}{0{,}938 \times 12{,}5} + \frac{1{,}97}{12{,}5} = 0{,}16
     \label{eq:mem-flexocompressao}
 \end{align}
 \subsection*{Flecha final líquida (itens 2.3.2.2 e 7.2)}
 
 \begin{align}
-    w_{net,fin} &= w_G\,(1 + k_{def}) + w_Q\,(1 + \psi_2\,k_{def}) = 4{,}42 \times (1 + 2) + 2{,}15 = 15{,}4~\text{mm} \nonumber \\
-    \eta &= \frac{w_{net,fin}}{L/250} = \frac{15{,}4}{81} = 0{,}19
+    w_{\mathrm{net,fin}} &= w_G\,(1 + k_{def}) + w_Q\,(1 + \psi_2\,k_{def}) = 4{,}35 \times (1 + 2) + 2{,}13 = 15{,}2~\text{mm} \nonumber \\
+    \eta &= \frac{w_{\mathrm{net,fin}}}{L/250} = \frac{15{,}2}{81} = 0{,}19
     \label{eq:mem-flecha}
 \end{align}
 \section{PILARES}\label{sec:mem-pilares}
 
-\subsection*{Pilar central montante (item 6.3.2, fórmula 6.23)}
+\subsection*{Pilar central montante bipartido (item 6.3.2 e anexo C)}
 
-O pilar recebe as reações das duas vigas e o esforço descendente do painel de contraventamento.
+O pilar é formado por duas lâminas, uma de cada lado da viga. A lâmina do lado do nó recebe metade das reações das duas vigas e a componente vertical da diagonal do painel de contraventamento, $D_{Ed}$, e, do vento na fachada, o binário $M_{w,d}$ dividido pela distância $a_1$ entre os eixos das lâminas.
 
 \begin{align}
-    N_{c,d} &= 2\,R_v + V_{Ed}\,\operatorname{tg}\beta = 199 + 130 = 330 \nonumber \\
-    \lambda &= \frac{\ell_{ef}}{i} = \frac{7}{0{,}0779} = 89{,}8,\quad \lambda_{rel} = 1{,}43,\quad k_c = 0{,}445 \nonumber \\
-    \eta &= \frac{N_{c,d}/(b\,h)}{k_c\,f_{c,0,d}} + \frac{\sigma_{m,d}}{f_{m,d}} = \frac{3{,}82}{0{,}445 \times 12{,}5} + \frac{0{,}757}{12{,}5} = 0{,}75
+    N_{c,d} &= \frac{2\,R_{Ed}}{2} + D_{Ed} + \frac{M_{w,d}}{a_1} = 107 + 258 + \frac{2{,}69}{0{,}5} = 371 \nonumber \\
+    \lambda_{ef} &= \sqrt{\lambda^2 + \eta\,\frac{n}{2}\,\lambda_1^2} = 67{,}9,\quad \lambda_x = 72{,}5,\quad k_c = 0{,}638 \nonumber \\
+    \eta &= \frac{N_{c,d}/(b_l\,h_l)}{k_c\,f_{c,0,d}} = \frac{371 / (0{,}16 \times 0{,}32)}{0{,}638 \times 12{,}5} \times 10^{-3} = 0{,}91
     \label{eq:mem-pilar-central}
 \end{align}
 \section{TERÇAS E COBERTURA}\label{sec:mem-tercas}
@@ -69,8 +69,8 @@ O pilar recebe as reações das duas vigas e o esforço descendente do painel de
 \subsection*{Terça como biela do contraventamento (item 6.3.2, fórmula 6.24)}
 
 \begin{align}
-    \sigma_{c,0,d} &= \frac{N_d}{b\,h} = \frac{107}{0{,}2 \times 0{,}58} \times 10^{-3} = 0{,}919,\quad \lambda_z = 99{,}6,\quad k_{c,z} = 0{,}368 \nonumber \\
-    \eta &= \frac{\sigma_{c,0,d}}{k_{c,z}\,f_{c,0,d}} + k_m\,\frac{\sigma_{m,y,d}}{f_{m,d}} + \frac{\sigma_{m,z,d}}{f_{m,d}} = \frac{0{,}919}{0{,}368 \times 13{,}4} + 0{,}7\,\frac{1{,}05}{12{,}5} + \frac{0{,}247}{12{,}5} = 0{,}27
+    \sigma_{c,0,d} &= \frac{N_{Ed}}{b\,h} = \frac{175}{0{,}2 \times 0{,}4} \times 10^{-3} = 2{,}19,\quad \lambda_z = 99{,}6,\quad k_{c,z} = 0{,}368 \nonumber \\
+    \eta &= \frac{\sigma_{c,0,d}}{k_{c,z}\,f_{c,0,d}} + k_m\,\frac{\sigma_{m,y,d}}{f_{m,d}} + \frac{\sigma_{m,z,d}}{f_{m,d}} = \frac{2{,}19}{0{,}368 \times 13{,}4} + 0{,}7\,\frac{2{,}05}{12{,}5} + \frac{0{,}304}{12{,}5} = 0{,}59
     \label{eq:mem-terca}
 \end{align}
 \subsection*{Fixação da telha à terça (ABNT NBR 6123, item 7.2.6)}
@@ -87,40 +87,55 @@ O pilar recebe as reações das duas vigas e o esforço descendente do painel de
 
 \begin{align}
     k_\ell &= \min\left(1;\ \sqrt{15/\ell}\right) = \sqrt{15/20{,}3} = 0{,}861 \nonumber \\
-    q_d &= \frac{k_\ell\,n\,N_d}{k_{f,3}\,\ell} = \frac{0{,}861 \times 5 \times 19{,}7}{30 \times 20{,}3} = 0{,}139~\text{kN/m} \nonumber \\
-    V_{Ed} &= \frac{q_d\,\ell}{2} + R_w = 1{,}41 + 105 = 107 \nonumber \\
-    N_{Ed} &= \frac{V_{Ed}}{\cos\theta} = \frac{107}{\cos 23{,}8^\circ} = 117 \nonumber \\
-    \eta &= \frac{N_{Ed}}{A\,f_y/\gamma_{M0}} = \frac{117}{616 \times 235 \times 10^{-3}} = 0{,}81
+    q_{Ed} &= \frac{k_\ell\,n\,N_{Ed}}{k_{f,3}\,\ell} = \frac{0{,}861 \times 5 \times 19}{30 \times 20{,}3} = 0{,}135~\text{kN/m} \nonumber \\
+    V_{Ed} &= \frac{q_{Ed}\,\ell}{2} + R_w = 1{,}37 + 174 = 175 \nonumber \\
+    N_{Ed} &= \frac{V_{Ed}}{\cos\beta} = \frac{175}{\cos 23{,}8^\circ} = 191 \nonumber \\
+    \eta &= \frac{N_{Ed}}{A\,f_y/\gamma_{M0}} = \frac{191}{1.020 \times 235 \times 10^{-3}} = 0{,}80
     \label{eq:mem-cv-cobertura}
 \end{align}
 \subsection*{Diagonal do contraventamento vertical (EN 1993-1-1, item 6.2.3)}
 
 \begin{align}
-    V_{Ed} &= \frac{f\,(F_w + H_{imp})}{n} = \frac{0{,}5 \times (842 + 15{,}2)}{4} = 107 \nonumber \\
-    N_{Ed} &= \frac{V_{Ed}}{\cos\beta} = \frac{107}{\cos 50{,}6^\circ} = 169 \nonumber \\
-    N_{t,Rd} &= \min\left(\frac{A\,f_y}{\gamma_{M0}};\ \frac{0{,}9\,A_s\,f_u}{\gamma_{M2}}\right) = \min(201;\ 212) = 201 \nonumber \\
-    \eta &= \frac{169}{201} = 0{,}84
+    V_{Ed} &= \frac{f\,(\gamma_Q\,F_{w,k} + H_{imp})}{n} = \frac{0{,}5 \times (1{,}5 \times 927 + 15{,}3)}{4} = 176 \nonumber \\
+    N_{Ed} &= \frac{V_{Ed}}{\cos\beta} = \frac{176}{\cos 55{,}8^\circ} = 312 \nonumber \\
+    N_{t,Rd} &= \min\left(\frac{A\,f_y}{\gamma_{M0}};\ \frac{0{,}9\,A_s\,f_u}{\gamma_{M2}}\right) = \min(374;\ 382) = 374 \nonumber \\
+    \eta &= \frac{312}{374} = 0{,}84
     \label{eq:mem-cv-vertical}
 \end{align}
 \section{LIGAÇÕES E ANCORAGEM}\label{sec:mem-ligacoes}
 
 \subsection*{Pinos da ligação L1 (itens 8.2.3 e 8.5.1.1)}
 
-Chapa de aço central, corte duplo; o modo governante de Johansen é o de uma rótula plástica no pino.
+Chapa de aço central, corte duplo, fórmula (8.11), válida para chapa central de qualquer espessura; o modo governante de Johansen é o de uma rótula plástica no pino. Duas fileiras de três pinos paralelas às fibras, com a força a 85{,}2$^\circ$ delas: $n_{ef}$ por interpolação entre as fórmulas (8.34) e (8.35), item 8.5.1.1(4).
 
 \begin{align}
-    F_{v,Rk} &= f_{h,\alpha,k}\,t_1\,d\left[\sqrt{2 + \frac{4\,M_{y,Rk}}{f_{h,\alpha,k}\,d\,t_1^2}} - 1\right] \nonumber \\
+    F_{v,Rk} &= f_{h,\alpha_F,k}\,t_1\,d\left[\sqrt{2 + \frac{4\,M_{y,Rk}}{f_{h,\alpha_F,k}\,d\,t_1^2}} - 1\right] \nonumber \\
     &= 14{,}1 \times 148 \times 24\left[\sqrt{2 + \frac{4 \times 465.000}{14{,}1 \times 24 \times 148^2}} - 1\right] \times 10^{-3} = 25 \nonumber \\
-    R_d &= n_{ef}\,\frac{2\,k_{mod}\,F_{v,Rk}}{\gamma_M} = 5 \times \frac{2 \times 0{,}65 \times 25}{1{,}3} = 125 \nonumber \\
-    \eta &= \frac{\sqrt{N_d^2 + V_d^2}}{R_d} = \frac{\sqrt{8{,}75^2 + 86{,}1^2}}{125} = 0{,}70 \leq 0{,}75
+    n_{ef} &= n_{fil}\left[n_{ef,0} + (n - n_{ef,0})\frac{\alpha}{90^\circ}\right] = 2\left[1{,}89 + (3 - 1{,}89)\frac{85{,}2}{90}\right] = 5{,}88 \nonumber \\
+    R_d &= n_{ef}\,\frac{2\,k_{mod}\,F_{v,Rk}}{\gamma_M} = 5{,}88 \times \frac{2 \times 0{,}65 \times 25}{1{,}3} = 147 \nonumber \\
+    \eta &= \frac{\sqrt{N_{Ed}^2 + V_{Ed}^2}}{R_d} = \frac{\sqrt{8{,}37^2 + 100^2}}{147} = 0{,}69 \leq 0{,}75
     \label{eq:mem-l1}
+\end{align}
+\subsection*{Pé do pilar da base L3a: número efetivo (fórmula 8.34) e ruptura de bloco (anexo A)}
+
+Cavilhas de 20 mm em chapa central, força paralela às fibras; 3 fileiras de 4 cavilhas, $a_1 = 100$ mm, $a_2 = 60$ mm e $a_{3,t} = 140$ mm; madeira de cada lado da chapa com $t_1 = 70$ mm. Os comprimentos do bloco são líquidos, descontados os furos, e a área de cisalhamento segue a segunda forma da fórmula A.3, com $t_{ef}$ da fórmula A.7 para o modo (h) de Johansen, com duas rótulas plásticas e chapa grossa.
+
+\begin{align}
+    n_{ef} &= \min\left\{n;\ n^{0{,}9}\sqrt[4]{\frac{a_1}{13\,d}}\right\} = \min\left\{4;\ 4^{0{,}9}\sqrt[4]{\frac{100}{13 \times 20}}\right\} = 2{,}74 \nonumber \\
+    R_d &= n_{fil}\,n_{ef}\,F_{v,Rd} = 3 \times 2{,}74 \times 20{,}2 = 166 \nonumber \\
+    t_{ef} &= 2\sqrt{\frac{M_{y,Rk}}{f_{h,k}\,d}} = 40~\text{mm} \nonumber \\
+    A_{net,t} &= (n_{fil} - 1)(a_2 - d)\,t_1 = 80 \times 70 \times 10^{-2} = 56~\text{cm}^2 \nonumber \\
+    A_{net,v} &= \frac{L_{net,v}}{2}\,(L_{net,t} + 2\,t_{ef}) = \frac{740}{2} \times (80 + 2 \times 40) \times 10^{-2} = 592~\text{cm}^2 \nonumber \\
+    F_{bs,Rk} &= 2\max\{1{,}5\,A_{net,t}\,f_{t,0,k};\ 0{,}7\,A_{net,v}\,f_{v,k}\} = 2\max\{161;\ 145\} = 323 \nonumber \\
+    \eta &= \frac{N_t}{k_{mod}\,F_{bs,Rk}/\gamma_M} = \frac{105}{161} = 0{,}66 \leq 0{,}75
+    \label{eq:mem-pe-bloco}
 \end{align}
 \subsection*{Ancoragem da base de canto, cone de arrancamento (EN 1992-4, fórmulas 7.1 a 7.7)}
 
 \begin{align}
-    N^0_{Rk,c} &= k_1\,\sqrt{f_{ck}}\,h_{ef}^{1{,}5} = 8{,}9 \times \sqrt{25} \times 400^{1{,}5} \times 10^{-3} = 356 \nonumber \\
-    N_{Rd,c} &= \frac{N^0_{Rk,c}}{\gamma_{Mc}}\,\frac{A_{c,N}}{A^0_{c,N}}\,\psi_{s,N}\,\psi_{re,N}\,\psi_{ec,N} = \frac{356}{1{,}5} \times \frac{3{,}2}{1{,}44} \times 1 = 527 \nonumber \\
-    \eta &= \frac{N_{Ed}}{N_{Rd,c}} = \frac{284}{527} = 0{,}54
+    N^0_{Rk,c} &= k_1\,\sqrt{f_{ck}}\,h_{ef}^{1{,}5} = 8{,}9 \times \sqrt{25} \times 500^{1{,}5} \times 10^{-3} = 498 \nonumber \\
+    N_{Rd,c} &= \frac{N^0_{Rk,c}}{\gamma_{Mc}}\,\frac{A_{c,N}}{A^0_{c,N}}\,\psi_{s,N}\,\psi_{re,N}\,\psi_{ec,N} = \frac{498}{1{,}5} \times \frac{4{,}37}{2{,}25} \times 1 = 644 \nonumber \\
+    \eta &= \frac{N_{Ed}}{N_{Rd,c}} = \frac{442}{644} = 0{,}69
     \label{eq:mem-ancoragem}
 \end{align}
 

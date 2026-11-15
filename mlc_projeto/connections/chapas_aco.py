@@ -15,7 +15,8 @@ está em connections.py. Aqui só o aço.
 Decisões de projeto (DECLARADAS — confirmar no detalhamento, issue 23):
   · Aço da chapa: S275 (f_y=275, f_u=430 MPa; t ≤ 40 mm) — escolha da usuária.
   · Espessura da chapa embutida t_p e garganta da solda a: parametrizados.
-  · Furo de cavilha ajustado (close-fit): d_0 = d (EC5 §8.6 — sem folga).
+  · Furo na chapa com folga normal (issue 79): d_0 = d + Δ, Δ da EN 1090-2
+    Tab. 11 — ver d0_furo(). Na madeira o furo continua ajustado (EC5 §10.4.4).
 
 Fatores parciais (EN 1993-1-1/1-8):
   γ_M0 = 1,00 (resistência de seção)   γ_M2 = 1,25 (parafusos, seção líquida, solda)
@@ -37,6 +38,21 @@ ACO_CHAPA: dict[str, dict] = {
     "S275": {"f_y": 275.0, "f_u": 430.0, "beta_w": 0.85},
     "S355": {"f_y": 355.0, "f_u": 490.0, "beta_w": 0.90},
 }
+
+
+def folga_furo_mm(d_mm: float) -> float:
+    """Folga nominal de furo redondo normal na chapa (EN 1090-2:2018 Tab. 11):
+    1 mm até Ø14, 2 mm de Ø16 a Ø24, 3 mm a partir de Ø27. Atende também o
+    limite do EC5 §10.4.3 para furos em chapas de aço, max(2 mm; 0,1·d)."""
+    d = float(d_mm)
+    return 1.0 if d <= 14.0 else (2.0 if d <= 24.0 else 3.0)
+
+
+def d0_furo(d_mm: float) -> float:
+    """Diâmetro do furo na chapa, d_0 = d + folga (issue 79). Nos furos
+    ovalizados, d_0 é a largura do rasgo; as distâncias e_3, e_4 da EN 1993-1-8
+    Tab. 3.3 e os termos em d_0 da Tab. 3.4 usam este valor."""
+    return float(d_mm) + folga_furo_mm(d_mm)
 
 GAMMA_M0 = 1.00   # EN 1993-1-1 §6.1 — resistência de seção bruta
 GAMMA_M2 = 1.25   # EN 1993-1-8 — parafusos/pinos, seção líquida e solda
@@ -93,7 +109,7 @@ def verificar_chapas_aco(
     beta_w = ACO_CHAPA[aco]["beta_w"]
 
     F_res_N = abs(F_res_kN) * 1e3
-    d0 = d_mm                                   # cavilha ajustada (close-fit)
+    d0 = d0_furo(d_mm)                          # furo com folga (issue 79)
     A_dowel = math.pi * d_mm ** 2 / 4.0         # mm² — área do fuste
 
     # Força de projeto por cavilha (aço dúctil → todas efetivas).
@@ -145,11 +161,13 @@ def verificar_chapas_aco(
     Fw_Ed_lin = F_res_N / l_w if l_w > 0 else 1e9          # N/mm
     eta_weld = Fw_Ed_lin / Fw_Rd_lin if Fw_Rd_lin > 0 else 999.0
 
+    # A solda da chapa embutida à chapa de topo / sela é verificada no quadro de
+    # soldas (issue 78), com a geometria real (cordões na borda inferior da
+    # chapa); o valor aqui, de garganta declarada, fica só informativo.
     etas = {
         "pino_cisalh": eta_shear,
         "furo_bearing": eta_bearing,
         "chapa_liquida": eta_net,
-        "solda": eta_weld,
     }
     gov_key = max(etas, key=etas.get)
     eta_gov = etas[gov_key]
@@ -161,6 +179,7 @@ def verificar_chapas_aco(
         "t_p_mm":       t_p_mm,
         "a_solda_mm":   a_solda_mm,
         "d_mm":         d_mm,
+        "d0_mm":        d0,
         "n_pinos":      n_pinos,
         "F_res_kN":     round(F_res_kN, 2),
         "N_ax_kN":      round(N_ax_kN, 2),

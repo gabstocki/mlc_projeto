@@ -3,6 +3,7 @@
 % =============================================================================
 
 \chapter{INTRODUÇÃO}\label{cap:introducao}
+\input{00-siglas}
 
 A madeira voltou a ocupar lugar de destaque entre os materiais estruturais. Às
 qualidades que sempre a recomendaram, como a elevada relação entre resistência e
@@ -48,10 +49,12 @@ típico dessa aplicação.
 
 \section{CONTEXTO NORMATIVO}\label{sec:contexto-normativo}
 
-A primeira norma brasileira de estruturas de madeira, a NB-11 de 1951, tinha como
+A primeira norma brasileira de estruturas de madeira, a NB-11 de 1951
+\cite{NB11:1951}, tinha como
 método de segurança o das tensões admissíveis. A passagem para o método dos
 estados-limites, de natureza probabilística, ocorreu com a ABNT NBR 7190:1997
-\cite{NBR7190:1997}, que já organizava o projeto em verificações de
+\cite{NBR7190:1997}, norma da
+\criarsigla*{ABNT}{Associação Brasileira de Normas Técnicas} que já organizava o projeto em verificações de
 estados-limites últimos e de serviço, com coeficientes parciais de segurança e
 coeficientes de modificação da resistência. Não é esse, portanto, o traço que
 distingue a revisão de 2022 \cite{NBR7190-1:2022}.
@@ -82,7 +85,9 @@ tensões transversais na zona de cumeeira que o Eurocódigo apresenta. As
 diferenças entre as duas abordagens são discutidas na
 \autoref{sec:eurocodigo-nbr}.
 
-A EN 1995-1-1 \cite{EN1995-1-1:2004}, o Eurocódigo 5, cobre essas verificações
+A EN 1995-1-1 \cite{EN1995-1-1:2004}, norma do
+\criarsigla*{CEN}{Comitê Europeu de Normalização} conhecida como Eurocódigo 5
+(EC5), cobre essas verificações
 de maneira explícita e é complementada por um conjunto normativo coerente: a
 EN 14080 \cite{EN14080:2013}, que define as classes de resistência e as propriedades
 características da MLC; a EN 1990 \cite{EN1990:2002}, que estabelece as combinações
@@ -93,15 +98,15 @@ vento, por ser esta a norma que descreve as condições meteorológicas do síti
 brasileiro.
 
 Essa composição normativa não é neutra e introduz uma dificuldade prática: as
-verificações do Eurocódigo 5 dependem de parâmetros de determinação nacional,
-os \criarsigla*{NDP}{parâmetros de determinação nacional}, que deveriam ser
+verificações do Eurocódigo 5 dependem de
+\criarsigla*{NDP}{parâmetros de determinação nacional}, que deveriam ser
 fixados por um Anexo Nacional inexistente no Brasil. O tratamento dado a essa
 lacuna é discutido adiante, no \autoref{cap:definicao-problema}.
 
 \section{JUSTIFICATIVA}\label{sec:justificativa}
 
 A verificação de um pórtico de MLC segundo o Eurocódigo 5 não se resume ao
-dimensionamento da viga principal. Um galpão completo exige, além da flexão e
+dimensionamento da viga principal. Uma estrutura completa exige, além da flexão e
 do cisalhamento da viga, a verificação das tensões na cumeeira e na borda
 inclinada, da estabilidade lateral, dos pilares, das terças, da fixação da
 telha sob sucção, do contraventamento horizontal e vertical, da estabilidade
@@ -113,14 +118,15 @@ Executada manualmente, essa cadeia de verificações é lenta o bastante para
 inviabilizar o estudo de alternativas: na prática, adota-se a primeira
 geometria que atende a todos os critérios, sem que se saiba a que distância ela
 está de uma solução eficiente. A automação do memorial de cálculo remove essa
-restrição, pois permite varrer o espaço de geometrias viáveis, identificar qual
-verificação governa em cada região desse espaço e submeter cada etapa a testes
-automatizados que impedem a propagação silenciosa de erros.
+restrição, pois permite varrer uma grade de geometrias candidatas, identificar
+qual verificação governa em cada região dessa grade e submeter cada etapa a
+testes automatizados que reduzem o risco de regressões nos comportamentos que
+cobrem.
 
 \section{OBJETIVOS}\label{sec:objetivos}\label{sec:objetivo-geral}
 
-O objetivo deste trabalho é dimensionar e verificar a estrutura de um galpão em
-madeira lamelada colada com pórticos de vigas de duplo-bisel, segundo a
+O objetivo deste trabalho é dimensionar e verificar a estrutura de uma cobertura
+para estacionamento em madeira lamelada colada com pórticos de vigas de duplo-bisel, segundo a
 EN 1995-1-1 \cite{EN1995-1-1:2004}, por meio de um programa de cálculo
 automatizado e reprodutível, e apresentar o memorial resultante. São objetivos
 específicos:\label{sec:objetivos-especificos}
@@ -154,16 +160,16 @@ específica do terreno.
 Também não integram o escopo o projeto de instalações, o detalhamento de
 fechamentos e vedações e o plano de montagem.
 
-A resistência ao fogo é verificada, porém sob uma limitação que se declara. O
-tempo requerido de resistência não é fixado pelo Eurocódigo: decorre do
-regulamento nacional de segurança contra incêndio, isto é, da
-ABNT NBR 14432 \cite{NBR14432:2001} e da instrução técnica do corpo de bombeiros estadual
-aplicável à ocupação. O valor adotado é, portanto, uma declaração de projeto, e
-a verificação vale sob essa declaração.
-
-%% TODO: dado ausente — confirmar o tempo requerido de resistência ao fogo
-%% junto ao regulamento aplicável à ocupação e à área da edificação. O valor
-%% em uso está declarado como parâmetro de origem PROJETO em core/normativo.py.
+A resistência ao fogo não é exigida da estrutura. O tempo requerido não é
+fixado pelo Eurocódigo, que dá apenas o método de verificação. Ele decorre da
+ABNT NBR 14432 \cite{NBR14432:2001} e, no Paraná, da \criarsigla*{NPT}{Norma de Procedimento Técnico} 008 do
+\criarsigla*{CBMPR}{Corpo de Bombeiros Militar do Paraná}, na versão de 2026
+\cite{CBMPR-NPT008:2026}. Por essa norma,
+a cobertura, térrea e aberta nas quatro faces, destinada a estacionamento, é
+isenta de tempo requerido de resistência ao fogo, conforme a
+\autoref{ssec:trrf}. A verificação da seção reduzida a 30 minutos é mantida como
+informativa. A mesma norma exige, independentemente da isenção, retardante ao fogo
+nos elementos de madeira, especificado na \autoref{ssec:faces-expostas}.
 
 \section{ESTRUTURA DO TRABALHO}\label{sec:estrutura-trabalho}
 

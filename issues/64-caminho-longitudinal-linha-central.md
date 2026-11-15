@@ -25,9 +25,9 @@ tinha a mesma premissa (painéis em x≈0 e x≈L).
 - **C — Pilar central engastado na direção longitudinal** (verificar rigidez/2ª ordem).
 
 ## O que fazer
-- [ ] Decidir A/B/C (decisão de projeto — arquitetura do estacionamento).
-- [ ] Implementar no `contraventamento.py` (apoios da treliça) e no `contraventamento_vertical.py`.
-- [ ] Atualizar tese §5.5/§8.5, desenhos (issue 52) e custo.
+- [x] Decidir A/B/C (decisão de projeto — arquitetura do estacionamento).
+- [x] Implementar no `contraventamento.py` (apoios da treliça) e no `contraventamento_vertical.py`.
+- [x] Atualizar tese §5.5/§8.5, desenhos (issue 52) e custo.
 
 ## Resolução ✅ (2026-10-06) — Opção A, 4 painéis nas fachadas + 4 na linha central
 

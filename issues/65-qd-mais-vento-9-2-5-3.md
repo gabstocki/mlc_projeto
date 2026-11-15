@@ -12,10 +12,10 @@ horizontais externas (ex.: vento), e a flecha ℓ/500 sob q_d **e** essas açõe
 **máximo** das duas parcelas. Conferir a redação exata no texto normativo.
 
 ## O que fazer
-- [ ] Confirmar a redação de §9.2.5.3(1)/(2).
-- [ ] Definir a concomitância: N_d (estabilização) deve vir da mesma combinação do vento
+- [x] Confirmar a redação de §9.2.5.3(1)/(2).
+- [x] Definir a concomitância: N_d (estabilização) deve vir da mesma combinação do vento
       θ=0° (não da envoltória com vento θ=90°).
-- [ ] Trocar max por soma na força e na flecha; atualizar testes e relatório.
+- [x] Trocar max por soma na força e na flecha; atualizar testes e relatório.
 
 ## Resolução ✅ (2026-10-06)
 

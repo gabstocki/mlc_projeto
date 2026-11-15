@@ -120,7 +120,7 @@ def test_ltb_do_projeto_passa_a_instabilidade_parcial():
     assert r["lambda_rel_m"] == pytest.approx(0.827, abs=2e-3)
     assert r["k_crit"] == pytest.approx(0.9396, abs=2e-3)   # já não é 1,0
     assert "parcial" in r["regime"]
-    assert r["eta"] == pytest.approx(0.1039, abs=5e-4)
+    assert r["eta"] == pytest.approx(0.1095, abs=5e-4)   # issue 114: peso variável
 
 
 def test_ltb_e_mais_severa_que_a_hipotese_no_centro_de_gravidade():

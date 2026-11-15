@@ -43,7 +43,9 @@ def test_L3_recebe_arrancamento_e_impacto(r):
     a = r["ancoragem_L3"]
     assert a["N_t_persistente_kN"] == pytest.approx(
         r["succao_uplift"]["N_uplift_ext_kN"], abs=0.01)
-    assert a["V_acidental_kN"] == pytest.approx(50.0 * 6.5 / 7.0, abs=0.05)
+    # choque a 0,50 m do piso; com o pilarete (issue 87) a madeira começa a 0,30 m
+    # e mede 6,70 m: R_base = F·(6,70 − 0,20)/6,70
+    assert a["V_acidental_kN"] == pytest.approx(50.0 * 6.5 / 6.7, abs=0.05)
     assert a["ok"] is True
 
 
@@ -56,5 +58,5 @@ def test_L3c_central_tambem_verificada(r):
 
 def test_quadro_fundacao_publica_o_cortante_das_bases_correntes(r):
     linhas = {l["Base"]: l for l in r["cargas_fundacao"]["linhas"]}
-    assert linhas["Extremidade (pilar lateral)"]["H (kN)"] == pytest.approx(46.4, abs=0.1)
-    assert linhas["Central (pilar do apoio partilhado)"]["H (kN)"] == pytest.approx(46.4, abs=0.1)
+    assert linhas["Extremidade (pilar lateral)"]["H (kN)"] == pytest.approx(48.5, abs=0.1)
+    assert linhas["Central (pilar do apoio partilhado)"]["H (kN)"] == pytest.approx(48.5, abs=0.1)

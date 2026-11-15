@@ -177,16 +177,19 @@ def test_verificacao_consolidada_governa_pelo_pior_elemento(modelo):
 
 # ── Declaração: o R não é do Eurocódigo ──────────────────────────────────────
 
-def test_R_requerido_e_parametro_declarado_e_pendente_de_confirmacao():
+def test_R_requerido_enquadrado_no_regulamento_estadual():
     """
-    A EN 1995-1-2 dá o método, não o tempo. Enquanto o projetista não fixar R
-    com o regulamento nacional, o parâmetro tem de aparecer no guard — o mesmo
-    mecanismo que mantém o S3 [F-21] visível.
+    Issue 88: o TRRF foi enquadrado na NPT 008 do CBPMPR — edificação térrea,
+    garagem aberta lateralmente, isenta (A2.3.10 b / A2.4 c). O parâmetro sai
+    do guard de pendências, a R30 fica como verificação informativa e a nota
+    registra a exigência de retardante (item 5.17).
     """
     p = NDP_SOURCE["R_fogo_req_min"]
-    assert p.origem == "PROJETO-A-CONFIRMAR"
-    assert not p.e_ndp            # não é NDP: nenhum Anexo Nacional o fixa
-    assert "R_fogo_req_min" in parametros_a_confirmar()
+    assert p.origem == "PROJETO"
+    assert not p.e_ndp
+    assert "R_fogo_req_min" not in parametros_a_confirmar()
+    assert "NPT 008" in p.clausula and "A2.4" in p.clausula
+    assert "INFORMATIVA" in p.nota and "5.17" in p.nota
 
 
 def test_beta_n_e_k_fi_estao_declarados_com_a_clausula():

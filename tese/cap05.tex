@@ -19,14 +19,14 @@ pilar e o espaço disponível para a ligação de base; e o espaçamento das ter
 condiciona o comprimento efetivo de flambagem lateral da viga. O problema é
 circular, e a via praticável é a varredura: percorre-se um conjunto de
 geometrias candidatas, submete-se cada uma à cadeia completa de verificações e
-observa-se o que governa em cada região do espaço de soluções.
+observa-se o que governa em cada região da grade.
 
 O procedimento adotado difere, num ponto essencial, do que é usual em
 pré-dimensionamento. Em vez de avaliar as candidatas por um modelo simplificado,
 mais rápido porém distinto daquele que produz o memorial, construiu-se um
 mecanismo que executa, para cada ponto da grade, exatamente o mesmo
 \textit{pipeline} de verificação empregado no dimensionamento final. Cada geometria é avaliada pelas
-cinquenta e cinco verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
+\nVerifExt{} verificações descritas no \autoref{cap:dimensionamento}, com o mesmo
 modelo estrutural, o mesmo gerador de combinações e os mesmos integradores.
 
 \subsection{Ferramentas computacionais}\label{ssec:ferramentas}
@@ -50,7 +50,7 @@ monografia foram produzidos.
     OpenSeesPy \cite{openseespy:2018}    & 3.8.0.0 & Modelo de elementos finitos de validação \\
     PyVista \cite{pyvista:2019} e VTK \cite{vtk:2006} & 0.48.4 e 9.6.2 & Visualização tridimensional do modelo \\
     pytest \cite{pytest}                 & 9.1.0  & Suíte de testes automatizados \\
-    \TeX\ Live \cite{texlive:2023} e abn\TeX2 \cite{abntex2:2018} & 2023 e 1.9.7 & Composição da monografia \\
+    TeX Live \cite{texlive:2023} e abnTeX2 \cite{abntex2:2018} & 2023 e 1.9.7 & Composição da monografia \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{software}{}{}
 
@@ -89,10 +89,38 @@ ao longo do vão.
 {}
 {}
 
-Resultaram 1.391 geometrias, das quais 1.104 foram aprovadas em todas as
-verificações e 287 reprovadas. As reprovações concentram-se nas alturas no apoio
-inferiores a 0,60 m e decorrem, conforme a região, da estabilidade global, do
-cisalhamento, das tensões na borda inclinada, da flecha e da flexão.
+Cada geometria inclui o balanço do beiral, de 1,135 m além do apoio externo, e
+é avaliada pela cadeia completa de verificações, inclusive as ligações, as bases,
+a calha central e os pilares, cuja largura acompanha a da viga. Resultaram 3.213
+geometrias, das quais 1.111 foram aprovadas em todas as verificações e 2.102
+reprovadas. As reprovações vêm de três regiões da grade, e só na última intervém a
+resistência da viga.
+
+\begin{alineas}
+    \item Todas as geometrias com largura de até 0,28 m são reprovadas. Em todas,
+          reprova a ligação entre terça e viga, cujos parafusos inclinados exigem
+          largura da viga para a penetração e as distâncias às bordas. Com 0,20 e
+          0,22 m reprovam também as bases dos pilares e o incêndio de veículo e,
+          com 0,20 m, o pilar central, cuja taxa média sobe de 0,40 com
+          $b = 0{,}32$ m para 0,63 com $b = 0{,}24$ m e 1,05 com $b = 0{,}20$ m.
+    \item Todas as geometrias com inclinação abaixo de 8,0$^{\circ}$ são reprovadas
+          pela calha central da \autoref{ssec:calha-central}. Com a borda da
+          calha 232 mm acima da terça T9, o último pano de telha fica com
+          inclinação menor que os 5~\% exigidos pela telha. Nas de menor altura
+          no apoio, reprova também o abaixamento da cumeeira, que passa de 5~\%
+          da flecha do eixo (\autoref{sec:ordem-analise}).
+    \item Com largura de 0,30 m ou mais, reprovam apenas as geometrias de menor
+          altura no apoio: com 0,40 m, pelo cisalhamento e pelas tensões na
+          borda inclinada (com 8,0$^{\circ}$ e 0,30 m, também pelo abaixamento da
+          cumeeira), e, com inclinação acima de 13$^{\circ}$, também com
+          0,45 m, pela borda inclinada. Além dessas, reprovam só quatro das geometrias mais pesadas da grade,
+          com largura de 0,36 m, inclinação de 15$^{\circ}$ ou mais e altura no
+          apoio de 1,15 m ou mais, e reprova o sistema, não a viga:
+          a lâmina do pilar central montante soma ao esforço do painel vertical a
+          reação de duas vigas mais pesadas. O $\alpha_{cr}$ transversal, calculado
+          com a rigidez do diafragma da cobertura (\autoref{sec:ordem-analise}),
+          fica acima de 10 em todas as geometrias aprovadas.
+\end{alineas}
 
 \subsection{Resultado}\label{ssec:resultado-varredura}
 
@@ -102,7 +130,7 @@ das ordenadas, a maior taxa de utilização entre as verificações que dependem
 seção da viga. Cada ponto corresponde a uma execução completa do
 \textit{pipeline} de verificação; a taxa representada é a maior entre
 cisalhamento, flexo-compressão, cumeeira, borda inclinada, flambagem lateral,
-apoio e estado-limite de serviço, e o volume refere-se às dezoito vigas
+apoio e estado-limite de serviço, e o volume refere-se às 18 vigas
 principais da edificação.
 
 \figura
@@ -114,117 +142,106 @@ principais da edificação.
 {}
 {}
 
-A figura torna visível o resultado central desta etapa: em toda a região
-aprovada, a viga opera com folga considerável. A geometria adotada situa-se em
-um patamar da curva no qual o acréscimo de madeira já quase não reduz a taxa de
-utilização, porque esta deixou de ser governada pela seção.
+A figura torna visível o resultado central desta etapa. Na fronteira inferior da
+região aprovada, a taxa da viga cai rapidamente com o volume. Acima de cerca de
+170 m\textsuperscript{3}, ela entra num patamar entre 0,5 e 0,6, no qual o
+acréscimo de madeira já não a reduz. A geometria adotada situa-se nesse patamar.
 
 A \autoref{tab:fronteira-volume} quantifica esse patamar. Cada linha é a
-geometria de menor volume, entre as 1.104 aprovadas, cuja maior taxa de
-utilização na viga não excede a margem indicada. As duas últimas colunas
-registram as taxas do contraventamento vertical e do pilar de canto na mesma
-geometria, obtidas pela EN 1995-1-1 \cite{EN1995-1-1:2004} e pela
-EN 1992-4 \cite{EN1992-4:2018}.
+geometria de menor volume, entre as 1.111 aprovadas, cuja maior taxa de
+utilização na viga não excede a margem indicada. Nenhuma geometria aprovada tem
+taxa na viga abaixo de 0,48, e por isso a tabela para na margem de 0,50. As duas
+últimas colunas registram as taxas do contraventamento vertical e do pilar de
+canto na mesma geometria, obtidas pela EN 1995-1-1 \cite{EN1995-1-1:2004} e pela
+EN 1992-4 \cite{EN1992-4:2018}. A tabela e a figura são geradas pelo programa a
+partir do resultado da varredura.
 
-\tabela{Geometria de menor volume para cada política de margem na viga}{\footnotesize
-\begin{tabular}{ccccrccc}
-\toprule
-    \textbf{Margem} & \textbf{$\alpha$} & \textbf{$h_0$} & \textbf{$b$} &
-    \textbf{Volume} & \textbf{Verificação} & \textbf{Contrav.} & \textbf{Pilar} \\
-    \textbf{na viga} & \textbf{(graus)} & \textbf{(m)} & \textbf{(m)} &
-    \textbf{(m\textsuperscript{3})} & \textbf{governante} & \textbf{vertical} & \textbf{de canto} \\
-\midrule
-    $\eta \leq 1{,}00$ & 8,5 & 0,50 & 0,24 & 109,9 & Borda inclinada & 0,77 & 0,87 \\
-    $\eta \leq 0{,}90$ & 8,0 & 0,55 & 0,24 & 110,4 & Borda inclinada & 0,77 & 0,85 \\
-    $\eta \leq 0{,}75$ & 7,5 & 0,65 & 0,24 & 115,2 & Cisalhamento    & 0,90 & 0,84 \\
-    $\eta \leq 0{,}60$ & 6,5 & 0,75 & 0,24 & 116,1 & Cisalhamento    & 0,90 & 0,81 \\
-    $\eta \leq 0{,}50$ & 6,0 & 0,80 & 0,28 & 136,0 & Cisalhamento    & 0,90 & 0,53 \\
-    $\eta \leq 0{,}40$ & 8,0 & 1,05 & 0,28 & 179,8 & Cisalhamento    & 0,78 & 0,56 \\
-\midrule
-    \textbf{Adotada} & \textbf{10,0} & \textbf{1,00} & \textbf{0,32} &
-    \textbf{220,8} & \textbf{Cisalhamento} & \textbf{0,79} & \textbf{0,43} \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{fronteira-volume}{}{}
+\input{tab_fronteira_volume}
 
 \subsection{O que governa o dimensionamento}\label{ssec:o-que-governa}
 
 A leitura conjunta da figura e da tabela conduz a três constatações.
 
-A primeira é que nenhuma verificação da viga governa o projeto. Na geometria
-adotada, a maior taxa entre as verificações da seção é o cisalhamento, com
-0,39, seguido das tensões na zona de cumeeira, com 0,36, e das tensões na
-borda inclinada, com 0,32. A flexo-compressão da viga fica em 0,17 e a
-flambagem lateral em 0,11. O que governa o conjunto são os contraventamentos
-transversal, vertical e da cobertura, com 0,85, 0,84 e 0,81, cuja solicitação responde à área
-exposta ao vento e é praticamente insensível à altura no apoio e à largura da
-seção.
+A primeira é que, na geometria adotada, as maiores taxas calculadas não estão
+na viga. A maior entre as verificações da viga é a do apoio sobre a sela
+central, com 0,58, seguida do apoio sobre o pilar lateral, com 0,49, do
+cisalhamento, com 0,41, e das tensões na zona de cumeeira, com 0,36. As maiores
+taxas estão nos componentes de aço e nas ligações, e nos contraventamentos
+vertical e da cobertura, com 0,84 e 0,80. Esse contraste resulta em parte das
+políticas adotadas: a viga foi escolhida com volume bem acima do mínimo aprovado
+(\autoref{sec:geometria-adotada}), e os componentes de aço são dimensionados até
+a taxa-alvo de 0,90, como as bases ancoradas e as soldas. Na fronteira de menor
+volume da \autoref{tab:fronteira-volume}, ao contrário, é a viga que governa,
+pelo cisalhamento. As solicitações dos componentes de estabilização respondem à
+área exposta ao vento e às reações de apoio, e são praticamente insensíveis à
+altura no apoio e à largura da seção.
 
-A segunda é que as duas últimas colunas da \autoref{tab:fronteira-volume}
-variam por mecanismos próprios, que não dependem da resistência da viga. A taxa
-do pilar de canto cresce de 0,43 na geometria adotada para cerca de 0,85 nas
-geometrias de menor volume porque, por decisão de projeto, a largura dos pilares
-acompanha a largura $b$ da viga, para que a reação vertical se transmita sem
-excentricidade. O pilar de canto recebe o esforço descendente dos dois painéis
-de contraventamento, que não depende de $b$, e flamba em torno do eixo paralelo a
-essa largura. Reduzir $b$ reduz a área do pilar e, sobretudo, aumenta a sua
-esbeltez nesse eixo. Na varredura, a taxa média do pilar de canto vale 0,86 com
-$b = 0{,}24$ m, 0,59 com $b = 0{,}28$ m e 0,44 com $b = 0{,}32$ m, e com $b$ fixo
-praticamente não varia com $h_0$ e $\alpha$, com desvio-padrão de 0,03.
+A segunda é que os limites da região aprovada são impostos, em parte, por
+elementos que acompanham a viga, nos detalhes mantidos fixos na varredura: a
+ligação entre terça e viga, a calha central e os perfis comerciais. Outros
+detalhes deslocariam a fronteira. A largura mínima de 0,30 m vem da ligação
+entre terça e viga. A inclinação
+mínima de 8,0$^{\circ}$ vem da calha central. Por isso, na \autoref{tab:fronteira-volume},
+as geometrias de menor volume têm todas $\alpha = 8{,}0^{\circ}$ e, até a margem
+de 0,60, $b = 0{,}30$ m, e diferem só pela altura no apoio; para descer à margem de
+0,50, a largura sobe a 0,36 m. A taxa dos pilares montantes bipartidos
+(\autoref{ssec:pilar-bipartido}) varia pouco, entre 0,85 e 1,00, porque as
+lâminas têm seção própria e a maior parte do seu esforço vem do painel vertical,
+que não depende da viga. A do
+contraventamento vertical fica entre 0,78 e 0,89 em todas as geometrias aprovadas,
+porque o programa escolhe, em cada uma, o menor diâmetro comercial com taxa até
+0,90. O deslocamento transversal do diafragma da cobertura fica entre 0,67 e 0,75
+do limite, porque o programa escolhe, em cada geometria, o menor diâmetro das
+diagonais dos frontões com taxa de deslocamento até 0,75.
 
-A taxa do contraventamento vertical, por sua vez, não acompanha o volume de modo
-monotônico, e o motivo é o critério de dimensionamento da diagonal. Em cada
-geometria o \textit{pipeline} escolhe o menor diâmetro comercial com taxa não
-superior a 0,90. A demanda cresce suavemente com $\alpha$, pela carga vertical da
-força de imperfeição, e a taxa sobe até se aproximar de 0,90; ao ultrapassá-lo, a
-escolha passa ao diâmetro seguinte, e a taxa cai. Com $b = 0{,}24$ m e
-$h_0 = 0{,}80$ m, por exemplo, ela sobe de 0,90 a 0,90 entre $\alpha = 6{,}5^{\circ}$
-e $7{,}5^{\circ}$ e cai para 0,77 em $\alpha = 8{,}0^{\circ}$. Os valores próximos
-de 0,90 da tabela não indicam geometrias mais críticas para o sistema, e sim
-geometrias situadas logo antes de uma troca de diâmetro. Em todas as 1.104
-geometrias aprovadas a taxa ficou entre 0,76 e 0,90.
-
-A terceira é que a relação entre volume e segurança é fortemente não linear. Na
-faixa acima de aproximadamente 180 m\textsuperscript{3}, acrescentar madeira
-praticamente não reduz a taxa de utilização, porque o critério que governa já
-não é a seção. Abaixo de aproximadamente 130 m\textsuperscript{3}, pequenas
-reduções de seção elevam abruptamente as taxas e a fronteira de reprovação é
-alcançada com rapidez.
+A terceira é que, dentro da região aprovada, a altura no apoio é a variável que
+controla o volume e a margem da viga. Com $\alpha = 8{,}0^{\circ}$ e
+$b = 0{,}32$ m, o volume cresce de 131,7 m\textsuperscript{3} com $h_0 = 0{,}40$ m
+para 205,6 m\textsuperscript{3} com $h_0 = 1{,}00$ m. A taxa da viga cai de 0,98
+para 0,53 até $h_0 = 0{,}75$ m, governada pelo cisalhamento e pela borda
+inclinada. Daí em diante volta a crescer devagar, até 0,56 com $h_0 = 1{,}00$ m,
+porque passa a governar o apoio sobre a sela central, cuja reação cresce com o
+peso próprio da viga.
 
 \section{GEOMETRIA ADOTADA}\label{sec:geometria-adotada}
 
 Adotou-se $\alpha = 10{,}0^{\circ}$, $h_0 = 1{,}00$ m e $b = 0{,}32$ m, do que resulta
-altura na cumeeira de 2,785 m e volume de 220,8 m\textsuperscript{3} de madeira
-lamelada colada nas vigas principais.
+altura na cumeeira de 2,785 m e volume de 226,6 m\textsuperscript{3} de madeira
+lamelada colada nas vigas principais, incluídos os balanços do beiral.
 
-A varredura mostra que existem geometrias aprovadas com metade desse volume. A
-adoção de uma seção mais robusta que o mínimo normativo apoia-se em três
+A varredura mostra que existem geometrias aprovadas com cerca de 60~\% desse
+volume. A adoção de uma seção mais robusta que o mínimo apoia-se em quatro
 razões, que a própria varredura permite sustentar.
 
-A primeira é a margem nos sistemas laterais, já exposta. A geometria adotada
-mantém o contraventamento vertical em 0,79 e o pilar de canto em 0,43, ao
-passo que as geometrias de menor volume os levam a 0,90 e 0,86. Como esses
-elementos concentram o caminho das forças horizontais até a fundação, e como o
-seu dimensionamento depende de uma ação de vento determinada por prescrição
-envolvente, preservar margem neles é decisão deliberada.
+A primeira é a largura. Com o tirante interno (\autoref{ssec:topo-pilar}), o pé
+dos pilares correntes deixou de levar tração por cavilhas, e a largura de 0,30 m
+também aprova em quase toda a grade. Na geometria adotada, porém, ela levaria os
+dois modos frágeis da ligação L1, que não admitem redistribuição, para perto do
+limite de 0,75: o fendilhamento e os pinos para 0,73, frente a 0,67 e 0,69
+com 0,32 m. A economia seria de 14 m\textsuperscript{3}, 6~\% do volume das
+vigas. Manteve-se 0,32 m por essa margem nos modos frágeis do apoio da peça
+principal. A largura
+acompanha a do pilar, o que elimina excentricidade na transferência da reação
+vertical, e oferece às ligações a espessura necessária para os grupos de pinos e
+de parafusos com as distâncias mínimas exigidas.
 
-A segunda é a largura da seção. A largura de 0,32 m acompanha a do pilar, o que
-elimina excentricidade na transferência da reação vertical, e oferece à ligação
-de base a espessura necessária para acomodar o grupo de pinos com as distâncias
-mínimas exigidas. As geometrias de menor volume convergem para 0,24 m de
-largura, valor que estreita o encaixe da chapa e agrava a sensibilidade ao
-fendilhamento, modo de ruptura frágil.
+A segunda é a altura no apoio. O valor de 1,00 m acomoda a ligação L1, com o rasgo
+da chapa embutida, os furos ovalizados e os 100 mm de madeira inteira acima do
+rasgo (\autoref{ssec:altura-rasgo}), e dá ao balanço do beiral altura de 0,80 m na
+ponta. As geometrias de menor volume operam com alturas no apoio entre 0,40 m e
+0,65 m, faixa em que a ligação passa a competir por espaço com a própria seção e
+em que a taxa da viga se aproxima de 1,0.
 
-A terceira é a altura no apoio. O valor de 1,00 m fornece altura suficiente para
-a ligação de base e mantém a altura na cumeeira em 2,785 m, compatível com o
-transporte rodoviário da peça inteira. As geometrias de menor volume operam com
-alturas no apoio entre 0,50 m e 0,65 m, faixa em que a ligação passa a competir
-por espaço com a própria seção.
+A terceira é a margem na viga. Com $h_0 = 1{,}00$ m, a maior taxa da viga é 0,58,
+de modo que a viga, peça principal e de substituição inviável, não está entre os
+elementos que governam a segurança do conjunto.
 
-Registre-se, por fim, que a inclinação de 10,0$^{\circ}$ não é a de menor
-volume. Inclinações menores reduzem a altura na cumeeira e o volume, mas
-aproximam a peça de uma viga de altura constante e elevam as tensões na borda
-inclinada, que passa a governar nas geometrias mais econômicas da
-\autoref{tab:fronteira-volume}.
+A quarta é a inclinação. A inclinação de 10,0$^{\circ}$ fica 2,0$^{\circ}$ acima do
+mínimo de 8,0$^{\circ}$ imposto pela calha, o que dá ao último pano de telha
+inclinação de 9,2~\% em vez dos 5~\% mínimos e mantém a altura na cumeeira em
+2,785 m, compatível com o transporte rodoviário da peça inteira. Com
+$\alpha = 8{,}0^{\circ}$ e as mesmas $h_0$ e $b$, o volume seria de 205,6
+m\textsuperscript{3}, 9~\% menor.
 
 \section{PILARES}\label{sec:predim-pilares}
 
@@ -232,15 +249,56 @@ Os pilares laterais e o central receberam seção única de
 0,32 $\times$ 0,27 m. A largura acompanha a da viga, pelo motivo já exposto de
 alinhamento do apoio. A profundidade no plano do pórtico é governada pelo pilar
 central, que recebe a reação de duas vigas e portanto o dobro do esforço normal
-dos laterais: sua taxa de utilização é 0,42, contra 0,21 do lateral.
+dos laterais: sua taxa de utilização é 0,42, frente a 0,21 do lateral.
 
-O pilar de canto, P1, P3, P25 ou P27, constitui exceção e recebeu seção própria de
-0,32 $\times$ 0,32 m. Ele acumula três solicitações que não coincidem nos
-demais: a reação de gravidade da viga, o esforço descendente transmitido pelo
-painel de contraventamento longitudinal e o esforço descendente transmitido pelo
-frontão transversal. A justificativa quantitativa desse engrossamento aparece na
-\autoref{sec:predim-contraventamento}, por depender do número de painéis
-adotado.
+Os 14 pilares montantes das baías contraventadas, isto é, os de canto, os
+laterais P4, P6, P22 e P24 e os centrais montantes, constituem exceção: são
+bipartidos, com duas lâminas de 0,16 $\times$ 0,32 m dos lados da viga, que
+sobem até a escora. A razão é o nó do painel de contraventamento vertical, que
+precisa ficar no nível da escora, e não no topo do pilar, como exposto na
+\autoref{ssec:no-topo}; a lâmina leva a componente vertical da diagonal paralela
+às fibras. Os de canto acumulam ainda o esforço do painel do frontão.
+
+\section{TERÇAS}\label{sec:predim-tercas}
+
+O espaçamento das terças é fixado em $L/8 = 2{,}53$ m, porque define os oito
+painéis por água do contraventamento da cobertura e o comprimento de flambagem
+lateral da viga. A seção é única para todas as terças, inclusive as de ponta,
+as de beiral, que funcionam como corda do diafragma, e as que trabalham como
+escora nas baías contraventadas, para não multiplicar os tipos de peça na
+fabricação. Ela é obtida pelo mesmo procedimento da viga: para cada seção
+comercial candidata, com larguras de 115 a 200 mm e alturas múltiplas de 40 mm,
+de 240 a 600 mm, a cadeia completa de verificações é executada, já que a seção
+altera o peso próprio, e portanto todas as ações, e as ligações que a
+atravessam. Aceita-se a candidata que resulta aprovada e em que cada verificação
+dependente da terça tem taxa não superior a 0,75, a mesma folga de 25\% adotada
+para os pilares; adota-se a de menor área.
+
+\tabela{Seções de terça candidatas em torno da adotada}{\footnotesize
+\begin{tabular}{lrcl}
+\toprule
+    \textbf{Seção} (m) & \textbf{Área} (m\textsuperscript{2}) & \textbf{$\eta$ máximo} & \textbf{Situação} \\
+\midrule
+    0,16 $\times$ 0,44 & 0,0704 & 0,92 & Acima da folga adotada \\
+    0,20 $\times$ 0,36 & 0,0720 & 0,83 & Não atende \\
+    0,18 $\times$ 0,40 & 0,0720 & 0,76 & Acima da folga adotada \\
+    0,18 $\times$ 0,44 & 0,0792 & 0,74 & Atende, menor área \\
+    \textbf{0,20 $\times$ 0,40} & \textbf{0,0800} & \textbf{0,74} & \textbf{Adotada} \\
+    0,20 $\times$ 0,56 & 0,1120 & 0,73 & Atende, com 40\% a mais de madeira \\
+\bottomrule
+\end{tabular}}{Elaborado pelo autor (2026)}{varredura-tercas}{}{}
+
+A escora central das baías contraventadas recebe 351 kN e trabalha à
+flexocompressão, com a flexão da cobertura. Com a terça corrente, de 200 mm de
+largura, a flambagem em torno do eixo de menor inércia levaria a sua taxa a 1,03,
+e por isso ela tem seção própria, de 0,24 por 0,40 m, apenas nas quatro baías
+contraventadas do alinhamento central, com taxa de 0,65. Nas demais candidatas
+governam a ligação das escoras ao nó e a ligação entre terça e viga, todas
+próximas de 0,74. A seção de 0,18 por 0,44 m tem área 1\% menor que a adotada e
+também atende; manteve-se a de 0,20 por 0,40 m, pela diferença desprezível e por
+conservar a largura das escoras de beiral e das juntas já detalhadas. A terça
+como barra fica longe do limite: a interação de flexão e compressão da biela do
+diafragma tem taxa de 0,59 e a flexão, de 0,20.
 
 \section{DIAGONAIS DE CONTRAVENTAMENTO}\label{sec:predim-contraventamento}
 
@@ -278,27 +336,31 @@ permanecem válidas como contenção lateral da viga.
     \textbf{Diâmetro} & \textbf{$\eta$ da diagonal} & \textbf{Estabiliza} & \textbf{Situação} \\
     \textbf{(mm)} & & \textbf{a cobertura} & \\
 \midrule
-    22 & 1,280 & Não  & Reprova \\
-    25 & 1,00 & Sim  & Aprova sem margem \\
-    28 & 0,79 & Sim  & \textbf{Adotado} \\
-    30 & 0,69 & Sim  & Sobredimensionado \\
+    28 & 1,32 & Não  & Reprova \\
+    30 & 1,15 & Não  & Reprova \\
+    33 & 0,95 & Sim  & Acima do alvo de 0,90 \\
+    36 & 0,80 & Sim  & \textbf{Adotado} \\
+    39 & 0,68 & Sim  & Atende, mais pesado \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{varredura-diagonal-cobertura}{}{}
 
-O diâmetro de 25 mm atende à verificação, porém sem margem, e foi descartado por
-isso. Adotou-se 28 mm.
+Adotou-se 36 mm, o menor diâmetro com taxa abaixo do alvo de 0,90 das peças de
+aço; o programa o escolhe automaticamente, como nas diagonais verticais.
 
 A força na diagonal não é governada pela estabilização das vigas, e sim pelo
 vento paralelo à cumeeira, que a cobertura coleta por atrito e conduz às baías
-rígidas: a reação de cada apoio da treliça soma 105 kN do vento e apenas
-1,4 kN da força de estabilização do item 9.2.5.3, que atua em adição às ações
+rígidas: a reação de cada apoio da treliça soma 173,8 kN do vento, já majorado
+por $\gamma_Q = 1{,}5$, e apenas 1,3 kN da força de estabilização do item 9.2.5.3, que atua em adição às ações
 externas. Acrescentar baías rígidas
 reduziria ambas as parcelas, porque o vento e as $n$ vigas se repartiriam por
 mais sistemas, mas não pouparia aço: a seção de cada diagonal diminuiria na
 mesma proporção em que o número de diagonais cresceria, e o número de ligações
 aumentaria. Manteve-se, por isso, o arranjo de apenas duas baías rígidas, situadas
 nas extremidades, CV-H1 entre os eixos 1 e 2 e CV-H2 entre os eixos 8 e 9, como
-mostra a \autoref{fig:des-planta-cv}.
+mostra a \autoref{fig:des-planta-cv}. As baías intermediárias recebem cruzes leves,
+as CV-D, que não servem ao vento longitudinal, mas formam a alma do diafragma pelo
+qual a força transversal chega aos frontões; a sua necessidade e o seu
+dimensionamento constam da \autoref{sec:ordem-analise}.
 
 \figura
 {Planta de contraventamento}
@@ -318,80 +380,65 @@ painel adicional reduz o esforço descendente no montante, e com ele a solicita�
 do pilar de canto e da respectiva ancoragem, mas ocupa uma baía que, em um
 estacionamento aberto, deixaria de permitir a circulação de veículos.
 
-O \textit{pipeline} foi executado para números de painéis entre 2 e 16, com a
+Antes do número, decide-se onde colocá-los, e essa decisão decorre do
+contraventamento da cobertura. A treliça de cada baía rígida apoia-se no beiral e
+no alinhamento central, entregando metade da força em cada apoio. Somadas as duas
+águas, cada beiral recebe um quarto da força longitudinal, e o alinhamento
+central recebe metade. A força de imperfeição reparte-se na mesma proporção,
+porque o pilar central carrega o dobro da carga vertical do pilar de beiral. Se
+os painéis ficassem apenas nas fachadas, a reação central das treliças não teria
+caminho até a fundação, pois os pilares centrais são articulados no topo e na
+base. Há, portanto, dois conjuntos de painéis, nas fachadas e no alinhamento
+central, e a variável de projeto é o número de painéis em cada um.
+
+O \textit{pipeline} completo foi executado para sete distribuições, com a
 diagonal dimensionada automaticamente para taxa de utilização não superior a
-0,90, em aço S235. Os resultados constam da \autoref{tab:varredura-paineis}, em
-que o montante é verificado conforme os itens 6.2.3 e 6.3.2 da
-EN 1995-1-1 \cite{EN1995-1-1:2004} e a ancoragem conforme a
-EN 1992-4 \cite{EN1992-4:2018}. O arranjo com dois painéis reprova.
+0,90, em aço S235. Nas fachadas, os painéis vão aos pares, um em cada
+extremidade de cada fachada; no alinhamento central, um par por extremidade. A
+\autoref{tab:distribuicao-paineis} reúne o resultado, com a lâmina mais solicitada
+do pilar montante bipartido (\autoref{ssec:pilar-bipartido}) verificada pelo item
+6.3.2 da EN 1995-1-1 \cite{EN1995-1-1:2004} e a ancoragem pela EN 1992-4
+\cite{EN1992-4:2018}.
 
-\tabela{Varredura do número de painéis de contraventamento vertical}{\scriptsize
-\begin{tabular}{ccrrcrccr}
+\tabela{Distribuição dos painéis entre as fachadas e o alinhamento central}{\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{cccccccrcl}
 \toprule
-    \textbf{$n$} & \textbf{$\varnothing$} & \textbf{$V$ por} & \textbf{Esforço} & \textbf{$\eta$ do} & \textbf{$N$ na} & \textbf{$\eta$ da} & \textbf{$\eta$} & \textbf{Aço} \\
-    & \textbf{(mm)} & \textbf{painel (kN)} & \textbf{desc. (kN)} & \textbf{canto} & \textbf{anc. (kN)} & \textbf{anc.} & \textbf{máx.} & \textbf{(kg)} \\
+    \textbf{Fach.} & \textbf{Central} & \textbf{$\varnothing$ (mm)} & \textbf{$V$ por painel} & \textbf{$\eta$ pilar} & \textbf{$\eta$ pilar} & \textbf{$\eta$ anc.} & \textbf{Aço} & \textbf{Baías} & \textbf{Situação} \\
+    & & \textbf{fach./centr.} & \textbf{(kN)} & \textbf{de canto} & \textbf{centr. mont.} & \textbf{central} & \textbf{(kg)} & \textbf{ocup.} & \\
 \midrule
-     2 & 64 & 424 & 580 & 0,94 & 664 & 1,26 & 1,39 &  915 \\
-     4 & 45 & 212 & 323 & 0,60 & 406 & 0,78 & 0,90 &  905 \\
-     6 & 39 & 141 & 237 & 0,49 & 321 & 0,61 & 0,80 & 1.019 \\
-     8 & 33 & 106 & 194 & 0,43 & 278 & 0,53 & 0,84 &  973 \\
-    10 & 30 &  84,7 & 168 & 0,40 & 252 & 0,48 & 0,81 & 1.005 \\
-    16 & 24 &  53,0 & 129 & 0,35 & 213 & 0,41 & 0,80 & 1.029 \\
-\bottomrule
-\end{tabular}}{Elaborado pelo autor (2026)}{varredura-paineis}{}{}
-
-A varredura foi executada com a força de imperfeição da EN 1993-1-1, antes da
-adoção do item 5.4.4 da EN 1995-1-1 \cite{EN1995-1-1:2004}, exposta na
-\autoref{sec:ordem-analise}, e com todos os painéis nas fachadas. A
-imperfeição responde por menos de 2\% da força longitudinal, e a diferença não
-altera a escolha do número de painéis.
-
-A varredura revela um resultado que inverte a intuição corrente: o peso total de
-aço é praticamente independente do número de painéis, permanecendo entre 905 e
-1.029 kg em toda a faixa examinada. Painéis mais numerosos com barras mais finas
-custam o mesmo aço que poucos painéis com barras grossas. O que o aumento de $n$
-efetivamente compra é margem no caminho de carga, isto é, no esforço descendente
-sobre o montante, na ancoragem e no bloco de fundação. O que custa são baías de
-circulação.
-
-A varredura conclui que oito painéis, cada um com cortante da ordem de 106 kN,
-equilibram a margem do caminho de carga e o número de baías ocupadas. Falta,
-porém, decidir onde colocá-los, e essa decisão decorre do contraventamento da
-cobertura. A treliça de cada baía rígida apoia-se no beiral e no alinhamento
-central, entregando metade da força em cada apoio. Somadas as duas águas, cada
-beiral recebe um quarto da força longitudinal, e o alinhamento central recebe
-metade. A força nocional reparte-se na mesma proporção, porque o pilar central
-carrega o dobro da carga vertical do pilar de beiral. Se os painéis ficassem
-apenas nas fachadas, a reação central das treliças não teria caminho até a
-fundação, pois os pilares centrais são articulados no topo e na base.
-
-O alinhamento central passa, assim, a receber painéis próprios. A
-\autoref{tab:distribuicao-paineis} compara as distribuições examinadas com o
-\textit{pipeline} completo, com a diagonal dimensionada automaticamente.
-
-\tabela{Distribuição dos painéis entre as fachadas e o alinhamento central}{\footnotesize
-\begin{tabular}{ccccl}
-\toprule
-    \textbf{Fachadas} & \textbf{Alinhamento} & \textbf{$\eta$ do pilar} & \textbf{$\eta$ do pilar} & \textbf{Situação} \\
-    & \textbf{central} & \textbf{central montante} & \textbf{de canto} & \\
-\midrule
-    8 & 2 & 1,01 & 0,34 & Reprova \\
-    4 & 2 & 1,01 & 0,43 & Reprova \\
-    8 & 4 & 0,75 & 0,34 & Atende, 12 baías ocupadas \\
-    4 & 4 & 0,75 & 0,43 & \textbf{Adotado}, 8 baías ocupadas \\
+     4 & 2 & 45 / 64 & 176 / 351 & 0,88 & 1,54 & 1,06 & 1.919 &  6 & Reprova \\
+     8 & 2 & 33 / 64 &  88 / 351 & 0,75 & 1,54 & 1,06 & 1.991 & 10 & Reprova \\
+     4 & 4 & 45 / 45 & 176 / 176 & 0,88 & 0,91 & 0,66 & 1.908 &  8 & \textbf{Adotado} \\
+     8 & 4 & 33 / 45 &  88 / 176 & 0,75 & 0,91 & 0,66 & 1.980 & 12 & Atende \\
+    12 & 4 & 27 / 45 &  59 / 176 & 0,75 & 0,91 & 0,66 & 1.984 & 16 & Atende \\
+     4 & 8 & 45 / 33 & 176 / 88  & 0,88 & 0,75 & 0,46 & 1.980 & 12 & Atende \\
+     8 & 8 & 33 / 33 &  88 / 88  & 0,75 & 0,75 & 0,46 & 2.052 & 16 & Atende \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{distribuicao-paineis}{}{}
 
-Com apenas dois painéis no alinhamento central, cada um recebe 212 kN, a diagonal
-passa a 48 mm e o pilar central montante, P2, P5, P8, P20, P23 ou P26, que soma o esforço descendente de
-258 kN às reações das duas vigas, reprova. Adotaram-se quatro painéis em cada
-conjunto. Nas fachadas, há um painel em cada extremidade de cada fachada, sob as
+Com apenas dois painéis no alinhamento central, cada um recebe 351 kN, a diagonal
+passa a 64 mm e o pilar central montante, P2, P5, P8, P20, P23 ou P26, cuja lâmina
+soma o esforço descendente de 517 kN à metade das reações das duas vigas, reprova,
+qualquer que seja o número de painéis nas fachadas. A partir de quatro painéis centrais,
+todas as distribuições atendem.
+
+A varredura revela um resultado que inverte a intuição corrente: o peso total de
+aço das diagonais verticais varia pouco com o número de painéis, entre 1.908 e
+2.052 kg em toda a faixa examinada. Painéis mais numerosos com
+barras mais finas custam o mesmo aço que poucos painéis com barras grossas. O que
+o aumento do número de painéis compra é margem no caminho de carga, isto é, no
+esforço descendente sobre o montante, na ancoragem e no bloco de fundação. O que
+custa são baías de circulação, num estacionamento aberto em que cada painel
+fecha uma baía.
+
+Adotaram-se, por isso, quatro painéis em cada conjunto, a menor distribuição que
+atende. Nas fachadas, há um painel em cada extremidade de cada fachada, sob as
 baías rígidas da cobertura. No alinhamento central, há dois painéis contíguos em
-cada extremidade. O arranjo ocupa as mesmas oito baías que a solução com todos os
-painéis nas fachadas e preserva o cortante de cerca de 106 kN por painel, com diagonal
-de 33 mm. Ficam livres 12 das 16 baías das fachadas e 4 das 8 do alinhamento
-central. A \autoref{fig:des-elevacoes} mostra os painéis nas elevações, com os
-nomes CV-V1 a CV-V8.
+cada extremidade. Cada painel recebe 176 kN, com diagonal de 45 mm, e ficam
+livres 12 das 16 baías das fachadas e 4 das 8 do alinhamento central. A
+\autoref{fig:des-elevacoes} mostra os painéis nas elevações, com os nomes CV-V1 a
+CV-V8.
 
 \figura
 {Elevações longitudinais dos alinhamentos A e B}
@@ -409,9 +456,8 @@ pelo diafragma de cobertura. Em cada frontão, um painel de cruz leva essa forç
 fundação. O painel foi dimensionado com largura igual ao espaçamento entre
 pórticos, 5,75 m, que dá às diagonais inclinação de 50,6$^{\circ}$ e as mantém
 curtas. No plano do frontão, porém, os pilares do pórtico distam 20,25 m entre
-si, e não havia montante a 5,75 m do canto. A falta só se tornou visível no
-desenho cotado da elevação. Acrescentou-se, por isso, em cada frontão um pilar de
-frontão, PF1 no eixo 1 e PF2 no eixo 9, com a mesma seção de 0,32 $\times$ 0,27 m
+si, e o painel precisa de um segundo montante a 5,75 m do canto. Há, por isso,
+em cada frontão um pilar de frontão, PF1 no eixo 1 e PF2 no eixo 9, com a mesma seção de 0,32 $\times$ 0,27 m
 dos pilares laterais, a 5,75 m do canto. Os painéis CV-T1, entre P1 e PF1, e
 CV-T2, entre PF2 e P27, ficam em cantos opostos, de modo que o conjunto é
 simétrico em relação ao centro da planta.
@@ -435,11 +481,14 @@ incorporado às forças de todos os sistemas de contraventamento. A
 \section{SÍNTESE}\label{sec:geometria-resultante}
 
 A \autoref{tab:criterios-predim} sintetiza as dimensões estabelecidas nesta
-etapa e o critério que governou cada uma. Nenhuma das dimensões da viga é
-governada por verificação de resistência da própria viga, conforme demonstrado
-na \autoref{ssec:o-que-governa}. As seções das terças e o respectivo
-espaçamento foram fixados como dado de entrada. As verificações que confirmam
-todas elas constam do \autoref{cap:dimensionamento}.
+etapa e o critério que governou cada uma, conforme a justificativa da
+\autoref{sec:geometria-adotada}. As dimensões da viga adotada não foram
+governadas pela sua resistência, que deixa margem
+(\autoref{ssec:o-que-governa}), e sim pelos limites e pelas margens ali
+expostos. O espaçamento das terças é fixado pela
+geometria do contraventamento, e a sua seção resulta da varredura da
+\autoref{sec:predim-tercas}. As verificações que confirmam todas elas constam do
+\autoref{cap:dimensionamento}.
 
 \tabela
 {Dimensões adotadas e critério governante de cada uma}
@@ -448,14 +497,15 @@ todas elas constam do \autoref{cap:dimensionamento}.
 \toprule
     \textbf{Elemento} & \textbf{Dimensão} & \textbf{Critério governante} \\
 \midrule
-    Inclinação do extradorso & 10,0$^{\circ}$ & Tensões na borda inclinada e altura de transporte \\
-    Altura da viga no apoio & 1,00 m & Espaço para a ligação de base e altura na cumeeira \\
+    Inclinação do extradorso & 10,0$^{\circ}$ & Mínimo de 8,0$^{\circ}$ da calha, com margem de drenagem, e altura de transporte \\
+    Altura da viga no apoio & 1,00 m & Ligação L1 com o rasgo e a madeira acima dele, margem na viga e altura do beiral \\
     Altura da viga na cumeeira & 2,785 m & Derivada: $h_{ap} = h_0 + (L/2)\tan\alpha$ \\
-    Largura da viga & 0,32 m & Alinhamento com o pilar e encaixe da chapa de ligação \\
+    Largura da viga & 0,32 m & Margem nos modos frágeis da L1, alinhamento com o pilar e encaixe da chapa \\
     Pilares lateral e central & 0,32 $\times$ 0,27 m & Esforço normal do pilar central \\
-    Pilar de canto & 0,32 $\times$ 0,32 m & Acúmulo de esforço descendente dos dois sistemas de contraventamento \\
+    Montantes (14), 2 lâminas & 0,16 $\times$ 0,32 m & Nó do painel vertical no nível da escora \\
     Pilar de frontão & 0,32 $\times$ 0,27 m & Montante do painel do frontão, a 5,75 m do canto \\
-    Diagonal da cobertura & $\varnothing$ 28 mm & Estabilização das terças como contenção lateral \\
+    Terças & 0,20 $\times$ 0,40 m & Varredura das terças e função de escora de beiral \\
+    Diagonal da cobertura & $\varnothing$ 36 mm & Vento paralelo à cumeeira coletado pela cobertura e levado às baías rígidas \\
     Painéis de contraventamento vertical & 4 + 4 & Fachadas e alinhamento central; caminho de carga das treliças da cobertura \\
     Painéis dos frontões & 1 por frontão & Um painel CV-T em cada frontão, entre o canto e o pilar de frontão \\
 \bottomrule

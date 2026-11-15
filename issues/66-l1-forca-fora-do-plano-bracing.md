@@ -15,11 +15,11 @@ verificação cobre esse trecho: a L1 é dimensionada só com N e V no plano do 
 chapa embutida trabalhando no seu próprio plano.
 
 ## O que fazer
-- [ ] Definir o caminho: (a) pela L1 (chapa embutida carregada fora do plano → flexão da chapa
+- [x] Definir o caminho: (a) pela L1 (chapa embutida carregada fora do plano → flexão da chapa
       e pinos ao corte na direção longitudinal), (b) pela terça de beiral/escora diretamente ao
       nó do painel vertical, (c) chapa de topo com batente.
-- [ ] Verificar o elemento escolhido (madeira: embutimento/fendilhamento ⊥; aço: chapa/solda).
-- [ ] Integrar com a escora de topo da linha central (pendência da issue 64) e com os desenhos (52).
+- [x] Verificar o elemento escolhido (madeira: embutimento/fendilhamento ⊥; aço: chapa/solda).
+- [x] Integrar com a escora de topo da linha central (pendência da issue 64) e com os desenhos (52).
 
 ## Resolução ✅ (2026-10-06) — opção (b): escora + nó metálico no topo do pilar
 

@@ -93,9 +93,13 @@ def verifica_cisalhamento(
     h_n:        float = 0.0,
     x_n:        float = 0.0,
     alpha_n:    float = 90.0,
+    t_rasgo_m:  float = 0.0,
 ) -> dict:
     """
     Verifica resistência ao cisalhamento no apoio — EC5 §6.1.7 Eq. 6.13.
+
+    Junto ao apoio a seção é cortada pelo rasgo da chapa embutida (issue 70):
+    b_ef = k_cr · (b − t_rasgo).
 
     Condição:
         τ_d = 1,5 · V_d / (b_ef · h_ef) ≤ f_v,d
@@ -146,7 +150,7 @@ def verifica_cisalhamento(
     # EC5 §6.1.7 Eq. 6.13 + A1: b_ef = k_cr · b
     # Com entalhe: k_v reduz a resistência efetiva (EC5 §6.5.2)
     k_cr  = mat.k_cr
-    b_ef  = k_cr * b
+    b_ef  = k_cr * (b - t_rasgo_m)
     tau_d = 1.5 * V_d_N / (b_ef * k_v * h_ef)  # Pa
 
     # ── Resistência de cálculo ────────────────────────────────
@@ -163,6 +167,7 @@ def verifica_cisalhamento(
         "b_m":        b,
         "k_cr":       k_cr,
         "b_ef_m":     round(b_ef, 6),
+        "t_rasgo_m":  t_rasgo_m,
         "k_v":        round(k_v, 4),
         # Esforços — referencial do eixo da peça (issue 12)
         "V_d_kN":         round(V_d_kN, 3),      # cortante transversal (⊥ eixo)
@@ -182,7 +187,7 @@ def verifica_cisalhamento(
             f"θ={theta_deg:.2f}°; R_v={R_v_kN:.1f} kN → V={V_d_kN:.1f} kN"
         ),
         # Referência
-        "norma":      "EC5 §6.1.7 Eq. 6.13 (b_ef=k_cr·b); eixo da peça (issue 12)",
+        "norma":      "EC5 §6.1.7 Eq. 6.13 (b_ef=k_cr·(b − t_rasgo)); eixo da peça (issue 12)",
     }
 
 

@@ -5,7 +5,9 @@ output/esquemas.py — Figuras esquemáticas do memorial (issue 63).
   · ESQ-02  modelo estrutural do pórtico transversal: vigas V, pilares P, rótulas,
             apoios e carregamento, com a nomenclatura da issue 52;
   · ESQ-03  modelo do apoio horizontal: do arco abatido (apoio indeslocável) à
-            viga biapoiada (apoio livre), passando pela mola de rigidez k_h.
+            viga biapoiada (apoio livre), passando pela mola de rigidez k_ap.
+  · ESQ-04  nó de topo das baías contraventadas: por que o pilar montante é
+            bipartido (issue 104) — as quatro soluções examinadas, no plano da fachada.
 
 Ao contrário das folhas de `desenhos.py`, não são desenhos em escala: a altura
 da viga é ampliada para que as grandezas fiquem legíveis, o que se declara na
@@ -84,7 +86,7 @@ def esquema_variaveis_viga(geo, caminho: Path, *, faixas: dict | None = None) ->
     L, h0, a = float(geo.L), float(geo.h0), float(geo.alpha_deg)
     hap = h0 + L / 2 * math.tan(math.radians(a))
     ev = 2.5                                               # ampliação vertical
-    fig, ax = _fig(78.0)
+    fig, ax = _fig(50.0)
     # elevação (unidades: m na horizontal, m·ev na vertical)
     pts = [(0, 0), (L, 0), (L, h0 * ev), (L / 2, hap * ev), (0, h0 * ev)]
     ax.add_patch(Polygon(pts, closed=True, fc=COR_MLC, ec="k", lw=0.9))
@@ -133,13 +135,28 @@ def esquema_modelo_portico(geo, caminho: Path, *, H_pilar: float) -> Path:
     H = float(H_pilar)
     fig, ax = _fig(82.0)
     s = 0.45
+    ab = float(getattr(geo, "a_bal", 0.0))
+    tg = math.tan(math.radians(a))
+    hb = h0 - ab * tg
     for vao, xa in (("V(2i−1)", 0.0), ("V(2i)", L)):
         pts = [(xa, H), (xa + L, H), (xa + L, H + h0), (xa + L / 2, H + hap), (xa, H + h0)]
+        if ab > 0 and xa == 0.0:                       # beiral em A
+            pts = [(-ab, H)] + pts[1:] + [(-ab, H + hb)]
+        elif ab > 0:                                    # beiral em C
+            pts = [(xa, H), (xa + L + ab, H), (xa + L + ab, H + hb), (xa + L, H + h0),
+                   (xa + L / 2, H + hap), (xa, H + h0)]
         ax.add_patch(Polygon(pts, closed=True, fc=COR_MLC, ec="0.55", lw=0.5))
         # eixo do modelo (linha do centroide) e carga
-        ax.plot([xa, xa + L / 2, xa + L],
-                [H + h0 / 2, H + hap / 2, H + h0 / 2], color="k", lw=1.2)
-        _carga(ax, xa + 0.3, xa + L - 0.3, H + hap + 0.3, 1.2)
+        xs_e = [xa, xa + L / 2, xa + L]
+        zs_e = [H + h0 / 2, H + hap / 2, H + h0 / 2]
+        if ab > 0 and xa == 0.0:
+            xs_e, zs_e = [-ab] + xs_e, [H + hb / 2] + zs_e
+        elif ab > 0:
+            xs_e, zs_e = xs_e + [xa + L + ab], zs_e + [H + hb / 2]
+        ax.plot(xs_e, zs_e, color="k", lw=1.2)
+        x_c0 = xa - ab if (ab > 0 and xa == 0.0) else xa
+        x_c1 = xa + L + ab if (ab > 0 and xa > 0) else xa + L
+        _carga(ax, x_c0 + 0.3, x_c1 - 0.3, H + hap + 0.3, 1.2)
         ax.text(xa + L / 2, H + hap + 2.0, r"$q_{esq}$ | $q_{dir}$", ha="center",
                 fontsize=7, color=COR_CARGA)
         ax.text(xa + L * 0.27, H + h0 * 0.35, vao, ha="center", fontsize=7.5,
@@ -163,11 +180,15 @@ def esquema_modelo_portico(geo, caminho: Path, *, H_pilar: float) -> Path:
                 arrowprops=dict(arrowstyle="->", lw=0.5))
     _cota(ax, (0, -3.6), (L, -3.6), r"$L$")
     _cota(ax, (L, -3.6), (2 * L, -3.6), r"$L$")
+    if ab > 0:
+        _cota(ax, (-ab, H + hap + 2.6), (0, H + hap + 2.6), r"$a$ (beiral)",
+              off=(0.9, 0.5), ha="left")
+        _cota(ax, (2 * L, H + hap + 2.6), (2 * L + ab, H + hap + 2.6), r"$a$", off=(0, 0.5))
     _cota(ax, (-1.4, 0), (-1.4, H), r"$H$", off=(-0.8, 0))
     ax.text(2 * L + 1.0, -4.6,
             "estabilidade no plano do pórtico: diafragma da cobertura → frontões (CV-T)",
             fontsize=6.0, ha="right", va="top", color="0.35")
-    ax.set_xlim(-3.5, 2 * L + 2.0)
+    ax.set_xlim(-3.5 - ab, 2 * L + 2.0 + ab)
     ax.set_ylim(-6.2, H + hap + 5.0)
     return _salvar(fig, caminho)
 
@@ -179,7 +200,7 @@ def esquema_apoio_horizontal(caminho: Path) -> Path:
     fig, ax = _fig(40.0)
     Lm, h0, hap = 10.0, 0.6, 1.6
     casos = (("(a) apoio indeslocável", "arco abatido: H > 0,\nmomento aliviado", "fixo"),
-             ("(b) apoio elástico", "H depende de $k_h$\nfrente à rigidez do arco", "mola"),
+             ("(b) apoio elástico", "H depende de $k_{ap}$\nfrente à rigidez do arco", "mola"),
              ("(c) apoio livre", "viga biapoiada: H = 0,\nmomento $qL^2/8$", "livre"))
     for n, (tit, txt, tipo) in enumerate(casos):
         x0 = n * (Lm + 3.2)
@@ -197,7 +218,7 @@ def esquema_apoio_horizontal(caminho: Path) -> Path:
             zy = [0.3 + (0.18 if k % 2 else -0.18) * (0 < k < 8) for k in range(9)]
             ax.plot(zx, zy, color="k", lw=0.7)
             ax.plot([zx[-1], zx[-1]], [-0.3, 0.9], color="k", lw=1.0)
-            ax.text(xr + 1.2, 1.15, r"$k_h$", fontsize=7.5, ha="center")
+            ax.text(xr + 1.2, 1.15, r"$k_{ap}$", fontsize=7.5, ha="center")
         if tipo != "livre":
             for xh, d in ((x0, 1), (xr, -1)):
                 ax.add_patch(FancyArrowPatch((xh - d * 1.6, -0.35), (xh - d * 0.3, -0.35),
@@ -219,10 +240,97 @@ def _salvar(fig, caminho: Path) -> Path:
     return caminho
 
 
+def esquema_no_topo(caminho: Path) -> Path:
+    """
+    ESQ-04 — Nó de topo das baías contraventadas, no plano da fachada: a força da
+    escora chega h0 acima do topo do pilar; quatro maneiras de levá-la à diagonal.
+    """
+    from matplotlib.patches import FancyBboxPatch  # noqa: F401
+    fig, ax = _fig(50.0)
+    COR_F, COR_MAL, COR_BOM = "#1f4e79", "#b03a2e", "#2e7d32"
+    W = 10.0                              # largura de cada painel (unidades)
+    Hp, h0, ht = 6.0, 2.0, 0.7            # pilar, viga e terça (fora de escala)
+
+    def _arrow(x0, y0, x1, y1, cor, lw=1.3):
+        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle="-|>", mutation_scale=8,
+                                     lw=lw, color=cor, zorder=8))
+
+    def _base(xc, bip=False):
+        # pilar(es), viga em seção sobre o apoio e escora (terça) sobre a viga
+        if bip:
+            for sg in (-1, 1):
+                ax.add_patch(Rectangle((xc + sg * 1.05 - 0.4, 0), 0.8, Hp + h0, fc=COR_MLC,
+                                       ec="k", lw=0.7, zorder=2))
+        else:
+            ax.add_patch(Rectangle((xc - 0.7, 0), 1.4, Hp, fc=COR_MLC, ec="k", lw=0.7, zorder=2))
+        ax.add_patch(Rectangle((xc - 0.6, Hp), 1.2, h0, fc="#e9d6a6", ec="k", lw=0.7, zorder=3))
+        ax.add_patch(Rectangle((xc - 3.0, Hp + h0), 6.8, ht, fc=COR_MLC, ec="k", lw=0.7,
+                               zorder=3))
+        ax.plot([xc - 3.6, xc + 4.4], [0, 0], color="k", lw=0.8)
+        ax.text(xc + 3.7, Hp + h0 + ht / 2, "escora", fontsize=5.4, va="center", ha="right",
+                zorder=9)
+        ax.text(xc, Hp + h0 / 2, "viga", fontsize=5.2, ha="center", va="center", rotation=90,
+                zorder=9)
+
+    def _diag(xc, x_no, y_no):
+        ax.plot([x_no, xc + 4.2], [y_no, 0.0], color="#b03a2e", lw=1.4, zorder=4)
+        ax.add_patch(Circle((x_no, y_no), 0.16, fc="w", ec="k", lw=0.7, zorder=9))
+
+    rot = ("(a) Nó no topo do pilar", "(b) Nó na escora, pela viga",
+           "(c) Pórtico de aço", "(d) Pilar bipartido")
+    for i in range(4):
+        xc = 1.8 + i * W
+        _base(xc, bip=(i == 3))
+        ax.text(xc + 0.6, -1.0, rot[i], fontsize=6.4, ha="center", va="top",
+                fontweight="bold", color=COR_BOM if i == 3 else "k")
+        yH = Hp + h0 + ht / 2
+        _arrow(xc - 4.1, yH, xc - 3.05, yH, COR_F)
+        ax.text(xc - 4.1, yH + 0.45, "H", fontsize=6.6, color=COR_F)
+    # (a) nó no topo do pilar: binário H·h0 sem equilíbrio
+    xc = 1.8
+    _diag(xc, xc + 0.7, Hp)
+    ax.add_patch(FancyArrowPatch((xc + 2.6, Hp + 0.2), (xc + 2.6, Hp + h0 + 0.6),
+                                 connectionstyle="arc3,rad=0.5", arrowstyle="-|>",
+                                 mutation_scale=8, lw=1.1, color=COR_MAL, zorder=8))
+    ax.text(xc - 1.0, Hp - 1.3, "binário H·h₀\nsem equilíbrio", fontsize=5.4,
+            color=COR_MAL, va="center", ha="right")
+    _cota(ax, (xc - 1.2, Hp), (xc - 1.2, Hp + h0), "h₀", off=(-0.45, 0), fs=6.4)
+    # (b) nó na escora apoiado na viga: força vertical ⊥ às fibras; umidade
+    xc = 1.8 + W
+    _diag(xc, xc + 1.0, Hp + h0 - 0.2)
+    _arrow(xc + 0.2, Hp + h0 - 0.1, xc + 0.2, Hp + 0.4, COR_MAL, lw=1.0)
+    ax.text(xc - 1.0, Hp - 1.3, "D desce pela viga,\n⊥ às fibras: o\ninchamento "
+            "da viga\ntensiona a diagonal", fontsize=5.4, color=COR_MAL, va="center", ha="right")
+    # (c) pórtico de aço ao lado da viga: excentricidade no pilar
+    xc = 1.8 + 2 * W
+    for sg in (-1, 1):
+        ax.add_patch(Rectangle((xc + sg * 0.75 - 0.08, Hp), 0.16, h0, fc="0.45", ec="k", lw=0.5,
+                               zorder=4))
+    ax.add_patch(Rectangle((xc - 0.83, Hp + h0 - 0.12), 1.66, 0.12, fc="0.45", ec="k", lw=0.5,
+                           zorder=4))
+    _diag(xc, xc + 0.75, Hp + h0 - 0.2)
+    _arrow(xc + 0.75, Hp + h0 - 0.3, xc + 0.75, Hp + 0.1, COR_MAL, lw=1.0)
+    ax.text(xc - 1.0, Hp - 1.3, "D chega ao pilar\nfora do eixo:\nmomento no pilar",
+            fontsize=5.4, color=COR_MAL, va="center", ha="right")
+    # (d) pilar bipartido: forças concorrentes; D desce pela lâmina // às fibras
+    xc = 1.8 + 3 * W
+    _diag(xc, xc + 1.05, Hp + h0 - 0.2)
+    _arrow(xc + 1.05, Hp + h0 - 0.5, xc + 1.05, 1.0, COR_BOM, lw=1.0)
+    ax.text(xc - 1.6, Hp - 1.3, "forças concorrentes;\nD desce pela lâmina,\n// às fibras",
+            fontsize=5.4, color=COR_BOM, va="center", ha="right")
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlim(-3.4, 4 * W - 2.2)
+    ax.set_ylim(-1.8, Hp + h0 + ht + 1.0)
+    fig.savefig(caminho, format="pdf")
+    plt.close(fig)
+    return caminho
+
+
 def gerar_esquemas(geo, pasta: Path, *, H_pilar: float, faixas: str | None = None) -> list[Path]:
     pasta = Path(pasta)
     return [
         esquema_variaveis_viga(geo, pasta / "esq01_variaveis_viga.pdf", faixas=faixas),
         esquema_modelo_portico(geo, pasta / "esq02_modelo_portico.pdf", H_pilar=H_pilar),
         esquema_apoio_horizontal(pasta / "esq03_apoio_horizontal.pdf"),
+        esquema_no_topo(pasta / "esq04_no_topo.pdf"),
     ]

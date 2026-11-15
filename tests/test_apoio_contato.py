@@ -26,9 +26,12 @@ def test_apoio_usa_a_geometria_real_do_pilar(r):
     """Antes: placa fictícia de 0,90 m sobre pilar de 0,27 m."""
     a = r["apoio"]
     assert a["l_apoio_m"] == pytest.approx(M.H_PILAR)
-    assert a["l_ef_m"] == pytest.approx(M.H_PILAR + 0.030)   # +30 mm lado do vão
+    # +30 mm lado do vão e +30 mm lado do beiral (a viga continua; issue 82)
+    assert a["l_ef_m"] == pytest.approx(M.H_PILAR + 0.060)
     assert a["k_c90"] == K_C90_MLC_APOIO_DISCRETO
-    sigma = a["R_d_kN"] * 1e3 / (M.GEO_PARAMS["b"] * a["l_ef_m"]) / 1e6
+    # largura de contato reduzida pelo rasgo da chapa embutida (issue 70)
+    sigma = a["R_d_kN"] * 1e3 / ((M.GEO_PARAMS["b"] - a["t_rasgo_m"]) * a["l_ef_m"]) / 1e6
+    assert a["t_rasgo_m"] == pytest.approx(0.029)
     assert a["sigma_c90d_MPa"] == pytest.approx(sigma, rel=1e-3)
     assert a["eta"] < 1.0 and a["eta_sem_kc90"] < 1.0
 
@@ -53,13 +56,16 @@ def test_sela_espessura_por_flexao_do_balanco():
 def test_pinos_so_recebem_o_arrancamento(r):
     L1 = r["L1"]
     assert L1["apoio_por_contato"] is True
-    assert L1["V_d_kN"] < L1["V_gravidade_kN"]
-    assert L1["V_d_kN"] == pytest.approx(86.1, abs=0.5)
+    # 86,1 kN sem beiral; o balanço de 1,135 m (issue 82) soma a sucção do beiral
+    # e a terça dimensionada 0,20×0,40 (issue 101) reduz o peso que a contrabalança
+    assert L1["V_d_kN"] == pytest.approx(100.5, abs=0.5)
 
 
 def test_fendilhamento_sem_reforco_com_grupo_no_terco_superior(r):
     f = r["fendilhamento_L1"]
     assert f["apoio_por_contato"] is True
     assert f["reforcado"] is False
-    assert f["h_e_mm"] == pytest.approx(1000 - 3 * M.D_BASE_MM)
+    # grupo posicionado pela geometria do rasgo (issue 71): h_e = y do pino mais alto
+    assert f["h_e_mm"] == pytest.approx(r["oblongo_L1"]["y_topo_mm"])
+    assert r["oblongo_L1"]["madeira_sobre_rasgo_mm"] >= 100.0
     assert f["eta"] < M.ETA_LIG_ALVO

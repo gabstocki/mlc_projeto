@@ -47,6 +47,11 @@ from __future__ import annotations
 
 import math
 
+#: Modos do concreto (cone, fendilhamento, esmagamento sob a chaveta) são frágeis: o
+#: projeto os limita a η ≤ 0,75, a mesma margem dos modos frágeis das ligações
+#: (cap. 7, tab. de modos de ruptura). Antes o veredito usava 1,0 (issue 109).
+ETA_CONCRETO_FRAGIL = 0.75
+
 # ── Aço da barra — EN 1993-1-8 Tab. 3.1 ──────────────────────────────────────
 # (f_yb, f_ub) em MPa por classe de parafuso/barra roscada.
 CLASSES_BARRA: dict[str, tuple[float, float]] = {
@@ -345,7 +350,7 @@ def verificar_grupo_ancoragem(
             "beta_V": round(beta_V, 4),
             "eta_concreto": round(eta_conc, 4),
             "ok_concreto": (
-                eta_conc <= 1.0 + 1e-9
+                eta_conc <= ETA_CONCRETO_FRAGIL + 1e-9
                 and split.get("verificavel", True)
                 and borda.get("verificavel", True)
             ),
@@ -375,7 +380,7 @@ def verificar_grupo_ancoragem(
         "ok": bool(
             eta_aco <= 1.0 + 1e-9
             and concreto["en_1992_4_verificado"]
-            and eta_conc <= 1.0 + 1e-9
+            and eta_conc <= ETA_CONCRETO_FRAGIL + 1e-9
         ),
         "eta": round(max(eta_aco, eta_conc), 4),
         **concreto,
@@ -482,7 +487,7 @@ def resistencia_cone(
     N_Rk_c = N0 * (A_cN / A0) * psi_s * psi_re * psi_ec         # N
     return {
         "N0_Rk_c_kN": round(N0 / 1e3, 2),
-        "k": k, "f_ck_MPa": f_ck,
+        "k": k, "f_ck_MPa": f_ck, "h_ef_mm": float(h_ef),
         "c_cr_N_mm": round(c_cr, 1), "s_cr_N_mm": round(s_cr, 1),
         "A_c_N_mm2": round(A_cN, 0), "A0_c_N_mm2": round(A0, 0),
         "psi_s_N": round(psi_s, 4), "psi_re_N": round(psi_re, 4),
@@ -782,9 +787,26 @@ def verificar_base_corrente(
     classe: str = "8.8",
     layout: tuple[int, int] = (2, 2),
     dados_concreto: dict | None = None,
+    M_persistente_kNm: float = 0.0,
+    M_acidental_kNm: float = 0.0,
+    s_mm: float = 400.0,
+    chaveta: dict | None = None,
 ) -> dict:
     """
     Ancoragem de uma base CORRENTE (L3 de extremidade, L3c central) — issue 48.
+
+    Issue 74 — com `chaveta` = {l_mm, h_mm, classe_concreto}, a base recebe uma
+    CHAVETA CRUCIFORME soldada sob a chapa: o cortante, de qualquer direção, vai
+    ao concreto pelo braço da cruz perpendicular a ele (esmagamento, EN 1992-1-1
+    §6.7), e os chumbadores ficam só com a tração. Sem chaveta, com graute e porca
+    de nivelamento, o cortante nos chumbadores agiria com braço de alavanca
+    (EN 1992-4 §6.2.2.3).
+
+    Com pilarete (issue 87), o cortante que vem do pilar de madeira entra no
+    pilarete a h da chapa de base e chega a ela com o momento M = V·h (o do
+    painel de contraventamento não: liga-se direto à chapa); o binário traciona
+    os chumbadores da fileira oposta. Soma-se ao N do grupo a tração equivalente
+    (n × força no chumbador mais tracionado), o que é conservador para o cone.
 
     Duas situações de projeto, não concomitantes (EN 1990 §6.4.3):
 
@@ -799,16 +821,24 @@ def verificar_base_corrente(
     os coeficientes parciais da situação persistente são mantidos na
     acidental — ambos a favor da segurança.
     """
+    from mlc_projeto.connections.pilarete import tracao_equivalente_momento
     casos = {}
-    for nome, N, V in (
-        ("persistente_succao", N_t_persistente_kN, V_persistente_kN),
-        ("acidental_impacto", 0.0, V_acidental_kN),
+    for nome, N, V, M in (
+        ("persistente_succao", N_t_persistente_kN, V_persistente_kN, M_persistente_kNm),
+        ("acidental_impacto", 0.0, V_acidental_kN, M_acidental_kNm),
     ):
+        N = N + tracao_equivalente_momento(M, layout, s_mm)
         r = verificar_grupo_ancoragem(
             N_Ed_kN=N, V_Ed_kN=V, n_chumbadores=n_chumbadores, d_mm=d_mm,
-            classe=classe, chaveta_cisalhamento=False,
+            classe=classe, chaveta_cisalhamento=chaveta is not None,
             dados_concreto=dados_concreto, layout=layout,
         )
+        if chaveta is not None:
+            r["chaveta"] = esmagamento_chaveta(
+                V_Ed_kN=V, l_chaveta_mm=chaveta["l_mm"], h_embutida_mm=chaveta["h_mm"],
+                classe_concreto=chaveta["classe_concreto"])
+            r["eta"] = max(r["eta"], r["chaveta"]["eta"])
+            r["ok"] = bool(r["ok"] and r["chaveta"]["ok"])
         casos[nome] = r
     gov = max(casos, key=lambda k: casos[k]["eta"])
     g = casos[gov]
@@ -828,7 +858,9 @@ def verificar_base_corrente(
         "modo_concreto_gov": g.get("modo_concreto_gov"),
         "eta": g["eta"],
         "ok": all(c["ok"] for c in casos.values()),
-        "norma": "EN 1993-1-8 Tab. 3.4/§3.4 + EN 1992-4 | EN 1991-1-7 (A_d)",
+        "chaveta": chaveta,
+        "norma": "EN 1993-1-8 Tab. 3.4/§3.4 + EN 1992-4 | EN 1991-1-7 (A_d)"
+                 + (" + EN 1992-1-1 §6.7 (chaveta)" if chaveta else ""),
     }
 
 
@@ -878,7 +910,8 @@ def esmagamento_chaveta(
         "fator_confinamento": round(conf, 3),
         "F_Rdu_kN": round(F_Rdu, 2),
         "eta": round(eta, 4),
-        "ok": eta <= 1.0,
+        "ok": eta <= ETA_CONCRETO_FRAGIL + 1e-9,
+        "eta_limite": ETA_CONCRETO_FRAGIL,
         "norma": "EN 1992-1-1 §6.7 (áreas parcialmente carregadas)",
         "nota_confinamento": (
             "A_c1/A_c0 = 1,0 adotado (sem ganho): elevá-lo exige a geometria "

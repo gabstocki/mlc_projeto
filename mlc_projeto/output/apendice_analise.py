@@ -5,7 +5,7 @@ Gera, a partir das combinações do pipeline, o apêndice da monografia com:
 
     · os diagramas M/V/N da combinação governante;
     · os diagramas M/V/N de TODAS as combinações ELU sobrepostos;
-    · a tabela de esforços por combinação (cargas por meia-água, M, reações,
+    · a tabela de esforços por combinação (cargas por água, M, reações,
       cortante e normal no eixo da peça).
 
 Os números saem de `Carregamentos` (os mesmos que alimentam as verificações).
@@ -45,8 +45,8 @@ def _rotulo_padrao(pid: str) -> tuple[str, str]:
     if not m:
         return pid, ""
     t, lado, faixa, cpi = m.groups()
-    pad = (f"$\\alpha = 90^\\circ$, {faixa}" if faixa
-           else f"$\\alpha = 0^\\circ$, {t}, {'esq.' if lado == 'esq' else 'dir.'}")
+    pad = (f"$\\alpha_v = 90^\\circ$, {faixa}" if faixa
+           else f"$\\alpha_v = 0^\\circ$, {t}, {'esq.' if lado == 'esq' else 'dir.'}")
     cpi = cpi.replace(".", "{,}")
     return pad, f"${cpi}$"
 
@@ -68,8 +68,10 @@ def linhas_esforcos(load) -> list[dict]:
         c = combos[t["nome"]]
         d = load.diagramas_MVN_ELU(c)
         R_A, R_B, H = d["R_A_kN"], d["R_B_kN"], d["H_kN"]
-        V_ap = (R_A * cs - H * sn, -(R_B * cs - H * sn))
-        N_ap = (H * cs + R_A * sn, H * cs + R_B * sn)
+        # no eixo da viga, o cortante do lado do vão (com beiral ≠ reação; issue 82)
+        S_A, S_B = d["R_A_vao_kN"], d["R_B_vao_kN"]
+        V_ap = (S_A * cs - H * sn, -(S_B * cs - H * sn))
+        N_ap = (H * cs + S_A * sn, H * cs + S_B * sn)
         pad, cpi = (("sem vento", "") if t["grupo"] == "Q"
                     else _rotulo_padrao(t["padrao"]))
         # governantes pelos mesmos critérios da tabela de combinações (issue 28)
@@ -194,7 +196,7 @@ def gerar_apendice_analise(load, geo, tese_dir: Path,
       "\\toprule\n"
       "    \\textbf{Nº} & \\textbf{Padrão de vento} & \\textbf{$c_{pi}$} & "
       "\\textbf{$q_{esq}$} & \\textbf{$q_{dir}$} & \\textbf{$M_{max}$} & "
-      "\\textbf{$x$} & \\textbf{$M_{cum}$} & \\textbf{$R_A$} & \\textbf{$R_B$} & "
+      "\\textbf{$x$} & \\textbf{$M_{ap,d}$} & \\textbf{$R_A$} & \\textbf{$R_B$} & "
       "\\textbf{$V_{max}$} & \\textbf{$N_{max}$} \\\\\n"
       "    & & & \\multicolumn{2}{c}{(kN/m)} & (kN$\\cdot$m) & (m) & "
       "(kN$\\cdot$m) & (kN) & (kN) & (kN) & (kN) \\\\\n")
@@ -215,9 +217,9 @@ def gerar_apendice_analise(load, geo, tese_dir: Path,
         a("    " + " & ".join(f"{ini}{c}{fim}" if c else "" for c in cel) + " \\\\\n")
     a("\\bottomrule\n\\end{tabular}}"
       "{Elaborado pelo autor (2026)}{an-esforcos}{}{}\n\n"
-      "Na tabela, $q_{esq}$ e $q_{dir}$ são as cargas de cálculo por meia-água, "
+      "Na tabela, $q_{esq}$ e $q_{dir}$ são as cargas de cálculo por água, "
       "positivas no sentido da gravidade; $x$ é a posição do momento máximo "
-      "$M_{max}$ a partir do apoio esquerdo; $M_{cum}$ é o momento na cumeeira; "
+      "$M_{max}$ a partir do apoio esquerdo; $M_{ap,d}$ é o momento na cumeeira; "
       "$R_A$ e $R_B$ são as reações verticais nos apoios; $V_{max}$ e $N_{max}$ "
       "são o cortante e o esforço normal no eixo da peça, cujos extremos ocorrem "
       "nos apoios. "

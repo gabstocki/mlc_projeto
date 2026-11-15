@@ -1,6 +1,6 @@
 # mlc_projeto
 
-Verificação estrutural de galpão em madeira lamelada colada (MLC/glulam)  
+Verificação estrutural de cobertura para estacionamento em madeira lamelada colada (MLC/glulam)  
 **Eurocode 5 — EN 1995-1-1** · Vigas de duplo-bisel · Vão 40,5 m
 
 **Engenheiro:** Gabriel Stocki — CREA-PR 195315/D  

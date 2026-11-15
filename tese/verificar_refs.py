@@ -3,7 +3,7 @@
 import re, glob, sys
 
 definidos = {}
-for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex')):
+for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex') + glob.glob('tab_*.tex')):
     txt = open(f, encoding='utf-8').read()
     for m in re.finditer(r'\\label\{([^}]*)\}', txt):
         definidos[m.group(1)] = f
@@ -16,7 +16,7 @@ for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex')):
         pass
 
 # labels gerados pelos comandos customizados (5o arg de \figura, 4o de tabela/qquadro/imagem)
-for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex')):
+for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex') + glob.glob('tab_*.tex')):
     txt = open(f, encoding='utf-8').read()
     for cmd, pref, pos in (('tabela', 'tab', 4), ('qquadro', 'qua', 4),
                            ('imagem', 'fig', 4), ('figura', 'fig', 5)):
@@ -38,7 +38,7 @@ for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex')):
                 definidos[f'{pref}:{args[pos-1].strip()}'] = f
 
 referenciados = {}
-for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex')):
+for f in sorted(glob.glob('cap*.tex') + glob.glob('apendice*.tex') + glob.glob('tab_*.tex')):
     txt = open(f, encoding='utf-8').read()
     for m in re.finditer(r'\\(?:autoref|ref)\{([^}]*)\}', txt):
         referenciados.setdefault(m.group(1), []).append(f)

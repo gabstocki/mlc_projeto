@@ -46,6 +46,7 @@ NBR6123-2023.pdf
 NBR7190-2022.pdf
 DD_CEN_TS_1992-4-2-2009.pdf
 ien-1992-4-2018-fastening-for-use-in-concrete.pdf
+en.1995.1.1.2004*.pdf
 *.pdf.norma
 
 # Monografia — intermediários do LaTeX
@@ -72,3 +73,9 @@ tese/*.run.xml
 tese/*.sig
 tese/*.synctex.gz
 tese/*.toc
+en.1991.1.2.2002.pdf
+NPT 008 - Resistencia ao fogo dos elemento de construção v 2026.pdf
+en.1993.1.2.2005.pdf
+
+# PDF do orientador (nunca versionar)
+main (1)gavassoni.pdf

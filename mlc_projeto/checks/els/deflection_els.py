@@ -141,13 +141,17 @@ def verificar_ELS(
     # ── Flecha assinada no ponto de máximo |w| (superposição elástica) ────────
     # Retorna (w_total, w_flexão, w_cisalhamento) no ponto de |w_total| máximo.
     def _parcelas_signed(
-        q_esq: float, q_dir: float | None = None
+        q_esq: float, q_dir: float | None = None, fG: float = 0.0
     ) -> tuple[float, float, float]:
         r = analisar_biarticulada(
             q=0.5 * (q_esq + (q_dir if q_dir is not None else q_esq)),
             L=L, h0=h0, h_ap=h_ap, alpha_rad=alpha_rad, b=geo.b,
             q_esq=q_esq, q_dir=(q_dir if q_dir is not None else q_esq),
             desenvolve_empuxo=load.empuxo_desenvolve,
+            a_bal=geo.a_bal,
+            # peso próprio variável da viga (issue 114) nas parcelas com G
+            g_var_kNm3=fG * load.gamma_mlc_kNm3
+            if getattr(load, "peso_viga_variavel", False) else 0.0,
         )
         M_x = np.interp(geo.x, r["x"], r["M_x"]) * 1e3   # N·m
         _, w_x, w_b_x, w_s_x = flecha_numerica(geo, mat, M_x, geo.x)
@@ -158,7 +162,7 @@ def verificar_ELS(
         return _parcelas_signed(q_esq, q_dir)[0]
 
     # ── Parcelas isoladas (superponíveis) ─────────────────────────────────────
-    w_G_s, w_G_b_s, w_G_v_s = _parcelas_signed(load.g_k)   # permanente (sentido ↓)
+    w_G_s, w_G_b_s, w_G_v_s = _parcelas_signed(load.g_k, fG=1.0)   # permanente (↓)
     w_Q_s = _w_signed(load.q_k)                 # sobrecarga
     s     = 1.0 if w_G_s >= 0 else -1.0         # sinal do sentido descendente
     w_G   = s * w_G_s                           # ↓ positiva
@@ -194,9 +198,9 @@ def verificar_ELS(
     # como um único caso de carga e mede a contribuição do cortante.
     g_k = load.g_k
     if gov_char == "vento":
-        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + we_gov, g_k + wd_gov)
+        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + we_gov, g_k + wd_gov, fG=1.0)
     else:
-        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + load.q_k)
+        _, w_S1_b_s, w_S1_v_s = _parcelas_signed(g_k + load.q_k, fG=1.0)
     w_S1_flex  = s * w_S1_b_s                    # parcela de flexão (↓ +)
     w_S1_cis   = s * w_S1_v_s                    # parcela de cisalhamento (↓ +)
     pct_cis_S1 = (abs(w_S1_cis) / abs(w_S1) * 100.0) if abs(w_S1) > 1e-12 else 0.0

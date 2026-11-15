@@ -162,3 +162,168 @@ todas cobertas; as das pp. 29 e 36 não estavam no e-mail (issue 63).
 | 63 | P2 | [Figuras: variáveis da varredura (§5.2) e modelo estrutural (§6.1)](63-figuras-varredura-e-modelo.md) — só no PDF | ✅
 
 **Ordem sugerida:** 41, 45, 46, 47, 48, 44, 42 (alteram resultados) → 39, 40, 49 → 43, 52, 50, 56, 53, 51 → texto (54–62).
+
+---
+
+# Backlog — 4ª revisão do orientador (2026-11)
+
+Observações sobre a versão com as issues 39–66 e 43 resolvidas. O orientador considera
+atendida praticamente toda a revisão anterior e **confirma a concepção das ligações**
+(gravidade por contato, arrancamento pelos pinos, oblongos verticais). Os pontos novos tratam
+caminho de cargas, durabilidade, incêndio, desenhos, redação e coerência.
+
+> **Mapa de numeração:** o §N citado pelo orientador corresponde a `tese/capNN.tex` com
+> NN = N + 1 a partir do §2 (o `cap02.tex` foi removido): §2 → cap03, §3 → cap04, …, §7 → cap08, §8 → cap09.
+
+### Pré-textuais e fundamentação
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 67 | P1 | [Nome oficial do curso (capa, rosto, termo)](67-nome-oficial-curso.md) ✅ — dado do autor | intro |
+| 68 | P2 | [Lógica das ligações explícita no texto; η ≤ 0,75 como critério do autor](68-logica-ligacoes-texto.md) | 1 ✅ |
+
+### Ligações — caminho de cargas e verificações
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 69 | P0 | [Ligação chapa de topo / sela ao pilar](69-ligacao-chapa-topo-sela-pilar.md) ✅ | 2.1 |
+| 70 | P1 | [Rasgo: b − t_rasgo na compressão ⊥ e no cisalhamento](70-rasgo-largura-apoio-cisalhamento.md) ✅ | 2.2 |
+| 71 | P1 | [Altura do rasgo, lâmina de 14 mm, folga no fundo](71-altura-rasgo-folga-fundo.md) ✅ | 2.3, 6.3, 10.8 |
+| 72 | P1 | [Oblongos L1/L1c: posição do pino e curso (retração/fluência)](72-oblongos-L1-posicao-pino-retracao.md) ✅ | 2.4 |
+| 73 | P1 | [Enrijecedores da sela L1c](73-sela-L1c-enrijecedores.md) ✅ | 2.5 |
+| 74 | P1 | [Chumbadores: texto “soldada 8.8” e cortante com alavanca](74-chumbadores-texto-8-8-alavanca.md) ✅ | 2.6 |
+| 75 | P0 | [Ruptura de bloco: pé dos pilares, montante terça–viga, L1/L1c](75-ruptura-de-bloco-pe-pilares-montante.md) ✅ | 2.7–2.9 |
+| 76 | P0 | [Pé do pilar: seção líquida, F90 do impacto, direção do choque, a4,t](76-pe-pilar-impacto-secao-liquida.md) ✅ | 2.10, 3.1 |
+| 77 | P1 | [Terça–viga: apoio em garfo; Tab. 34](77-terca-viga-garfo-tab34.md) ✅ | 2.11, 3.4 |
+| 78 | P1 | [Soldas: especificar e verificar](78-soldas-especificar-verificar.md) ✅ | 2.12 |
+| 79 | P0 | [d0 com folga nos furos das chapas](79-folga-d0-furos-chapas.md) ✅ | 3.2 |
+| 80 | P1 | [Furos da chapa de base: tolerância e aperto](80-furos-chapa-base-tolerancia.md) ✅ | 3.3 |
+
+### Durabilidade
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 81 | P1 | [Retração impedida: ovalizar ⊥ às fibras](81-retracao-impedida-chapas-embutidas.md) ✅ | 4.1 |
+| 82 | P1 | [Beiral e oitão — decisão do autor](82-beiral-oitao-decisao.md) ✅ | 4.2 |
+| 83 | P1 | [Topos, vedação do rasgo, calha e rufos](83-protecao-topos-rasgo-rufos.md) | 4.3, 6.7 ✅ |
+| 84 | P2 | [Faces expostas: acabamento e estética](84-faces-expostas-acabamento.md) | 4.4 ✅ |
+| 85 | P1 | [UC 3.2, espécie e tratamento](85-classe-uso-UC32-tratamento.md) ✅ | 4.5 |
+| 86 | P1 | [Proteção contra corrosão](86-protecao-corrosao-aco.md) | 4.6 ✅ |
+| 87 | P0 | [Pilarete metálico](87-pilarete-metalico.md) ✅ | 4.7, 6.6 |
+
+### Incêndio
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 88 | P1 | [TRRF pela NBR 14432 e CBPMPR](88-incendio-TRRF-NBR14432-CBPR.md) | 5.1, 8.6, 10.7 ✅ |
+| 89 | P2 | [Incêndio localizado de veículo](89-incendio-localizado-veiculo.md) | 5.2 ✅ |
+
+### Desenhos
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 90 | P1 | [L1/L1c: corte A–A, linha oculta, chapa em VG, DES-05](90-desenhos-L1-L1c-corte-vg.md) | 6.1–6.3 ✅ |
+| 91 | P1 | [Desenhos faltantes; soldas/aço/proteção; sela e bases](91-desenhos-faltantes.md) | 6.4–6.6 ✅ |
+
+### Redação, referências e notação
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 92 | P2 | [Retirar a narrativa do processo de revisão](92-redacao-sem-historico-revisao.md) | 7.1 ✅ |
+| 93 | P1 | [Refazer a varredura global com o critério atual](93-refazer-varredura-global.md) | 7.1 (§4.5.2) ✅ |
+| 94 | P2 | [Erros de redação pontuais](94-redacao-erros-pontuais.md) ✅ | 7.2 |
+| 95 | P1 | [Referências: letras, EN 1992-4, “Citado n vezes”, destaque](95-referencias-formato-abnt.md) ✅ | 8.1, 8.3, 8.4 |
+| 96 | P1 | [Afirmações sem fonte](96-afirmacoes-sem-fonte.md) ✅ — dados do autor | 8.2 |
+| 97 | P1 | [Símbolos: ausentes, unicidade, notação única](97-lista-simbolos-unicidade.md) ✅ | 9.1–9.3 |
+| 98 | P2 | [Lista de siglas](98-lista-siglas.md) ✅ | 9.4 |
+
+### Coerência
+| # | Prioridade | Issue | Item |
+|---|-----------|-------|------|
+| 99 | P1 | [Números divergentes, precisão, Apêndice D](99-coerencia-numerica-capitulos.md) — por último ✅ | 10.1, 10.8 |
+| 100 | P1 | [Afirmações que contradizem os resultados](100-afirmacoes-contraditorias.md) | 10.2 ✅ |
+| 101 | P1 | [Objetivos × resultados (terças; objetivo c)](101-objetivos-terca-detalhamento.md) — decisão do autor | 10.3 ✅ |
+| 102 | P1 | [Esforços característicos para a fundação](102-esforcos-caracteristicos-fundacao.md) ✅ | 10.4 |
+| 103 | P2 | [Título e resumo](103-titulo-resumo.md) ✅ — decisão do autor | 10.5, 10.6 |
+| 124 | P1 | [Varredura: causas de reprovação omitidas (`ok` numpy.bool_)](124-varredura-causas-numpy-bool.md) ✅ | achado próprio, 2026-11-15 |
+| 123 | P2 | [Redação: menos certeza do que a demonstração e ajustes pontuais](123-redacao-certeza-e-ajustes.md) ✅ | revisão técnica, item 15 |
+| 122 | P2 | [Resumo e conclusões com o alcance efetivamente demonstrado](122-alcance-conclusoes-resumo.md) ✅ | revisão técnica, item 14 |
+| 121 | P1 | [Validação computacional documentada e versão congelada](121-validacao-computacional-versao.md) ✅ (falta etiquetar a versão) | revisão técnica, item 13 |
+| 120 | P2 | [Especificações de materiais menos categóricas (adesivo, tratamento, GL24h)](120-especificacoes-materiais-redacao.md) ✅ | revisão técnica, item 12 |
+| 119 | P1 | [Incêndio: NPT 008 (nova edição, nov/2026) e análise localizada como estudo exploratório](119-incendio-npt008-2026-exploratorio.md) ✅ — NPT 008 v03/2026 | revisão técnica, item 11 |
+| 118 | P2 | [Hierarquia de ruptura: retirar ductilidade presumida](118-hierarquia-ruptura-ductilidade.md) ✅ | revisão técnica, item 10 |
+| 117 | P2 | [Quantitativo por lista explícita de peças (terças, espaçadores)](117-quantitativo-explicito-pecas.md) ✅ | revisão técnica, item 9 |
+| 116 | P1 | [Equivalência cálculo × cota de desenho × lista de fabricação](116-calculo-desenho-fabricacao.md) ✅ | revisão técnica, item 8 |
+| 115 | P1 | [Memorial: equações que não reproduzem o resultado e tabelas dessincronizadas](115-memorial-equacoes-tabelas-sincronia.md) ✅ | revisão técnica, item 7 |
+| 114 | P1 | [Peso próprio da viga com altura variável (hoje uniforme médio)](114-peso-proprio-variavel-viga.md) ✅ | revisão técnica, item 6 |
+| 113 | P1 | [Rigidez horizontal do apoio no sistema espacial (empuxo nulo)](113-rigidez-horizontal-apoio-sistema.md) ✅ | revisão técnica, item 5 |
+| 112 | P1 | [Deslocamento total sob sucção: folgas, pinos, tirante, chapas e viga](112-deslocamentos-succao-total.md) ✅ | revisão técnica, item 4 |
+| 111 | P1 | [L1: furos ovalizados e engajamento progressivo dos pinos](111-l1-oblongos-engajamento-progressivo.md) ✅ — grupo 3×2 | revisão técnica, item 3 |
+| 110 | **P0** | [Caminho transversal até os frontões e diafragma nas baías intermediárias](110-caminho-transversal-diafragma.md) ✅ | revisão técnica, item 2 |
+| 109 | **P0** | [Vento longitudinal entra sem γ_Q nos contraventamentos](109-vento-longitudinal-sem-gamma-q.md) ✅ | revisão técnica, item 1 |
+| 108 | P2 | [Sela e pé das lâminas do bipartido: tirante por lâmina?](108-tirante-por-lamina-bipartido.md) ✅ mantida a solução atual | — |
+| 107 | P2 | [Largura de 0,30 m passou a aprovar: manter 0,32 m?](107-largura-030-aprova.md) ✅ mantida 0,32 m | — |
+| 106 | P1 | [Efeitos do bipartido e do tirante ainda não propagados](106-efeitos-bipartido-tirante.md) | — ✅ |
+| 105 | P1 | [Concepção das ligações (tirante interno, nó por contato, chapas duplas) e padrão gráfico](105-concepcao-ligacoes-padrao-grafico.md) | — ✅ |
+| 104 | **P0** | [Nó de topo: excentricidade h0 entre escora e topo do pilar](104-no-topo-excentricidade-escora.md) — achado na 91; pilar bipartido | — ✅ |
+
+## Sequência de trabalho
+
+Princípio: decidir o que muda a **concepção** antes de calcular; calcular de **cima para
+baixo** em cada caminho de carga (o que está acima define a força e a geometria do que está
+abaixo); **especificar** depois que as peças estiverem fixas; **desenhar** só a geometria final;
+**texto e coerência** por último, sobre números estáveis.
+
+| Fase | Ordem | Issue | Por que nesta posição |
+|---|---|---|---|
+| 0 — Decisões | 1 | 82 Beiral/oitão | Muda o modelo da viga (balanço), a posição da L1, a exposição dos topos e a classe de uso |
+| | 2 | 101 Terças: dimensionar ou ajustar objetivo | Se dimensionar, muda seção/espaçamento → terça–viga, escoras, nó de topo |
+| | 3 | 85 Espécie e tratamento (UC 3.2) | Pode mudar ρ_k/classe e o texto de materiais |
+| 1 — Concepção/modelo | 4 | (82 implementada, se “sim”) | Maior propagação; tudo abaixo depende dela |
+| | 5 | (101 implementada, se dimensionar) | |
+| | 6 | 87 Pilarete metálico | Muda altura livre do pilar, ponto do impacto e a cadeia da base |
+| 2 — Topo (viga → pilar) | 7 | 72 Oblongos: curso e posição do pino | Define o curso → altura da chapa |
+| | 8 | 71 Altura do rasgo, folga no fundo | Fecha a altura da chapa (977 mm hoje) e a lâmina superior |
+| | 9 | 70 Apoio com b − t_rasgo | Depende da espessura do rasgo |
+| | 10 | 73 Enrijecedores da sela | Sela definida antes de prendê-la ao pilar |
+| | 11 | 81 Retração impedida (critério) | Critério que a 69 deve adotar desde a concepção; aplica a escoras e montante |
+| | 12 | 69 Chapa de topo/sela → pilar | Nova ligação com forças do arrancamento e do nó de topo |
+| | 13 | 77 Terça–viga: garfo e Tab. 34 | Fecha a cobertura |
+| 3 — Base (pilar → fundação) | 14 | 76 Pé do pilar sob impacto | Direção do choque e a4,t mudam a geometria do pé |
+| | 15 | 75 Ruptura de bloco (pé, montante, L1/L1c) | Com a geometria do pé e do montante já fixa |
+| | 16 | 80 Furos da chapa de base e aperto | Chapa de base sobre o pilarete |
+| | 17 | 74 Chumbadores: texto 8.8 e alavanca | Depende de graute/porca e do pilarete |
+| | 18 | 102 Esforços característicos à fundação | Forças finais da base |
+| 4 — Especificação | 19 | 78 Soldas | Todas as chapas já definidas (inclui 69, 73, 87) |
+| | 20 | 86 Corrosão | Lista final de peças de aço |
+| | 21 | 83 Topos, rasgo, calha e rufos | Depende da 82 |
+| | 22 | 84 Faces expostas | Depende da 82 e da 85 |
+| 5 — Incêndio | 23 | 88 TRRF (NBR 14432 / CBPMPR) | Pode retirar a verificação R30 → muda a contagem de verificações |
+| | 24 | 89 Incêndio localizado de veículo | Comentário sobre a solução final |
+| 6 — Resultados globais | 25 | 93 Refazer a varredura global | Só depois de todo cálculo mudar |
+| 7 — Desenhos | 26 | 90 L1/L1c: corte A–A, linha oculta, VG | Geometria final do topo |
+| | 27 | 91 Desenhos faltantes, soldas, aço, níveis | Depende de 69, 78, 86, 87 |
+| 8 — Texto | 28 | 68 Lógica das ligações | Sobre a solução final |
+| | 29 | 92 Retirar a narrativa de revisão | |
+| | 30 | 100 Afirmações contraditórias | |
+| | 31 | 101 (c) Objetivo (c) no §8.1 | Após 69 e 91 |
+| | 32 | 96 Afirmações sem fonte | Dados do autor |
+| | 33 | 95 Formato das referências | Depois de todas as referências novas (EN 1090-2, NBR 14432, NPT…) |
+| | 34 | 97 Lista de símbolos | Depois dos símbolos novos (pilarete, soldas, retração) |
+| | 35 | 98 Lista de siglas | Depois da 88 (TRRF, CBPMPR) |
+| | 36 | 94 Erros pontuais | Passada de estilo sobre o texto já reescrito |
+| | 37 | 103 Título e resumo | Resumo escrito sobre os resultados finais |
+| 9 — Fechamento | 38 | 99 Coerência numérica + Apêndice D | Última execução do pipeline gera texto, apêndices e console |
+| A qualquer momento | — | 67 Nome do curso | Só depende do dado oficial |
+
+Feitas: 79 (d0 com folga) ✅, 82 (beiral 1,00 m em A/C + oitões) ✅, 101 parte (a) (terça 0,20 × 0,40 dimensionada) ✅ — parte (c) após 69/91, 85 (pinus, lamelas tratadas, UC 3.1/3.2) ✅, 87 (pilarete Ø139,7×8, h 0,30 m) ✅, 72 (curso 15 mm abaixo / 20 mm acima) ✅, 71 (pinos a 818 mm, rasgo 892, 108 mm acima) ✅, 70 (b − 29 mm: apoio 0,49, cisalh. 0,41) ✅, 73 (3 enrijecedores 125×125×12,5 + chapas laterais 250) ✅, 81 (D⊥ ≤ 133 mm ou ovalizado ⊥; pé ≤ 3 fileiras) ✅, 69 (chapa vertical + cavilhas no topo; nó deslizante 2×M24) ✅, 77 (garfo M_d/80; l_ef 160; a1/a2 corrigidos) ✅, 76 (a4,t 80 → 2 fileiras; F90 0,58; fora do plano por contato) ✅, 75 (Anexo A completo, conferido na EN 1995-1-1; L3a a2 90) ✅, 80 (furo Ø36 + arruela-chapa soldada) ✅, 74 (chaveta em cruz nas bases correntes) ✅, 102 (característicos por ação, tabelas geradas) ✅, 78 (quadro de soldas, 30 cordões) ✅, 86 (galvanização a fogo + dúplex nas bases; respiros no pilarete) ✅, 83 (rufos ventilados, rasgo ventilado, calha 300×150 com saída por pórtico; DES-10) ✅, 84 (impregnante pigmentado + plano de manutenção) ✅, 88 (isenta de TRRF pela NPT 008 PR; R30 informativo; retardante 5.17) ✅, 89 (incêndio de veículo: madeira 83 min; pilarete com intumescente R60) ✅, 93 (varredura 3.213 pontos; 1.067 aprovadas; b ≥ 0,30 e α ≥ 8° por elementos externos à viga) ✅, 90 (DES-05 L1 + A–A, DES-05B L1c + B–B, DES-05C chapa em VG; furos em linha oculta) ✅, 91 (DES-11 a 14; soldas em cada folha; 7 emendas da corda; montante 2×4 no rasgo superior; terminal CV-H; nó → 104) ✅, 68 (lógica das ligações no texto: caminho único, f_t,90 ≪ f_c,90, borda carregada, Eq. 8.11 chapa espessa, 0,75 critério do autor, tab:cadeia-base) ✅, 92 (narrativa de revisão retirada; varredura de painéis CV refeita: 4/4 adotado) ✅, 100 (afirmações × resultados: CV cobertura 0,89, Tab. 13, §6.8, içamento a 0,247·L iguala M, resumo 'reduziu') ✅, 101 (c) (§8.1 por objetivo; nó de topo declarado não detalhado → 104) ✅, 104 (pilar bipartido nos 14 montantes; nó no nível da escora; DES-15) ✅, 105 (tirante interno, nó por contato, chapas duplas; DES-00, listas de peças; 1.448 → 928 cavilhas) ✅.
+
+**Rastreabilidade:** todos os itens da 4ª revisão (1.1–10.8) estão em alguma issue (coluna “Item”).
+
+## Revisão técnica (comentários tipo banca, 2026-11-14) — issues 109–123
+
+Ordem de execução, seguindo o item 16 dos comentários:
+
+| Etapa | Issues | Por quê |
+|---|---|---|
+| 1 — Ações e caminho de carga | **109** (γ_Q no vento longitudinal), **110** (diafragma transversal) | Mudam forças em todo o contraventamento; 110 pode exigir novo sistema |
+| 2 — Modelo da viga | 114 (peso próprio variável), 113 (rigidez horizontal no sistema, usa o modelo da 110) | Mudam M_Ed e o modelo de apoio |
+| 3 — Ligação de arrancamento | 111 (engajamento progressivo), 112 (deslocamento total) | Pode reformular a L1 |
+| 4 — Sincronização | 115 (memorial), 116 (cálculo × desenho), 117 (quantitativos) | Depois do cálculo estabilizado |
+| 5 — Programa | 121 (verificação independente, versão congelada) | Documenta a versão final |
+| 6 — Incêndio e especificação | 119, 120, 118 | Texto e norma atualizada |
+| 7 — Fechamento | 122 (conclusões), 123 (redação) | Por último |

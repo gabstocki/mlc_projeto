@@ -51,7 +51,7 @@ def test_secao_liquida_menor_que_bruta():
     assert r["A_net_cm2"] < r["A_gross_cm2"]
     assert r["N_t_Rd_kN"] == min(r["N_pl_Rd_kN"], r["N_u_Rd_kN"])
     # A_net = t·(h_p − n_linhas·d0)
-    A_net = 16.0 * (r["h_p_mm"] - 12 * 24.0) / 100.0
+    A_net = 16.0 * (r["h_p_mm"] - 12 * 26.0) / 100.0   # d0 = 24 + 2 (issue 79)
     assert r["A_net_cm2"] == pytest.approx(A_net, rel=1e-3)
 
 
@@ -108,6 +108,7 @@ def test_integracao_L1_real_aprova():
     L1 = dimensionar_ligacao_base(mat.com_duracao(gov.duracao), load, geo, d_mm=24)
     r = chapas_aco_ligacao(L1, geo, t_p_mm=16.0, a_solda_mm=6.0, aco="S275")
     assert r["ok"]
-    for k in ("pino_cisalh", "furo_bearing", "chapa_liquida", "solda"):
+    # a solda passou ao quadro de soldas (issue 78)
+    for k in ("pino_cisalh", "furo_bearing", "chapa_liquida"):
         assert r["etas"][k] < 1.0
     assert r["F_res_kN"] == pytest.approx(L1["F_res_kN"], abs=0.01)

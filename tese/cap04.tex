@@ -19,13 +19,24 @@ tabelas próprias de resultados, a partir do \autoref{cap:predimensionamento}.
 \section{DESCRIÇÃO DA EDIFICAÇÃO}\label{sec:descricao-edificacao}
 
 Trata-se de uma cobertura destinada a estacionamento de veículos, aberta nas
-quatro faces, com 40,5 m de largura por 46,0 m de comprimento, perfazendo
-1.863 m\textsuperscript{2} em planta. A estrutura é composta por nove pórticos
-transversais igualmente espaçados a cada 5,75 m.
+quatro faces, com 40,5 m de largura por 46,0 m de comprimento entre eixos dos
+pilares de perímetro, perfazendo 1.863 m\textsuperscript{2} de área interna. A
+estrutura é composta por nove pórticos transversais igualmente espaçados a cada
+5,75 m.
+
+A cobertura projeta-se 1,00 m além da face externa dos pilares de perímetro,
+em todo o contorno, para proteger da chuva os topos das vigas e das terças, as
+ligações de topo e o trecho superior dos pilares. Nos alinhamentos A e C, o
+beiral é formado pelo prolongamento da própria viga em balanço além do apoio,
+com o extradorso continuando a água e uma terça de ponta na extremidade. Nos
+eixos 1 e 9, o oitão é formado pelo prolongamento das terças em balanço além do
+pórtico de frontão. Medidos dos eixos, os balanços são de 1,135 m na viga e de
+1,16 m na terça, e a cobertura passa a medir 42,77 m por 48,32 m, ou
+2.067 m\textsuperscript{2} em planta, sem alteração da área interna.
 
 Cada pórtico é formado por três pilares, sendo dois laterais e um central, e
 por duas vigas de duplo-bisel de 20,25 m de vão cada uma, apoiadas sobre eles.
-Os pilares têm 7,0 m de altura. Como cada viga tem a cumeeira a meio vão, a
+Os pilares têm 7,0 m de altura, do topo da chapa de base ao apoio da viga; os 0,30 m inferiores são de um pilarete metálico que afasta a madeira do piso, e a peça de madeira mede 6,70 m. Como cada viga tem a cumeeira a meio vão, a
 cobertura resulta em duas águas duplas dispostas lado a lado, com calha central
 sobre a linha de pilares intermediários.
 
@@ -65,23 +76,23 @@ extradorso são as terças.
 
 A \autoref{tab:geometria-edificacao} reúne os dados geométricos de entrada,
 fixados pelo uso da edificação. A inclinação, as alturas e a largura da viga e
-as seções dos pilares não constam dela, porque resultam do pré-dimensionamento e
-estão reunidas na \autoref{tab:criterios-predim}.
+as seções dos pilares e das terças não constam dela, porque resultam do
+pré-dimensionamento e estão reunidas na \autoref{tab:criterios-predim}.
 
 \tabela{Dados geométricos de entrada da edificação}{\footnotesize
 \begin{tabular}{lcrl}
 \toprule
     \textbf{Parâmetro} & \textbf{Símbolo} & \textbf{Valor} & \textbf{Unidade} \\
 \midrule
-    Largura total em planta              & $B_{tot}$ & 40,50 & m \\
-    Comprimento total em planta          & $L_{tot}$ & 46,00 & m \\
+    Largura entre eixos de perímetro     & $B_{tot}$ & 40,50 & m \\
+    Comprimento entre eixos de perímetro & $L_{tot}$ & 46,00 & m \\
     Vão de cada pórtico                  & $L$       & 20,25 & m \\
     Número de vãos por pórtico           & --        & 2     & -- \\
     Número de pórticos                   & --        & 9     & -- \\
     Espaçamento entre pórticos           & $L_T$     &  5,75 & m \\
     Altura dos pilares                   & $H$       &  7,00 & m \\
-    Seção das terças                     & $b_t \times h_t$ & 0,20 $\times$ 0,58 & m \\
-    Espaçamento entre terças             & $s$       &  2,53 & m \\
+    Espaçamento entre terças             & $s_t$     &  2,53 & m \\
+    Projeção do beiral e do oitão além da face dos pilares & -- & 1,00 & m \\
 \bottomrule
 \end{tabular}}{Elaborado pelo autor (2026)}{geometria-edificacao}{}{}
 
@@ -107,9 +118,11 @@ texto onde cada elemento é discutido.
     P1 a P27 & Pilares & P$(3i-2)$ em A, P$(3i-1)$ em B e P$(3i)$ em C, no pórtico $i$; cantos P1, P3, P25 e P27 \\
     PF1, PF2 & Pilares de frontão & Eixo 1 a 5,75 m de A; eixo 9 a 5,75 m de C \\
     T1 a T17 & Linhas de terças & De A para C, a cada 2,53 m; T1, T9 e T17 sobre os apoios \\
+    T0, T18 & Terças de ponta & Na extremidade dos beirais de A e de C \\
     CV-H1, CV-H2 & Contraventamento da cobertura & Baías 1--2 e 8--9 \\
     CV-V1 a CV-V8 & Painéis verticais & A: 1--2, 8--9; C: 1--2, 8--9; B: 1--2, 2--3, 7--8, 8--9 \\
     CV-T1, CV-T2 & Painéis dos frontões & P1--PF1 no eixo 1; PF2--P27 no eixo 9 \\
+    CV-D & Alma do diafragma & Todos os painéis entre terças das baías 2--3 a 7--8 \\
     L1, L1c, L1f & Ligações de topo & Viga sobre pilar lateral, sela do pilar central e topo do pilar de frontão \\
     L3, L3c, L3f, L3a & Ligações de base & Corrente lateral, corrente central, pilar de frontão e base ancorada com chaveta \\
 \bottomrule
@@ -154,7 +167,7 @@ ligação.
 \end{tabular}}{Elaborado pelo autor (2026) com base na EN 14080 \cite{EN14080:2013}}{gl24h}{}{}
 
 A resistência à tração perpendicular às fibras, de apenas 0,5 MPa, corresponde
-a cerca de dois por cento da resistência à flexão. É essa desproporção que
+a cerca de 2~\% da resistência à flexão. É essa desproporção que
 torna determinantes as verificações da zona de cumeeira e do fendilhamento nas
 ligações, discutidas no \autoref{cap:dimensionamento} e no
 \autoref{cap:detalhamento}.
@@ -210,7 +223,8 @@ ação de menor duração entre as presentes.
 O coeficiente $k_{def}$ quantifica a fluência e é empregado nas verificações de
 estado-limite de serviço para converter a flecha instantânea na flecha final. A
 progressão de 0,60 na classe 1 até 2,00 na classe 3 mostra que a deformação
-diferida de uma peça exposta pode triplicar a parcela instantânea, o que faz da
+diferida de uma peça exposta chega ao dobro da instantânea, e a flecha final, ao
+triplo dela, o que faz da
 classe de serviço uma decisão de projeto com consequência direta sobre a altura
 da seção.
 
@@ -225,23 +239,79 @@ $k_{def} = 2{,}00$, o maior previsto na norma.
 
 Essa classificação também determina as exigências de durabilidade. A
 \autoref{tab:materiais-complementares} reúne as decisões correspondentes e os
-demais materiais empregados. O adesivo Tipo I é o único admitido para peças em
-classe de serviço 3, e o tratamento preservativo não dispensa o detalhamento de
-proteção construtiva, tratado no \autoref{cap:detalhamento}.
+demais materiais empregados.
+
+A madeira lamelada colada deve ser da classe GL24h da EN 14080
+\cite{EN14080:2013}, com as propriedades da \autoref{tab:gl24h} declaradas pelo
+fabricante e asseguradas pelo controle de produção que a norma exige, da
+classificação das lamelas aos ensaios das linhas de cola e das emendas; ou de
+classe com propriedades ao menos equivalentes, comprovadas conforme a ABNT
+NBR 7190-1 \cite{NBR7190-1:2022}. A classe não se infere da espécie: decorre da
+classificação das lamelas e do processo do fabricante. A espécie usual na MLC
+produzida no Paraná é o pinus de reflorestamento, \textit{Pinus taeda} ou
+\textit{Pinus elliottii}, compatível com a classe exigida, e é a ela que se
+referem as considerações de durabilidade a seguir. Nas toras de reflorestamento, o alburno ocupa a maior parte da seção,
+e a EN 350 \cite{EN350:2016} classifica o alburno de qualquer espécie como não
+durável; a proteção vem, portanto, do tratamento, e não da durabilidade natural.
+O alburno do pinus é permeável, o que permite a impregnação completa.
+
+A classe de uso segue a EN 335 \cite{EN335:2013} e depende da posição da peça.
+Sob a cobertura, protegidos pelo beiral e pelos oitões, as vigas, as terças e
+os pilares do alinhamento central estão sujeitos apenas a umedecimento
+ocasional pela chuva conduzida pelo vento, sem acúmulo de água: classe de uso
+3.1. Os pilares de perímetro, nos alinhamentos A e C, nos cantos e nos frontões,
+têm o fuste exposto à chuva abaixo do beiral e podem permanecer úmidos por
+períodos prolongados: classe de uso 3.2. Os topos das vigas e das terças na
+ponta dos balanços, que seriam igualmente da classe 3.2, recebem selagem e rufo
+ventilado (\autoref{ssec:topos-expostos}) e passam à classe 3.1.
+
+O tratamento é especificado pela condição mais severa, para que todas as peças
+saiam do mesmo processo: as lamelas são tratadas em autoclave, por vácuo e
+pressão, com preservativo hidrossolúvel à base de cobre, \criarsigla*{CCA}{arseniato de cobre cromatado} ou
+\criarsigla*{CCB}{borato de cobre cromatado}, antes da
+colagem, com penetração total do alburno, classe NP5 da EN 351-1
+\cite{EN351-1:2007}, e retenção correspondente à classe de uso 3. Depois do
+tratamento, as lamelas são secas até o teor de umidade de colagem e
+aplainadas. O adesivo é especificado por desempenho: adesivo estrutural do
+Tipo I, adequado à classe de serviço 3, conforme a EN 301 \cite{EN301:2017}, que
+abrange os fenólicos, como o resorcinol-fenol-formaldeído, e os aminoplásticos,
+como a melamina-ureia-formaldeído, ou conforme a EN 15425 \cite{EN15425:2017},
+para os poliuretanos monocomponentes. A escolha entre eles é do fabricante. Como
+o preservativo pode afetar a adesão, a compatibilidade entre a lamela tratada e o
+adesivo escolhido deve ser demonstrada pelo fabricante, nos ensaios de
+delaminação e de cisalhamento da linha de cola exigidos pela EN 14080
+\cite{EN14080:2013} no controle de produção. A sequência adotada, tratar antes de
+colar, é a usual. O tratamento do elemento já colado com preservativo
+hidrossolúvel não é especificado, porque o umedecimento e a secagem posteriores
+solicitam as linhas de cola; só seria aceitável com processo qualificado pelo
+fabricante para esse fim, com os mesmos ensaios de linha de cola feitos depois
+do tratamento. Cortes, furos e rasgos de ligação
+feitos depois do tratamento expõem madeira não tratada e recebem preservativo
+de aplicação superficial. O tratamento não dispensa a proteção construtiva,
+tratada no \autoref{cap:detalhamento}. A classe de serviço 3 e o preservativo à
+base de cobre definem também a proteção contra corrosão das peças de aço,
+especificada na \autoref{sec:protecao-corrosao}.
 
 \tabela
 {Materiais complementares e exigências de durabilidade}
 {\footnotesize
-\begin{tabular}{lll}
+\begin{tabular}{p{4.9cm}p{5.0cm}l}
 \toprule
     \textbf{Item} & \textbf{Especificação} & \textbf{Referência} \\
 \midrule
-    Classe de uso da madeira           & UC 3.1     & EN 335 \cite{EN335:2013} \\
-    Adesivo estrutural                 & Tipo I     & EN 301 \cite{EN301:2017} \\
-    Tratamento preservativo            & Exigido    & EN 351-1 \cite{EN351-1:2007} \\
+    Madeira lamelada colada            & GL24h, propriedades declaradas e controle de produção & EN 14080 \cite{EN14080:2013} \\
+    Espécie usual                      & Pinus de reflorestamento & -- \\
+    Classe de uso: pilares de perímetro & UC 3.2    & EN 335 \cite{EN335:2013} \\
+    Classe de uso: demais peças        & UC 3.1     & EN 335 \cite{EN335:2013} \\
+    Tratamento preservativo            & Lamelas em autoclave, CCA ou CCB, NP5 & EN 351-1 \cite{EN351-1:2007} \\
+    Adesivo estrutural                 & Tipo I, classe de serviço 3, compatível com o preservativo; EN 301 ou EN 15425 & EN 14080 \cite{EN14080:2013} \\
     Aço das barras de contraventamento & S235       & EN 1993-1-1 \cite{EN1993-1-1:2005} \\
     Aço das chapas de ligação          & S275       & EN 1993-1-1 \cite{EN1993-1-1:2005} \\
-    Aço dos chumbadores                & Classe 8.8 & EN 1993-1-8 \cite{EN1993-1-8:2005} \\
+    Aço das cavilhas                   & S275, $f_{u,k} \geq 400$ MPa & EN 1995-1-1 \cite{EN1995-1-1:2004} \\
+    Aço dos chumbadores e tirantes internos & Classe 8.8 & EN 1993-1-8 \cite{EN1993-1-8:2005} \\
+    Acabamento das faces              & Impregnante pigmentado, permeável ao vapor & EN 927-1 \cite{EN927-1:2013} \\
+    Retardante ao fogo                 & De superfície, para uso exterior & NPT 008 \cite{CBMPR-NPT008:2026} \\
+    Proteção do aço                    & Galvanização a fogo; dúplex nas bases & EN ISO 1461 \cite{ENISO1461:2022} \\
     Concreto da fundação               & C25/30     & EN 1992-4 \cite{EN1992-4:2018} \\
 \bottomrule
 \end{tabular}}
@@ -266,7 +336,7 @@ a carga concentrada não é concomitante com a distribuída nem com o vento.
 \toprule
     \textbf{Grandeza} & \textbf{Símbolo} & \textbf{Valor} & \textbf{Unidade} & \textbf{Origem} \\
 \midrule
-    Telha metálica trapezoidal      & $g_{tel}$ & 0,10 & kN/m\textsuperscript{2} & Ficha técnica \\
+    Telha metálica trapezoidal      & $g_{tel}$ & 0,10 & kN/m\textsuperscript{2} & Premissa, ordem de grandeza de catálogo \\
     Instalações e serviços          & $g_{ins}$ & 0,10 & kN/m\textsuperscript{2} & Estimativa de projeto \\
     Sobrecarga de cobertura         & $q_k$ & 0,40 & kN/m\textsuperscript{2} & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
     Carga concentrada de manutenção & $Q_k$ & 1,00 & kN & EN 1991-1-1 \cite{EN1991-1-1:2002} \\
@@ -300,44 +370,13 @@ anexo nacional brasileiro. Diversos parâmetros desses documentos são deixados 
 determinação de cada país, e o texto do próprio Eurocódigo apenas recomenda um
 valor. Na ausência de anexo, o projeto adota integralmente os valores
 recomendados, e essa escolha é declarada de forma explícita em toda saída de
-cálculo, conforme reproduzido na \autoref{tab:ndp}. São dezoito ao todo, e
-caso a obra venha a ser submetida sob um anexo nacional concreto, todos devem
+cálculo, conforme reproduzido na \autoref{tab:ndp}. São \nNDPExt{} ao todo, e
+caso a obra venha a ser submetida a um anexo nacional concreto, todos devem
 ser revistos.
 
-\tabela
-{Parâmetros de determinação nacional adotados}
-{\scriptsize
-\begin{tabular}{lrl}
-\toprule
-    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Cláusula de origem} \\
-\midrule
-    $\gamma_G$ desfavorável            & 1,35  & EN 1990, tab. A1.2(B) \\
-    $\gamma_G$ favorável               & 1,00  & EN 1990, tab. A1.2(B) \\
-    $\gamma_G$ estabilizante, EQU      & 0,90  & EN 1990, tab. A1.2(A) \\
-    $\gamma_G$ desestabilizante, EQU   & 1,10  & EN 1990, tab. A1.2(A) \\
-    $\gamma_Q$                         & 1,50  & EN 1990, tab. A1.2(B) \\
-    $\psi_0$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
-    $\psi_1$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
-    $\psi_2$ sobrecarga                & 0,00  & EN 1990, tab. A1.1, categoria H \\
-    $\psi_0$ vento                     & 0,60  & EN 1990, tab. A1.1 \\
-    $\psi_2$ vento                     & 0,00  & EN 1990, tab. A1.1 \\
-    $\gamma_M$ madeira                 & 1,25  & EN 1995-1-1, tab. 2.3 \\
-    $\gamma_M$ ligação                 & 1,30  & EN 1995-1-1, tab. 2.3 \\
-    $k_{cr}$                           & 0,67  & EN 1995-1-1, item 6.1.7 \\
-    Limite de flecha instantânea       & $L/300$ & EN 1995-1-1, tab. 7.2 \\
-    Limite de flecha final líquida     & $L/250$ & EN 1995-1-1, tab. 7.2 \\
-    $\alpha_{cc}$                      & 1,00  & EN 1992-1-1, item 3.1.6(1) \\
-    $\gamma_C$                         & 1,50  & EN 1992-1-1, tab. 2.1N \\
-    $\alpha_{cr}$ mínimo               & 10,0  & EN 1993-1-1, item 5.2.1(3), por analogia \\
-\bottomrule
-\end{tabular}}
-{Elaborado pelo autor (2026)}
-{ndp}
-{}
-{}
+\input{tab_ndp}
 
-Coeficientes como $\gamma_M$ e os limites de
-flecha incidem diretamente sobre o dimensionamento, e um anexo nacional que os
+Coeficientes como $\gamma_M$ e $\psi_0$ incidem diretamente sobre o dimensionamento, e um anexo nacional que os
 alterasse modificaria as taxas de utilização apresentadas no
 \autoref{cap:dimensionamento}.
 
@@ -346,12 +385,12 @@ alterasse modificaria as taxas de utilização apresentadas no
 A estrutura é uma cobertura isolada no sentido do item 7.2 da ABNT NBR 6123
 \cite{NBR6123:2023}: uma cobertura sobre suportes de reduzidas dimensões, aberta
 nas quatro faces. Os coeficientes da tabela 25, de coberturas isoladas a duas
-águas, só se aplicam, porém, quando $0{,}07 \leq \operatorname{tg}\theta \leq 0{,}6$
+águas, só se aplicam, porém, quando $0{,}07 \leq \operatorname{tg}\alpha \leq 0{,}6$
 e $h \geq 0{,}5\,\ell_2$ (item 7.2.1), em que $h$ é a altura livre entre o piso e a
 aresta horizontal mais baixa da cobertura e $\ell_2$ a profundidade da cobertura
 medida perpendicularmente à cumeeira. A primeira condição é atendida, com
-$\operatorname{tg}\theta = \operatorname{tg} 10^{\circ} = 0{,}176$. A segunda não: adotou-se
-$h = 7{,}00$ m, o pé-direito até o beiral, ao passo que $0{,}5\,\ell_2 = 20{,}25$ m
+$\operatorname{tg}\alpha = \operatorname{tg} 10^{\circ} = 0{,}176$. A segunda não: adotou-se
+$H = 7{,}00$ m, o pé-direito até o beiral, ao passo que $0{,}5\,\ell_2 = 20{,}25$ m
 para a cobertura inteira, de 40,5 m, e ao menos 10,1 m para cada água dupla, de
 20,25 m. A geometria está fora do domínio da tabela 25, e a norma não permite
 extrapolá-la.
@@ -364,8 +403,9 @@ $c_{pi} = -0{,}3$ para obstruções na borda de barlavento. As duas condições
 ocorrem aqui, e os veículos podem ocupar toda a área coberta, de modo que a zona
 de obstrução corresponde à cobertura inteira. Os coeficientes de pressão
 externa são os da tabela 10 da norma, para telhados múltiplos, simétricos, de
-tramos iguais, aplicável por ser $h = 7{,}00$ m inferior à largura do tramo,
-$a' = 20{,}25$ m. Por permanecer a estrutura uma cobertura isolada, aplicam-se
+tramos iguais, aplicável por ser $H = 7{,}00$ m inferior à largura do tramo,
+$a' = 20{,}25$ m; tramo, na terminologia da norma, é cada um dos dois vãos do
+pórtico, com as suas duas águas. Por permanecer a estrutura uma cobertura isolada, aplicam-se
 ainda o item 7.2.2, à força de atrito com vento paralelo à cumeeira, e o item
 7.2.6, aos elementos de vedação. O detalhamento e os padrões de coeficientes
 varridos constam do \autoref{cap:modelagem}.
@@ -375,5 +415,5 @@ varridos constam do \autoref{cap:modelagem}.
 A EN 1995-1-1 \cite{EN1995-1-1:2004} admite classificar a ação do vento como de
 curta duração ou como instantânea. Na classe de serviço 3, a primeira conduz a
 $k_{mod} = 0{,}70$ e a segunda a $k_{mod} = 0{,}90$. Adotou-se a classificação como
-curta duração, de resultado conservador, o que reduz em cerca de vinte e dois
-por cento a resistência mobilizável nas combinações governadas pelo vento.
+curta duração, de resultado conservador, o que reduz em cerca de 22~\%
+a resistência mobilizável nas combinações governadas pelo vento.

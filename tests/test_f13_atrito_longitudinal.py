@@ -172,7 +172,7 @@ def test_nao_restam_parametros_com_clausula_por_confirmar():
     """
     from mlc_projeto.core.normativo import parametros_a_confirmar
 
-    ESPERADAS = {"S3", "classe_consequencia", "K_FI", "R_fogo_req_min"}
+    ESPERADAS = {"S3", "classe_consequencia", "K_FI"}   # R_fogo: issue 88 (isenta, NPT 008)
 
     pendentes = parametros_a_confirmar()
     assert "coef_atrito_cobertura_isolada" not in pendentes, (

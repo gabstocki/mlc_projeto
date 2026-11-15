@@ -121,7 +121,8 @@ def test_verificacao_completa_inclui_vento_e_nocional():
     # lateral total é ~847 kN, contra os ~125 kN do coeficiente Cf=0,04
     # anterior. Distribui-se por 6 painéis (era 2), o que baixa o download no
     # montante de 515,8 para 171,9 kN e desafoga pilar de canto e ancoragem.
-    assert 700.0 < res["V_lat_total_kN"] < 1000.0
+    # issue 109: o vento longitudinal entra majorado por γ_Q = 1,5 (≈ 1.405 kN)
+    assert 1100.0 < res["V_lat_total_kN"] < 1600.0
     # diâmetro auto dentro do alvo e verificação aprovada
     assert res["d_auto"] is True
     assert res["ok"] is True

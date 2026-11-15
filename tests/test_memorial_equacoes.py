@@ -26,10 +26,10 @@ def test_apendice_tem_as_verificacoes_governantes(res, tmp_path):
     tex = out.read_text()
     for rotulo in ("cisalhamento", "cumeeira", "borda-inclinada", "flexocompressao",
                    "flecha", "pilar-central", "terca", "telha", "cv-cobertura",
-                   "cv-vertical", "l1", "ancoragem"):
+                   "cv-vertical", "l1", "pe-bloco", "ancoragem"):
         assert f"\\label{{eq:mem-{rotulo}}}" in tex
     # align quebrável entre páginas (revisão de formatação), um número por bloco
-    assert tex.count("\\begin{align}") == tex.count("\\end{align}") == 12
+    assert tex.count("\\begin{align}") == tex.count("\\end{align}") == 13
 
 
 def test_valores_saem_dos_resultados(res, tmp_path):

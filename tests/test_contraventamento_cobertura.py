@@ -124,15 +124,12 @@ def test_l1_penalizado_e_o_vao_da_viga():
     assert r["l_1_efetivo_m"] == pytest.approx(20.25)
 
 
-def test_diagonal_28mm_passa_e_cobertura_ok():
-    """Ø28 mm (redimensionada) passa e a cobertura valida a restrição das terças.
-
-    Com a ação longitudinal normativa (§7.2.2) a Ø22 reprova e deixa de validar
-    a restrição lateral (l_1 da flambagem lateral passaria ao vão da viga).
-    Ø25 passa sem margem; Ø28 adotada.
-    """
-    r = _res(d_barra=28.0)
-    assert r["eta_diag_N"] < 1.0
+def test_diagonal_36mm_passa_e_cobertura_ok():
+    """Com o vento longitudinal majorado por γ_Q (issue 109) a Ø28 reprova; a Ø36
+    adotada passa e a cobertura valida a restrição das terças."""
+    assert _res(d_barra=28.0)["eta_diag_N"] > 1.0
+    r = _res(d_barra=36.0)
+    assert r["eta_diag_N"] <= 0.90
     assert r["cobertura_ok"] is True
     assert r["l_1_efetivo_m"] == pytest.approx(2.53, abs=1e-6)  # terças válidas
 

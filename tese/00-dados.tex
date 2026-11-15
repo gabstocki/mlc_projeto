@@ -37,8 +37,8 @@
 
 % Identificação
 %-----------------------------------------------------------------------------
-\titulo{Dimensionamento automatizado de galpão em madeira lamelada colada
-segundo o Eurocódigo 5}
+\titulo{Dimensionamento automatizado de cobertura para estacionamento em
+madeira lamelada colada segundo o Eurocódigo 5}
 
 \autor{Gabriel Goes Stocki}
 \local{Curitiba}
@@ -51,8 +51,11 @@ segundo o Eurocódigo 5}
 \orientador{Prof. Dr. Elvidio Gavassoni Neto}
 \orientadora{}
 
-%% TODO: dado ausente — confirmar a titulação do orientador (Dr., DSc, PhD) e
-%% acrescentá-la após o nome, no formato do modelo: "Prof. Fulano de Tal, DSc".
+% Titulação informada pelo autor (2026-11-14): Doutor e Mestre em Engenharia
+% Estrutural (PUC-Rio); Engenheiro de Terminais e Dutos (Universidade Petrobras);
+% Engenheiro Civil (UFES); Agrimensor (ETFES). Na folha de rosto e no termo de
+% aprovação entra só o título acadêmico mais alto, abreviado antes do nome:
+% "Prof. Dr." (doutorado). Os demais não se indicam nos pré-textuais.
 
 % Não há coorientação neste trabalho.
 \coorientador{}
@@ -72,16 +75,14 @@ Universidade Federal do Paraná}
 
 \def \ImprimirProgramaPos{}
 
-\def \ImprimirCurso{Curso de Engenharia Civil}
+\def \ImprimirCurso{Pós-Graduação \textit{Lato Sensu} em Estruturas}
 
 \preambulo{%
 Trabalho de Conclusão de Curso apresentado como requisito parcial à obtenção do
-título de Especialista em Estruturas, Curso de Engenharia Civil, Setor de
-Tecnologia, Universidade Federal do Paraná}
+título de Especialista em Estruturas, Pós-Graduação \textit{Lato Sensu} em
+Estruturas, Setor de Tecnologia, Universidade Federal do Paraná}
 
-%% TODO: verificar — confirmar a denominação exata do curso e do setor junto à
-%% coordenação, bem como a redação do preâmbulo exigida pelo regulamento de
-%% trabalho de conclusão de curso.
+%% Denominação do curso e título conferido informados pelo autor (issue 67).
 
 %-----------------------------------------------------------------------------
 \newcommand{\imprimirCurso}{}
@@ -137,30 +138,40 @@ Tecnologia, Universidade Federal do Paraná}
 % Resumo e palavras-chave
 %-----------------------------------------------------------------------------
 \newcommand{\ResumoTexto}{%
-Este trabalho apresenta o dimensionamento e a verificação estrutural de um
-galpão em madeira lamelada colada destinado a estacionamento, com 40,5 m por
-46,0 m em planta, composto por nove pórticos de duas vigas de duplo-bisel de
+Este trabalho apresenta o dimensionamento e a verificação estrutural de uma
+cobertura para estacionamento em madeira lamelada colada, aberta nas quatro
+faces, com 40,5 m por 46,0 m em planta, composta por nove pórticos de duas vigas de duplo-bisel de
 20,25 m de vão apoiadas sobre três pilares. O dimensionamento segue a
 EN 1995-1-1, complementada pela EN 1990 e pela EN 14080, com as forças devidas
-ao vento determinadas pela ABNT NBR 6123. A cadeia de sessenta e quatro verificações foi
-implementada em programa de computador submetido a suíte de 736 testes
-automatizados, o que permitiu avaliar 1.391 geometrias candidatas pelo mesmo
-conjunto de verificações que produz o memorial final, assegurando equivalência
-entre a fase de concepção e a de verificação. A análise da rigidez relativa
+ao vento determinadas pela ABNT NBR 6123. A cadeia de \nVerifExt{} verificações foi
+implementada em programa de computador submetido a suíte de \nTestes{} testes
+automatizados e conferido por casos de referência independentes, o que
+permitiu avaliar 3.213 geometrias candidatas pelo mesmo conjunto de verificações
+que produz o memorial final, com o mesmo código na fase de concepção e na de
+verificação. A análise da rigidez relativa
 entre a viga e os seus apoios demonstrou que o empuxo de arco não se
-desenvolve, o que elevou o momento de projeto em 71,4\% em relação ao modelo de
-arco e dispensou o tirante de base. Os resultados indicam que nenhuma
-verificação da viga governa o dimensionamento: a maior taxa de utilização da
-seção é de 0,39, por cisalhamento, enquanto o conjunto é governado pelo
-contraventamento transversal, com 0,85. A parcela de atrito do vento
+desenvolve, o que elevou o momento de projeto em 70,4\% em relação ao modelo de
+arco e dispensou o tirante de base. Com vigas e pilares rotulados, a força
+transversal só chega aos frontões por um diafragma com alma em todas as baías.
+Na solução adotada, com os critérios de margem e os detalhes escolhidos, a maior
+taxa da viga é de 0,58, no apoio sobre a sela central, e as maiores utilizações
+estão nas peças de aço das ligações, nos contraventamentos e nas lâminas dos
+pilares montantes, com até 0,91, e no critério de engajamento dos pinos da
+ligação entre viga e pilar, com \etaMaxGlobal. A parcela de atrito do vento
 paralelo à cumeeira, prescrita pela norma brasileira, mostrou-se determinante
 para todo o sistema de estabilização longitudinal. Apoiar a viga por contato
-direto sobre o pilar, deixando aos pinos apenas o arrancamento, eliminou o risco
-de fendilhamento nas ligações entre viga e pilar sem necessidade de reforço. Conclui-se que, em
-edificações abertas de cobertura leve, a estabilização determina o
-dimensionamento mais do que a resistência dos elementos, e que a automação da
-cadeia de verificação permite conhecer a posição da solução adotada no espaço
-de soluções viáveis.
+direto sobre o pilar, deixando aos pinos apenas o arrancamento, reduziu o
+fendilhamento nas ligações entre viga e pilar a uma taxa de 0,67, sem necessidade
+de reforço. As ligações, a ancoragem e os demais elementos foram detalhados em
+16 folhas de desenho cotadas e em escala, geradas pelo mesmo programa, que
+fornece também os esforços destinados ao projeto da fundação. A estimativa
+preliminar de custo da estrutura resultou em R\$ \custoTotalMi{} milhões, ou
+R\$ \custoPorMetro{} por metro quadrado coberto, dos quais \custoPctMadeira~\%
+correspondem à madeira. Conclui-se que, na solução estudada, os sistemas de
+estabilização e os detalhes das ligações condicionaram o projeto tanto quanto a
+resistência da viga, e que a automação da cadeia de verificação permite
+conhecer a posição da solução adotada entre as geometrias aprovadas na grade
+examinada.
 }
 
 \newcommand{\PalavraschaveTexto}{%
@@ -171,28 +182,40 @@ paramétrica; contraventamento.}
 %-----------------------------------------------------------------------------
 \newcommand{\AbstractTexto}{%
 This work presents the structural design and verification of a glued laminated
-timber shed intended for vehicle parking, measuring 40.5 m by 46.0 m in plan
+timber parking canopy, open on all four sides, measuring 40.5 m by 46.0 m in plan
 and comprising nine frames of two double-tapered beams spanning 20.25 m each,
 supported on three columns. The design follows EN 1995-1-1, complemented by
 EN 1990 and EN 14080, with wind actions determined according to the Brazilian
-standard ABNT NBR 6123. The chain of sixty-four verifications was implemented in a
-computer program subjected to a suite of 736 automated tests, which made it
-possible to assess 1,391 candidate geometries using the same set of
-verifications that produces the final design report, thereby ensuring
-equivalence between the conceptual and the verification stages. Analysis of the
+standard ABNT NBR 6123. The chain of \nVerif{} verifications was implemented in a
+computer program subjected to a suite of \nTestes{} automated tests and checked
+against independent reference cases, which made it possible to assess 3,213
+candidate geometries using the same set of verifications that produces the
+final design report, with the same code in the conceptual and the verification
+stages. Analysis of the
 relative stiffness between the beam and its supports showed that arch thrust
-does not develop, which raised the design bending moment by 71.4\% with respect
-to the arch model and rendered the base tie unnecessary. The results indicate
-that no beam verification governs the design: the highest utilisation ratio of
-the cross section is 0.39, due to shear, whereas the assembly is governed by
-the transverse (gable) bracing, at 0.85. The wind friction component parallel to the ridge,
+does not develop, which raised the design bending moment by 70.4\% with respect
+to the arch model and rendered the base tie unnecessary. With pinned beams and
+columns, the transverse force reaches the gable ends only through a roof
+diaphragm with bracing in every bay. In the adopted solution, under the chosen
+margin criteria and details, the highest beam utilisation is 0.58, in bearing on
+the central saddle, and the highest utilisations are in the steel parts of the
+connections, in the bracing systems and in the leaves of the bracing columns, at
+up to 0.91, and in the dowel engagement criterion of the beam-to-column
+connection, at 0.95. The wind friction component parallel to the ridge,
 prescribed by the Brazilian standard, proved decisive for the entire
 longitudinal stabilisation system. Supporting the beam by direct bearing on the
-column, leaving only the uplift to the dowels, removed the splitting risk at the
-beam-to-column connections without reinforcement. It is concluded that, in open
-buildings with lightweight roofs, stabilisation governs the design more than
-member resistance, and that automating the verification chain makes it possible
-to locate the adopted solution within the space of feasible solutions.
+column, leaving only the uplift to the dowels, reduced splitting at the
+beam-to-column connections to a utilisation ratio of 0.67, without
+reinforcement. The connections, the anchorage and the remaining members were
+detailed in 16 dimensioned, scaled drawing sheets produced by the same program,
+which also delivers the design forces for the foundation design. The preliminary
+cost estimate of the structure is BRL \custoTotalMiEn{} million, or
+BRL \custoPorMetroEn{} per square metre of covered area, of which
+\custoPctMadeira\% corresponds to the timber. It is concluded that, in the
+solution studied, the stabilisation systems and the connection details
+conditioned the design as much as the beam resistance, and that automating the
+verification chain makes it possible to locate the adopted solution among the
+geometries approved in the examined grid.
 }
 
 \newcommand{\KeywordsTexto}{%

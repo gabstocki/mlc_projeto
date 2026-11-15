@@ -64,7 +64,7 @@ from mlc_projeto.checks.elu.estabilidade_global import (
     forca_nocional as _forca_nocional_ec5,
 )
 from mlc_projeto.core.geometry  import GeometriaViga
-from mlc_projeto.core.loads     import Carregamentos
+from mlc_projeto.core.loads     import Carregamentos, GAMMA_Q
 
 
 # ── Constantes de aço (EN 1993-1-1) ───────────────────────────────────────────
@@ -410,8 +410,11 @@ def verificar_contraventamento_vertical(
     n_pan = max(1, int(n_paineis_long))
 
     # ── 1) Demanda de vento longitudinal θ=0° ─────────────────────────────────
+    # `vento_0` é CARACTERÍSTICO; o ELU com vento dominante leva γ_Q = 1,5 (issue 109).
+    # A nocional H_imp já sai da reação vertical de cálculo e não recebe γ_Q.
     vento_0 = getattr(load, "vento_0", None) or {}
-    F_vento0_kN = float(vento_0.get("F_total_kN", 0.0))
+    F_vento0_k_kN = float(vento_0.get("F_total_kN", 0.0))
+    F_vento0_kN = GAMMA_Q * F_vento0_k_kN
 
     # ── 2) Força nocional (imperfeição global) — EN 1995-1-1 §5.4.4 ───────────
     # Resíduo do [F-06]: a nocional é φ·V_Ed,vertical, logo o que se maximiza é
@@ -495,7 +498,9 @@ def verificar_contraventamento_vertical(
         "direcao": "longitudinal (// cumeeira, θ=0°)",
 
         # Demanda
-        "F_vento0_kN":   round(F_vento0_kN, 3),
+        "F_vento0_k_kN": round(F_vento0_k_kN, 3),
+        "gamma_Q_vento": GAMMA_Q,
+        "F_vento0_kN":   round(F_vento0_kN, 3),        # de cálculo (γ_Q·F_k)
         "phi":           noc["phi"],
         "H_imp_kN":      H_imp_kN,
         "V_vert_total_kN": round(V_vert_total, 1),
@@ -574,7 +579,8 @@ def relatorio(res: dict) -> None:
     print(f"  Direção : {res['direcao']}")
     print()
     print("  ── Demanda lateral longitudinal ──")
-    print(f"    F_vento0 (θ=0°) = {res['F_vento0_kN']:.2f} kN")
+    print(f"    F_vento0 (θ=0°) = γ_Q·F_k = {res['gamma_Q_vento']:.2f}×{res['F_vento0_k_kN']:.2f}"
+          f" = {res['F_vento0_kN']:.2f} kN")
     print(f"    H_imp (nocional φ={res['phi']:.5f}) = {res['H_imp_kN']:.2f} kN")
     print(f"    V_lat total = {res['V_lat_total_kN']:.2f} kN "
           f"/ {res['n_paineis']} painéis = {res['V_painel_kN']:.2f} kN/painel")

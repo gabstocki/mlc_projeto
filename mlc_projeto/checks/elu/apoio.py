@@ -172,13 +172,29 @@ def reacao_arrancamento_max(load: Carregamentos) -> dict:
     """
     melhor = (0.0, None)
     for comb in load.combinacoes_ELU_fisicas().values():
-        r = load._analisar(q_esq=comb.q_esq, q_dir=comb.q_dir)
+        r = load._analisar(q_esq=comb.q_esq, q_dir=comb.q_dir, fG=comb.fator_G)
         up = max(0.0, -float(r["R_A_kN"]), -float(r["R_B_kN"]))
         if up > melhor[0]:
             melhor = (up, comb)
     return {"R_up_kN": round(melhor[0], 3),
             "comb": melhor[1].nome if melhor[1] else None,
             "duracao": melhor[1].duracao if melhor[1] else None}
+
+
+def reacao_arrancamento_caracteristica(load: Carregamentos) -> dict:
+    """
+    Maior arrancamento num apoio na combinação CARACTERÍSTICA G + W (EN 1990
+    §6.5.3(2)a; vento dominante, sem Q — categoria H), para o deslocamento sob
+    sucção (issue 112).
+    """
+    melhor = (0.0, None)
+    A, g = load.area_trib, load.g_k
+    for p in load.padroes_vento:
+        r = load._analisar(q_esq=g + p["w_esq_kNm2"] * A, q_dir=g + p["w_dir_kNm2"] * A, fG=1.0)
+        up = max(0.0, -float(r["R_A_kN"]), -float(r["R_B_kN"]))
+        if up > melhor[0]:
+            melhor = (up, p["id"])
+    return {"R_up_k_kN": round(melhor[0], 3), "padrao": melhor[1]}
 
 
 def verifica_apoio_contato(
@@ -188,11 +204,15 @@ def verifica_apoio_contato(
     l_apoio_m: float,
     a_extremidade_m: float = 0.0,
     rotulo: str = "L1",
+    t_rasgo_m: float = 0.0,
 ) -> dict:
     """
     Compressão ⊥ às fibras no apoio por CONTATO direto — EC5 §6.1.5 (issue 42).
 
-        σ_c,90,d = R_d / (b · l_ef) ≤ k_c,90 · f_c,90,d
+        σ_c,90,d = R_d / ((b − t_rasgo) · l_ef) ≤ k_c,90 · f_c,90,d
+
+    O rasgo da chapa embutida corta a face de apoio (issue 70): só as duas
+    faixas laterais, de largura total b − t_rasgo, tocam a chapa de topo.
 
         l_ef = l + min(30 mm; a_ext) [lado da extremidade] + 30 mm [lado do vão]
         k_c,90 = 1,75 (MLC, apoio discreto, l ≤ 400 mm, l_1 ≥ 2h — trivial
@@ -202,7 +222,7 @@ def verifica_apoio_contato(
     ovalizados na chapa, ficam para o arrancamento e o esforço axial. Varre as
     combinações ELU com o k_mod de cada duração (F-06).
     """
-    b = geo.b
+    b = geo.b - t_rasgo_m
     l_mm = l_apoio_m * 1000.0
     l_ef_mm = l_mm + ACRESCIMO_LEF_MM + min(ACRESCIMO_LEF_MM, a_extremidade_m * 1000.0)
     k_c90 = K_C90_MLC_APOIO_DISCRETO if l_mm <= L_MAX_KC90_MM else 1.0
@@ -220,6 +240,7 @@ def verifica_apoio_contato(
         "rotulo":          rotulo,
         "apoio":           "contato direto (chapa de topo / sela)",
         "b_m":             b,
+        "t_rasgo_m":       t_rasgo_m,
         "l_apoio_m":       round(l_apoio_m, 3),
         "l_ef_m":          round(l_ef_mm / 1000.0, 3),
         "k_c90":           k_c90,
@@ -270,6 +291,88 @@ def verifica_sela_central(
         "eta": round(eta, 4),
         "ok": eta <= 1.0,
         "norma": "EN 1993-1-1 §6.2.5 (flexão da placa em balanço)",
+    }
+
+
+def verifica_enrijecedores_sela(
+    *,
+    sigma_contato_MPa: float,
+    balanco_m: float,
+    b_contato_m: float,
+    t_sela_mm: float,
+    n_enrij: int = 3,
+    t_enrij_mm: float = 12.5,
+    a_solda_mm: float = 4.0,
+    f_y_MPa: float = 275.0,
+    f_u_MPa: float = 430.0,
+    beta_w: float = 0.85,
+    gamma_M0: float = 1.00,
+    gamma_M2: float = 1.25,
+    E_MPa: float = 210000.0,
+    h_lateral_mm: float = 250.0,
+    f_c90_d_MPa: float | None = None,
+) -> dict:
+    """
+    Enrijecedores sob os balanços da sela (issue 73).
+
+    Sem enrijecedor, o balanço c da chapa flete sob a pressão de contato e
+    descarrega a ponta: a pressão deixa de ser uniforme, como a verificação
+    §6.1.5 admite. Com n enrijecedores triangulares (c × c, a 45°), soldados à
+    chapa e apoiados na face do pilar, a chapa passa a vencer o vão entre
+    enrijecedores, e cada enrijecedor é um consolo de altura c na raiz.
+
+      · chapa: faixa entre enrijecedores, biapoiada no vão s: m = σ·s²/8;
+      · enrijecedor: força F = σ·(largura tributária)·c no centro do balanço,
+        M = F·c/2 na raiz, W = t·c²/6; esbeltez da borda livre c/t ≤ 14ε
+        (EN 1993-1-1 Tab. 5.2, banzo em balanço);
+      · solda de filete dupla enrijecedor–chapa: F/(2·c·a) ≤ f_vw,d;
+      · uniformidade: flecha da ponta sem e com enrijecedor;
+      · equilíbrio da raiz: o momento dos consolos é um binário — tração na
+        chapa da sela (equilibrada pelo balanço oposto) e compressão contra a
+        face do pilar, ⊥ às fibras, por uma chapa lateral de altura h_lat
+        soldada à sela e aos enrijecedores: braço z = 2·h_lat/3 e pressão
+        triangular p_max = 2·C/(b·h_lat) ≤ f_c,90,d.
+    """
+    c = balanco_m * 1000.0
+    b = b_contato_m * 1000.0
+    s = b / (n_enrij - 1) if n_enrij > 1 else b
+    sig = sigma_contato_MPa
+    eps = math.sqrt(235.0 / f_y_MPa)
+    # chapa entre enrijecedores (faixa de 1 mm)
+    m = sig * s ** 2 / 8.0
+    t_req_chapa = math.sqrt(6.0 * m * gamma_M0 / f_y_MPa)
+    eta_chapa = (t_req_chapa / t_sela_mm) ** 2
+    # enrijecedor mais carregado (central: largura tributária s)
+    F = sig * s * c / 1e3                                     # kN
+    M = F * c / 2.0                                           # kN·mm
+    W = t_enrij_mm * c ** 2 / 6.0
+    eta_enrij = M * 1e3 / W / (f_y_MPa / gamma_M0)
+    esbeltez = c / t_enrij_mm
+    eta_esb = esbeltez / (14.0 * eps)
+    f_vwd = f_u_MPa / math.sqrt(3.0) / (beta_w * gamma_M2)
+    eta_solda = F * 1e3 / (2.0 * c * a_solda_mm) / f_vwd
+    # flecha da ponta (faixa de 1 mm): chapa só × consolo (T: chapa + enrijecedor)
+    I_chapa = t_sela_mm ** 3 / 12.0
+    d_sem = sig * c ** 4 / (8.0 * E_MPa * I_chapa)
+    I_T = t_enrij_mm * c ** 3 / 12.0 / s                      # por mm de largura (seção na raiz)
+    d_com = sig * c ** 4 / (8.0 * E_MPa * (I_chapa + I_T))
+    C = n_enrij * M / (2.0 * h_lateral_mm / 3.0)               # kN contra a face
+    p_max = 2.0 * C * 1e3 / (b * h_lateral_mm)                 # MPa
+    partes = {"chapa_entre_enrijecedores": eta_chapa, "enrijecedor_flexao": eta_enrij,
+              "enrijecedor_borda_livre": eta_esb, "solda": eta_solda}
+    if f_c90_d_MPa:
+        partes["face_do_pilar"] = p_max / f_c90_d_MPa
+    gov = max(partes, key=partes.get)
+    return {
+        "n_enrij": n_enrij, "t_enrij_mm": t_enrij_mm, "dim_enrij_mm": (c, c),
+        "vao_chapa_mm": round(s, 1), "a_solda_mm": a_solda_mm,
+        "F_enrij_kN": round(F, 2), "M_raiz_kNm": round(M / 1e3, 3),
+        "t_req_chapa_mm": round(t_req_chapa, 2),
+        "flecha_ponta_sem_mm": round(d_sem, 3), "flecha_ponta_com_mm": round(d_com, 4),
+        "h_lateral_mm": h_lateral_mm, "C_face_kN": round(C, 2), "p_face_MPa": round(p_max, 3),
+        "partes": {k: round(v, 4) for k, v in partes.items()},
+        "governa": gov, "eta": round(partes[gov], 4), "ok": partes[gov] <= 1.0,
+        "norma": "EN 1993-1-1 §6.2.5, Tab. 5.2 + EN 1993-1-8 §4.5.3.3",
     }
 
 

@@ -29,7 +29,7 @@ def test_peso_e_reacoes_simetricas():
 
 
 def test_momentos_sinais_opostos():
-    """Içamento a 0,207L gera M⁻ (hogging) e M⁺ (sagging) de sinais opostos."""
+    """O içamento em dois pontos gera M⁻ (hogging) e M⁺ (sagging) de sinais opostos."""
     r = verificar_icamento(GEO, MAT)
     assert r["M_neg_kNm"] < 0        # hogging nos pontos de içamento
     assert r["M_pos_kNm"] > 0        # sagging no vão central
@@ -60,7 +60,7 @@ def test_lingas_inclinadas_geram_compressao():
 def test_ltb_reduz_capacidade():
     """LTB sem contraventamento: k_crit<1 (l_ef longo = vão entre pontos)."""
     r = verificar_icamento(GEO, MAT)
-    assert r["l_ef_LTB_m"] == pytest.approx((1 - 2 * 0.207) * GEO.L, abs=1e-2)
+    assert r["l_ef_LTB_m"] == pytest.approx((1 - 2 * r["a_rel"]) * GEO.L, abs=1e-2)
     assert r["k_crit"] <= 1.0
     assert r["eta_LTB"] >= 0.0
 
@@ -79,3 +79,13 @@ def test_governante_e_ok():
     assert r["eta"] == max(r["etas"].values())
     assert r["ok"] == (r["eta"] <= 1.0)
     assert r["norma"].startswith("EN 1991-1-6")
+
+
+def test_posicao_padrao_iguala_os_momentos_na_viga_de_secao_variavel():
+    """Issue 100: 0,207·L só iguala |M⁻| e |M⁺| na peça prismática; na viga com
+    h_ap > h0 o peso concentra-se no meio e o ponto ótimo fica mais para dentro."""
+    r = verificar_icamento(GEO, MAT)
+    assert abs(r["M_neg_kNm"]) == pytest.approx(r["M_pos_kNm"], rel=0.02)
+    assert r["a_rel"] > 0.207
+    r0 = verificar_icamento(GEO, MAT, a_rel=0.207)
+    assert r0["M_pos_kNm"] > 2 * abs(r0["M_neg_kNm"])     # 0,207 não iguala aqui

@@ -230,6 +230,7 @@ def reacao_vertical_incendio(geo: GeometriaViga, load: Carregamentos) -> float:
         alpha_rad=geo.alpha_rad, b=geo.b,
         q_esq=q_fi, q_dir=q_fi,
         desenvolve_empuxo=load.empuxo_desenvolve,
+        a_bal=geo.a_bal,
     )
     return abs(float(r["R_v_gov_kN"]))
 
@@ -296,6 +297,7 @@ def verificar_fogo_viga(
         alpha_rad=geo.alpha_rad, b=geo.b,
         q_esq=q_fi, q_dir=q_fi,
         desenvolve_empuxo=load.empuxo_desenvolve,
+        a_bal=geo.a_bal,
     )
 
     x    = geo.x
